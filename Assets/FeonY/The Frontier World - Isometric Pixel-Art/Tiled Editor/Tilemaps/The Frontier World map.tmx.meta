@@ -1,0 +1,36 @@
+fileFormatVersion: 2
+guid: f49cd22bdc1872148878808738859482
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 1fa25d03934ea624a82bf2fcee6f0873, type: 3}
+  missingFiles: []
+  errors: []
+  warnings:
+  - Tileset '(Tiles) The Frontier World' is an embedded tileset. Exported tilesets
+    are preferred.
+  missingSortingLayers: []
+  missingLayers: []
+  missingTags: []
+  importerVersion: 26
+  pixelsPerUnit: 64
+  edgesPerEllipse: 32
+  numberOfObjectsImported: 536
+  tilesAsObjects: 0
+  sortingMode: 0
+  isIsometric: 1
+  customImporterClassName: 
+  internalTilesets:
+  - {instanceID: 0}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277169
+  packageName: The Frontier World | Isometric 2.5D Pixel-Art
+  packageVersion: 1.0.2
+  assetPath: Assets/FeonY/The Frontier World - Isometric Pixel-Art/Tiled Editor/Tilemaps/The
+    Frontier World map.tmx
+  uploadId: 698896
