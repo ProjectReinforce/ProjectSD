@@ -12,6 +12,12 @@ namespace SwDreams.Adapter.Entity
     /// 
     /// PhotonView 없음. 네트워크 동기화는 SpawnManager가 RPC로 처리.
     /// 각 적은 고유 ID로 호스트-클라이언트 간 매칭.
+    /// 
+    /// Phase 3 변경:
+    /// - EnemyType 노출 (EnemyMovement에서 전략 선택용)
+    /// - KnockbackResistance (Tank의 넉백 감소)
+    /// - ForceReturn() (Swarm 수명 만료 시 풀 반환)
+    /// - OnForceReturned 이벤트 (경험치 드롭 없는 제거)
     /// </summary>
     [RequireComponent(typeof(EnemyMovement))]
     [RequireComponent(typeof(EnemyContact))]
@@ -32,10 +38,20 @@ namespace SwDreams.Adapter.Entity
         public float MoveSpeed => enemyData != null ? enemyData.moveSpeed : 0f;
         public int ContactDamage => enemyData != null ? enemyData.contactDamage : 0;
 
+        // Phase 3: 타입 + 넉백 저항
+        public EnemyType EnemyType => enemyData != null ? enemyData.enemyType : EnemyType.Chaser;
+        public float KnockbackResistance => enemyData != null ? enemyData.knockbackResistance : 0f;
+
         // 이벤트
         public event Action<int, int> OnHealthChanged;
         public event Action OnDied;
         public event Action<Enemy> OnDiedWithRef;
+
+        /// <summary>
+        /// Swarm 수명 만료 등 사망이 아닌 제거 시 발생.
+        /// SpawnManager에서 구독하여 activeEnemies에서 제거.
+        /// </summary>
+        public event Action<Enemy> OnForceReturned;
 
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
@@ -75,6 +91,9 @@ namespace SwDreams.Adapter.Entity
             CurrentHP = Mathf.Max(0, CurrentHP - result.FinalDamage);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
 
+            // TODO: 넉백 처리 시 KnockbackResistance 적용
+            // 넉백 거리 = basePushback * (1 - KnockbackResistance)
+
             if (!IsAlive)
                 Die();
         }
@@ -83,6 +102,17 @@ namespace SwDreams.Adapter.Entity
         {
             OnDied?.Invoke();
             OnDiedWithRef?.Invoke(this);
+        }
+
+        /// <summary>
+        /// 사망이 아닌 강제 제거 (Swarm 수명 만료, 화면 밖 정리 등).
+        /// 경험치 드롭 없이 풀에 반환.
+        /// </summary>
+        public void ForceReturn()
+        {
+            if (!IsAlive) return;
+            CurrentHP = 0; // 이중 처리 방지
+            OnForceReturned?.Invoke(this);
         }
 
         // === IPoolable ===
@@ -96,6 +126,7 @@ namespace SwDreams.Adapter.Entity
             OnDied = null;
             OnDiedWithRef = null;
             OnHealthChanged = null;
+            OnForceReturned = null;
             CurrentHP = 0;
             EnemyId = -1;
             gameObject.SetActive(false);

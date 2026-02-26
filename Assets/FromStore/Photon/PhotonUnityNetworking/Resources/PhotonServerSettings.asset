@@ -44,6 +44,9 @@ MonoBehaviour:
   - RPC_StartGame
   - RPC_SyncExp
   - RPC_TakeDamage
+  - RPC_EnemyRemoved
+  - RPC_SpawnSwarm
+  - RPC_ChangeState
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

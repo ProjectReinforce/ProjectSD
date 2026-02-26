@@ -567,10 +567,11 @@ MonoBehaviour:
   enemyPrefab: {fileID: 661582006748820927, guid: ab75f86a1913d6449965c8f713d939f4, type: 3}
   orbPrefab: {fileID: 4382913653879672792, guid: 2d51f2ab48b7f67419cf8019ebf73b2e, type: 3}
   chaserData: {fileID: 11400000, guid: da90b05f2cc34df43b38b8d0431484ed, type: 2}
-  spawnInterval: 1
-  maxEnemies: 30
-  spawnMinDistance: 8
-  spawnMaxDistance: 12
+  runnerData: {fileID: 11400000, guid: 57184a50fa52c5e46bbe5a696fadc2e0, type: 2}
+  tankData: {fileID: 11400000, guid: 4ae042e8639145c49ae4d28fe3285f60, type: 2}
+  swarmData: {fileID: 11400000, guid: e6fbd977bfb5e35479f4ce172faee56d, type: 2}
+  difficultyData: {fileID: 11400000, guid: 89492b6127c89f04296ae9a667e3bb3f, type: 2}
+  swarmLifetime: 8
   startDelay: 2
 --- !u!114 &1135951836
 MonoBehaviour:
@@ -653,51 +654,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1939956856
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1939956858}
-  - component: {fileID: 1939956857}
-  m_Layer: 0
-  m_Name: PoolTestRunner
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1939956857
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1939956856}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4a87872df60aa0542867d2c2a5afce27, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PoolTestRunner
-  testPrefab: {fileID: 1597727518595902301, guid: cb7caa5b53fb669409e5d29727304cf0, type: 3}
---- !u!4 &1939956858
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1939956856}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -706,6 +662,5 @@ SceneRoots:
   - {fileID: 203844589}
   - {fileID: 14537417}
   - {fileID: 1496672558}
-  - {fileID: 1939956858}
   - {fileID: 218850537}
   - {fileID: 1135951837}
