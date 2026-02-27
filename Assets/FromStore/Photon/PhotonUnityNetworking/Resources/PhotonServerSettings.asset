@@ -52,6 +52,8 @@ MonoBehaviour:
   - RPC_PlayerSelected
   - RPC_ReceiveChoices
   - RPC_StartTimer
+  - RPC_NotifyDamageApplied
+  - RPC_NotifySkillTriggered
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
