@@ -5533,8 +5533,8 @@ GameObject:
   m_Component:
   - component: {fileID: 895395500}
   - component: {fileID: 895395499}
-  - component: {fileID: 895395498}
   - component: {fileID: 895395501}
+  - component: {fileID: 895395502}
   m_Layer: 0
   m_Name: System
   m_TagString: Untagged
@@ -5542,20 +5542,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &895395498
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 895395497}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b9eb81e481fce94cace362df69c6545, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Adapter.Manager.GameManager
-  menuSceneName: MenuScene
-  gameSceneName: GameScene
 --- !u!114 &895395499
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5600,6 +5586,20 @@ MonoBehaviour:
   titlePanel: {fileID: 780597316}
   roomListPanel: {fileID: 1350422083}
   waitingRoomPanel: {fileID: 1258911573}
+--- !u!114 &895395502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 895395497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdab46b0d6156314f8d7478649b17bd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Adapter.Manager.TestManager
+  menuSceneName: MenuScene
+  gameSceneName: GameScene
 --- !u!1 &902724670
 GameObject:
   m_ObjectHideFlags: 0

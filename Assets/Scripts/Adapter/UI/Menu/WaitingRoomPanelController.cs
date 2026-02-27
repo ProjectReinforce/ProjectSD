@@ -229,7 +229,7 @@ namespace Adapter.UI.Menu
                 countdownText.text = "Starting...";
             }
 
-            GameManager.Instance?.EnterGameSceneByMaster();
+            TestManager.Instance?.EnterGameSceneByMaster();
         }
 
         private void RefreshRoomUi()

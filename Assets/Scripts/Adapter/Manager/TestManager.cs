@@ -1,4 +1,4 @@
-﻿using Photon.Pun;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,9 +14,9 @@ namespace Adapter.Manager
         Paused
     }
 
-    public class GameManager : MonoBehaviour
+    public class TestManager : MonoBehaviour
     {
-        public static GameManager Instance { get; private set; }
+        public static TestManager Instance { get; private set; }
 
         [SerializeField] private string menuSceneName = "MenuScene";
         [SerializeField] private string gameSceneName = "GameScene";
