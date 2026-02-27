@@ -6,6 +6,7 @@ using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Skill;
 using SwDreams.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Presentation;
 
 namespace SwDreams.Testing
 {
@@ -106,7 +107,10 @@ namespace SwDreams.Testing
 
             if (GameManager.Instance != null &&
                 GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+            {
+                rb.linearVelocity = Vector2.zero;
                 return;
+            }
 
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
@@ -120,11 +124,36 @@ namespace SwDreams.Testing
 
             rb.linearVelocity = input * moveSpeed;
 
-            if (PhotonNetwork.IsMasterClient && GameManager.Instance != null && kb.lKey.isPressed)
+            if (PhotonNetwork.IsMasterClient && GameManager.Instance != null)
             {
-                // 강제 레벨업 트리거
-                GameManager.Instance.AddExp(9999);
-                Debug.Log("[Test] 강제 레벨업 트리거!");
+                if (kb.lKey.wasPressedThisFrame)
+                {
+                    GameManager.Instance?.AddExp(9999);
+                    Debug.Log("[Test] 강제 레벨업");
+                }
+
+                // K: 게임 강제 재개 (Paused → Playing)
+                if (kb.kKey.wasPressedThisFrame)
+                {
+                    GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
+                    if (UIManager.Instance != null)
+                        UIManager.Instance.HideLevelUp();
+                    Debug.Log("[Test] 강제 재개");
+                }
+
+                // J: 선택 스킵 (현재 선택지 중 첫 번째 자동 선택)
+                if (kb.jKey.wasPressedThisFrame)
+                {
+                    if (LevelUpManager.Instance != null && LevelUpManager.Instance.IsLevelUpActive)
+                    {
+                        var choices = LevelUpManager.Instance.GetCurrentChoices();
+                        if (choices != null && choices.Length > 0)
+                        {
+                            LevelUpManager.Instance.SubmitChoice(choices[0].skillId);
+                            Debug.Log($"[Test] 자동 선택: {choices[0].skillName}");
+                        }
+                    }
+                }
             }
         }
 

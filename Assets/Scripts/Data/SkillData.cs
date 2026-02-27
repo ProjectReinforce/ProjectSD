@@ -26,6 +26,8 @@ namespace SwDreams.Data
         public string skillName;
         public SkillType skillType;
         public SkillEffectType effectType;
+        
+        [Header("UI 표시용")]
         public Sprite icon;
         [TextArea] public string description;
 

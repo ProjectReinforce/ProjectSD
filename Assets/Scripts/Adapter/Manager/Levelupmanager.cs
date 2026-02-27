@@ -3,6 +3,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
 using SwDreams.Adapter.Skill;
+using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Manager
 {
@@ -59,18 +60,18 @@ namespace SwDreams.Adapter.Manager
         // 클라이언트: 내가 받은 선택지
         private SkillData[] myChoices;
 
-        // ===== 이벤트 (UI 연결용) =====
-        /// <summary>선택지 수신 시 발생. LevelUpPanel이 구독.</summary>
-        public event System.Action<SkillData[]> OnChoicesReceived;
+        // // ===== 이벤트 (UI 연결용) =====
+        // /// <summary>선택지 수신 시 발생. LevelUpPanel이 구독.</summary>
+        // public event System.Action<SkillData[]> OnChoicesReceived;
 
-        /// <summary>타이머 갱신. UI 타이머 바 용.</summary>
-        public event System.Action<float, float> OnTimerUpdated; // remaining, total
+        // /// <summary>타이머 갱신. UI 타이머 바 용.</summary>
+        // public event System.Action<float, float> OnTimerUpdated; // remaining, total
 
-        /// <summary>레벨업 종료 (게임 재개). UI 닫기용.</summary>
-        public event System.Action OnLevelUpEnded;
+        // /// <summary>레벨업 종료 (게임 재개). UI 닫기용.</summary>
+        // public event System.Action OnLevelUpEnded;
 
-        /// <summary>혼돈 스킬 선택지 수신 시 발생.</summary>
-        public event System.Action<SkillData[]> OnChaosChoicesReceived;
+        // /// <summary>혼돈 스킬 선택지 수신 시 발생.</summary>
+        // public event System.Action<SkillData[]> OnChaosChoicesReceived;
 
         // ===== 로컬 플레이어 참조 =====
         // PlayerStub이 스폰된 후 등록해야 함
@@ -161,25 +162,30 @@ namespace SwDreams.Adapter.Manager
             playerSelections.Clear();
             playerChoices.Clear();
 
-            // 1) 게임 일시정지
+            // 게임 일시정지
             GameManager.Instance.ChangeStateNetwork(GameManager.GameState.Paused);
 
-            // 2) 모든 플레이어에게 선택지 생성 + 전송
+            StartLevelUpSequenceInternal(isChaosLevel);
+        }
+
+        /// <summary>
+        /// 선택지 생성 + 전송. Paused 전환 없이 호출 가능 (대기열 처리용).
+        /// </summary>
+        private void StartLevelUpSequenceInternal(bool isChaosLevel)
+        {
+            isLevelUpActive = true;
+            timeoutTimer = selectionTimeout;
+
             foreach (var player in PhotonNetwork.PlayerList)
             {
                 playerSelections[player.ActorNumber] = false;
 
                 if (isChaosLevel)
-                {
                     SendChaosChoices(player);
-                }
                 else
-                {
                     SendNormalChoices(player);
-                }
             }
 
-            // 3) 타임아웃 알림
             photonView.RPC(nameof(RPC_StartTimer), RpcTarget.All, selectionTimeout);
         }
 
@@ -250,10 +256,14 @@ namespace SwDreams.Adapter.Manager
                       string.Join(", ", System.Array.ConvertAll(myChoices, s => s?.skillName ?? "null")));
 
             // UI 이벤트 발행
-            if (isChaos)
-                OnChaosChoicesReceived?.Invoke(myChoices);
+            if (UIManager.Instance != null)
+                UIManager.Instance.ShowLevelUp(myChoices, isChaos);
             else
-                OnChoicesReceived?.Invoke(myChoices);
+                Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
+            // if (isChaos)
+            //     OnChaosChoicesReceived?.Invoke(myChoices);
+            // else
+            //     OnChoicesReceived?.Invoke(myChoices);
         }
 
         [PunRPC]
@@ -332,7 +342,9 @@ namespace SwDreams.Adapter.Manager
             if (timeoutTimer > 0f)
             {
                 timeoutTimer -= Time.unscaledDeltaTime; // timeScale 영향 안 받도록
-                OnTimerUpdated?.Invoke(timeoutTimer, selectionTimeout);
+                // OnTimerUpdated?.Invoke(timeoutTimer, selectionTimeout);
+                if (UIManager.Instance != null)
+                    UIManager.Instance.UpdateLevelUpTimer(timeoutTimer, selectionTimeout);
             }
 
             // 타임아웃 처리 (호스트만)
@@ -409,6 +421,8 @@ namespace SwDreams.Adapter.Manager
         private void EndLevelUpSequence()
         {
             isLevelUpActive = false;
+            playerSelections.Clear();
+            playerChoices.Clear();
 
             // 대기 중인 레벨업이 있으면 바로 다음 시퀀스 시작
             if (pendingLevelUps.Count > 0)
@@ -420,7 +434,9 @@ namespace SwDreams.Adapter.Manager
                 StartLevelUpSequence(isChaosLevel);
 
                 // UI 닫기 → 새 선택지 UI 열기 (클라이언트에서 자연스럽게 전환)
-                photonView.RPC(nameof(RPC_LevelUpEnded), RpcTarget.All);
+                // photonView.RPC(nameof(RPC_LevelUpEnded), RpcTarget.All);
+                StartLevelUpSequenceInternal(isChaosLevel);
+                
                 return;
             }
 
@@ -436,7 +452,11 @@ namespace SwDreams.Adapter.Manager
         {
             isLevelUpActive = false;
             myChoices = null;
-            OnLevelUpEnded?.Invoke();
+            // OnLevelUpEnded?.Invoke();
+
+            if (UIManager.Instance != null)
+                UIManager.Instance.HideLevelUp();
+
             Debug.Log("[LevelUpManager] 레벨업 종료, 게임 재개");
         }
 

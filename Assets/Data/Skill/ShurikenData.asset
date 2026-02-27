@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 0
   effectType: 0
   icon: {fileID: 0}
-  description: 
+  description: closest target
   maxLevel: 7
   damagePerLevel: 0f00000012000000160000001a0000001f000000250000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d000000
   cooldownPerLevel:
