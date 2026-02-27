@@ -441,6 +441,8 @@ namespace SwDreams.Adapter.Skill
         {
             switch (skillData.effectType)
             {
+                case SkillEffectType.None:
+                    return null;
                 case SkillEffectType.Projectile:
                     var projEffect = slotObj.AddComponent<ProjectileEffect>();
                     if (skillData.projectilePrefab != null)

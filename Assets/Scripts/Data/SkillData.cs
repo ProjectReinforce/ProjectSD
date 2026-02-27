@@ -11,6 +11,7 @@ namespace SwDreams.Data
 
     public enum SkillEffectType
     {
+        None,
         Projectile,       // 표창, 매직미사일, 부메랑, 회오리바람
         Area,             // 번개, 개미지옥, 성역
         Orbital,          // 장검

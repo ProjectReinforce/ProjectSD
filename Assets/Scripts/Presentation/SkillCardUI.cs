@@ -94,13 +94,7 @@ namespace SwDreams.Presentation
             transform.localScale = Vector3.one;
 
             if (cardBackground != null)
-            {
-                Debug.Log($"{cardBackground.color}");
-
                 cardBackground.color = defaultCardColor;
-
-                Debug.Log($"{cardBackground.color}");
-            }
         }
 
         private void SetupLevelBadge(SkillData skillData)

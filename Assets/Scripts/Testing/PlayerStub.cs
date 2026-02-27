@@ -73,26 +73,13 @@ namespace SwDreams.Testing
                 Debug.LogWarning("[PlayerStub] startingSkillData 또는 SkillManager 없음");
             }
 
-            // 테스트용 코드
-            // if (skillManager == null) return;
-
-            // // 테스트: 시작 스킬 + 더미 스킬 여러 개
-            // if (startingSkillData != null)
-            //     skillManager.AcquireSkill(startingSkillData);
-
-            // // 같은 스킬 다시 넣기 → 레벨업 되어야 함
-            // skillManager.AcquireSkill(startingSkillData);
-
-            // // 슬롯 상태 출력
-            // skillManager.LogSlotStatus();
-
             // 패시브 테스트 (임시)
-            var testStats = GetComponent<PlayerStats>();
-            if (testStats != null)
-            {
-                testStats.RecalculateAll();
-                Debug.Log($"[Test] MoveSpeed: {testStats.MoveSpeed}, ATK: {testStats.AttackMultiplier}");
-            }
+            // var testStats = GetComponent<PlayerStats>();
+            // if (testStats != null)
+            // {
+            //     testStats.RecalculateAll();
+            //     Debug.Log($"[Test] MoveSpeed: {testStats.MoveSpeed}, ATK: {testStats.AttackMultiplier}");
+            // }
 
             // 로컬 플레이어만 LevelUpManager에 등록
             if (photonView.IsMine && LevelUpManager.Instance != null)
@@ -128,7 +115,7 @@ namespace SwDreams.Testing
             {
                 if (kb.lKey.wasPressedThisFrame)
                 {
-                    GameManager.Instance?.AddExp(9999);
+                    GameManager.Instance?.AddExp(100);
                     Debug.Log("[Test] 강제 레벨업");
                 }
 
@@ -144,14 +131,30 @@ namespace SwDreams.Testing
                 // J: 선택 스킵 (현재 선택지 중 첫 번째 자동 선택)
                 if (kb.jKey.wasPressedThisFrame)
                 {
-                    if (LevelUpManager.Instance != null && LevelUpManager.Instance.IsLevelUpActive)
+                    var choices = LevelUpManager.Instance?.GetCurrentChoices();
+                    if (choices != null && choices.Length > 0)
                     {
-                        var choices = LevelUpManager.Instance.GetCurrentChoices();
-                        if (choices != null && choices.Length > 0)
-                        {
-                            LevelUpManager.Instance.SubmitChoice(choices[0].skillId);
-                            Debug.Log($"[Test] 자동 선택: {choices[0].skillName}");
-                        }
+                        // isLevelUpActive 체크 우회하지 않고, 직접 스킬 적용 + RPC
+                        int skillId = choices[0].skillId;
+                        LevelUpManager.Instance.SubmitChoice(skillId);
+                        UIManager.Instance?.HideLevelUp();
+                        Debug.Log($"[Test] 자동 선택: {choices[0].skillName}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Test] 선택지 없음 — K키로 강제 재개하세요");
+                    }
+                }
+
+                if (kb.pKey.wasPressedThisFrame)
+                {
+                    var stats = GetComponent<PlayerStats>();
+                    if (stats != null)
+                    {
+                        Debug.Log($"[Stats] ATK: {stats.AttackMultiplier:F2}, " +
+                                $"MoveSpeed: {stats.MoveSpeed:F1}, " +
+                                $"ProjSpeed: {stats.ProjectileSpeedBonus:F1}, " +
+                                $"ProjCount: {stats.ProjectileCountBonus}");
                     }
                 }
             }
