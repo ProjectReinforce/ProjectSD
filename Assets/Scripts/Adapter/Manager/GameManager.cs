@@ -70,21 +70,23 @@ namespace SwDreams.Adapter.Manager
         {
             if (!PhotonNetwork.IsMasterClient) return;
 
-            bool leveledUp = expService.AddExp(amount);
+            int leveledUp = expService.AddExp(amount);
 
             photonView.RPC(nameof(RPC_SyncExp), RpcTarget.All,
                 expService.CurrentExp, expService.GetRequiredExp(), expService.CurrentLevel, leveledUp);
         }
 
         [PunRPC]
-        private void RPC_SyncExp(int currentExp, int requiredExp, int level, bool leveledUp)
+        private void RPC_SyncExp(int currentExp, int requiredExp, int level, int levelUpCount)
         {
             OnExpChanged?.Invoke(currentExp, requiredExp);
 
-            if (leveledUp)
+            // 레벨업 횟수만큼 이벤트 발행 → LevelUpManager가 큐에 쌓음
+            for (int i = 0; i < levelUpCount; i++)
             {
-                Debug.Log($"[GameManager] 레벨업! Lv.{level}");
-                OnLevelUp?.Invoke(level);
+                int lvl = level - levelUpCount + i + 1; // 중간 레벨도 정확히 전달
+                Debug.Log($"[GameManager] 레벨업! Lv.{lvl}");
+                OnLevelUp?.Invoke(lvl);
             }
         }
 
@@ -92,6 +94,25 @@ namespace SwDreams.Adapter.Manager
         {
             CurrentState = newState;
             OnStateChanged?.Invoke(newState);
+        }
+
+        /// <summary>
+        /// 네트워크 상태 전환. 호스트에서만 호출.
+        /// 모든 클라이언트에서 동시에 상태 변경.
+        /// </summary>
+        public void ChangeStateNetwork(GameState newState)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            photonView.RPC(nameof(RPC_ChangeState), RpcTarget.All, (int)newState);
+        }
+
+        [PunRPC]
+        private void RPC_ChangeState(int stateInt)
+        {
+            GameState newState = (GameState)stateInt;
+            CurrentState = newState;
+            OnStateChanged?.Invoke(newState);
+            Debug.Log($"[GameManager] 상태 전환(Network): {newState}");
         }
     }
 }

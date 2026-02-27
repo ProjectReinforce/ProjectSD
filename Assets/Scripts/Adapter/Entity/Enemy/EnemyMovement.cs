@@ -59,6 +59,10 @@ namespace SwDreams.Adapter.Entity
         {
             if (enemy == null || !enemy.IsAlive) return;
 
+            if (Manager.GameManager.Instance != null &&
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing)
+                return;
+
             // Swarm 수명 체크
             if (hasLifetime)
             {

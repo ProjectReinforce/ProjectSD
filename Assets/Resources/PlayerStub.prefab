@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 4941265938462163578}
   - component: {fileID: 2342640481499277430}
   - component: {fileID: -1036550334346602213}
+  - component: {fileID: 1937433557903283363}
   m_Layer: 10
   m_Name: PlayerStub
   m_TagString: Player
@@ -237,6 +238,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor
+--- !u!114 &1937433557903283363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72df5f7de2f4ee4488f1c94778d8eb4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.PlayerStats
+  baseAttackMultiplier: 1
+  baseMoveSpeed: 5
+  baseMaxHP: 100
+  baseProjectileSpeed: 0
+  baseProjectileCount: 0
+  baseSkillRange: 0
+  baseCooldownReduction: 0
+  baseKnockback: 1
+  baseCritDamage: 1.5
+  baseExpMultiplier: 1
+  baseDefenseMultiplier: 1
+  baseHealMultiplier: 1
+  baseSkillDuration: 0
 --- !u!1 &5449631014595424917
 GameObject:
   m_ObjectHideFlags: 0
@@ -248,6 +274,7 @@ GameObject:
   - component: {fileID: 8723160286747431291}
   - component: {fileID: 2843376057357322501}
   - component: {fileID: 5860801376262495510}
+  - component: {fileID: 1124899101422158438}
   m_Layer: 10
   m_Name: Skills
   m_TagString: Untagged
@@ -277,7 +304,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5449631014595424917}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82f0dbc91bce4144eb282b092bcd2fa5, type: 3}
   m_Name: 
@@ -290,9 +317,22 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5449631014595424917}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3da56b4c23b52044ca04de6670c2a8fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.ProjectileEffect
   projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
+--- !u!114 &1124899101422158438
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5449631014595424917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de7c1983c212a2c45bae77a0a63fb653, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.SkillManager
+  skillSlotPrefab: {fileID: 0}

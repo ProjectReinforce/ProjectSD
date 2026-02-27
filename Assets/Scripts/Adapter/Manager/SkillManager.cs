@@ -442,10 +442,12 @@ namespace SwDreams.Adapter.Skill
             switch (skillData.effectType)
             {
                 case SkillEffectType.Projectile:
-                    return slotObj.AddComponent<ProjectileEffect>();
-                    // TODO Phase 5: projectilePrefab 연결 필요
-                    // ProjectileEffect에 SetPrefab() 메서드 추가하거나
-                    // SkillData에 projectilePrefab 필드 추가
+                    var projEffect = slotObj.AddComponent<ProjectileEffect>();
+                    if (skillData.projectilePrefab != null)
+                        projEffect.SetProjectilePrefab(skillData.projectilePrefab);
+                    else
+                        Debug.LogWarning($"[SkillManager] {skillData.skillName}: projectilePrefab 미설정!");
+                    return projEffect;
 
                 // Phase 5 확장 지점:
                 // case SkillEffectType.Area:

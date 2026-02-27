@@ -35,6 +35,7 @@ namespace SwDreams.Data
         public float[] cooldownPerLevel = { 1.5f, 1.4f, 1.3f, 1.2f, 1.1f, 1.0f, 0.9f };
 
         [Header("투사체 전용")]
+        public GameObject projectilePrefab;
         public float projectileSpeed = 10f;
         public int projectileCount = 1;
         public float projectileLifetime = 5f;

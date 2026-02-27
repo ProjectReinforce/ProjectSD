@@ -15,11 +15,13 @@ namespace SwDreams.Adapter.Skill
         [SerializeField] private GameObject projectilePrefab;
 
         private Transform playerTransform;
+        private PlayerStats playerStats;
 
         private void Start()
         {
             // Skill은 Player의 자식이므로 root가 Player
             playerTransform = transform.root;
+            playerStats = playerTransform.GetComponent<PlayerStats>();
 
             if (projectilePrefab != null)
                 PoolManager.Instance?.Prewarm(projectilePrefab, 20);
@@ -30,11 +32,20 @@ namespace SwDreams.Adapter.Skill
             if (projectilePrefab == null || playerTransform == null) return;
 
             Vector2 direction = GetAimDirection();
+
+            // PlayerStats 보너스 적용
             int count = skill.Data.projectileCount;
+            float speed = skill.Data.projectileSpeed;
+
+            if (playerStats != null)
+            {
+                count = playerStats.GetEffectiveProjectileCount(count);
+                speed = playerStats.GetEffectiveProjectileSpeed(speed);
+            }
 
             if (count <= 1)
             {
-                SpawnProjectile(skill, direction);
+                SpawnProjectile(skill, direction, speed);
             }
             else
             {
@@ -44,12 +55,23 @@ namespace SwDreams.Adapter.Skill
                 for (int i = 0; i < count; i++)
                 {
                     Vector2 dir = RotateVector(direction, startAngle + i * spreadAngle);
-                    SpawnProjectile(skill, dir);
+                    SpawnProjectile(skill, dir, speed);
                 }
             }
         }
 
-        private void SpawnProjectile(Skill skill, Vector2 direction)
+        /// <summary>
+        /// SkillManager에서 동적 생성 시 프리팹 설정용.
+        /// </summary>
+        public void SetProjectilePrefab(GameObject prefab)
+        {
+            projectilePrefab = prefab;
+
+            if (prefab != null)
+                PoolManager.Instance?.Prewarm(prefab, 20);
+        }
+
+        private void SpawnProjectile(Skill skill, Vector2 direction, float speed)
         {
             GameObject obj = PoolManager.Instance.Get(projectilePrefab);
             var projectile = obj.GetComponent<Projectile>();
@@ -61,11 +83,15 @@ namespace SwDreams.Adapter.Skill
                 return;
             }
 
+            int damage = skill.CurrentDamage;
+            if (playerStats != null)
+                damage = Mathf.RoundToInt(damage * playerStats.AttackMultiplier);
+
             projectile.Initialize(
                 position: (Vector2)playerTransform.position,
                 direction: direction,
-                damage: skill.CurrentDamage,
-                speed: skill.Data.projectileSpeed,
+                damage: damage,
+                speed: speed,
                 lifetime: skill.Data.projectileLifetime
             );
         }

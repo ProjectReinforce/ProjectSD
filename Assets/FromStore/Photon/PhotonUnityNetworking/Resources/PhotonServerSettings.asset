@@ -47,6 +47,11 @@ MonoBehaviour:
   - RPC_EnemyRemoved
   - RPC_SpawnSwarm
   - RPC_ChangeState
+  - RPC_ForceChoice
+  - RPC_LevelUpEnded
+  - RPC_PlayerSelected
+  - RPC_ReceiveChoices
+  - RPC_StartTimer
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

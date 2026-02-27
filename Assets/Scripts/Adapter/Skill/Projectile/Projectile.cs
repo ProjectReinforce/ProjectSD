@@ -35,6 +35,10 @@ namespace SwDreams.Adapter.Skill
 
         private void Update()
         {
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                return;
+                
             transform.position += (Vector3)(direction * speed * Time.deltaTime);
 
             aliveTime += Time.deltaTime;

@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -63,6 +64,10 @@ namespace SwDreams.Adapter.Skill
         private void Update()
         {
             if (!isActive || skillData == null || skillEffect == null) return;
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                return;
 
             if (CooldownRemaining > 0f)
             {

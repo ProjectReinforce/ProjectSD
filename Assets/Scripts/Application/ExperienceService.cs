@@ -16,19 +16,19 @@ namespace SwDreams.Application
         /// 경험치 추가. 레벨업 발생 시 true 반환.
         /// 호스트에서만 호출.
         /// </summary>
-        public bool AddExp(int amount)
+        public int AddExp(int amount)
         {
             CurrentExp += amount;
-            int required = LevelTable.GetRequiredExp(CurrentLevel);
+            int levelUps = 0;
 
-            if (CurrentExp >= required)
+            while (CurrentExp >= LevelTable.GetRequiredExp(CurrentLevel))
             {
-                CurrentExp -= required;
+                CurrentExp -= LevelTable.GetRequiredExp(CurrentLevel);
                 CurrentLevel++;
-                return true;
+                levelUps++;
             }
 
-            return false;
+            return levelUps;
         }
 
         public int GetRequiredExp()

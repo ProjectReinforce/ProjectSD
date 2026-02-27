@@ -1,4 +1,5 @@
 using UnityEngine;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Entity
 {
@@ -19,6 +20,10 @@ namespace SwDreams.Adapter.Entity
         public void UpdateMovement(Transform enemy, Transform target, float speed)
         {
             if (target == null) return;
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                return;
 
             Vector2 direction = (target.position - enemy.position).normalized;
             enemy.position += (Vector3)(direction * speed * Time.deltaTime);

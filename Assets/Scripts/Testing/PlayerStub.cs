@@ -5,6 +5,7 @@ using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Skill;
 using SwDreams.Data;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Testing
 {
@@ -44,6 +45,7 @@ namespace SwDreams.Testing
         public event Action OnDied;
 
         private Rigidbody2D rb;
+        private SkillManager skillManager;
 
         private void Awake()
         {
@@ -52,18 +54,59 @@ namespace SwDreams.Testing
             rb.freezeRotation = true;
             CurrentHP = maxHP;
             gameObject.tag = "Player";
+
+            skillManager = GetComponentInChildren<SkillManager>();
         }
 
         private void Start()
         {
             // 모든 클라이언트에서 모든 플레이어의 스킬 실행.
             // 투사체는 로컬 렌더링, 데미지는 호스트만 처리.
-            ActivateSkills();
+            if (startingSkillData != null && skillManager != null)
+            {
+                skillManager.AcquireSkill(startingSkillData);
+                Debug.Log($"[PlayerStub] 시작 스킬 획득: {startingSkillData.skillName}");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerStub] startingSkillData 또는 SkillManager 없음");
+            }
+
+            // 테스트용 코드
+            // if (skillManager == null) return;
+
+            // // 테스트: 시작 스킬 + 더미 스킬 여러 개
+            // if (startingSkillData != null)
+            //     skillManager.AcquireSkill(startingSkillData);
+
+            // // 같은 스킬 다시 넣기 → 레벨업 되어야 함
+            // skillManager.AcquireSkill(startingSkillData);
+
+            // // 슬롯 상태 출력
+            // skillManager.LogSlotStatus();
+
+            // 패시브 테스트 (임시)
+            var testStats = GetComponent<PlayerStats>();
+            if (testStats != null)
+            {
+                testStats.RecalculateAll();
+                Debug.Log($"[Test] MoveSpeed: {testStats.MoveSpeed}, ATK: {testStats.AttackMultiplier}");
+            }
+
+            // 로컬 플레이어만 LevelUpManager에 등록
+            if (photonView.IsMine && LevelUpManager.Instance != null)
+            {
+                LevelUpManager.Instance.RegisterLocalPlayer(skillManager);
+            }
         }
 
         private void Update()
         {
             if (!photonView.IsMine) return;
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                return;
 
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
@@ -76,6 +119,13 @@ namespace SwDreams.Testing
             input = input.normalized;
 
             rb.linearVelocity = input * moveSpeed;
+
+            if (PhotonNetwork.IsMasterClient && GameManager.Instance != null && kb.lKey.isPressed)
+            {
+                // 강제 레벨업 트리거
+                GameManager.Instance.AddExp(9999);
+                Debug.Log("[Test] 강제 레벨업 트리거!");
+            }
         }
 
         /// <summary>
@@ -103,31 +153,6 @@ namespace SwDreams.Testing
                 OnDied?.Invoke();
                 Debug.Log("[PlayerStub] 사망!");
             }
-        }
-
-        /// <summary>
-        /// 로컬 플레이어의 스킬 활성화.
-        /// 자식에 있는 Skill 컴포넌트를 찾아서 Activate.
-        /// </summary>
-        private void ActivateSkills()
-        {
-            var skill = GetComponentInChildren<Skill>(true);
-            if (skill != null && startingSkillData != null)
-            {
-                skill.Activate(startingSkillData);
-                Debug.Log($"[PlayerStub] 스킬 활성화: {startingSkillData.skillName}");
-            }
-        }
-
-        /// <summary>
-        /// 원격 플레이어의 스킬 비활성화.
-        /// 투사체는 로컬 전용이라 원격에서는 발동 안 함.
-        /// </summary>
-        private void DeactivateSkills()
-        {
-            var skill = GetComponentInChildren<Skill>(true);
-            if (skill != null)
-                skill.Deactivate();
         }
     }
 }
