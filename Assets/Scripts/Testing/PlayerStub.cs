@@ -123,26 +123,35 @@ namespace SwDreams.Testing
                 if (kb.kKey.wasPressedThisFrame)
                 {
                     GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
-                    if (UIManager.Instance != null)
-                        UIManager.Instance.HideLevelUp();
+                    UIManager.Instance?.HideLevelUp();
                     Debug.Log("[Test] 강제 재개");
                 }
 
-                // J: 선택 스킵 (현재 선택지 중 첫 번째 자동 선택)
-                if (kb.jKey.wasPressedThisFrame)
+                // J: 선택 스킵 — SubmitChoice 직접 호출 + UI 닫기
+                if (kb.jKey.wasPressedThisFrame && LevelUpManager.Instance != null)
                 {
-                    var choices = LevelUpManager.Instance?.GetCurrentChoices();
+                    var choices = LevelUpManager.Instance.GetCurrentChoices();
                     if (choices != null && choices.Length > 0)
                     {
-                        // isLevelUpActive 체크 우회하지 않고, 직접 스킬 적용 + RPC
-                        int skillId = choices[0].skillId;
-                        LevelUpManager.Instance.SubmitChoice(skillId);
-                        UIManager.Instance?.HideLevelUp();
-                        Debug.Log($"[Test] 자동 선택: {choices[0].skillName}");
+                        int id = choices[0].skillId;
+                        Debug.Log($"[Test] 자동 선택: {choices[0].skillName} (ID:{id})");
+
+                        // 로컬 스킬 적용
+                        if (skillManager != null)
+                        {
+                            SkillData chosen = choices[0];
+                            skillManager.ApplyChoice(chosen);
+                        }
+
+                        // 호스트에 선택 알림 (호스트 자신이므로 RPC_PlayerSelected 직접 호출과 동일)
+                        LevelUpManager.Instance.SubmitChoice(id);
                     }
                     else
                     {
-                        Debug.Log("[Test] 선택지 없음 — K키로 강제 재개하세요");
+                        // 선택지가 없으면 (혼돈 스킬 미구현 등) 강제 재개
+                        GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
+                        UIManager.Instance?.HideLevelUp();
+                        Debug.Log("[Test] 선택지 없음 — 강제 재개");
                     }
                 }
 
@@ -156,6 +165,9 @@ namespace SwDreams.Testing
                                 $"ProjSpeed: {stats.ProjectileSpeedBonus:F1}, " +
                                 $"ProjCount: {stats.ProjectileCountBonus}");
                     }
+                    
+                    if (skillManager != null)
+                        skillManager.LogSlotStatus();
                 }
             }
         }

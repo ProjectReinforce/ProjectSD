@@ -118,7 +118,7 @@ namespace SwDreams.Data
         private void ValidateNoDuplicateIds()
         {
             var allArrays = new SkillData[][] { activeSkills, passiveSkills, chaosSkills, evolvedSkills };
-            var ids = new System.Collections.Generic.HashSet<int>();
+            var ids = new System.Collections.Generic.Dictionary<int, string>();
 
             foreach (var array in allArrays)
             {
@@ -126,9 +126,15 @@ namespace SwDreams.Data
                 foreach (var skill in array)
                 {
                     if (skill == null) continue;
-                    if (!ids.Add(skill.skillId))
+                    if (ids.ContainsKey(skill.skillId))
                     {
-                        Debug.LogError($"[SkillDatabase] 중복 스킬 ID 발견: {skill.skillId} ({skill.skillName})");
+                        // Error → Warning으로 변경 (에디터 편집 중 오작동 방지)
+                        Debug.LogWarning($"[SkillDatabase] 중복 스킬 ID: {skill.skillId}" +
+                            $" ({skill.skillName}) ↔ ({ids[skill.skillId]})");
+                    }
+                    else
+                    {
+                        ids[skill.skillId] = skill.skillName;
                     }
                 }
             }

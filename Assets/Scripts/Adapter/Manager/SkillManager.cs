@@ -27,6 +27,16 @@ namespace SwDreams.Adapter.Skill
     /// </summary>
     public class SkillManager : MonoBehaviour
     {
+        /// <summary>
+        /// 진화 대기 정보. 어떤 2개 스킬이 어떤 진화 스킬로 변할 수 있는지.
+        /// </summary>
+        public struct EvolutionCandidate
+        {
+            public int activeSkillId;
+            public int passiveSkillId;
+            public SkillData evolvedSkillData;
+        }
+        
         // ===== 설정 =====
         public const int MaxSlots = 6;
 
@@ -37,6 +47,7 @@ namespace SwDreams.Adapter.Skill
 
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
+        private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
 
         // 외부 읽기용
         public IReadOnlyList<Skill> EquippedSkills => equippedSkills;
@@ -115,6 +126,14 @@ namespace SwDreams.Adapter.Skill
                     result.Add(equippedSkills[i]);
             }
             return result;
+        }
+
+        /// <summary>
+        /// 외부(LevelUpManager)에서 진화 후보 조회용.
+        /// </summary>
+        public List<EvolutionCandidate> GetPendingEvolutions()
+        {
+            return pendingEvolutions;
         }
 
         // ===== 스킬 획득 =====
@@ -225,48 +244,87 @@ namespace SwDreams.Adapter.Skill
         /// SkillData에 evolutionPair / evolvedSkill이 설정돼 있고,
         /// 둘 다 최대 레벨이면 진화 발동.
         /// </summary>
-        private void CheckEvolution(Skill changedSkill)
+        private void CheckEvolution(Skill skill)
         {
-            if (!changedSkill.IsMaxLevel) return;
+            if (skill.Data.evolutionPair == null || skill.Data.evolvedSkill == null)
+                return;
 
-            SkillData data = changedSkill.Data;
-            if (data.evolutionPair == null || data.evolvedSkill == null) return;
+            Skill partner = GetSkill(skill.Data.evolutionPair.skillId);
+            if (partner == null || !partner.IsMaxLevel || !skill.IsMaxLevel)
+                return;
 
-            // 짝이 되는 스킬도 보유 중이고 최대 레벨인지 체크
-            Skill partner = GetSkill(data.evolutionPair.skillId);
-            if (partner == null || !partner.IsMaxLevel) return;
+            // 이미 같은 진화가 대기열에 있는지 확인
+            int evolvedId = skill.Data.evolvedSkill.skillId;
+            for (int i = 0; i < pendingEvolutions.Count; i++)
+            {
+                if (pendingEvolutions[i].evolvedSkillData.skillId == evolvedId)
+                    return;
+            }
 
-            // 진화 발동!
-            ExecuteEvolution(changedSkill, partner, data.evolvedSkill);
+            // 어느 쪽이 액티브인지 판별
+            int activeId, passiveId;
+            if (skill.Data.skillType == SkillType.Active)
+            {
+                activeId = skill.Data.skillId;
+                passiveId = partner.Data.skillId;
+            }
+            else
+            {
+                activeId = partner.Data.skillId;
+                passiveId = skill.Data.skillId;
+            }
+
+            pendingEvolutions.Add(new EvolutionCandidate
+            {
+                activeSkillId = activeId,
+                passiveSkillId = passiveId,
+                evolvedSkillData = skill.Data.evolvedSkill
+            });
+
+            Debug.Log($"[SkillManager] ★ 진화 가능 등록: {skill.Data.skillName} + {partner.Data.skillName} → {skill.Data.evolvedSkill.skillName}");
         }
 
         /// <summary>
-        /// 진화 실행. 2슬롯 → 1슬롯 변환.
+        /// 플레이어가 진화 스킬을 선택했을 때 호출.
+        /// 기존 2개 스킬 제거 + 진화 스킬 1개 생성.
         /// </summary>
-        private void ExecuteEvolution(Skill skillA, Skill skillB, SkillData evolvedData)
+        public bool TryExecuteEvolution(int evolvedSkillId)
         {
-            Debug.Log($"[SkillManager] ★ 진화! {skillA.Data.skillName} + {skillB.Data.skillName} → {evolvedData.skillName}");
+            EvolutionCandidate? target = null;
+            int targetIndex = -1;
 
-            int idA = skillA.Data.skillId;
-            int idB = skillB.Data.skillId;
-
-            // 1) 기존 2개 제거
-            RemoveSkill(idA);
-            RemoveSkill(idB);
-
-            // 2) 진화 스킬 추가 (슬롯 여유 확보됨: 2개 제거 → 1개 추가)
-            Skill evolvedSkill = CreateSkillSlot(evolvedData);
-            if (evolvedSkill != null)
+            for (int i = 0; i < pendingEvolutions.Count; i++)
             {
-                equippedSkills.Add(evolvedSkill);
-                OnSkillAdded?.Invoke(evolvedSkill);
+                if (pendingEvolutions[i].evolvedSkillData.skillId == evolvedSkillId)
+                {
+                    target = pendingEvolutions[i];
+                    targetIndex = i;
+                    break;
+                }
             }
 
-            // 3) 패시브 재계산 (패시브가 제거됐으므로)
-            OnPassiveChanged?.Invoke();
+            if (target == null)
+            {
+                Debug.LogError($"[SkillManager] 진화 실행 실패 — ID {evolvedSkillId} 대기열에 없음");
+                return false;
+            }
 
-            // 4) 진화 이벤트
-            OnEvolution?.Invoke(evolvedData);
+            var evo = target.Value;
+
+            // 기존 2개 스킬 제거
+            RemoveSkill(evo.activeSkillId);
+            RemoveSkill(evo.passiveSkillId);
+
+            // 진화 스킬 생성
+            CreateSkillSlot(evo.evolvedSkillData);
+
+            // 대기열에서 제거
+            pendingEvolutions.RemoveAt(targetIndex);
+
+            Debug.Log($"[SkillManager] ★ 진화 완료: {evo.evolvedSkillData.skillName} (슬롯 {SlotCount}/{MaxSlots})");
+
+            OnEvolution?.Invoke(evo.evolvedSkillData);
+            return true;
         }
 
         /// <summary>
@@ -293,58 +351,74 @@ namespace SwDreams.Adapter.Skill
         // ===== 선택지 생성 (호스트용) =====
 
         /// <summary>
-        /// 레벨업 시 표시할 선택지 3개 생성.
-        /// 호스트에서 각 플레이어의 SkillManager 상태를 참조하여 호출.
+        /// 이 플레이어의 상태에 맞는 레벨업 선택지를 생성.
+        /// LevelUpManager.SendNormalChoices()에서 호출.
         /// </summary>
-        /// <param name="allSkills">전체 스킬 풀 (SkillDatabase에서 제공)</param>
-        /// <param name="count">선택지 수 (기본 3)</param>
-        /// <returns>선택지 SkillData 배열. 이미 보유 중이면 "레벨업" 의미.</returns>
-        public SkillData[] GenerateChoices(SkillData[] allSkills, int count = 3)
+        /// <param name="pool">SkillDatabase.GetNormalPool() 결과</param>
+        /// <param name="count">선택지 개수 (기본 3)</param>
+        /// <param name="evolutionChance">진화 등장 확률 (0~1, 기본 0.7)</param>
+        public SkillData[] GenerateChoices(SkillData[] pool, int count = 3, float evolutionChance = 0.7f)
         {
-            List<SkillData> candidates = new List<SkillData>();
-
-            if (HasEmptySlot)
+            // 1) 진화 후보 수집
+            SkillData evolutionChoice = null;
+            if (pendingEvolutions.Count > 0 && UnityEngine.Random.value < evolutionChance)
             {
-                // 슬롯 여유 있음 → 전체 풀에서 후보 수집
-                for (int i = 0; i < allSkills.Length; i++)
-                {
-                    SkillData sd = allSkills[i];
-
-                    // 혼돈 스킬은 별도 시스템에서 처리
-                    if (sd.skillType == SkillType.Chaos) continue;
-
-                    // 이미 보유 + 최대 레벨이면 제외
-                    Skill existing = GetSkill(sd.skillId);
-                    if (existing != null && existing.IsMaxLevel) continue;
-
-                    candidates.Add(sd);
-                }
-            }
-            else
-            {
-                // 슬롯 꽉 참 → 보유 중이면서 레벨업 가능한 것만
-                for (int i = 0; i < equippedSkills.Count; i++)
-                {
-                    if (!equippedSkills[i].IsMaxLevel)
-                        candidates.Add(equippedSkills[i].Data);
-                }
+                int evoIndex = UnityEngine.Random.Range(0, pendingEvolutions.Count);
+                evolutionChoice = pendingEvolutions[evoIndex].evolvedSkillData;
             }
 
-            // 후보가 요청 수보다 적을 수 있음
-            int resultCount = Mathf.Min(count, candidates.Count);
-            SkillData[] result = new SkillData[resultCount];
+            // 2) 일반 후보 수집 (최대 레벨 제외, 슬롯 꽉 차면 미보유 제외)
+            List<SkillData> normalCandidates = new List<SkillData>();
+            for (int i = 0; i < pool.Length; i++)
+            {
+                if (pool[i] == null) continue;
 
-            // Fisher-Yates 셔플로 랜덤 선택
-            for (int i = candidates.Count - 1; i > 0; i--)
+                // 진화 스킬과 중복 방지
+                if (evolutionChoice != null && pool[i].skillId == evolutionChoice.skillId)
+                    continue;
+
+                // 보유 중이고 최대 레벨이면 제외
+                if (HasSkill(pool[i].skillId))
+                {
+                    var existing = GetSkill(pool[i].skillId);
+                    if (existing.IsMaxLevel) continue;
+                }
+                // 슬롯 꽉 찼으면 미보유 스킬 제외
+                else if (!HasEmptySlot)
+                {
+                    continue;
+                }
+
+                normalCandidates.Add(pool[i]);
+            }
+
+            // 3) 셔플
+            ShuffleList(normalCandidates);
+
+            // 4) 선택지 조합
+            List<SkillData> result = new List<SkillData>();
+
+            if (evolutionChoice != null)
+                result.Add(evolutionChoice);
+
+            for (int i = 0; i < normalCandidates.Count && result.Count < count; i++)
+                result.Add(normalCandidates[i]);
+
+            // 5) 최종 셔플 (진화가 항상 첫 자리가 아니도록)
+            ShuffleList(result);
+
+            return result.ToArray();
+        }
+
+        private void ShuffleList<T>(List<T> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
             {
                 int j = UnityEngine.Random.Range(0, i + 1);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+                T temp = list[i];
+                list[i] = list[j];
+                list[j] = temp;
             }
-
-            for (int i = 0; i < resultCount; i++)
-                result[i] = candidates[i];
-
-            return result;
         }
 
         /// <summary>
@@ -377,20 +451,23 @@ namespace SwDreams.Adapter.Skill
         /// 호스트가 결과를 받아 각 플레이어에서 호출.
         /// </summary>
         /// <returns>true: 성공</returns>
-        public bool ApplyChoice(SkillData chosenSkill)
+        public void ApplyChoice(SkillData chosenSkill)
         {
-            if (chosenSkill == null) return false;
+            // 진화 스킬인지 확인
+            for (int i = 0; i < pendingEvolutions.Count; i++)
+            {
+                if (pendingEvolutions[i].evolvedSkillData.skillId == chosenSkill.skillId)
+                {
+                    TryExecuteEvolution(chosenSkill.skillId);
+                    return;
+                }
+            }
 
+            // 기존: 보유 중이면 레벨업, 아니면 신규
             if (HasSkill(chosenSkill.skillId))
-            {
-                // 이미 보유 → 레벨업
-                return LevelUpSkill(chosenSkill.skillId);
-            }
+                LevelUpSkill(chosenSkill.skillId);
             else
-            {
-                // 새 스킬 획득
-                return AcquireSkill(chosenSkill);
-            }
+                AcquireSkill(chosenSkill);
         }
 
         // ===== 내부: 스킬 슬롯 생성 =====

@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
-  m_Name: ShurikenData
+  m_Name: 301_EvolvedShurikenData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
-  skillId: 0
-  skillName: "\uD45C\uCC3D"
+  skillId: 301
+  skillName: "\uAC15\uD55C \uD45C\uCC3D"
   skillType: 0
-  effectType: 0
+  effectType: 1
   icon: {fileID: 0}
-  description: closest target
-  maxLevel: 7
-  damagePerLevel: 0f00000012000000160000001a0000001f000000250000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d000000
+  description: "\uB354 \uAC15\uD558\uAC8C \uAC00\uC7A5 \uAC00\uAE4C\uC6B4 \uC801
+    \uACF5\uACA9"
+  maxLevel: 2
+  damagePerLevel: 3c0000004600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   cooldownPerLevel:
   - 1.5
   - 1.4
@@ -28,9 +29,11 @@ MonoBehaviour:
   - 1.1
   - 1
   - 0.9
+  bonusType: 1
+  bonusPerLevel: 1.5
   projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
-  projectileSpeed: 10
-  projectileCount: 1
+  projectileSpeed: 15
+  projectileCount: 2
   projectileLifetime: 5
   areaRadius: 2
   areaDuration: 3

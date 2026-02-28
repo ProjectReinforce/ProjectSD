@@ -14,6 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillDatabase
   activeSkills:
   - {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
-  passiveSkills: []
+  passiveSkills:
+  - {fileID: 11400000, guid: 7e024f50cbb58014ab7169a34b464c9c, type: 2}
+  - {fileID: 11400000, guid: c239da775c0b14242b26894289099dda, type: 2}
+  - {fileID: 11400000, guid: f495f7bdece44d04d9c9762c919d14e7, type: 2}
   chaosSkills: []
-  evolvedSkills: []
+  evolvedSkills:
+  - {fileID: 11400000, guid: 08d2042b2e61b414da6f0e5553dd9773, type: 2}

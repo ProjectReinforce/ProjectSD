@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
-  m_Name: IncreaseAttackData
+  m_Name: 101_IncreaseProjectileSpeedData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
-  skillId: 0
-  skillName: "\uD45C\uCC3D"
-  skillType: 0
+  skillId: 101
+  skillName: "\uD22C\uC0AC\uCCB4 \uC18D\uB3C4 \uC99D\uAC00"
+  skillType: 1
   effectType: 0
   icon: {fileID: 0}
-  description: closest target
-  maxLevel: 7
-  damagePerLevel: 0f00000012000000160000001a0000001f000000250000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d000000
+  description: "\uD22C\uC0AC\uCCB4 \uC18D\uB3C4\uAC00 \uC99D\uAC00\uD569\uB2C8\uB2E4."
+  maxLevel: 5
+  damagePerLevel: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   cooldownPerLevel:
   - 1.5
   - 1.4
@@ -28,11 +28,13 @@ MonoBehaviour:
   - 1.1
   - 1
   - 0.9
+  bonusType: 1
+  bonusPerLevel: 1.5
   projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
   projectileSpeed: 10
   projectileCount: 1
   projectileLifetime: 5
   areaRadius: 2
   areaDuration: 3
-  evolutionPair: {fileID: 0}
-  evolvedSkill: {fileID: 0}
+  evolutionPair: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
+  evolvedSkill: {fileID: 11400000, guid: 08d2042b2e61b414da6f0e5553dd9773, type: 2}

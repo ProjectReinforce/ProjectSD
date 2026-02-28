@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
-  m_Name: IncreaseProjectileSpeedData
+  m_Name: 001_ShurikenData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
-  skillId: 0
+  skillId: 1
   skillName: "\uD45C\uCC3D"
   skillType: 0
-  effectType: 0
+  effectType: 1
   icon: {fileID: 0}
   description: closest target
   maxLevel: 7
@@ -28,11 +28,13 @@ MonoBehaviour:
   - 1.1
   - 1
   - 0.9
+  bonusType: 0
+  bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
   projectileSpeed: 10
   projectileCount: 1
   projectileLifetime: 5
   areaRadius: 2
   areaDuration: 3
-  evolutionPair: {fileID: 0}
-  evolvedSkill: {fileID: 0}
+  evolutionPair: {fileID: 11400000, guid: f495f7bdece44d04d9c9762c919d14e7, type: 2}
+  evolvedSkill: {fileID: 11400000, guid: 08d2042b2e61b414da6f0e5553dd9773, type: 2}

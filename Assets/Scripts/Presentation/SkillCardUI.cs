@@ -103,6 +103,21 @@ namespace SwDreams.Presentation
 
             SkillManager sm = FindLocalSkillManager();
 
+            // 진화 스킬인지 확인
+            if (sm != null)
+            {
+                var evos = sm.GetPendingEvolutions();
+                for (int i = 0; i < evos.Count; i++)
+                {
+                    if (evos[i].evolvedSkillData.skillId == skillData.skillId)
+                    {
+                        levelText.text = "★ 진화";
+                        levelText.color = new Color(1f, 0.5f, 0f, 1f); // 주황
+                        return;
+                    }
+                }
+            }
+
             if (sm != null && sm.HasSkill(skillData.skillId))
             {
                 // SkillManager.GetSkill()은 Adapter.Skill.Skill 반환

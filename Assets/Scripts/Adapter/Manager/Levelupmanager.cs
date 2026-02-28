@@ -215,6 +215,9 @@ namespace SwDreams.Adapter.Manager
             // 저장 (타임아웃 시 랜덤 선택용)
             playerChoices[player.ActorNumber] = choiceIds;
 
+            Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} 선택지: " +
+                    string.Join(", ", System.Array.ConvertAll(choices, s => s.skillName)));
+
             // 해당 플레이어에게만 RPC 전송
             photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, false);
         }
