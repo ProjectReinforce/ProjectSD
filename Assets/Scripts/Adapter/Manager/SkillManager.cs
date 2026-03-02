@@ -11,19 +11,15 @@ namespace SwDreams.Adapter.Skill
     ///
     /// 역할:
     /// - 스킬 획득/레벨업/제거
-    /// - 6슬롯 제한 관리 (액티브 + 패시브 합계)
+    /// - 슬롯 제한 관리 (액티브 + 패시브 합계)
     /// - 진화 가능 여부 감지
     /// - 선택지 생성 (호스트용)
     /// - 패시브 스킬 → PlayerStats 반영
     ///
-    /// 프리팹 구성:
-    /// Player(또는 PlayerStub)의 자식에 빈 오브젝트 "Skills"
-    /// → SkillManager 부착
-    /// → 스킬 획득 시 자식으로 Skill 오브젝트 동적 생성
-    ///
-    /// 네트워크:
-    /// 호스트가 선택지 생성 + 결과 적용을 관리.
-    /// SkillManager 자체는 PhotonView 불필요 (LevelUpManager가 RPC 처리).
+    /// Phase 5 개선사항:
+    /// - [CHANGED] SkillEffectFactory 도입 → AddSkillEffect() switch문 제거
+    /// - [CHANGED] GameplayConfig SO 참조 → MaxSlots 등 상수 외부화
+    /// - [CHANGED] 진화 확률, 선택지 수 등을 GameplayConfig에서 읽음
     /// </summary>
     public class SkillManager : MonoBehaviour
     {
@@ -38,16 +34,26 @@ namespace SwDreams.Adapter.Skill
         }
         
         // ===== 설정 =====
-        public const int MaxSlots = 6;
+        // [CHANGED] const → GameplayConfig SO로 이동. 
+        // GameplayConfig가 없으면 기본값 6 사용 (하위 호환).
+        public int MaxSlots => (gameplayConfig != null) ? gameplayConfig.maxSkillSlots : 6;
+
+        [Header("설정")]
+        [SerializeField] private GameplayConfig gameplayConfig;
+        // Inspector에서 GameplayConfig SO 에셋 연결.
+        // null이면 기본값으로 동작 (기존 코드와 호환).
 
         [Header("스킬 프리팹")]
         [SerializeField] private GameObject skillSlotPrefab;
         // 빈 오브젝트에 Skill 컴포넌트만 붙은 프리팹.
-        // SkillEffect는 스킬 타입에 따라 동적 추가.
+        // SkillEffect는 SkillEffectFactory가 동적 추가.
 
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
         private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
+
+        // [CHANGED] 팩토리 인스턴스. Awake()에서 초기화.
+        private SkillEffectFactory effectFactory;
 
         // 외부 읽기용
         public IReadOnlyList<Skill> EquippedSkills => equippedSkills;
@@ -70,6 +76,15 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>패시브 변경 시 발생. PlayerStats 재계산용.</summary>
         public event Action OnPassiveChanged;
+
+        // ===== 초기화 =====
+
+        // [CHANGED] Awake에서 팩토리 초기화
+        private void Awake()
+        {
+            effectFactory = new SkillEffectFactory();
+            effectFactory.RegisterDefaults();
+        }
 
         // ===== 스킬 조회 =====
 
@@ -359,6 +374,13 @@ namespace SwDreams.Adapter.Skill
         /// <param name="evolutionChance">진화 등장 확률 (0~1, 기본 0.7)</param>
         public SkillData[] GenerateChoices(SkillData[] pool, int count = 3, float evolutionChance = 0.7f)
         {
+            // [CHANGED] GameplayConfig 값 우선 사용
+            if (gameplayConfig != null)
+            {
+                count = gameplayConfig.choiceCount;
+                evolutionChance = gameplayConfig.evolutionChance;
+            }
+
             // 1) 진화 후보 수집
             SkillData evolutionChoice = null;
             if (pendingEvolutions.Count > 0 && UnityEngine.Random.value < evolutionChance)
@@ -428,6 +450,10 @@ namespace SwDreams.Adapter.Skill
         /// <param name="count">선택지 수 (기본 3)</param>
         public SkillData[] GenerateChaosChoices(SkillData[] chaosSkills, int count = 3)
         {
+            // [CHANGED] GameplayConfig 값 우선 사용
+            if (gameplayConfig != null)
+                count = gameplayConfig.choiceCount;
+
             // 혼돈 스킬은 슬롯을 차지하지 않으므로 단순 랜덤
             List<SkillData> candidates = new List<SkillData>(chaosSkills);
 
@@ -475,7 +501,7 @@ namespace SwDreams.Adapter.Skill
         /// <summary>
         /// 스킬 오브젝트 생성 + 활성화.
         /// SkillManager의 자식으로 생성.
-        /// SkillEffect는 SkillData의 effectType에 따라 동적 추가.
+        /// [CHANGED] SkillEffect는 SkillEffectFactory가 동적 추가.
         /// </summary>
         private Skill CreateSkillSlot(SkillData skillData)
         {
@@ -499,50 +525,21 @@ namespace SwDreams.Adapter.Skill
             if (skill == null)
                 skill = slotObj.AddComponent<Skill>();
 
-            // SkillEffect 동적 추가 (액티브 스킬만)
+            // [CHANGED] SkillEffect 생성을 팩토리에 위임 (액티브 스킬만)
             SkillEffect effect = null;
             if (skillData.skillType == SkillType.Active)
             {
-                effect = AddSkillEffect(slotObj, skillData);
+                effect = effectFactory.Create(skillData.effectType, slotObj, skillData);
             }
 
             skill.Activate(skillData, effect);
             return skill;
         }
 
-        /// <summary>
-        /// SkillData의 effectType에 따라 적절한 SkillEffect 컴포넌트 추가.
-        /// Phase 4: ProjectileEffect만. Phase 5에서 나머지 추가.
-        /// </summary>
-        private SkillEffect AddSkillEffect(GameObject slotObj, SkillData skillData)
-        {
-            switch (skillData.effectType)
-            {
-                case SkillEffectType.None:
-                    return null;
-                case SkillEffectType.Projectile:
-                    var projEffect = slotObj.AddComponent<ProjectileEffect>();
-                    if (skillData.projectilePrefab != null)
-                        projEffect.SetProjectilePrefab(skillData.projectilePrefab);
-                    else
-                        Debug.LogWarning($"[SkillManager] {skillData.skillName}: projectilePrefab 미설정!");
-                    return projEffect;
-
-                // Phase 5 확장 지점:
-                // case SkillEffectType.Area:
-                //     return slotObj.AddComponent<AreaEffect>();
-                // case SkillEffectType.Orbital:
-                //     return slotObj.AddComponent<OrbitalEffect>();
-                // case SkillEffectType.Placed:
-                //     return slotObj.AddComponent<PlacedEffect>();
-                // case SkillEffectType.Debuff:
-                //     return slotObj.AddComponent<DebuffEffect>();
-
-                default:
-                    Debug.LogWarning($"[SkillManager] 미구현 SkillEffectType: {skillData.effectType}");
-                    return null;
-            }
-        }
+        // ===== [삭제됨] AddSkillEffect() switch문 =====
+        // 기존 switch(skillData.effectType) 로직이 SkillEffectFactory로 이동.
+        // 새 SkillEffect 타입 추가 시 SkillEffectFactory.RegisterDefaults()에
+        // Register() 한 줄만 추가하면 됨. SkillManager 수정 불필요.
 
         // ===== GameState 연동 =====
 
@@ -568,6 +565,14 @@ namespace SwDreams.Adapter.Skill
                     skill.Activate(skill.Data);
             }
         }
+
+        // ===== 외부 접근: 팩토리 =====
+
+        /// <summary>
+        /// 외부에서 런타임에 이펙트 타입을 추가 등록할 때 사용.
+        /// 예: Phase 5에서 모드별 커스텀 이펙트 지원 시.
+        /// </summary>
+        public SkillEffectFactory EffectFactory => effectFactory;
 
         // ===== 디버그 =====
 
