@@ -54,6 +54,7 @@ MonoBehaviour:
   - RPC_StartTimer
   - RPC_NotifyDamageApplied
   - RPC_NotifySkillTriggered
+  - RPC_SyncSkillAcquisition
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

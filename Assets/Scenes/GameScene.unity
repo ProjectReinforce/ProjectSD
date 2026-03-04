@@ -2161,7 +2161,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.CameraFollow
   smoothSpeed: 8
-  zOffset: -10
+  zOffset: -15
 --- !u!1 &962360991
 GameObject:
   m_ObjectHideFlags: 0

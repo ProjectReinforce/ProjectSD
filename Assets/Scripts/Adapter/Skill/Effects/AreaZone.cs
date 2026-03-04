@@ -109,7 +109,6 @@ namespace SwDreams.Adapter.Skill
         {
             var hits = Physics2D.OverlapCircleAll(transform.position, radius);
 
-            int hitCount = 0;
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Enemy")) continue;
@@ -117,36 +116,52 @@ namespace SwDreams.Adapter.Skill
                 var damageable = hit.GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
                 {
+                    int hpBefore = damageable.CurrentHP;
                     damageable.TakeDamage(damage);
-                    hitCount++;
+                    Debug.Log($"[AreaZone] 피해 틱 — {hit.name} HP:{hpBefore}→{damageable.CurrentHP} (데미지:{damage})");
                 }
             }
-
-            if (hitCount > 0)
-                Debug.Log($"[AreaZone] 피해 틱 — {hitCount}마리 적중, 데미지:{damage}");
         }
 
         private void ApplyHealTick()
         {
             var hits = Physics2D.OverlapCircleAll(transform.position, radius);
 
-            int healCount = 0;
+            if (hits.Length == 0)
+            {
+                Debug.Log($"[AreaZone] 회복 틱 — 감지 콜라이더 0개 (pos:{transform.position}, radius:{radius})");
+                return;
+            }
+
+            bool foundPlayer = false;
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Player")) continue;
+                foundPlayer = true;
 
                 var damageable = hit.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
+                if (damageable == null)
                 {
-                    // 음수 데미지 = 회복
-                    // TODO [Phase 5]: Player에 Heal(int) 메서드 추가 후 교체
-                    damageable.TakeDamage(-damage);
-                    healCount++;
+                    Debug.LogWarning($"[AreaZone] {hit.name}에 IDamageable 없음!");
+                    continue;
                 }
+
+                if (!damageable.IsAlive) continue;
+
+                int hpBefore = damageable.CurrentHP;
+
+                // 풀피면 스킵 (불필요한 RPC 방지)
+                if (hpBefore >= damageable.MaxHP)
+                    continue;
+
+                // 음수 데미지 = 회복
+                // TODO [Phase 5]: Player에 Heal(int) 메서드 추가 후 교체
+                damageable.TakeDamage(-damage);
+                Debug.Log($"[AreaZone] 회복! HP:{hpBefore}→{damageable.CurrentHP}/{damageable.MaxHP} (회복량:{damage})");
             }
 
-            if (healCount > 0)
-                Debug.Log($"[AreaZone] 회복 틱 — {healCount}명 회복, 회복량:{damage}");
+            if (!foundPlayer)
+                Debug.Log($"[AreaZone] 회복 틱 — 콜라이더 {hits.Length}개 감지했으나 Player 태그 없음");
         }
 
         private void ReturnToPool()

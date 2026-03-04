@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
@@ -11,14 +12,14 @@ namespace SwDreams.Adapter.Skill
     /// 동작:
     /// 1. 플레이어 위치에 설치
     /// 2. attackRange 내 가장 가까운 적을 탐색
-    /// 3. attackCooldown 간격으로 즉발 공격 (투사체 없는 직접 데미지)
+    /// 3. attackCooldown 간격으로 즉발 공격 + 레이저 라인 비주얼
     /// 4. duration 후 풀 반환
     ///
-    /// alwaysCritical = true면 항상 치명타 데미지 적용.
-    /// 네트워크: 로컬 비주얼, 호스트 데미지 판정.
+    /// 비주얼: LineRenderer로 공격 라인 표시 (모든 클라이언트).
+    /// 데미지: 호스트에서만 판정.
     ///
     /// 프리팹: SpriteRenderer + PlacedTurret
-    /// (콜라이더 불필요 — 직접 OverlapCircle 사용)
+    /// (LineRenderer는 런타임에 자동 추가)
     /// </summary>
     public class PlacedTurret : MonoBehaviour, IPoolable
     {
@@ -38,6 +39,10 @@ namespace SwDreams.Adapter.Skill
         // 비주얼
         private SpriteRenderer spriteRenderer;
 
+        // 공격 비주얼 (LineRenderer)
+        private LineRenderer attackLine;
+        private const float ATTACK_LINE_DURATION = 0.1f;
+
         // 공격 대상 캐시 (매 프레임 탐색 방지)
         private Transform currentTarget;
         private float targetSearchTimer;
@@ -46,6 +51,26 @@ namespace SwDreams.Adapter.Skill
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            SetupAttackLine();
+        }
+
+        /// <summary>
+        /// 공격 라인 비주얼 초기화. LineRenderer를 런타임에 추가.
+        /// </summary>
+        private void SetupAttackLine()
+        {
+            attackLine = GetComponent<LineRenderer>();
+            if (attackLine == null)
+                attackLine = gameObject.AddComponent<LineRenderer>();
+
+            attackLine.positionCount = 2;
+            attackLine.startWidth = 0.06f;
+            attackLine.endWidth = 0.02f;
+            attackLine.material = new Material(Shader.Find("Sprites/Default"));
+            attackLine.startColor = new Color(1f, 1f, 0.3f, 1f); // 밝은 노랑
+            attackLine.endColor = new Color(1f, 0.5f, 0f, 0.5f);  // 반투명 주황
+            attackLine.sortingOrder = 10;
+            attackLine.enabled = false;
         }
 
         /// <summary>
@@ -89,7 +114,7 @@ namespace SwDreams.Adapter.Skill
                 return;
             }
 
-            // 대상 탐색 (모든 클라이언트 — 비주얼 회전용)
+            // === 모든 클라이언트: 대상 탐색 + 방향 전환 (비주얼) ===
             targetSearchTimer += Time.deltaTime;
             if (targetSearchTimer >= TARGET_SEARCH_INTERVAL)
             {
@@ -97,7 +122,6 @@ namespace SwDreams.Adapter.Skill
                 FindTarget();
             }
 
-            // 포탑 방향 전환 (비주얼)
             if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)
             {
                 Vector2 dir = currentTarget.position - transform.position;
@@ -105,15 +129,56 @@ namespace SwDreams.Adapter.Skill
                 transform.rotation = Quaternion.Euler(0, 0, angle);
             }
 
-            // 공격 (호스트만)
-            if (!PhotonNetwork.IsMasterClient) return;
-
+            // === 모든 클라이언트: 공격 타이밍 + 비주얼 ===
             attackTimer += Time.deltaTime;
-            if (attackTimer >= attackCooldown)
+            if (attackTimer >= attackCooldown && currentTarget != null
+                && currentTarget.gameObject.activeInHierarchy)
             {
-                attackTimer -= attackCooldown;
-                TryAttack();
+                float dist = Vector2.Distance(transform.position, currentTarget.position);
+                if (dist <= attackRange)
+                {
+                    attackTimer -= attackCooldown;
+
+                    // 비주얼: 모든 클라이언트에서 표시
+                    ShowAttackLine(currentTarget.position);
+
+                    // 데미지: 호스트만 처리
+                    if (PhotonNetwork.IsMasterClient)
+                    {
+                        var damageable = currentTarget.GetComponent<IDamageable>();
+                        if (damageable != null && damageable.IsAlive)
+                        {
+                            int finalDamage = damage;
+                            if (alwaysCritical)
+                                finalDamage = Mathf.RoundToInt(damage * critDamageMultiplier);
+
+                            damageable.TakeDamage(finalDamage);
+                        }
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// 공격 라인 비주얼 표시. 잠시 후 자동 소멸.
+        /// </summary>
+        private void ShowAttackLine(Vector3 targetPos)
+        {
+            if (attackLine == null) return;
+
+            attackLine.SetPosition(0, transform.position);
+            attackLine.SetPosition(1, targetPos);
+            attackLine.enabled = true;
+
+            StopCoroutine(nameof(HideAttackLineCoroutine));
+            StartCoroutine(nameof(HideAttackLineCoroutine));
+        }
+
+        private IEnumerator HideAttackLineCoroutine()
+        {
+            yield return new WaitForSeconds(ATTACK_LINE_DURATION);
+            if (attackLine != null)
+                attackLine.enabled = false;
         }
 
         private void FindTarget()
@@ -139,40 +204,6 @@ namespace SwDreams.Adapter.Skill
                 Debug.Log($"[PlacedTurret] 대상 발견: {currentTarget.name}, 거리:{minDist:F1}");
         }
 
-        private void TryAttack()
-        {
-            if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy)
-            {
-                FindTarget(); // 공격 시점에 재탐색
-                if (currentTarget == null) return;
-            }
-
-            // 사거리 재확인
-            float dist = Vector2.Distance(transform.position, currentTarget.position);
-            if (dist > attackRange)
-            {
-                currentTarget = null;
-                return;
-            }
-
-            var damageable = currentTarget.GetComponent<IDamageable>();
-            if (damageable == null || !damageable.IsAlive) return;
-
-            // 데미지 계산
-            int finalDamage = damage;
-            if (alwaysCritical)
-            {
-                finalDamage = Mathf.RoundToInt(damage * critDamageMultiplier);
-            }
-
-            damageable.TakeDamage(finalDamage);
-
-            Debug.Log($"[PlacedTurret] 공격! 대상:{currentTarget.name}, " +
-                      $"데미지:{finalDamage}{(alwaysCritical ? " (치명타)" : "")}");
-
-            // TODO [Phase 5 비주얼]: 공격 라인 이펙트 (SpriteRenderer or LineRenderer)
-        }
-
         private void ReturnToPool()
         {
             isActive = false;
@@ -196,6 +227,9 @@ namespace SwDreams.Adapter.Skill
         {
             isActive = false;
             currentTarget = null;
+            StopAllCoroutines();
+            if (attackLine != null)
+                attackLine.enabled = false;
             gameObject.SetActive(false);
         }
     }

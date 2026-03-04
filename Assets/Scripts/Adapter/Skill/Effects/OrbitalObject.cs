@@ -9,16 +9,16 @@ namespace SwDreams.Adapter.Skill
     /// 회전 오브젝트 개체. OrbitalEffect가 관리.
     ///
     /// 동작:
-    /// 1. 플레이어 주변 원형 궤도 회전
-    /// 2. 적과 접촉 시 데미지 + 넉백 (호스트만)
+    /// 1. 플레이어 주변 원형 궤도 회전 (위치는 OrbitalEffect.Update()에서 제어)
+    /// 2. OverlapCircleAll로 범위 내 적 판정 + 데미지 + 넉백 (호스트만)
     /// 3. duration 후 풀 반환
     ///
-    /// OrbitalEffect가 위치/회전을 직접 제어하므로
-    /// 이 컴포넌트는 충돌 판정 + 생명주기만 담당.
+    /// 주의: OrbitalEffect가 transform.position을 직접 이동하므로
+    /// OnTriggerStay2D가 발동하지 않음 → OverlapCircleAll 사용.
     ///
-    /// 프리팹: SpriteRenderer + CircleCollider2D(Trigger) + OrbitalObject
+    /// 프리팹: SpriteRenderer + OrbitalObject
+    /// (콜라이더 불필요 — OverlapCircleAll로 직접 탐지)
     /// </summary>
-    [RequireComponent(typeof(Collider2D))]
     public class OrbitalObject : MonoBehaviour, IPoolable
     {
         // 런타임 설정 (Initialize에서 주입)
@@ -28,7 +28,10 @@ namespace SwDreams.Adapter.Skill
         private float aliveTime;
         private bool isActive;
 
-        // 개별 히트 쿨다운 (같은 적에게 연속 히트 방지)
+        // 판정 반경 (스프라이트 크기 기준, 인스펙터에서 조정 가능)
+        [SerializeField] private float hitRadius = 0.3f;
+
+        // 히트 쿨다운 (같은 적에게 연속 히트 방지)
         private float hitCooldown = 0.3f;
         private float hitTimer;
 
@@ -64,32 +67,34 @@ namespace SwDreams.Adapter.Skill
 
             // 히트 쿨다운 감소
             if (hitTimer > 0f)
-                hitTimer -= Time.deltaTime;
-        }
-
-        private void OnTriggerStay2D(Collider2D other)
-        {
-            if (!isActive) return;
-            if (!other.CompareTag("Enemy")) return;
-            if (hitTimer > 0f) return;
-
-            // 호스트에서만 데미지 적용
-            if (PhotonNetwork.IsMasterClient)
             {
-                var damageable = other.GetComponent<IDamageable>();
+                hitTimer -= Time.deltaTime;
+                return; // 쿨다운 중이면 판정 스킵
+            }
+
+            // 호스트에서만 데미지 판정
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            // OverlapCircle로 범위 내 적 탐색
+            var hits = Physics2D.OverlapCircleAll(transform.position, hitRadius);
+            foreach (var hit in hits)
+            {
+                if (!hit.CompareTag("Enemy")) continue;
+
+                var damageable = hit.GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
                 {
                     damageable.TakeDamage(damage);
 
                     // 넉백 적용
                     if (knockbackForce > 0f)
-                    {
-                        ApplyKnockback(other);
-                    }
+                        ApplyKnockback(hit);
+
+                    // 히트 쿨다운 시작 (1회 판정 후 잠시 대기)
+                    hitTimer = hitCooldown;
+                    return; // 프레임당 1타겟만
                 }
             }
-
-            hitTimer = hitCooldown;
         }
 
         private void ApplyKnockback(Collider2D enemyCollider)
