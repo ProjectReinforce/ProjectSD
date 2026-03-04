@@ -500,6 +500,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b9eb81e481fce94cace362df69c6545, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Manager.GameManager
+  config: {fileID: 11400000, guid: 0f8c10ac535dff1459a70970d9619d55, type: 2}
 --- !u!4 &218850537
 Transform:
   m_ObjectHideFlags: 0

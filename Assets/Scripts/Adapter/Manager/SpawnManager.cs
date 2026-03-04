@@ -52,6 +52,7 @@ namespace SwDreams.Adapter.Manager
         private DifficultyManager difficulty;
         private DamageService damageService = new DamageService();
         private string currentPhaseName = "";
+        private bool isReachBossTime = false;
 
         // 적 추적
         private Dictionary<int, Enemy> activeEnemies = new();
@@ -146,8 +147,10 @@ namespace SwDreams.Adapter.Manager
             }
 
             // 보스 시간 도달 시 스폰 중지
-            if (difficulty.IsBossTime(gameTime))
+            if (difficulty.IsBossTime(gameTime) && !isReachBossTime)
             {
+                isReachBossTime = true;
+
                 if (currentPhaseName != "BOSS")
                 {
                     currentPhaseName = "BOSS";

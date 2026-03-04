@@ -53,7 +53,6 @@ namespace SwDreams.Adapter.Skill
             }
 
             creators[type] = creator;
-            Debug.Log($"[SkillEffectFactory] 등록: {type}");
         }
 
         /// <summary>
@@ -78,10 +77,6 @@ namespace SwDreams.Adapter.Skill
         /// SkillEffectType에 맞는 SkillEffect 컴포넌트를 slotObj에 생성.
         /// 미등록 타입이면 null 반환 + 경고 로그.
         /// </summary>
-        /// <param name="type">SkillData.effectType</param>
-        /// <param name="slotObj">이펙트가 부착될 GameObject</param>
-        /// <param name="data">스킬 데이터 (이펙트 초기화용)</param>
-        /// <returns>생성된 SkillEffect 또는 null</returns>
         public SkillEffect Create(SkillEffectType type, GameObject slotObj, SkillData data)
         {
             if (type == SkillEffectType.None)
@@ -112,7 +107,7 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>
         /// 기본 이펙트 타입들을 등록.
-        /// SkillManager.Awake() 또는 초기화 시점에서 호출.
+        /// SkillManager.Awake()에서 호출.
         ///
         /// Phase 5 확장 시 이 메서드에 Register() 추가:
         /// - AreaEffect
@@ -133,36 +128,37 @@ namespace SwDreams.Adapter.Skill
                 return effect;
             });
 
-            // ── Phase 5 확장 지점 ──
-            // 아래 주석을 해제하고 해당 클래스를 구현하면 바로 사용 가능
+            // ── Phase 5: Area (장판형) ──
+            Register(SkillEffectType.Area, (slotObj, data) =>
+            {
+                var effect = slotObj.AddComponent<AreaEffect>();
+                effect.Initialize(data);
+                return effect;
+            });
 
-            // Register(SkillEffectType.Area, (slotObj, data) =>
-            // {
-            //     var effect = slotObj.AddComponent<AreaEffect>();
-            //     effect.Initialize(data);
-            //     return effect;
-            // });
+            // ── Phase 5: Orbital (회전형) ──
+            Register(SkillEffectType.Orbital, (slotObj, data) =>
+            {
+                var effect = slotObj.AddComponent<OrbitalEffect>();
+                effect.Initialize(data);
+                return effect;
+            });
 
-            // Register(SkillEffectType.Orbital, (slotObj, data) =>
-            // {
-            //     var effect = slotObj.AddComponent<OrbitalEffect>();
-            //     effect.Initialize(data);
-            //     return effect;
-            // });
+            // ── Phase 5: Placed (설치형) ──
+            Register(SkillEffectType.Placed, (slotObj, data) =>
+            {
+                var effect = slotObj.AddComponent<PlacedEffect>();
+                effect.Initialize(data);
+                return effect;
+            });
 
-            // Register(SkillEffectType.Placed, (slotObj, data) =>
-            // {
-            //     var effect = slotObj.AddComponent<PlacedEffect>();
-            //     effect.Initialize(data);
-            //     return effect;
-            // });
-
-            // Register(SkillEffectType.Debuff, (slotObj, data) =>
-            // {
-            //     var effect = slotObj.AddComponent<DebuffEffect>();
-            //     effect.Initialize(data);
-            //     return effect;
-            // });
+            // ── Phase 5: Debuff (디버프형) ──
+            Register(SkillEffectType.Debuff, (slotObj, data) =>
+            {
+                var effect = slotObj.AddComponent<DebuffEffect>();
+                effect.Initialize(data);
+                return effect;
+            });
 
             Debug.Log($"[SkillEffectFactory] 기본 등록 완료. 등록된 타입 수: {creators.Count}");
         }

@@ -6,17 +6,13 @@ namespace SwDreams.Data
     /// 게임플레이 상수 중앙 관리 SO.
     /// 코드에 하드코딩된 매직 넘버를 Inspector에서 조정 가능하도록 분리.
     ///
+    /// 소유자: GameManager ([SerializeField]로 연결)
+    /// 접근: GameManager.Instance.Config로 다른 매니저/엔티티에서 읽기 전용 접근
+    ///
     /// 사용법:
     /// 1. Project 창에서 Create > SwDreams > GameplayConfig 생성
-    /// 2. 수치 설정 후 필요한 Manager/Entity에 연결
-    ///
-    /// Phase 5 선행 개선:
-    /// - 기존 코드의 하드코딩 상수를 이 SO로 점진적 이동
-    /// - 각 컴포넌트에서 [SerializeField]로 참조하여 사용
-    ///
-    /// 향후 확장:
-    /// - Phase 6: 보스 관련 설정 추가
-    /// - Phase 7: 밸런싱 프리셋 지원 (Easy/Normal/Hard)
+    /// 2. 수치 설정
+    /// 3. GameManager Inspector의 Config 필드에 연결 (한 곳에서만!)
     /// </summary>
     [CreateAssetMenu(fileName = "GameplayConfig", menuName = "SwDreams/GameplayConfig")]
     public class GameplayConfig : ScriptableObject

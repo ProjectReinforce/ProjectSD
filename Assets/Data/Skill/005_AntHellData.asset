@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
+  m_Name: 005_AntHellData
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
+  skillId: 5
+  skillName: "\uAC1C\uBBF8\uC9C0\uC625"
+  skillType: 0
+  effectType: 2
+  icon: {fileID: 0}
+  description: "\uBC1F\uAE30\uB9CC \uD574!"
+  maxLevel: 7
+  damagePerLevel: 080000000a0000000c0000000f00000012000000160000001b0000001b0000001b0000002d0000002d0000002d0000002d0000002d0000002d000000
+  cooldownPerLevel:
+  - 3
+  - 2.8
+  - 2.6
+  - 2.4
+  - 2.2
+  - 2
+  - 1.8
+  bonusType: 0
+  bonusPerLevel: 0
+  projectilePrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
+  projectileSpeed: 10
+  projectileCount: 1
+  projectileLifetime: 5
+  areaRadius: 2
+  areaDuration: 4
+  tickRate: 0.5
+  isHealingEffect: 0
+  orbitRadius: 1.5
+  rotationSpeed: 180
+  objectCount: 3
+  knockbackForce: 2
+  attackRange: 5
+  attackCooldown: 0.5
+  alwaysCritical: 0
+  debuffDuration: 5
+  damageAmplify: 1.3
+  targetCount: 3
+  maxInstances: 3
+  effectPrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
+  evolutionPair: {fileID: 0}
+  evolvedSkill: {fileID: 0}

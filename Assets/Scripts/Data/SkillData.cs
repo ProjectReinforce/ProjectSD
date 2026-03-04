@@ -65,9 +65,45 @@ namespace SwDreams.Data
         public int projectileCount = 1;
         public float projectileLifetime = 5f;
 
-        [Header("범위 전용")]
+        [Header("범위/장판 전용 (Area)")]
         public float areaRadius = 2f;
         public float areaDuration = 3f;
+        [Tooltip("장판 틱 간격 (초). 짧을수록 자주 판정")]
+        public float tickRate = 0.5f;
+        [Tooltip("true = 회복 장판 (성역), false = 피해 장판 (개미지옥)")]
+        public bool isHealingEffect = false;
+
+        [Header("회전형 전용 (Orbital)")]
+        [Tooltip("궤도 반경 (플레이어 중심 거리)")]
+        public float orbitRadius = 1.5f;
+        [Tooltip("초당 회전 각도")]
+        public float rotationSpeed = 180f;
+        [Tooltip("회전 오브젝트 개수")]
+        public int objectCount = 3;
+        [Tooltip("넉백 힘")]
+        public float knockbackForce = 2f;
+
+        [Header("설치형 전용 (Placed)")]
+        [Tooltip("포탑 공격 사거리")]
+        public float attackRange = 5f;
+        [Tooltip("포탑 공격 간격 (초)")]
+        public float attackCooldown = 0.5f;
+        [Tooltip("항상 치명타")]
+        public bool alwaysCritical = false;
+
+        [Header("디버프 전용 (Debuff)")]
+        [Tooltip("디버프 지속시간 (초)")]
+        public float debuffDuration = 5f;
+        [Tooltip("받는 피해 증가 배율 (1.3 = +30%)")]
+        public float damageAmplify = 1.3f;
+        [Tooltip("동시 디버프 대상 수")]
+        public int targetCount = 3;
+
+        [Header("공통 효과")]
+        [Tooltip("최대 동시 설치/장판 수")]
+        public int maxInstances = 3;
+        [Tooltip("효과 프리팹 (장판/회전체/포탑/마커)")]
+        public GameObject effectPrefab;
 
         [Header("진화 연결 (Phase 4)")]
         public SkillData evolutionPair;    // 이 스킬과 조합되는 패시브/액티브

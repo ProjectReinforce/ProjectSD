@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -18,8 +19,8 @@ namespace SwDreams.Adapter.Skill
     ///
     /// Phase 5 개선사항:
     /// - [CHANGED] SkillEffectFactory 도입 → AddSkillEffect() switch문 제거
-    /// - [CHANGED] GameplayConfig SO 참조 → MaxSlots 등 상수 외부화
-    /// - [CHANGED] 진화 확률, 선택지 수 등을 GameplayConfig에서 읽음
+    /// - [CHANGED] GameplayConfig는 GameManager.Instance.Config에서 접근
+    ///   (SkillManager가 직접 SO를 들고 있지 않음)
     /// </summary>
     public class SkillManager : MonoBehaviour
     {
@@ -34,14 +35,16 @@ namespace SwDreams.Adapter.Skill
         }
         
         // ===== 설정 =====
-        // [CHANGED] const → GameplayConfig SO로 이동. 
-        // GameplayConfig가 없으면 기본값 6 사용 (하위 호환).
-        public int MaxSlots => (gameplayConfig != null) ? gameplayConfig.maxSkillSlots : 6;
-
-        [Header("설정")]
-        [SerializeField] private GameplayConfig gameplayConfig;
-        // Inspector에서 GameplayConfig SO 에셋 연결.
-        // null이면 기본값으로 동작 (기존 코드와 호환).
+        // [CHANGED] GameManager.Instance.Config에서 읽되, null이면 기본값 6 사용
+        private const int DefaultMaxSlots = 6;
+        public int MaxSlots
+        {
+            get
+            {
+                var cfg = GameManager.Instance?.Config;
+                return (cfg != null) ? cfg.maxSkillSlots : DefaultMaxSlots;
+            }
+        }
 
         [Header("스킬 프리팹")]
         [SerializeField] private GameObject skillSlotPrefab;
@@ -84,6 +87,18 @@ namespace SwDreams.Adapter.Skill
         {
             effectFactory = new SkillEffectFactory();
             effectFactory.RegisterDefaults();
+        }
+
+        // ===== Config 접근 헬퍼 =====
+
+        /// <summary>
+        /// GameplayConfig 단축 접근. null 가능.
+        /// 내부에서 반복 사용 시 로컬 변수에 캐싱 권장:
+        ///   var cfg = GetConfig();
+        /// </summary>
+        private GameplayConfig GetConfig()
+        {
+            return GameManager.Instance?.Config;
         }
 
         // ===== 스킬 조회 =====
@@ -370,15 +385,16 @@ namespace SwDreams.Adapter.Skill
         /// LevelUpManager.SendNormalChoices()에서 호출.
         /// </summary>
         /// <param name="pool">SkillDatabase.GetNormalPool() 결과</param>
-        /// <param name="count">선택지 개수 (기본 3)</param>
-        /// <param name="evolutionChance">진화 등장 확률 (0~1, 기본 0.7)</param>
+        /// <param name="count">선택지 개수 (기본 3, Config 우선)</param>
+        /// <param name="evolutionChance">진화 등장 확률 (기본 0.7, Config 우선)</param>
         public SkillData[] GenerateChoices(SkillData[] pool, int count = 3, float evolutionChance = 0.7f)
         {
             // [CHANGED] GameplayConfig 값 우선 사용
-            if (gameplayConfig != null)
+            var cfg = GetConfig();
+            if (cfg != null)
             {
-                count = gameplayConfig.choiceCount;
-                evolutionChance = gameplayConfig.evolutionChance;
+                count = cfg.choiceCount;
+                evolutionChance = cfg.evolutionChance;
             }
 
             // 1) 진화 후보 수집
@@ -447,12 +463,13 @@ namespace SwDreams.Adapter.Skill
         /// 혼돈 스킬 선택지 생성 (Lv.5, 10, 15 전용).
         /// </summary>
         /// <param name="chaosSkills">혼돈 스킬 풀</param>
-        /// <param name="count">선택지 수 (기본 3)</param>
+        /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
         public SkillData[] GenerateChaosChoices(SkillData[] chaosSkills, int count = 3)
         {
             // [CHANGED] GameplayConfig 값 우선 사용
-            if (gameplayConfig != null)
-                count = gameplayConfig.choiceCount;
+            var cfg = GetConfig();
+            if (cfg != null)
+                count = cfg.choiceCount;
 
             // 혼돈 스킬은 슬롯을 차지하지 않으므로 단순 랜덤
             List<SkillData> candidates = new List<SkillData>(chaosSkills);
@@ -476,7 +493,6 @@ namespace SwDreams.Adapter.Skill
         /// 선택지에서 플레이어가 고른 스킬을 적용.
         /// 호스트가 결과를 받아 각 플레이어에서 호출.
         /// </summary>
-        /// <returns>true: 성공</returns>
         public void ApplyChoice(SkillData chosenSkill)
         {
             // 진화 스킬인지 확인

@@ -188,9 +188,9 @@ namespace SwDreams.Testing
         {
             if (!IsAlive) return;
 
-            CurrentHP = Mathf.Max(0, CurrentHP - damage);
+            CurrentHP = Mathf.Clamp(CurrentHP - damage, 0, MaxHP);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
-            Debug.Log($"[PlayerStub] HP: {CurrentHP}/{MaxHP}");
+            Debug.Log($"[PlayerStub] HP: {CurrentHP}/{MaxHP} (dmg:{damage})");
 
             if (!IsAlive)
             {

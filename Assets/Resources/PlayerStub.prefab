@@ -335,5 +335,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de7c1983c212a2c45bae77a0a63fb653, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.SkillManager
-  gameplayConfig: {fileID: 11400000, guid: 0f8c10ac535dff1459a70970d9619d55, type: 2}
   skillSlotPrefab: {fileID: 0}
