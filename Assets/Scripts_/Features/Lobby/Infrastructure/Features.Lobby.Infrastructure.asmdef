@@ -1,0 +1,16 @@
+{
+  "name": "Features.Lobby.Infrastructure",
+  "references": [
+    "Shared",
+    "Features.Lobby.Application"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
