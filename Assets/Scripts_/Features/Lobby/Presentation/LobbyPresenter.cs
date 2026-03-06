@@ -1,0 +1,97 @@
+using Features.Lobby.Application;
+using Features.Lobby.Application.Ports;
+using Shared.Kernel;
+
+namespace Features.Lobby.Presentation
+{
+    public sealed class LobbyPresenter : ILobbyOutputPort
+    {
+        private readonly LobbyView _view;
+        private readonly CreateRoomUseCase _createRoomUseCase;
+        private readonly JoinRoomUseCase _joinRoomUseCase;
+        private readonly LeaveRoomUseCase _leaveRoomUseCase;
+        private readonly ChangeTeamUseCase _changeTeamUseCase;
+        private readonly SetReadyUseCase _setReadyUseCase;
+        private readonly StartGameUseCase _startGameUseCase;
+
+        public LobbyPresenter(
+            LobbyView view,
+            CreateRoomUseCase createRoomUseCase,
+            JoinRoomUseCase joinRoomUseCase,
+            LeaveRoomUseCase leaveRoomUseCase,
+            ChangeTeamUseCase changeTeamUseCase,
+            SetReadyUseCase setReadyUseCase,
+            StartGameUseCase startGameUseCase)
+        {
+            _view = view;
+            _createRoomUseCase = createRoomUseCase;
+            _joinRoomUseCase = joinRoomUseCase;
+            _leaveRoomUseCase = leaveRoomUseCase;
+            _changeTeamUseCase = changeTeamUseCase;
+            _setReadyUseCase = setReadyUseCase;
+            _startGameUseCase = startGameUseCase;
+        }
+
+        public Result CreateRoom(string roomName, int capacity, string ownerDisplayName)
+        {
+            return _createRoomUseCase.Execute(roomName, capacity, ownerDisplayName, this);
+        }
+
+        public Result JoinRoom(EntityId roomId, string memberDisplayName)
+        {
+            return _joinRoomUseCase.Execute(roomId, memberDisplayName, this);
+        }
+
+        public Result LeaveRoom(EntityId roomId, EntityId memberId)
+        {
+            return _leaveRoomUseCase.Execute(roomId, memberId, this);
+        }
+
+        public Result ChangeTeam(EntityId roomId, EntityId memberId, LobbyTeam team)
+        {
+            return _changeTeamUseCase.Execute(roomId, memberId, team, this);
+        }
+
+        public Result SetReady(EntityId roomId, EntityId memberId, bool isReady)
+        {
+            return _setReadyUseCase.Execute(roomId, memberId, isReady, this);
+        }
+
+        public Result StartGame(EntityId roomId)
+        {
+            return _startGameUseCase.Execute(roomId, this);
+        }
+
+        public void ShowLobby(LobbyState lobby)
+        {
+            if (_view != null)
+            {
+                _view.RenderLobby(lobby);
+            }
+        }
+
+        public void ShowRoom(RoomState room)
+        {
+            if (_view != null)
+            {
+                _view.RenderRoom(room);
+            }
+        }
+
+        public void ShowStartGame(RoomState room)
+        {
+            if (_view != null)
+            {
+                _view.RenderStartGame(room);
+            }
+        }
+
+        public void ShowError(string message)
+        {
+            if (_view != null)
+            {
+                _view.RenderError(message);
+            }
+        }
+    }
+}
