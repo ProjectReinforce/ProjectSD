@@ -10,45 +10,53 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
-  m_Name: 009_CurseDollData
+  m_Name: 004_BoltData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
-  skillId: 9
-  skillName: "\uC800\uC8FC\uC778\uD615"
+  skillId: 4
+  skillName: "\uBC88\uAC1C"
   skillType: 0
-  effectType: 5
+  effectType: 2
   icon: {fileID: 0}
-  description: "\uBC1B\uB294 \uB370\uBBF8\uC9C0 \uC99D\uD3ED"
+  description: "\uBE60\uC9C1"
   maxLevel: 7
-  damagePerLevel: 000000000000000000000000000000000000000000000000000000000000000000000000000000002d0000002d0000002d0000002d0000002d000000
+  damagePerLevel: 14000000190000001e000000240000002b000000330000003c0000001b0000001b0000002d0000002d0000002d0000002d0000002d0000002d000000
   cooldownPerLevel:
-  - 4
-  - 3.7
-  - 3.4
-  - 3.1
-  - 2.8
-  - 2.5
-  - 2.2
+  - 1.5
+  - 1.4
+  - 1.3
+  - 1.2
+  - 1.1
+  - 1
+  - 0.9
   bonusType: 0
   bonusPerLevel: 0
-  projectilePrefab: {fileID: 7611705742342394119, guid: 594a0d8e6afed9c4b940ebdb66c88430, type: 3}
+  projectilePrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
   projectileSpeed: 10
   projectileCount: 1
   projectileLifetime: 5
-  areaRadius: 2.5
-  areaDuration: 4
-  tickRate: 0.8
+  isHoming: 0
+  homingRotateSpeed: 300
+  isBoomerang: 0
+  isTornado: 0
+  pullRadius: 2
+  pullForce: 3
+  areaRadius: 1.2
+  areaDuration: 0.3
+  tickRate: 0.1
   isHealingEffect: 0
+  spawnAtRandomPosition: 1
+  randomSpawnRadius: 5
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
-  knockbackForce: 2.5
+  knockbackForce: 2
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0
   debuffDuration: 5
   damageAmplify: 1.3
   targetCount: 3
-  maxInstances: 0
-  effectPrefab: {fileID: 0}
+  maxInstances: 5
+  effectPrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

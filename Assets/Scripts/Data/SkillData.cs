@@ -64,6 +64,18 @@ namespace SwDreams.Data
         public float projectileSpeed = 10f;
         public int projectileCount = 1;
         public float projectileLifetime = 5f;
+        [Tooltip("유도 투사체 (매직 미사일)")]
+        public bool isHoming = false;
+        [Tooltip("유도 회전 속도 (도/초). 높을수록 급선회")]
+        public float homingRotateSpeed = 300f;
+        [Tooltip("왕복 투사체 (부메랑)")]
+        public bool isBoomerang = false;
+        [Tooltip("느린 전진 + 범위 끌어당김 (회오리바람)")]
+        public bool isTornado = false;
+        [Tooltip("회오리 끌어당김 반경")]
+        public float pullRadius = 2f;
+        [Tooltip("회오리 끌어당김 힘")]
+        public float pullForce = 3f;
 
         [Header("범위/장판 전용 (Area)")]
         public float areaRadius = 2f;
@@ -72,6 +84,10 @@ namespace SwDreams.Data
         public float tickRate = 0.5f;
         [Tooltip("true = 회복 장판 (성역), false = 피해 장판 (개미지옥)")]
         public bool isHealingEffect = false;
+        [Tooltip("true = 플레이어 위치가 아닌 랜덤 위치에 생성 (번개)")]
+        public bool spawnAtRandomPosition = false;
+        [Tooltip("랜덤 생성 반경 (플레이어 기준)")]
+        public float randomSpawnRadius = 5f;
 
         [Header("회전형 전용 (Orbital)")]
         [Tooltip("궤도 반경 (플레이어 중심 거리)")]

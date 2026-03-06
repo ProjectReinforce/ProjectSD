@@ -33,12 +33,6 @@ namespace SwDreams.Adapter.Skill
         private List<GameObject> activeZones = new List<GameObject>();
         private int maxInstances;
 
-        private void Start()
-        {
-            playerTransform = transform.root;
-            playerStats = playerTransform.GetComponent<PlayerStats>();
-        }
-
         /// <summary>
         /// SkillEffectFactory에서 생성 직후 호출.
         /// </summary>
@@ -47,14 +41,30 @@ namespace SwDreams.Adapter.Skill
             zonePrefab = data.effectPrefab;
             maxInstances = data.maxInstances;
 
+            // Start()보다 먼저 호출되므로 여기서 참조 확보
+            CachePlayerReferences();
+
             if (zonePrefab != null)
                 PoolManager.Instance?.Prewarm(zonePrefab, maxInstances + 2);
             else
                 Debug.LogWarning($"[AreaEffect] {data.skillName}: effectPrefab 미설정!");
         }
 
+        /// <summary>
+        /// Player 참조 캐싱. Initialize() 또는 Execute() 첫 호출 시.
+        /// Start()에 의존하지 않음 — Skill.Update()가 먼저 Execute()를 호출할 수 있으므로.
+        /// </summary>
+        private void CachePlayerReferences()
+        {
+            if (playerTransform != null) return;
+            playerTransform = transform.root;
+            if (playerTransform != null)
+                playerStats = playerTransform.GetComponent<PlayerStats>();
+        }
+
         public override void Execute(Skill skill)
         {
+            CachePlayerReferences();
             if (zonePrefab == null || playerTransform == null) return;
 
             // 오래된 장판 정리
@@ -92,8 +102,23 @@ namespace SwDreams.Adapter.Skill
                     damage = Mathf.RoundToInt(damage * playerStats.AttackMultiplier);
             }
 
+            // [Phase 5] 스폰 위치 결정
+            Vector2 spawnPos;
+            if (data.spawnAtRandomPosition)
+            {
+                // 번개: 플레이어 주변 랜덤 위치
+                float spawnRadius = data.randomSpawnRadius + (playerStats != null ? playerStats.SkillRangeBonus : 0f);
+                Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
+                spawnPos = (Vector2)playerTransform.position + randomOffset;
+            }
+            else
+            {
+                // 개미지옥/성역: 플레이어 위치
+                spawnPos = playerTransform.position;
+            }
+
             zone.Initialize(
-                position: playerTransform.position,
+                position: spawnPos,
                 damage: damage,
                 radius: radius,
                 duration: duration,

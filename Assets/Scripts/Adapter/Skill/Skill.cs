@@ -34,12 +34,16 @@ namespace SwDreams.Adapter.Skill
         // 실행 담당
         private SkillEffect skillEffect;
 
+        // PlayerStats 캐시 (CDR 적용용)
+        private PlayerStats cachedStats;
+
         // 로컬 플레이어 전용 플래그
         private bool isActive = false;
 
         private void Awake()
         {
             skillEffect = GetComponent<SkillEffect>();
+            cachedStats = GetComponentInParent<PlayerStats>();
         }
 
         /// <summary>
@@ -54,6 +58,9 @@ namespace SwDreams.Adapter.Skill
 
             if (effect != null)
                 skillEffect = effect;
+
+            if (cachedStats == null)
+                cachedStats = GetComponentInParent<PlayerStats>();
         }
 
         public void Deactivate()
@@ -80,7 +87,12 @@ namespace SwDreams.Adapter.Skill
 
         private void Fire()
         {
-            CooldownRemaining = CurrentCooldown;
+            // [Phase 5] PlayerStats의 CDR 적용
+            float cooldown = CurrentCooldown;
+            if (cachedStats != null)
+                cooldown = cachedStats.GetEffectiveCooldown(cooldown);
+
+            CooldownRemaining = cooldown;
             skillEffect.Execute(this);
             OnFired?.Invoke(this);
         }
