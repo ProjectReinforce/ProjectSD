@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -28,6 +29,12 @@ namespace SwDreams.Adapter.Skill
         private float radius;
         private bool isHealing;
 
+        // [Phase 5 진화] 추가 효과
+        private bool appliesSlow;
+        private float slowMultiplier;
+        private float executeThreshold; // 0이면 비활성
+        private bool isDualZone;        // 적 데미지 + 플레이어 회복 동시
+
         // 타이머
         private float aliveTime;
         private float tickTimer;
@@ -45,14 +52,20 @@ namespace SwDreams.Adapter.Skill
         /// AreaEffect에서 스폰 후 호출.
         /// </summary>
         public void Initialize(Vector2 position, int damage, float radius,
-            float duration, float tickRate, bool isHealing)
+            float duration, float tickRate, bool isHealing,
+            bool appliesSlow = false, float slowMultiplier = 0.5f,
+            float executeThreshold = 0f, bool isDualZone = false)
         {
             transform.position = position;
             this.damage = damage;
             this.radius = radius;
             this.duration = duration;
-            this.tickRate = Mathf.Max(0.1f, tickRate); // 최소 0.1초
+            this.tickRate = Mathf.Max(0.1f, tickRate);
             this.isHealing = isHealing;
+            this.appliesSlow = appliesSlow;
+            this.slowMultiplier = slowMultiplier;
+            this.executeThreshold = executeThreshold;
+            this.isDualZone = isDualZone;
 
             aliveTime = 0f;
             tickTimer = 0f;
@@ -99,7 +112,12 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         private void ApplyTick()
         {
-            if (isHealing)
+            if (isDualZone)
+            {
+                ApplyDamageTick();
+                ApplyHealTick();
+            }
+            else if (isHealing)
                 ApplyHealTick();
             else
                 ApplyDamageTick();
@@ -114,11 +132,29 @@ namespace SwDreams.Adapter.Skill
                 if (!hit.CompareTag("Enemy")) continue;
 
                 var damageable = hit.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
+                if (damageable == null || !damageable.IsAlive) continue;
+
+                // [진화: 나락] HP 비율 이하 적 즉사 (보스 제외)
+                if (executeThreshold > 0f)
                 {
-                    int hpBefore = damageable.CurrentHP;
-                    damageable.TakeDamage(damage);
-                    Debug.Log($"[AreaZone] 피해 틱 — {hit.name} HP:{hpBefore}→{damageable.CurrentHP} (데미지:{damage})");
+                    float hpRatio = (float)damageable.CurrentHP / Mathf.Max(1, damageable.MaxHP);
+                    if (hpRatio <= executeThreshold)
+                    {
+                        // 즉사 = 현재 HP만큼 데미지
+                        damageable.TakeDamage(damageable.CurrentHP);
+                        continue;
+                    }
+                }
+
+                // 일반 데미지
+                damageable.TakeDamage(damage);
+
+                // [진화: 뇌전역] 슬로우 — 이동속도 감소
+                if (appliesSlow)
+                {
+                    var movement = hit.GetComponent<EnemyMovement>();
+                    if (movement != null)
+                        movement.ApplySlowTemporary(slowMultiplier, tickRate * 1.5f);
                 }
             }
         }

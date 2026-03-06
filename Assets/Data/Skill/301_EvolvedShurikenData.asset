@@ -16,6 +16,7 @@ MonoBehaviour:
   skillName: "\uAC15\uD55C \uD45C\uCC3D"
   skillType: 0
   effectType: 1
+  chaosEffectType: 0
   icon: {fileID: 0}
   description: "\uB354 \uAC15\uD558\uAC8C \uAC00\uC7A5 \uAC00\uAE4C\uC6B4 \uC801
     \uACF5\uACA9"
@@ -31,14 +32,33 @@ MonoBehaviour:
   - 0.9
   bonusType: 1
   bonusPerLevel: 1.5
-  projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
+  projectilePrefab: {fileID: 2361586414690528474, guid: bb29ea3098f2cbb429223375dce2db33, type: 3}
   projectileSpeed: 15
   projectileCount: 3
   projectileLifetime: 5
+  isHoming: 0
+  homingRotateSpeed: 300
+  isBoomerang: 0
+  isTornado: 0
+  pullRadius: 2
+  pullForce: 3
+  isExploding: 1
+  explosionRadius: 1.5
+  chainCount: 0
+  chainRadius: 4
+  hasPullOnReturn: 0
+  isSpiral: 0
+  spiralExpandSpeed: 1
+  appliesSlow: 0
+  slowMultiplier: 0.5
+  executeThreshold: 0
+  isDualZone: 0
   areaRadius: 2
   areaDuration: 3
   tickRate: 0.5
   isHealingEffect: 0
+  spawnAtRandomPosition: 0
+  randomSpawnRadius: 5
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
@@ -49,6 +69,7 @@ MonoBehaviour:
   debuffDuration: 5
   damageAmplify: 1.3
   targetCount: 3
+  spreadOnDeathCount: 0
   maxInstances: 3
   effectPrefab: {fileID: 0}
   evolutionPair: {fileID: 0}

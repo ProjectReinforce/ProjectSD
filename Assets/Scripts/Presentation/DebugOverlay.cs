@@ -5,6 +5,7 @@ using TMPro;
 using Photon.Pun;
 using SwDreams.Adapter.Manager;
 using SwDreams.Adapter.Skill;
+using SwDreams.Data;
 using SwDreams.Domain.Interfaces;
 
 namespace SwDreams.Presentation
@@ -117,6 +118,13 @@ namespace SwDreams.Presentation
             displayText = textObj.AddComponent<TextMeshProUGUI>();
             if (fontAsset != null)
                 displayText.font = fontAsset;
+            else
+            {
+                // TMP 기본 내장 폰트 명시적 로드 (프로젝트 기본이 한글 폰트일 수 있으므로)
+                var defaultFont = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+                if (defaultFont != null)
+                    displayText.font = defaultFont;
+            }
             displayText.fontSize = fontSize;
             displayText.color = Color.white;
             displayText.alignment = TextAlignmentOptions.TopLeft;
@@ -213,6 +221,20 @@ namespace SwDreams.Presentation
             else
             {
                 sb.AppendLine("Skills: No Player");
+            }
+
+            sb.AppendLine();
+
+            // 혼돈 스킬
+            if (localPlayer != null)
+            {
+                var chaosManager = localPlayer.GetComponentInChildren<ChaosSkillManager>();
+                if (chaosManager != null && chaosManager.ActiveEffects.Count > 0)
+                {
+                    sb.AppendLine($"Chaos ({chaosManager.ActiveEffects.Count})");
+                    for (int i = 0; i < chaosManager.ActiveEffects.Count; i++)
+                        sb.AppendLine($"  * {chaosManager.ActiveEffects[i]}");
+                }
             }
 
             sb.AppendLine();

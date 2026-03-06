@@ -52,7 +52,6 @@ namespace SwDreams.Adapter.Manager
         private DifficultyManager difficulty;
         private DamageService damageService = new DamageService();
         private string currentPhaseName = "";
-        private bool isReachBossTime = false;
 
         // 적 추적
         private Dictionary<int, Enemy> activeEnemies = new();
@@ -147,10 +146,8 @@ namespace SwDreams.Adapter.Manager
             }
 
             // 보스 시간 도달 시 스폰 중지
-            if (difficulty.IsBossTime(gameTime) && !isReachBossTime)
+            if (difficulty.IsBossTime(gameTime))
             {
-                isReachBossTime = true;
-
                 if (currentPhaseName != "BOSS")
                 {
                     currentPhaseName = "BOSS";
@@ -358,8 +355,26 @@ namespace SwDreams.Adapter.Manager
             enemy.OnDiedWithRef -= OnEnemyDied;
             enemy.OnForceReturned -= OnEnemyForceReturned;
 
+            // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
+            NotifyChaosManagers(enemy.transform.position);
+
             photonView.RPC(nameof(RPC_EnemyDied), RpcTarget.All,
                 enemy.EnemyId, (Vector2)enemy.transform.position, enemy.ExpValue);
+        }
+
+        /// <summary>
+        /// 모든 플레이어의 ChaosSkillManager에 적 사망 알림.
+        /// 연쇄 폭발 등 혼돈 스킬 효과 트리거.
+        /// </summary>
+        private void NotifyChaosManagers(Vector3 enemyPosition)
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
+                if (chaos != null)
+                    chaos.OnEnemyKilled(enemyPosition);
+            }
         }
 
         private void OnEnemyForceReturned(Enemy enemy)

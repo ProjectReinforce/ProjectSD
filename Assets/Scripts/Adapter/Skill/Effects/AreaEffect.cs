@@ -123,7 +123,11 @@ namespace SwDreams.Adapter.Skill
                 radius: radius,
                 duration: duration,
                 tickRate: data.tickRate,
-                isHealing: data.isHealingEffect
+                isHealing: data.isHealingEffect,
+                appliesSlow: data.appliesSlow,
+                slowMultiplier: data.slowMultiplier,
+                executeThreshold: data.executeThreshold,
+                isDualZone: data.isDualZone
             );
 
             activeZones.Add(zoneObj);

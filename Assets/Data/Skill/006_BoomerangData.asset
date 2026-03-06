@@ -16,6 +16,7 @@ MonoBehaviour:
   skillName: "\uBD80\uBA54\uB791"
   skillType: 0
   effectType: 1
+  chaosEffectType: 0
   icon: {fileID: 0}
   description: "\uB3CC\uC544\uC624\uB294\uAC70\uC57C"
   maxLevel: 7
@@ -40,6 +41,17 @@ MonoBehaviour:
   isTornado: 0
   pullRadius: 2
   pullForce: 3
+  isExploding: 0
+  explosionRadius: 1.5
+  chainCount: 0
+  chainRadius: 4
+  hasPullOnReturn: 0
+  isSpiral: 0
+  spiralExpandSpeed: 1
+  appliesSlow: 0
+  slowMultiplier: 0.5
+  executeThreshold: 0
+  isDualZone: 0
   areaRadius: 2
   areaDuration: 3
   tickRate: 0.5
@@ -56,7 +68,8 @@ MonoBehaviour:
   debuffDuration: 5
   damageAmplify: 1.3
   targetCount: 3
+  spreadOnDeathCount: 0
   maxInstances: 3
   effectPrefab: {fileID: 0}
-  evolutionPair: {fileID: 11400000, guid: f495f7bdece44d04d9c9762c919d14e7, type: 2}
-  evolvedSkill: {fileID: 11400000, guid: 08d2042b2e61b414da6f0e5553dd9773, type: 2}
+  evolutionPair: {fileID: 11400000, guid: 3c0c8ef66db39aa48b8b23a80924adb0, type: 2}
+  evolvedSkill: {fileID: 11400000, guid: 0dc658e1e34d59c4792f124e48a882f2, type: 2}

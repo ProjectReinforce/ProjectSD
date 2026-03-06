@@ -225,7 +225,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlayerStub
   maxHP: 100
   moveSpeed: 5
-  startingSkillData: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
+  startingSkillData: {fileID: 11400000, guid: 95033975ff04f024ebb1694cd41dfb7c, type: 2}
 --- !u!114 &-1036550334346602213
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -272,9 +272,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8723160286747431291}
-  - component: {fileID: 2843376057357322501}
-  - component: {fileID: 5860801376262495510}
   - component: {fileID: 1124899101422158438}
+  - component: {fileID: 8593987351426206606}
   m_Layer: 10
   m_Name: Skills
   m_TagString: Untagged
@@ -297,32 +296,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2592639555844373259}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2843376057357322501
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5449631014595424917}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82f0dbc91bce4144eb282b092bcd2fa5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.Skill
-  skillData: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
---- !u!114 &5860801376262495510
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5449631014595424917}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3da56b4c23b52044ca04de6670c2a8fd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.ProjectileEffect
-  projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
 --- !u!114 &1124899101422158438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -336,3 +309,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.SkillManager
   skillSlotPrefab: {fileID: 0}
+--- !u!114 &8593987351426206606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5449631014595424917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06a4253d96f732f4dbbd315a510be232, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.ChaosSkillManager
+  explosionRadius: 2
+  explosionDamage: 20
+  maxChainPerFrame: 5
+  explosionEffectPrefab: {fileID: 0}
+  unityCheckRadius: 5

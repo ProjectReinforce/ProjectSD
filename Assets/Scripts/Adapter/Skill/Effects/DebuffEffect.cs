@@ -32,11 +32,11 @@ namespace SwDreams.Adapter.Skill
         private GameObject markerPrefab;
         private Transform playerTransform;
         private PlayerStats playerStats;
+        private int spreadOnDeathCount; // 역병 인형 진화용
 
         private void Start()
         {
-            playerTransform = transform.root;
-            playerStats = playerTransform.GetComponent<PlayerStats>();
+            CachePlayerReferences();
         }
 
         /// <summary>
@@ -45,13 +45,25 @@ namespace SwDreams.Adapter.Skill
         public void Initialize(SkillData data)
         {
             markerPrefab = data.effectPrefab;
+            spreadOnDeathCount = data.spreadOnDeathCount;
+
+            CachePlayerReferences();
 
             if (markerPrefab != null)
                 PoolManager.Instance?.Prewarm(markerPrefab, data.targetCount * 2);
         }
 
+        private void CachePlayerReferences()
+        {
+            if (playerTransform != null) return;
+            playerTransform = transform.root;
+            if (playerTransform != null)
+                playerStats = playerTransform.GetComponent<PlayerStats>();
+        }
+
         public override void Execute(Skill skill)
         {
+            CachePlayerReferences();
             if (playerTransform == null) return;
 
             // 호스트에서만 대상 선정 + 디버프 적용
@@ -103,7 +115,7 @@ namespace SwDreams.Adapter.Skill
 
             // 새 디버프 부착
             var mark = enemyObj.AddComponent<DebuffMark>();
-            mark.Initialize(amplify, duration, markerPrefab);
+            mark.Initialize(amplify, duration, markerPrefab, spreadOnDeathCount);
         }
 
         /// <summary>

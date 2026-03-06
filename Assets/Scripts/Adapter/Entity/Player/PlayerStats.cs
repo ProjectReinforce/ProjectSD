@@ -52,9 +52,10 @@ namespace SwDreams.Adapter.Skill
         private float bonusSkillDuration;
 
         // ===== Final (외부에서 읽기 전용) =====
-        public float AttackMultiplier => baseAttackMultiplier + bonusAttackMultiplier;
-        public float MoveSpeed => baseMoveSpeed + bonusMoveSpeed;
-        public int MaxHP => baseMaxHP + bonusMaxHP;
+        // [Phase 5] Chaos modifier 통합: (base + passive bonus) * chaos
+        public float AttackMultiplier => (baseAttackMultiplier + bonusAttackMultiplier) * GetChaosAttackMul();
+        public float MoveSpeed => baseMoveSpeed + bonusMoveSpeed + GetChaosMoveBonus();
+        public int MaxHP => Mathf.RoundToInt((baseMaxHP + bonusMaxHP) * GetChaosHPMul());
         public float ProjectileSpeedBonus => baseProjectileSpeed + bonusProjectileSpeed;
         public int ProjectileCountBonus => baseProjectileCount + bonusProjectileCount;
         public float SkillRangeBonus => baseSkillRange + bonusSkillRange;
@@ -65,6 +66,27 @@ namespace SwDreams.Adapter.Skill
         public float DefenseMultiplier => baseDefenseMultiplier + bonusDefenseMultiplier;
         public float HealMultiplier => baseHealMultiplier + bonusHealMultiplier;
         public float SkillDurationBonus => baseSkillDuration + bonusSkillDuration;
+
+        // ===== Chaos modifier 헬퍼 =====
+        private ChaosSkillManager chaosManager;
+
+        private float GetChaosAttackMul()
+        {
+            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
+            return chaosManager != null ? chaosManager.ChaosAttackMultiplier : 1f;
+        }
+
+        private float GetChaosMoveBonus()
+        {
+            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
+            return chaosManager != null ? chaosManager.ChaosMoveSpeedBonus : 0f;
+        }
+
+        private float GetChaosHPMul()
+        {
+            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
+            return chaosManager != null ? chaosManager.ChaosMaxHPMultiplier : 1f;
+        }
 
         // ===== 이벤트 =====
         /// <summary>스탯 재계산 완료 시 발생. UI 갱신, 이동속도 적용 등.</summary>

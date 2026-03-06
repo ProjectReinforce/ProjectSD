@@ -68,7 +68,14 @@ namespace SwDreams.Adapter.Skill
 
             if (count <= 1)
             {
-                SpawnProjectile(skill, direction, speed);
+                SpawnProjectile(skill, direction, speed, 0, 1);
+            }
+            else if (skill.Data.isSpiral)
+            {
+                // 나선형: 360도 균등 분배 (장검처럼)
+                float angleStep = 360f / count;
+                for (int i = 0; i < count; i++)
+                    SpawnProjectile(skill, direction, speed, i, count);
             }
             else
             {
@@ -78,7 +85,7 @@ namespace SwDreams.Adapter.Skill
                 for (int i = 0; i < count; i++)
                 {
                     Vector2 dir = RotateVector(direction, startAngle + i * spreadAngle);
-                    SpawnProjectile(skill, dir, speed);
+                    SpawnProjectile(skill, dir, speed, i, count);
                 }
             }
         }
@@ -95,7 +102,8 @@ namespace SwDreams.Adapter.Skill
                 PoolManager.Instance?.Prewarm(prefab, 20);
         }
 
-        private void SpawnProjectile(Skill skill, Vector2 direction, float speed)
+        private void SpawnProjectile(Skill skill, Vector2 direction, float speed,
+            int index = 0, int totalCount = 1)
         {
             GameObject obj = PoolManager.Instance.Get(projectilePrefab);
             var projectile = obj.GetComponent<Projectile>();
@@ -132,13 +140,45 @@ namespace SwDreams.Adapter.Skill
             {
                 var boomerang = projectile as BoomerangProjectile;
                 if (boomerang != null)
+                {
                     boomerang.SetBoomerang(playerTransform);
+
+                    // [진화: 그래비톤 부메랑] 복귀 경로 끌어당김
+                    if (data.hasPullOnReturn)
+                        boomerang.SetPullOnReturn(data.pullRadius, data.pullForce);
+                }
             }
             else if (data.isTornado)
             {
                 var tornado = projectile as TornadoProjectile;
                 if (tornado != null)
                     tornado.SetTornado(data.pullRadius, data.pullForce);
+            }
+
+            // [Phase 5 진화] 폭발/체인/나선
+            if (data.isExploding)
+            {
+                var exploding = projectile as ExplodingProjectile;
+                if (exploding != null)
+                    exploding.SetExplosion(data.explosionRadius);
+            }
+
+            if (data.chainCount > 0)
+            {
+                var chain = projectile as ChainProjectile;
+                if (chain != null)
+                    chain.SetChain(data.chainCount, data.chainRadius, data.homingRotateSpeed);
+            }
+
+            if (data.isSpiral)
+            {
+                var spiral = projectile as SpiralTornadoProjectile;
+                if (spiral != null)
+                {
+                    float startAngle = (totalCount > 1) ? (360f / totalCount) * index : 0f;
+                    spiral.SetSpiral(playerTransform, data.pullRadius, data.pullForce,
+                        data.spiralExpandSpeed, startAngle);
+                }
             }
         }
 

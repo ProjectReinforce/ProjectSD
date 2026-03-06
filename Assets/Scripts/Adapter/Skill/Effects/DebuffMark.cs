@@ -30,27 +30,46 @@ namespace SwDreams.Adapter.Skill
         private float duration;
         private float aliveTime;
 
-        // 비주얼 마커 오브젝트 (effectPrefab의 인스턴스)
+        // 비주얼 마커 오브젝트
         private GameObject visualMarker;
+        private GameObject cachedMarkerPrefab;
+
+        // [Phase 5 진화: 역병 인형] 사망 시 전이
+        private int spreadOnDeathCount;
+        private bool subscribedToDeath;
 
         /// <summary>
         /// DebuffEffect에서 호출.
         /// </summary>
-        public void Initialize(float damageAmplify, float duration, GameObject markerPrefab = null)
+        public void Initialize(float damageAmplify, float duration,
+            GameObject markerPrefab = null, int spreadOnDeathCount = 0)
         {
             DamageAmplify = damageAmplify;
             this.duration = duration;
+            this.spreadOnDeathCount = spreadOnDeathCount;
+            cachedMarkerPrefab = markerPrefab;
             aliveTime = 0f;
 
-            // 비주얼 마커 생성 (있으면)
+            // 비주얼 마커 생성
             if (markerPrefab != null)
             {
                 visualMarker = PoolManager.Instance?.Get(markerPrefab);
                 if (visualMarker != null)
                 {
                     visualMarker.transform.SetParent(transform);
-                    visualMarker.transform.localPosition = Vector3.up * 0.5f; // 적 머리 위
+                    visualMarker.transform.localPosition = Vector3.up * 0.5f;
                     visualMarker.transform.localScale = Vector3.one;
+                }
+            }
+
+            // 역병 전이: 사망 이벤트 구독
+            if (spreadOnDeathCount > 0 && !subscribedToDeath)
+            {
+                var enemy = GetComponent<Entity.Enemy>();
+                if (enemy != null)
+                {
+                    enemy.OnDied += OnHostEnemyDied;
+                    subscribedToDeath = true;
                 }
             }
         }
@@ -80,7 +99,8 @@ namespace SwDreams.Adapter.Skill
 
         private void RemoveDebuff()
         {
-            // 비주얼 마커 반환
+            UnsubscribeDeath();
+
             if (visualMarker != null)
             {
                 visualMarker.transform.SetParent(null);
@@ -91,9 +111,61 @@ namespace SwDreams.Adapter.Skill
             Destroy(this);
         }
 
+        /// <summary>
+        /// [진화: 역병 인형] 저주 대상 사망 시 가까운 적에게 전이.
+        /// </summary>
+        private void OnHostEnemyDied()
+        {
+            if (spreadOnDeathCount <= 0) return;
+
+            Vector2 deathPos = transform.position;
+            int spread = 0;
+
+            var enemies = GameObject.FindGameObjectsWithTag("Enemy");
+
+            // 거리순 정렬 (가장 가까운 적부터)
+            System.Array.Sort(enemies, (a, b) =>
+            {
+                float dA = Vector2.Distance(deathPos, a.transform.position);
+                float dB = Vector2.Distance(deathPos, b.transform.position);
+                return dA.CompareTo(dB);
+            });
+
+            foreach (var e in enemies)
+            {
+                if (spread >= spreadOnDeathCount) break;
+                if (!e.activeInHierarchy) continue;
+                if (e == gameObject) continue; // 자기 자신 제외
+
+                var existing = e.GetComponent<DebuffMark>();
+                if (existing != null)
+                {
+                    existing.Refresh(DamageAmplify, duration);
+                }
+                else
+                {
+                    var mark = e.AddComponent<DebuffMark>();
+                    mark.Initialize(DamageAmplify, duration, cachedMarkerPrefab, spreadOnDeathCount);
+                }
+                spread++;
+            }
+        }
+
+        private void UnsubscribeDeath()
+        {
+            if (subscribedToDeath)
+            {
+                var enemy = GetComponent<Entity.Enemy>();
+                if (enemy != null)
+                    enemy.OnDied -= OnHostEnemyDied;
+                subscribedToDeath = false;
+            }
+        }
+
         private void OnDestroy()
         {
-            // 적이 먼저 죽어서 Destroy될 때 마커도 정리
+            UnsubscribeDeath();
+
             if (visualMarker != null)
             {
                 visualMarker.transform.SetParent(null);

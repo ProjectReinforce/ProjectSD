@@ -19,6 +19,17 @@ namespace SwDreams.Data
         Debuff            // 저주인형
     }
 
+    public enum ChaosEffectType
+    {
+        None,
+        GlassCannon,      // 유리대포: 최대 체력 절반, 공격력 2배
+        ChainExplosion,   // 연쇄 폭발: 적 처치 시 주변 폭발
+        BerserkMode,      // 폭주 모드: HP 30% 이하 시 CDR 절반 + 이속 50% 증가
+        AccelEngine,      // 가속 엔진: 시간 경과에 따라 스탯 증가
+        Unity,            // 단결: 팀원 밀집 시 데미지 증폭
+        Gambler           // 도박꾼: 선택지 1개가 한 등급 높게 등장
+    }
+
     public enum PassiveBonusType
     {
         None,               // 액티브/혼돈 스킬
@@ -45,6 +56,7 @@ namespace SwDreams.Data
         public string skillName;
         public SkillType skillType;
         public SkillEffectType effectType;
+        public ChaosEffectType chaosEffectType;
         
         [Header("UI 표시용")]
         public Sprite icon;
@@ -76,6 +88,33 @@ namespace SwDreams.Data
         public float pullRadius = 2f;
         [Tooltip("회오리 끌어당김 힘")]
         public float pullForce = 3f;
+
+        [Header("진화 전용 — 투사체")]
+        [Tooltip("적중 시 폭발 (폭렬 표창)")]
+        public bool isExploding = false;
+        [Tooltip("폭발 반경")]
+        public float explosionRadius = 1.5f;
+        [Tooltip("적중 후 체인 (체인 미사일). 최대 체인 횟수")]
+        public int chainCount = 0;
+        [Tooltip("체인 탐색 반경")]
+        public float chainRadius = 4f;
+        [Tooltip("복귀 경로 끌어당김 (그래비톤 부메랑)")]
+        public bool hasPullOnReturn = false;
+        [Tooltip("나선형 이동 (대선풍)")]
+        public bool isSpiral = false;
+        [Tooltip("나선 확장 속도")]
+        public float spiralExpandSpeed = 1f;
+
+        [Header("진화 전용 — 장판")]
+        [Tooltip("범위 내 적 슬로우 (뇌전역)")]
+        public bool appliesSlow = false;
+        [Tooltip("슬로우 배율 (0.5 = 50% 감속)")]
+        public float slowMultiplier = 0.5f;
+        [Tooltip("HP 비율 이하 적 즉사 (나락). 0이면 비활성")]
+        [Range(0f, 1f)]
+        public float executeThreshold = 0f;
+        [Tooltip("회복+데미지 동시 (심판의 성역)")]
+        public bool isDualZone = false;
 
         [Header("범위/장판 전용 (Area)")]
         public float areaRadius = 2f;
@@ -114,6 +153,8 @@ namespace SwDreams.Data
         public float damageAmplify = 1.3f;
         [Tooltip("동시 디버프 대상 수")]
         public int targetCount = 3;
+        [Tooltip("사망 시 가까운 적에게 전이 (역병 인형). 전이 수")]
+        public int spreadOnDeathCount = 0;
 
         [Header("공통 효과")]
         [Tooltip("최대 동시 설치/장판 수")]

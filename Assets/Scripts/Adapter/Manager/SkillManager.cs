@@ -314,6 +314,9 @@ namespace SwDreams.Adapter.Skill
             Debug.Log($"[SkillManager] ★ 진화 가능 등록: {skill.Data.skillName} + {partner.Data.skillName} → {skill.Data.evolvedSkill.skillName}");
         }
 
+        // [Phase 5] 진화로 제거된 스킬 ID 추적 (선택지에서 제외용)
+        private HashSet<int> removedByEvolutionIds = new HashSet<int>();
+
         /// <summary>
         /// 플레이어가 진화 스킬을 선택했을 때 호출.
         /// 기존 2개 스킬 제거 + 진화 스킬 1개 생성.
@@ -341,12 +344,18 @@ namespace SwDreams.Adapter.Skill
 
             var evo = target.Value;
 
+            // 진화로 제거되는 스킬 ID 기록 (선택지 재등장 방지)
+            removedByEvolutionIds.Add(evo.activeSkillId);
+            removedByEvolutionIds.Add(evo.passiveSkillId);
+
             // 기존 2개 스킬 제거
             RemoveSkill(evo.activeSkillId);
             RemoveSkill(evo.passiveSkillId);
 
-            // 진화 스킬 생성
-            CreateSkillSlot(evo.evolvedSkillData);
+            // 진화 스킬 생성 + 리스트에 추가
+            Skill evolvedSkill = CreateSkillSlot(evo.evolvedSkillData);
+            if (evolvedSkill != null)
+                equippedSkills.Add(evolvedSkill);
 
             // 대기열에서 제거
             pendingEvolutions.RemoveAt(targetIndex);
@@ -415,6 +424,10 @@ namespace SwDreams.Adapter.Skill
                 if (evolutionChoice != null && pool[i].skillId == evolutionChoice.skillId)
                     continue;
 
+                // [Phase 5] 진화로 제거된 스킬은 다시 등장하지 않음
+                if (removedByEvolutionIds.Contains(pool[i].skillId))
+                    continue;
+
                 // 보유 중이고 최대 레벨이면 제외
                 if (HasSkill(pool[i].skillId))
                 {
@@ -466,13 +479,23 @@ namespace SwDreams.Adapter.Skill
         /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
         public SkillData[] GenerateChaosChoices(SkillData[] chaosSkills, int count = 3)
         {
-            // [CHANGED] GameplayConfig 값 우선 사용
             var cfg = GetConfig();
             if (cfg != null)
                 count = cfg.choiceCount;
 
-            // 혼돈 스킬은 슬롯을 차지하지 않으므로 단순 랜덤
-            List<SkillData> candidates = new List<SkillData>(chaosSkills);
+            // [Phase 5] 이미 보유한 혼돈 스킬 제외
+            var chaosManager = GetComponent<ChaosSkillManager>();
+            if (chaosManager == null)
+                chaosManager = GetComponentInParent<ChaosSkillManager>();
+
+            List<SkillData> candidates = new List<SkillData>();
+            foreach (var skill in chaosSkills)
+            {
+                if (skill == null) continue;
+                if (chaosManager != null && chaosManager.HasChaosEffect(skill.chaosEffectType))
+                    continue;
+                candidates.Add(skill);
+            }
 
             int resultCount = Mathf.Min(count, candidates.Count);
             SkillData[] result = new SkillData[resultCount];
@@ -495,6 +518,20 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         public void ApplyChoice(SkillData chosenSkill)
         {
+            // [Phase 5] 혼돈 스킬이면 ChaosSkillManager에 위임 (슬롯 미사용)
+            if (chosenSkill.skillType == SkillType.Chaos)
+            {
+                var chaosManager = GetComponent<ChaosSkillManager>();
+                if (chaosManager == null)
+                    chaosManager = GetComponentInParent<ChaosSkillManager>();
+
+                if (chaosManager != null)
+                    chaosManager.ApplyChaos(chosenSkill);
+                else
+                    Debug.LogWarning("[SkillManager] ChaosSkillManager 없음 — 혼돈 스킬 적용 실패");
+                return;
+            }
+
             // 진화 스킬인지 확인
             for (int i = 0; i < pendingEvolutions.Count; i++)
             {
@@ -576,9 +613,9 @@ namespace SwDreams.Adapter.Skill
             for (int i = 0; i < equippedSkills.Count; i++)
             {
                 var skill = equippedSkills[i];
-                // 패시브는 Activate 불필요 (수치 보정만)
+                // [Phase 5 Fix] Activate 대신 Resume 사용 — Level 리셋 방지
                 if (skill.Data.skillType == SkillType.Active)
-                    skill.Activate(skill.Data);
+                    skill.Resume();
             }
         }
 

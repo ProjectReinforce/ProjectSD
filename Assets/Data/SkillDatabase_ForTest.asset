@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 403ebb4cc00224a429e155b6220df0f5, type: 3}
+  m_Name: SkillDatabase_ForTest
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillDatabase
+  activeSkills:
+  - {fileID: 11400000, guid: 7739e571ff109f542a287284ac1e47eb, type: 2}
+  - {fileID: 11400000, guid: 95033975ff04f024ebb1694cd41dfb7c, type: 2}
+  - {fileID: 11400000, guid: e59a74167bef24140b90b247372991c0, type: 2}
+  - {fileID: 11400000, guid: 8c3bd3042e769eb4eb2239b08a17736e, type: 2}
+  - {fileID: 11400000, guid: 28ae4acdb8ce04e4e8c53bc72839b443, type: 2}
+  passiveSkills:
+  - {fileID: 11400000, guid: e12fa716c93844f41b5c4f111f903436, type: 2}
+  - {fileID: 11400000, guid: 64f7979473a8b0847b2c8a17ec726170, type: 2}
+  - {fileID: 11400000, guid: 7e024f50cbb58014ab7169a34b464c9c, type: 2}
+  - {fileID: 11400000, guid: b64adebf49db00046a952fb93b999cf7, type: 2}
+  chaosSkills:
+  - {fileID: 11400000, guid: eac0080b43a75c54ca7999c3dcd488d4, type: 2}
+  - {fileID: 11400000, guid: 21851d4dabd920f40b316cd19ce71c63, type: 2}
+  - {fileID: 11400000, guid: a1894a78cdf4eb640adcd7ffc63cc024, type: 2}
+  - {fileID: 11400000, guid: 46ef59f0c82749c4cb4fd6694afaa5e0, type: 2}
+  - {fileID: 11400000, guid: 11aa63d1e2c430c46864c04b72228ef2, type: 2}
+  - {fileID: 11400000, guid: 084c0e5ff61f7c3438fc7e4f55cd3ca4, type: 2}
+  evolvedSkills:
+  - {fileID: 11400000, guid: 872b215991c55d145a55a1fb00e883d5, type: 2}
+  - {fileID: 11400000, guid: 2e822228ff2103743936ab66f4e4d92c, type: 2}
+  - {fileID: 11400000, guid: e5bae478e0e7f444dac0c842114cee06, type: 2}
+  - {fileID: 11400000, guid: f8460cb15174e4840a1cbe5df2db6cba, type: 2}
+  - {fileID: 11400000, guid: 649bce81b58ed3e40a7d63be84e0778a, type: 2}

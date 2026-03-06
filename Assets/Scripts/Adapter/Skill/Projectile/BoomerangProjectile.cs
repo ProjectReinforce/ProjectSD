@@ -16,11 +16,26 @@ namespace SwDreams.Adapter.Skill
         private Vector2 startPosition;
         private float maxDistance;
 
+        // [Phase 5 진화: 그래비톤 부메랑] 복귀 경로 끌어당김
+        private bool hasPullOnReturn;
+        private float boomerangPullRadius = 2f;
+        private float boomerangPullForce = 2f;
+
         public void SetBoomerang(Transform player)
         {
             phase = Phase.Outgoing;
             startPosition = transform.position;
             maxDistance = lifetime;
+        }
+
+        /// <summary>
+        /// 진화: 그래비톤 부메랑. ProjectileEffect에서 호출.
+        /// </summary>
+        public void SetPullOnReturn(float pullRadius, float pullForce)
+        {
+            hasPullOnReturn = true;
+            boomerangPullRadius = pullRadius;
+            boomerangPullForce = pullForce;
         }
 
         protected override void Update()
@@ -79,13 +94,28 @@ namespace SwDreams.Adapter.Skill
                 return;
             }
 
-            // 가속: 멀면 느리게 → 가까워지면서 원래 speed로 복원
             float progress = 1f - Mathf.Clamp01(dist / maxDistance);
             float returnSpd = speed * Mathf.Lerp(0.2f, 1f, progress);
 
             direction = toStart.normalized;
             transform.position += (Vector3)(direction * returnSpd * Time.deltaTime);
             transform.Rotate(0, 0, 720f * Time.deltaTime);
+
+            // [진화: 그래비톤] 복귀 경로에서 적 끌어당김
+            if (hasPullOnReturn && Photon.Pun.PhotonNetwork.IsMasterClient)
+            {
+                var hits = Physics2D.OverlapCircleAll(transform.position, boomerangPullRadius);
+                foreach (var hit in hits)
+                {
+                    if (!hit.CompareTag("Enemy")) continue;
+                    float eDist = Vector2.Distance(transform.position, hit.transform.position);
+                    if (eDist < 0.2f) continue;
+
+                    float amount = boomerangPullForce * Time.deltaTime;
+                    hit.transform.position = Vector2.MoveTowards(
+                        hit.transform.position, transform.position, amount);
+                }
+            }
         }
 
         protected override void OnHitEnemy(Collider2D other)
@@ -98,6 +128,7 @@ namespace SwDreams.Adapter.Skill
             base.OnSpawnFromPool();
             phase = Phase.Outgoing;
             startPosition = Vector2.zero;
+            hasPullOnReturn = false;
         }
     }
 }

@@ -16,6 +16,7 @@ MonoBehaviour:
   skillName: "\uD130\uB81B"
   skillType: 0
   effectType: 4
+  chaosEffectType: 0
   icon: {fileID: 0}
   description: "\uBFC5\uBFC5"
   maxLevel: 7
@@ -34,10 +35,29 @@ MonoBehaviour:
   projectileSpeed: 10
   projectileCount: 1
   projectileLifetime: 5
+  isHoming: 0
+  homingRotateSpeed: 300
+  isBoomerang: 0
+  isTornado: 0
+  pullRadius: 2
+  pullForce: 3
+  isExploding: 0
+  explosionRadius: 1.5
+  chainCount: 0
+  chainRadius: 4
+  hasPullOnReturn: 0
+  isSpiral: 0
+  spiralExpandSpeed: 1
+  appliesSlow: 0
+  slowMultiplier: 0.5
+  executeThreshold: 0
+  isDualZone: 0
   areaRadius: 2.5
   areaDuration: 4
   tickRate: 0.8
   isHealingEffect: 0
+  spawnAtRandomPosition: 0
+  randomSpawnRadius: 5
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
@@ -48,7 +68,8 @@ MonoBehaviour:
   debuffDuration: 5
   damageAmplify: 1.3
   targetCount: 3
+  spreadOnDeathCount: 0
   maxInstances: 2
   effectPrefab: {fileID: 7611705742342394119, guid: 594a0d8e6afed9c4b940ebdb66c88430, type: 3}
-  evolutionPair: {fileID: 0}
-  evolvedSkill: {fileID: 0}
+  evolutionPair: {fileID: 11400000, guid: 9f8bcd1dcec7919469d1855f8491926d, type: 2}
+  evolvedSkill: {fileID: 11400000, guid: 1758fc5a26e455c40b62a05bf3826421, type: 2}
