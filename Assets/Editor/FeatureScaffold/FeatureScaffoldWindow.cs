@@ -98,7 +98,7 @@ namespace ProjectSD.EditorTools.FeatureScaffold
                 new AsmdefData
                 {
                     name = presentationAssembly,
-                    references = new[] { SharedAssemblyName, applicationAssembly },
+                    references = new[] { SharedAssemblyName, applicationAssembly, domainAssembly },
                     noEngineReferences = false
                 },
                 created,
@@ -109,7 +109,7 @@ namespace ProjectSD.EditorTools.FeatureScaffold
                 new AsmdefData
                 {
                     name = infrastructureAssembly,
-                    references = new[] { SharedAssemblyName, applicationAssembly },
+                    references = new[] { SharedAssemblyName, applicationAssembly, domainAssembly },
                     noEngineReferences = false
                 },
                 created,

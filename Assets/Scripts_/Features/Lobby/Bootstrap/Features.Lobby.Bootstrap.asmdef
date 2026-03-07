@@ -1,10 +1,11 @@
 {
-  "name": "Features.Lobby.Bootstrap",
+  "name": "Bootstrap",
   "references": [
     "Shared",
-    "Features.Lobby.Application",
-    "Features.Lobby.Presentation",
-    "Features.Lobby.Infrastructure"
+    "Application",
+    "Domain",
+    "Presentation",
+    "Infrastructure"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

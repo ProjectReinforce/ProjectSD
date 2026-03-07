@@ -25,15 +25,21 @@ Shared/
 ## Dependency Direction
 
 ```
-Presentation -> Application -> Domain
+Application -> Domain
+Application -> Shared
+Presentation -> Application
+Presentation -> Domain
+Presentation -> Shared
 Infrastructure -> Application
+Infrastructure -> Domain
+Infrastructure -> Shared
 Shared -> (no feature dependency)
 ```
 
 - `Domain`: no Unity API, no Photon API, no IO, no database.
 - `Application`: depends on Domain and Shared only.
-- `Presentation`: depends on Application and Shared only.
-- `Infrastructure`: implements Application ports; no business logic.
+- `Presentation`: depends on Application, Domain and Shared only.
+- `Infrastructure`: depends on Application, Domain and Shared only; implements Application ports; no business logic.
 
 ---
 

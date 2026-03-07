@@ -1,5 +1,7 @@
-using Features.Lobby.Application;
+using Features.Lobby.Domain;
 using UnityEngine;
+
+using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Presentation
 {
@@ -8,33 +10,37 @@ namespace Features.Lobby.Presentation
         [SerializeField] private RoomListView _roomListView;
         [SerializeField] private RoomDetailView _roomDetailView;
 
-        public void RenderLobby(LobbyState lobby)
+        private LobbyInputHandler _inputHandler;
+
+        public void SetInputHandler(LobbyInputHandler inputHandler)
         {
-            if (_roomListView == null || lobby == null)
+            _inputHandler = inputHandler;
+        }
+
+        public void RenderLobby(DomainLobby lobby)
+        {
+            if (_roomListView == null)
             {
+                Debug.LogError("[LobbyView] _roomListView is not assigned.");
                 return;
             }
 
             _roomListView.Render(lobby.Rooms);
         }
 
-        public void RenderRoom(RoomState room)
+        public void RenderRoom(Room room)
         {
-            if (_roomDetailView == null || room == null)
+            if (_roomDetailView == null)
             {
+                Debug.LogError("[LobbyView] _roomDetailView is not assigned.");
                 return;
             }
 
             _roomDetailView.Render(room);
         }
 
-        public void RenderStartGame(RoomState room)
+        public void RenderStartGame(Room room)
         {
-            if (room == null)
-            {
-                return;
-            }
-
             Debug.Log($"[Lobby] Start game: {room.Name}");
         }
 

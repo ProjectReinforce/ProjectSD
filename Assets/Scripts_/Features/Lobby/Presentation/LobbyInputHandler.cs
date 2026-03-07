@@ -1,4 +1,3 @@
-using Features.Lobby.Application;
 using Shared.Kernel;
 
 namespace Features.Lobby.Presentation
@@ -42,7 +41,7 @@ namespace Features.Lobby.Presentation
             return _presenter.LeaveRoom(roomId, memberId);
         }
 
-        public Result HandleChangeTeam(EntityId roomId, EntityId memberId, LobbyTeam team)
+        public Result HandleChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
         {
             return _presenter.ChangeTeam(roomId, memberId, team);
         }

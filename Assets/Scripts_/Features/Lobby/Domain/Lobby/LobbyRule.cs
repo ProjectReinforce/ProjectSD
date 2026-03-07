@@ -2,7 +2,7 @@ using Shared.Kernel;
 
 namespace Features.Lobby.Domain
 {
-    public static class DomainRule
+    public static class LobbyRule
     {
         public static Result ValidateRoomName(string roomName)
         {

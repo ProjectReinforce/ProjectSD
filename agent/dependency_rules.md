@@ -20,9 +20,9 @@ Rules:
 
 * Application may depend on Domain and Shared only.
 
-* Presentation may depend on Application and Shared only.
+* Presentation may depend on Application, Domain and Shared only.
 
-* Infrastructure may depend on Application and Shared only.
+* Infrastructure may depend on Application, Domain and Shared only.
 
 Never reference:
 

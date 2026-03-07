@@ -1,6 +1,6 @@
 # AGENT 규칙 문서 설명 (한국어 안내)
 
-이 문서는 코드 생성 Agent가 참고하는 **AGENT.md 및 /agent 폴더 규칙 문서들에 어떤 내용이 들어있는지 설명하는 안내 문서**이다.
+이 문서는 코드 생성 Agent가 참고하는 **AGENTS.md 및 /agent 폴더 규칙 문서들에 어떤 내용이 들어있는지 설명하는 안내 문서**이다.
 실제 Agent는 영어 규칙 문서를 따르며, 이 문서는 사람이 이해하기 쉽게 한국어로 요약한 것이다.
 
 ---
@@ -10,7 +10,7 @@
 프로젝트에는 다음과 같은 Agent 규칙 문서가 존재한다.
 
 ```
-AGENT.md
+AGENTS.md
 
 /agent
   architecture.md
@@ -25,7 +25,7 @@ AGENT.md
 
 ---
 
-# 1. AGENT.md
+# 1. AGENTS.md
 
 역할
 Agent가 어떤 규칙 문서를 따라야 하는지 알려주는 **루트 규칙 파일**이다.
@@ -84,8 +84,14 @@ Shared/
 허용되는 의존 방향
 
 ```
-Presentation → Application → Domain
+Application → Domain
+Application → Shared
+Presentation → Application
+Presentation → Domain
+Presentation → Shared
 Infrastructure → Application
+Infrastructure → Domain
+Infrastructure → Shared
 ```
 
 금지되는 의존

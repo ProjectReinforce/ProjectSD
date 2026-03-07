@@ -19,12 +19,6 @@ namespace Features.Lobby.Bootstrap
                 return;
             }
 
-            if (_entryPoint.View == null)
-            {
-                Debug.LogError("[Lobby] LobbyView reference is missing in LobbyEntryPoint.");
-                return;
-            }
-
             var repository = new LobbyRepository();
             var network = new LobbyPhotonAdapter();
             var clock = new ClockAdapter();

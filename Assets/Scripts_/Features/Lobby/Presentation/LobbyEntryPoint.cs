@@ -1,5 +1,6 @@
-using Features.Lobby.Application;
 using UnityEngine;
+
+using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Presentation
 {
@@ -8,19 +9,13 @@ namespace Features.Lobby.Presentation
         [SerializeField] private LobbyView _view;
 
         private LobbyPresenter _presenter;
-        private LobbyInputHandler _inputHandler;
-
-        public LobbyInputHandler InputHandler
-        {
-            get { return _inputHandler; }
-        }
 
         public LobbyView View
         {
             get { return _view; }
         }
 
-        public void Initialize(LobbyPresenter presenter, LobbyState initialState)
+        public void Initialize(LobbyPresenter presenter, DomainLobby initialLobby)
         {
             if (_view == null)
             {
@@ -29,8 +24,9 @@ namespace Features.Lobby.Presentation
             }
 
             _presenter = presenter;
-            _inputHandler = new LobbyInputHandler(presenter);
-            presenter.ShowLobby(initialState ?? LobbyState.Empty);
+            var inputHandler = new LobbyInputHandler(presenter);
+            _view.SetInputHandler(inputHandler);
+            presenter.ShowLobby(initialLobby ?? new DomainLobby());
         }
 
         private void Awake()

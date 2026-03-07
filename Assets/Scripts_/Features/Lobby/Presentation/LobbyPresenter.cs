@@ -1,6 +1,11 @@
 using Features.Lobby.Application;
 using Features.Lobby.Application.Ports;
+using Features.Lobby.Domain;
 using Shared.Kernel;
+using UnityEngine;
+using EntityId = Shared.Kernel.EntityId;
+
+using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Presentation
 {
@@ -47,7 +52,7 @@ namespace Features.Lobby.Presentation
             return _leaveRoomUseCase.Execute(roomId, memberId, this);
         }
 
-        public Result ChangeTeam(EntityId roomId, EntityId memberId, LobbyTeam team)
+        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
         {
             return _changeTeamUseCase.Execute(roomId, memberId, team, this);
         }
@@ -62,36 +67,48 @@ namespace Features.Lobby.Presentation
             return _startGameUseCase.Execute(roomId, this);
         }
 
-        public void ShowLobby(LobbyState lobby)
+        public void ShowLobby(DomainLobby lobby)
         {
-            if (_view != null)
+            if (_view == null)
             {
-                _view.RenderLobby(lobby);
+                Debug.LogError("[LobbyPresenter] LobbyView is not assigned.");
+                return;
             }
+
+            _view.RenderLobby(lobby);
         }
 
-        public void ShowRoom(RoomState room)
+        public void ShowRoom(Room room)
         {
-            if (_view != null)
+            if (_view == null)
             {
-                _view.RenderRoom(room);
+                Debug.LogError("[LobbyPresenter] LobbyView is not assigned.");
+                return;
             }
+
+            _view.RenderRoom(room);
         }
 
-        public void ShowStartGame(RoomState room)
+        public void ShowStartGame(Room room)
         {
-            if (_view != null)
+            if (_view == null)
             {
-                _view.RenderStartGame(room);
+                Debug.LogError("[LobbyPresenter] LobbyView is not assigned.");
+                return;
             }
+
+            _view.RenderStartGame(room);
         }
 
         public void ShowError(string message)
         {
-            if (_view != null)
+            if (_view == null)
             {
-                _view.RenderError(message);
+                Debug.LogError("[LobbyPresenter] LobbyView is not assigned.");
+                return;
             }
+
+            _view.RenderError(message);
         }
     }
 }

@@ -1,21 +1,22 @@
-using Features.Lobby.Application;
 using Features.Lobby.Application.Ports;
 using Shared.Kernel;
+
+using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Infrastructure.Persistence
 {
     public sealed class LobbyRepository : ILobbyRepository
     {
-        private LobbyState _lobby = LobbyState.Empty;
+        private DomainLobby _lobby = new DomainLobby();
 
-        public LobbyState LoadLobby()
+        public DomainLobby LoadLobby()
         {
             return _lobby;
         }
 
-        public Result SaveLobby(LobbyState lobby)
+        public Result SaveLobby(DomainLobby lobby)
         {
-            _lobby = lobby ?? LobbyState.Empty;
+            _lobby = lobby ?? new DomainLobby();
             return Result.Success();
         }
     }

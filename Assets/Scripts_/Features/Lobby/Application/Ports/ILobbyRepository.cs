@@ -1,10 +1,12 @@
 using Shared.Kernel;
 
+using DomainLobby = Features.Lobby.Domain.Lobby;
+
 namespace Features.Lobby.Application.Ports
 {
     public interface ILobbyRepository
     {
-        LobbyState LoadLobby();
-        Result SaveLobby(LobbyState lobby);
+        DomainLobby LoadLobby();
+        Result SaveLobby(DomainLobby lobby);
     }
 }

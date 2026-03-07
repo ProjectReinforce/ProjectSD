@@ -14,21 +14,21 @@ namespace Features.Lobby.Application
             _network = network;
         }
 
-        public Result Execute(EntityId roomId, EntityId memberId, LobbyTeam team, ILobbyOutputPort output)
+        public Result Execute(EntityId roomId, EntityId memberId, TeamType team, ILobbyOutputPort output)
         {
             if (output == null)
             {
                 return Result.Failure("Output port is required.");
             }
 
-            var lobby = LobbyStateMapper.ToDomain(_repository.LoadLobby());
+            var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
             {
                 return Fail(output, "Room was not found.");
             }
 
-            var changeResult = room.ChangeTeam(memberId, LobbyStateMapper.ToDomainTeam(team));
+            var changeResult = room.ChangeTeam(memberId, team);
             if (changeResult.IsFailure)
             {
                 return Fail(output, changeResult.Error);
@@ -40,13 +40,13 @@ namespace Features.Lobby.Application
                 return Fail(output, networkResult.Error);
             }
 
-            var saveResult = _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
             {
                 return Fail(output, saveResult.Error);
             }
 
-            output.ShowRoom(LobbyStateMapper.ToRoomState(room));
+            output.ShowRoom(room);
             return Result.Success();
         }
 

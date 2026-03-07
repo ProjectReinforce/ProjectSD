@@ -21,7 +21,7 @@ namespace Features.Lobby.Application
                 return Result.Failure("Output port is required.");
             }
 
-            var lobby = LobbyStateMapper.ToDomain(_repository.LoadLobby());
+            var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
             {
@@ -45,14 +45,13 @@ namespace Features.Lobby.Application
                 lobby.RemoveRoom(roomId);
             }
 
-            var lobbyState = LobbyStateMapper.ToState(lobby);
-            var saveResult = _repository.SaveLobby(lobbyState);
+            var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
             {
                 return Fail(output, saveResult.Error);
             }
 
-            output.ShowLobby(lobbyState);
+            output.ShowLobby(lobby);
             return Result.Success();
         }
 

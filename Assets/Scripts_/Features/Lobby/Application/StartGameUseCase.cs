@@ -22,14 +22,14 @@ namespace Features.Lobby.Application
                 return Result.Failure("Output port is required.");
             }
 
-            var lobby = LobbyStateMapper.ToDomain(_repository.LoadLobby());
+            var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
             {
                 return Fail(output, "Room was not found.");
             }
 
-            var ruleResult = DomainRule.CanStartGame(room);
+            var ruleResult = LobbyRule.CanStartGame(room);
             if (ruleResult.IsFailure)
             {
                 return Fail(output, ruleResult.Error);
@@ -41,13 +41,13 @@ namespace Features.Lobby.Application
                 return Fail(output, networkResult.Error);
             }
 
-            var saveResult = _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
             {
                 return Fail(output, saveResult.Error);
             }
 
-            output.ShowStartGame(LobbyStateMapper.ToRoomState(room));
+            output.ShowStartGame(room);
             return Result.Success();
         }
 

@@ -1,8 +1,9 @@
 {
-  "name": "Features.Lobby.Presentation",
+  "name": "Presentation",
   "references": [
     "Shared",
-    "Features.Lobby.Application"
+    "Application",
+    "Domain"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

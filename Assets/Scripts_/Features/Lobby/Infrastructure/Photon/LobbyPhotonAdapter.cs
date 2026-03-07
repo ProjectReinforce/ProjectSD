@@ -1,20 +1,21 @@
-using Features.Lobby.Application;
 using Features.Lobby.Application.Ports;
+using Features.Lobby.Domain;
 using UnityEngine;
 using EntityId = Shared.Kernel.EntityId;
 using Result = Shared.Kernel.Result;
+using TeamType = Shared.Kernel.TeamType;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
     public sealed class LobbyPhotonAdapter : ILobbyNetworkPort
     {
-        public Result CreateRoom(RoomState room)
+        public Result CreateRoom(Room room)
         {
             Debug.Log($"[LobbyPhotonAdapter] CreateRoom: {room.Name}");
             return Result.Success();
         }
 
-        public Result JoinRoom(EntityId roomId, MemberState member)
+        public Result JoinRoom(EntityId roomId, RoomMember member)
         {
             Debug.Log($"[LobbyPhotonAdapter] JoinRoom: {roomId}, Member={member.DisplayName}");
             return Result.Success();
@@ -26,7 +27,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result ChangeTeam(EntityId roomId, EntityId memberId, LobbyTeam team)
+        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
         {
             Debug.Log($"[LobbyPhotonAdapter] ChangeTeam: {roomId}, Member={memberId}, Team={team}");
             return Result.Success();

@@ -2,13 +2,6 @@ using Shared.Kernel;
 
 namespace Features.Lobby.Domain
 {
-    public enum TeamType
-    {
-        None = 0,
-        Red = 1,
-        Blue = 2
-    }
-
     public sealed class RoomMember : Entity
     {
         public RoomMember(EntityId id, string displayName, TeamType team, bool isReady)

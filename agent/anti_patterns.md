@@ -13,6 +13,8 @@ Never do these:
 * Make one port responsible for unrelated behaviors.
 * Introduce architectural layers not defined in architecture.md.
 
+* Silent failure on null — returning silently without logging when a required reference is null. Use `Debug.LogError` for missing SerializeField/injected dependencies; do not add null checks for internal data parameters (let NullReferenceException surface naturally).
+
 When unsure:
 
 Prefer keeping code inside the current feature rather than Shared.

@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 This project uses rule-based guidance for code generation agents.
 

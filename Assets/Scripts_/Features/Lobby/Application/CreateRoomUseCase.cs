@@ -24,14 +24,14 @@ namespace Features.Lobby.Application
                 return Result.Failure("Output port is required.");
             }
 
-            var lobby = LobbyStateMapper.ToDomain(_repository.LoadLobby());
-            var roomNameValidation = DomainRule.ValidateRoomName(roomName);
+            var lobby = _repository.LoadLobby();
+            var roomNameValidation = LobbyRule.ValidateRoomName(roomName);
             if (roomNameValidation.IsFailure)
             {
                 return Fail(output, roomNameValidation.Error);
             }
 
-            var uniqueRoomValidation = DomainRule.EnsureUniqueRoomName(lobby, roomName);
+            var uniqueRoomValidation = LobbyRule.EnsureUniqueRoomName(lobby, roomName);
             if (uniqueRoomValidation.IsFailure)
             {
                 return Fail(output, uniqueRoomValidation.Error);
@@ -53,22 +53,20 @@ namespace Features.Lobby.Application
                 return Fail(output, addResult.Error);
             }
 
-            var roomState = LobbyStateMapper.ToRoomState(room);
-            var networkResult = _network.CreateRoom(roomState);
+            var networkResult = _network.CreateRoom(room);
             if (networkResult.IsFailure)
             {
                 return Fail(output, networkResult.Error);
             }
 
-            var lobbyState = LobbyStateMapper.ToState(lobby);
-            var saveResult = _repository.SaveLobby(lobbyState);
+            var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
             {
                 return Fail(output, saveResult.Error);
             }
 
-            output.ShowLobby(lobbyState);
-            output.ShowRoom(roomState);
+            output.ShowLobby(lobby);
+            output.ShowRoom(room);
             return Result.Success();
         }
 

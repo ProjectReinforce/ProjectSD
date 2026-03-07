@@ -1,8 +1,9 @@
 {
-  "name": "Features.Lobby.Infrastructure",
+  "name": "Infrastructure",
   "references": [
     "Shared",
-    "Features.Lobby.Application"
+    "Application",
+    "Domain"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
