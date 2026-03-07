@@ -12,7 +12,7 @@ namespace Features.Lobby.Presentation
                 return;
             }
 
-            Debug.Log("[Lobby] Room detail updated: " + room.Name + " (" + room.Members.Count + "/" + room.Capacity + ")");
+            Debug.Log($"[Lobby] Room detail updated: {room.Name} ({room.Members.Count}/{room.Capacity})");
         }
     }
 }

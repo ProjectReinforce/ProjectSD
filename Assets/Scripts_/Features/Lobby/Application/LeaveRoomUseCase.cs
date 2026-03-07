@@ -46,7 +46,12 @@ namespace Features.Lobby.Application
             }
 
             var lobbyState = LobbyStateMapper.ToState(lobby);
-            _repository.SaveLobby(lobbyState);
+            var saveResult = _repository.SaveLobby(lobbyState);
+            if (saveResult.IsFailure)
+            {
+                return Fail(output, saveResult.Error);
+            }
+
             output.ShowLobby(lobbyState);
             return Result.Success();
         }

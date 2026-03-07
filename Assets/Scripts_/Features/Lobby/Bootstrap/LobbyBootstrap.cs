@@ -34,8 +34,8 @@ namespace Features.Lobby.Bootstrap
                 new CreateRoomUseCase(repository, network, clock),
                 new JoinRoomUseCase(repository, network, clock),
                 new LeaveRoomUseCase(repository, network),
-                new ChangeTeamUseCase(repository),
-                new SetReadyUseCase(repository),
+                new ChangeTeamUseCase(repository, network),
+                new SetReadyUseCase(repository, network),
                 new StartGameUseCase(repository, network));
 
             _entryPoint.Initialize(presenter, repository.LoadLobby());

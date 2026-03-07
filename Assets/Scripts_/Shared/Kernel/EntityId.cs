@@ -33,12 +33,12 @@ namespace Shared.Kernel
 
         public override int GetHashCode()
         {
-            return Value == null ? 0 : Value.GetHashCode();
+            return Value.GetHashCode();
         }
 
         public override string ToString()
         {
-            return Value ?? string.Empty;
+            return Value;
         }
     }
 }

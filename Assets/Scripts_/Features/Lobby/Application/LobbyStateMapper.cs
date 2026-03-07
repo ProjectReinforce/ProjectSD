@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 using DomainLobby = Features.Lobby.Domain.Lobby;
 using DomainRoom = Features.Lobby.Domain.Room;
 using DomainRoomMember = Features.Lobby.Domain.RoomMember;
@@ -33,6 +34,7 @@ namespace Features.Lobby.Application
                 var createRoomResult = DomainRoom.Create(roomState.RoomId, roomState.Name, roomState.Capacity, owner);
                 if (createRoomResult.IsFailure)
                 {
+                    Debug.LogWarning($"[Lobby] Failed to restore room '{roomState.Name}': {createRoomResult.Error}");
                     continue;
                 }
 
@@ -45,12 +47,11 @@ namespace Features.Lobby.Application
                         continue;
                     }
 
-                    room.AddMember(
-                        new DomainRoomMember(
-                            member.MemberId,
-                            member.DisplayName,
-                            ToDomainTeam(member.Team),
-                            member.IsReady));
+                    room.AddMember(new DomainRoomMember(
+                        member.MemberId,
+                        member.DisplayName,
+                        ToDomainTeam(member.Team),
+                        member.IsReady));
                 }
 
                 lobby.AddRoom(room);

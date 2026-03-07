@@ -4,14 +4,9 @@ namespace Features.Lobby.Infrastructure.Photon
 {
     public sealed class PhotonRoomEventMapper
     {
-        public EntityId MapRoomId(string roomId)
+        public EntityId MapId(string id)
         {
-            return new EntityId(roomId);
-        }
-
-        public EntityId MapMemberId(string memberId)
-        {
-            return new EntityId(memberId);
+            return new EntityId(id);
         }
     }
 }

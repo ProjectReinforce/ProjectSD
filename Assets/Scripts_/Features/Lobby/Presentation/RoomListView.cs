@@ -8,8 +8,7 @@ namespace Features.Lobby.Presentation
     {
         public void Render(IReadOnlyList<RoomState> rooms)
         {
-            var count = rooms == null ? 0 : rooms.Count;
-            Debug.Log("[Lobby] Room list updated. Count=" + count);
+            Debug.Log($"[Lobby] Room list updated. Count={rooms.Count}");
         }
     }
 }

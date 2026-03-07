@@ -14,11 +14,26 @@ namespace Features.Lobby.Presentation
 
         public Result HandleCreateRoom(string roomName, int capacity, string ownerDisplayName)
         {
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return Result.Failure("Room name is required.");
+            }
+
+            if (capacity < 2)
+            {
+                return Result.Failure("Capacity must be at least 2.");
+            }
+
             return _presenter.CreateRoom(roomName, capacity, ownerDisplayName);
         }
 
         public Result HandleJoinRoom(EntityId roomId, string memberDisplayName)
         {
+            if (string.IsNullOrWhiteSpace(memberDisplayName))
+            {
+                return Result.Failure("Display name is required.");
+            }
+
             return _presenter.JoinRoom(roomId, memberDisplayName);
         }
 

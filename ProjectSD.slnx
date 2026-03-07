@@ -9,9 +9,9 @@
   <Project Path="PhotonChat.csproj" />
   <Project Path="PhotonUnityNetworking.Editor.csproj" />
   <Project Path="Features.Lobby.Infrastructure.csproj" />
+  <Project Path="Features.Lobby.Domain.csproj" />
   <Project Path="Shared.csproj" />
   <Project Path="Features.Lobby.Application.csproj" />
-  <Project Path="Features.Lobby.Domain.csproj" />
   <Project Path="PhotonUnityNetworking.Utilities.PhotonPlayer.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Features.Lobby.Bootstrap.csproj" />

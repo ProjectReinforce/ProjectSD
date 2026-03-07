@@ -92,7 +92,8 @@ namespace Features.Lobby.Domain
                 return Result.Failure("Member was not found.");
             }
 
-            return member.ChangeTeam(team);
+            member.ChangeTeam(team);
+            return Result.Success();
         }
 
         public Result SetReady(EntityId memberId, bool isReady)
@@ -103,7 +104,8 @@ namespace Features.Lobby.Domain
                 return Result.Failure("Member was not found.");
             }
 
-            return member.SetReady(isReady);
+            member.SetReady(isReady);
+            return Result.Success();
         }
 
         public bool CanStartGame()

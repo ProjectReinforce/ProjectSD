@@ -1,5 +1,6 @@
-using Features.Lobby.Application.Ports;
 using Features.Lobby.Application;
+using Features.Lobby.Application.Ports;
+using Shared.Kernel;
 
 namespace Features.Lobby.Infrastructure.Persistence
 {
@@ -12,9 +13,10 @@ namespace Features.Lobby.Infrastructure.Persistence
             return _lobby;
         }
 
-        public void SaveLobby(LobbyState lobby)
+        public Result SaveLobby(LobbyState lobby)
         {
             _lobby = lobby ?? LobbyState.Empty;
+            return Result.Success();
         }
     }
 }

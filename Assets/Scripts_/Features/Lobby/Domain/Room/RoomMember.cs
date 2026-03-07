@@ -23,16 +23,14 @@ namespace Features.Lobby.Domain
         public TeamType Team { get; private set; }
         public bool IsReady { get; private set; }
 
-        public Result ChangeTeam(TeamType newTeam)
+        public void ChangeTeam(TeamType newTeam)
         {
             Team = newTeam;
-            return Result.Success();
         }
 
-        public Result SetReady(bool isReady)
+        public void SetReady(bool isReady)
         {
             IsReady = isReady;
-            return Result.Success();
         }
     }
 }

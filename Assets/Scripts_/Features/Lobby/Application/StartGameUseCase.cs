@@ -41,7 +41,12 @@ namespace Features.Lobby.Application
                 return Fail(output, networkResult.Error);
             }
 
-            _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            var saveResult = _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            if (saveResult.IsFailure)
+            {
+                return Fail(output, saveResult.Error);
+            }
+
             output.ShowStartGame(LobbyStateMapper.ToRoomState(room));
             return Result.Success();
         }

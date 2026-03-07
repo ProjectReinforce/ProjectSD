@@ -35,12 +35,12 @@ namespace Features.Lobby.Presentation
                 return;
             }
 
-            Debug.Log("[Lobby] Start game: " + room.Name);
+            Debug.Log($"[Lobby] Start game: {room.Name}");
         }
 
         public void RenderError(string message)
         {
-            Debug.LogWarning("[Lobby] " + message);
+            Debug.LogWarning($"[Lobby] Error: {message}");
         }
     }
 }

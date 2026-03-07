@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Shared.Kernel
 {
@@ -7,40 +8,12 @@ namespace Shared.Kernel
     {
         public bool Equals(ValueObject other)
         {
-            if (ReferenceEquals(this, other))
-            {
-                return true;
-            }
-
-            if (other == null || GetType() != other.GetType())
+            if (other is null || GetType() != other.GetType())
             {
                 return false;
             }
 
-            using (var thisValues = GetEqualityComponents().GetEnumerator())
-            using (var otherValues = other.GetEqualityComponents().GetEnumerator())
-            {
-                while (true)
-                {
-                    var hasThis = thisValues.MoveNext();
-                    var hasOther = otherValues.MoveNext();
-
-                    if (!hasThis && !hasOther)
-                    {
-                        return true;
-                    }
-
-                    if (hasThis != hasOther)
-                    {
-                        return false;
-                    }
-
-                    if (!Equals(thisValues.Current, otherValues.Current))
-                    {
-                        return false;
-                    }
-                }
-            }
+            return GetEqualityComponents().SequenceEqual(other.GetEqualityComponents());
         }
 
         public override bool Equals(object obj)

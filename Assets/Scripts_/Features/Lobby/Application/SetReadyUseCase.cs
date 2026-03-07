@@ -6,10 +6,12 @@ namespace Features.Lobby.Application
     public sealed class SetReadyUseCase
     {
         private readonly ILobbyRepository _repository;
+        private readonly ILobbyNetworkPort _network;
 
-        public SetReadyUseCase(ILobbyRepository repository)
+        public SetReadyUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
         {
             _repository = repository;
+            _network = network;
         }
 
         public Result Execute(EntityId roomId, EntityId memberId, bool isReady, ILobbyOutputPort output)
@@ -32,7 +34,18 @@ namespace Features.Lobby.Application
                 return Fail(output, readyResult.Error);
             }
 
-            _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            var networkResult = _network.SetReady(roomId, memberId, isReady);
+            if (networkResult.IsFailure)
+            {
+                return Fail(output, networkResult.Error);
+            }
+
+            var saveResult = _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            if (saveResult.IsFailure)
+            {
+                return Fail(output, saveResult.Error);
+            }
+
             output.ShowRoom(LobbyStateMapper.ToRoomState(room));
             return Result.Success();
         }

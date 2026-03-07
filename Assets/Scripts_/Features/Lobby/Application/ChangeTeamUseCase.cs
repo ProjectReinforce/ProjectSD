@@ -1,5 +1,4 @@
 using Features.Lobby.Application.Ports;
-using Features.Lobby.Domain;
 using Shared.Kernel;
 
 namespace Features.Lobby.Application
@@ -7,10 +6,12 @@ namespace Features.Lobby.Application
     public sealed class ChangeTeamUseCase
     {
         private readonly ILobbyRepository _repository;
+        private readonly ILobbyNetworkPort _network;
 
-        public ChangeTeamUseCase(ILobbyRepository repository)
+        public ChangeTeamUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
         {
             _repository = repository;
+            _network = network;
         }
 
         public Result Execute(EntityId roomId, EntityId memberId, LobbyTeam team, ILobbyOutputPort output)
@@ -33,7 +34,18 @@ namespace Features.Lobby.Application
                 return Fail(output, changeResult.Error);
             }
 
-            _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            var networkResult = _network.ChangeTeam(roomId, memberId, team);
+            if (networkResult.IsFailure)
+            {
+                return Fail(output, networkResult.Error);
+            }
+
+            var saveResult = _repository.SaveLobby(LobbyStateMapper.ToState(lobby));
+            if (saveResult.IsFailure)
+            {
+                return Fail(output, saveResult.Error);
+            }
+
             output.ShowRoom(LobbyStateMapper.ToRoomState(room));
             return Result.Success();
         }
