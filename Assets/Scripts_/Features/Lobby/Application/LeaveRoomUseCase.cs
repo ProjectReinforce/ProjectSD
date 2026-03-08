@@ -8,10 +8,10 @@ namespace Features.Lobby.Application
     public sealed class LeaveRoomUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyNetworkPort _network;
-        private readonly IEventBus _eventBus;
+        private readonly ILobbyRoomNetworkPort _network;
+        private readonly IEventPublisher _eventBus;
 
-        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventBus eventBus)
+        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyRoomNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;

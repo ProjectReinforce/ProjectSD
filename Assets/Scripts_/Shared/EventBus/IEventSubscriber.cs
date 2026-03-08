@@ -2,9 +2,8 @@ using System;
 
 namespace Shared.EventBus
 {
-    public interface IEventBus
+    public interface IEventSubscriber
     {
-        void Publish<T>(T e);
         void Subscribe<T>(Action<T> handler);
         void Unsubscribe<T>(Action<T> handler);
     }

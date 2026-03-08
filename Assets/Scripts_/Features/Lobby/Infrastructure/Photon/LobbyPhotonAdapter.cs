@@ -7,7 +7,7 @@ using TeamType = Shared.Kernel.TeamType;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
-    public sealed class LobbyPhotonAdapter : ILobbyNetworkPort
+    public sealed class LobbyPhotonAdapter : ILobbyRoomNetworkPort, ILobbyTeamNetworkPort, ILobbyMatchNetworkPort
     {
         public Result CreateRoom(Room room)
         {

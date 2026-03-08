@@ -14,17 +14,13 @@ namespace Features.Lobby.Presentation
 
         private LobbyInputHandler _inputHandler;
 
-        public void Initialize(IEventBus eventBus)
+        public void Initialize(IEventSubscriber eventBus, LobbyInputHandler inputHandler)
         {
+            _inputHandler = inputHandler;
             eventBus.Subscribe<LobbyUpdatedEvent>(e => RenderLobby(e.Lobby));
             eventBus.Subscribe<RoomUpdatedEvent>(e => RenderRoom(e.Room));
             eventBus.Subscribe<GameStartedEvent>(e => RenderStartGame(e.Room));
             eventBus.Subscribe<LobbyErrorEvent>(e => RenderError(e.Message));
-        }
-
-        public void SetInputHandler(LobbyInputHandler inputHandler)
-        {
-            _inputHandler = inputHandler;
         }
 
         public void RenderLobby(DomainLobby lobby)

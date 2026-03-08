@@ -9,10 +9,10 @@ namespace Features.Lobby.Application
     public sealed class StartGameUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyNetworkPort _network;
-        private readonly IEventBus _eventBus;
+        private readonly ILobbyMatchNetworkPort _network;
+        private readonly IEventPublisher _eventBus;
 
-        public StartGameUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventBus eventBus)
+        public StartGameUseCase(ILobbyRepository repository, ILobbyMatchNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;

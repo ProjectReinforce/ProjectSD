@@ -32,9 +32,30 @@ Examples:
 
 ILobbyRepository
 ILobbyNetworkPort
-ILobbyOutputPort
 
 Avoid overly generic names.
+
+---
+
+## Event Naming
+
+Domain events use past-tense + Event suffix.
+
+Examples:
+
+LobbyUpdatedEvent
+RoomUpdatedEvent
+GameStartedEvent
+LobbyErrorEvent
+
+---
+
+## EventBus Naming
+
+IEventBus
+EventBus
+
+Location: Shared/EventBus/
 
 ---
 
@@ -51,12 +72,12 @@ ClockAdapter
 
 ## UI Naming
 
-Presenter:
-
-LobbyPresenter
-
 Views:
 
 LobbyView
 RoomListView
 RoomDetailView
+
+InputHandler:
+
+LobbyInputHandler

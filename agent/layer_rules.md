@@ -24,39 +24,38 @@ Not allowed:
 
 ## Application
 
-Application contains use cases and ports.
+Application contains use cases, ports, and events.
 
 Allowed:
 
 * UseCase classes
 * Repository interfaces
 * Network port interfaces
-* Output port interfaces
+* Domain event structs (e.g. LobbyUpdatedEvent)
 
 Rules:
 
 * UseCases coordinate domain logic.
 * UseCases must remain thin.
 * Business rules must stay inside Domain.
+* UseCases publish events via IEventBus — they do not call View or Presenter directly.
 
 ---
 
 ## Presentation
 
-Handles user interaction and UI flow.
+Handles user interaction and UI rendering.
 
 Allowed:
 
-* EntryPoint
-* Presenter
-* View
+* View (MonoBehaviour)
 * InputHandler
 
 Rules:
 
 * Do not place business logic here.
-* Presenter updates views.
-* InputHandler receives user input.
+* View subscribes to IEventBus and renders itself.
+* InputHandler receives user input and calls UseCases directly.
 
 ---
 
@@ -74,3 +73,20 @@ Rules:
 
 * Must implement Application ports.
 * Must not contain business logic.
+
+---
+
+## Bootstrap
+
+Handles composition root for a feature.
+
+Allowed:
+
+* Object creation
+* Dependency wiring
+* Initialization order
+
+Rules:
+
+* Must not contain business logic or rendering logic.
+* All wiring for a feature must live in that feature's Bootstrap.

@@ -20,7 +20,7 @@ namespace ProjectSD.EditorTools.FeatureScaffold
         private static void OpenWindow()
         {
             var window = GetWindow<FeatureScaffoldWindow>("Feature Scaffold");
-            window.minSize = new Vector2(420f, 220f);
+            window.minSize = new Vector2(420f, 240f);
             window.Show();
         }
 
@@ -58,6 +58,7 @@ namespace ProjectSD.EditorTools.FeatureScaffold
             var portsPath = CombineUnityPath(applicationPath, "Ports");
             var presentationPath = CombineUnityPath(featureRoot, "Presentation");
             var infrastructurePath = CombineUnityPath(featureRoot, "Infrastructure");
+            var bootstrapPath = CombineUnityPath(featureRoot, "Bootstrap");
 
             EnsureDirectory(featureRoot, created, skipped);
             EnsureDirectory(domainPath, created, skipped);
@@ -65,11 +66,13 @@ namespace ProjectSD.EditorTools.FeatureScaffold
             EnsureDirectory(portsPath, created, skipped);
             EnsureDirectory(presentationPath, created, skipped);
             EnsureDirectory(infrastructurePath, created, skipped);
+            EnsureDirectory(bootstrapPath, created, skipped);
 
             var domainAssembly = "Features." + featureName + ".Domain";
             var applicationAssembly = "Features." + featureName + ".Application";
             var presentationAssembly = "Features." + featureName + ".Presentation";
             var infrastructureAssembly = "Features." + featureName + ".Infrastructure";
+            var bootstrapAssembly = "Features." + featureName + ".Bootstrap";
 
             CreateAsmdef(
                 CombineUnityPath(domainPath, domainAssembly + ".asmdef"),
@@ -115,6 +118,17 @@ namespace ProjectSD.EditorTools.FeatureScaffold
                 created,
                 skipped);
 
+            CreateAsmdef(
+                CombineUnityPath(bootstrapPath, bootstrapAssembly + ".asmdef"),
+                new AsmdefData
+                {
+                    name = bootstrapAssembly,
+                    references = new[] { SharedAssemblyName, applicationAssembly, domainAssembly, presentationAssembly, infrastructureAssembly },
+                    noEngineReferences = false
+                },
+                created,
+                skipped);
+
             CreateFileIfMissing(
                 CombineUnityPath(portsPath, "I" + featureName + "OutputPort.cs"),
                 BuildOutputPortTemplate(featureName),
@@ -122,14 +136,14 @@ namespace ProjectSD.EditorTools.FeatureScaffold
                 skipped);
 
             CreateFileIfMissing(
-                CombineUnityPath(presentationPath, featureName + "EntryPoint.cs"),
-                BuildEntryPointTemplate(featureName),
+                CombineUnityPath(presentationPath, featureName + "Presenter.cs"),
+                BuildPresenterTemplate(featureName),
                 created,
                 skipped);
 
             CreateFileIfMissing(
-                CombineUnityPath(presentationPath, featureName + "Presenter.cs"),
-                BuildPresenterTemplate(featureName),
+                CombineUnityPath(bootstrapPath, featureName + "Bootstrap.cs"),
+                BuildBootstrapTemplate(featureName),
                 created,
                 skipped);
 
@@ -250,13 +264,16 @@ namespace ProjectSD.EditorTools.FeatureScaffold
                 + "}\n";
         }
 
-        private static string BuildEntryPointTemplate(string featureName)
+        private static string BuildBootstrapTemplate(string featureName)
         {
             return "using UnityEngine;\n\n"
-                + "namespace Features." + featureName + ".Presentation\n"
+                + "namespace Features." + featureName + ".Bootstrap\n"
                 + "{\n"
-                + "    public sealed class " + featureName + "EntryPoint : MonoBehaviour\n"
+                + "    public sealed class " + featureName + "Bootstrap : MonoBehaviour\n"
                 + "    {\n"
+                + "        private void Awake()\n"
+                + "        {\n"
+                + "        }\n"
                 + "    }\n"
                 + "}\n";
         }

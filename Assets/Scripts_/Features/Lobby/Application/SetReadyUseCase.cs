@@ -8,10 +8,10 @@ namespace Features.Lobby.Application
     public sealed class SetReadyUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyNetworkPort _network;
-        private readonly IEventBus _eventBus;
+        private readonly ILobbyTeamNetworkPort _network;
+        private readonly IEventPublisher _eventBus;
 
-        public SetReadyUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventBus eventBus)
+        public SetReadyUseCase(ILobbyRepository repository, ILobbyTeamNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;

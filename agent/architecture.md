@@ -6,13 +6,14 @@ The project follows a **Feature-first Clean Architecture**.
 
 Structure:
 
-Features/ <FeatureName>/
+Assets/Scripts_/Features/<FeatureName>/
 Domain/
 Application/
 Presentation/
 Infrastructure/
+Bootstrap/
 
-Shared/
+Assets/Scripts_/Shared/
 
 Each feature must be self-contained.
 
@@ -22,6 +23,7 @@ Rules:
 * Shared must only contain reusable cross-feature utilities.
 * Infrastructure implements Application ports.
 * Domain must stay framework-independent.
+* Bootstrap handles composition and wiring between layers.
 
 Features should grow independently.
 Only split features when a concept gains an independent lifecycle.

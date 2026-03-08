@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shared.EventBus
 {
-    public sealed class EventBus : IEventBus
+    public sealed class EventBus : IEventPublisher, IEventSubscriber
     {
         private readonly Dictionary<Type, List<Delegate>> _handlers = new Dictionary<Type, List<Delegate>>();
 

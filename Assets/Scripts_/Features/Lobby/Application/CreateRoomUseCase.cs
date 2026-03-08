@@ -9,11 +9,11 @@ namespace Features.Lobby.Application
     public sealed class CreateRoomUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyNetworkPort _network;
+        private readonly ILobbyRoomNetworkPort _network;
         private readonly IClockPort _clock;
-        private readonly IEventBus _eventBus;
+        private readonly IEventPublisher _eventBus;
 
-        public CreateRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IClockPort clock, IEventBus eventBus)
+        public CreateRoomUseCase(ILobbyRepository repository, ILobbyRoomNetworkPort network, IClockPort clock, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
