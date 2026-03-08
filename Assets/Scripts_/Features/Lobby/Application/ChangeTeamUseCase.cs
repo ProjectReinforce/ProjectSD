@@ -9,10 +9,10 @@ namespace Features.Lobby.Application
     public sealed class ChangeTeamUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyTeamNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IEventPublisher _eventBus;
 
-        public ChangeTeamUseCase(ILobbyRepository repository, ILobbyTeamNetworkPort network, IEventPublisher eventBus)
+        public ChangeTeamUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -30,7 +30,7 @@ namespace Features.Lobby.Application
             if (changeResult.IsFailure)
                 return Fail(changeResult.Error);
 
-            var networkResult = _network.ChangeTeam(roomId, memberId, team);
+            var networkResult = _network.RequestChangeTeam(roomId, memberId, team);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

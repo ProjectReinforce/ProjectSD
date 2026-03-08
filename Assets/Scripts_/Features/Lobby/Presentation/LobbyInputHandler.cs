@@ -1,4 +1,5 @@
 using Features.Lobby.Application;
+using Features.Lobby.Domain;
 using Shared.Kernel;
 
 namespace Features.Lobby.Presentation

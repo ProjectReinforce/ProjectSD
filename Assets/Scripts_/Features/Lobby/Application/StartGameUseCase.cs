@@ -9,10 +9,10 @@ namespace Features.Lobby.Application
     public sealed class StartGameUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyMatchNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IEventPublisher _eventBus;
 
-        public StartGameUseCase(ILobbyRepository repository, ILobbyMatchNetworkPort network, IEventPublisher eventBus)
+        public StartGameUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -30,7 +30,7 @@ namespace Features.Lobby.Application
             if (ruleResult.IsFailure)
                 return Fail(ruleResult.Error);
 
-            var networkResult = _network.StartGame(roomId);
+            var networkResult = _network.RequestStartGame(roomId);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

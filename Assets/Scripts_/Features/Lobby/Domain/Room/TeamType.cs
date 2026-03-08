@@ -1,4 +1,4 @@
-namespace Shared.Kernel
+namespace Features.Lobby.Domain
 {
     public enum TeamType
     {

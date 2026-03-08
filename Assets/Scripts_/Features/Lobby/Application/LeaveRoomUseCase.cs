@@ -8,10 +8,10 @@ namespace Features.Lobby.Application
     public sealed class LeaveRoomUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyRoomNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IEventPublisher _eventBus;
 
-        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyRoomNetworkPort network, IEventPublisher eventBus)
+        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -25,22 +25,14 @@ namespace Features.Lobby.Application
             if (room == null)
                 return Fail("Room was not found.");
 
-            var leaveResult = room.RemoveMember(memberId);
-            if (leaveResult.IsFailure)
-                return Fail(leaveResult.Error);
+            var member = room.FindMember(memberId);
+            if (member == null)
+                return Fail("Member was not found.");
 
-            var networkResult = _network.LeaveRoom(roomId, memberId);
+            var networkResult = _network.RequestLeaveRoom(roomId, memberId);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 
-            if (room.Members.Count == 0)
-                lobby.RemoveRoom(roomId);
-
-            var saveResult = _repository.SaveLobby(lobby);
-            if (saveResult.IsFailure)
-                return Fail(saveResult.Error);
-
-            _eventBus.Publish(new LobbyUpdatedEvent(lobby));
             return Result.Success();
         }
 

@@ -9,11 +9,11 @@ namespace Features.Lobby.Application
     public sealed class CreateRoomUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyRoomNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IClockPort _clock;
         private readonly IEventPublisher _eventBus;
 
-        public CreateRoomUseCase(ILobbyRepository repository, ILobbyRoomNetworkPort network, IClockPort clock, IEventPublisher eventBus)
+        public CreateRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IClockPort clock, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -40,20 +40,10 @@ namespace Features.Lobby.Application
                 return Fail(roomResult.Error);
 
             var room = roomResult.Value;
-            var addResult = lobby.AddRoom(room);
-            if (addResult.IsFailure)
-                return Fail(addResult.Error);
-
-            var networkResult = _network.CreateRoom(room);
+            var networkResult = _network.RequestCreateRoom(room);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 
-            var saveResult = _repository.SaveLobby(lobby);
-            if (saveResult.IsFailure)
-                return Fail(saveResult.Error);
-
-            _eventBus.Publish(new LobbyUpdatedEvent(lobby));
-            _eventBus.Publish(new RoomUpdatedEvent(room));
             return Result.Success();
         }
 

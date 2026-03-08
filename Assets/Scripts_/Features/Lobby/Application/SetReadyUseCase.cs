@@ -8,10 +8,10 @@ namespace Features.Lobby.Application
     public sealed class SetReadyUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyTeamNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IEventPublisher _eventBus;
 
-        public SetReadyUseCase(ILobbyRepository repository, ILobbyTeamNetworkPort network, IEventPublisher eventBus)
+        public SetReadyUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -29,7 +29,7 @@ namespace Features.Lobby.Application
             if (readyResult.IsFailure)
                 return Fail(readyResult.Error);
 
-            var networkResult = _network.SetReady(roomId, memberId, isReady);
+            var networkResult = _network.RequestSetReady(roomId, memberId, isReady);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

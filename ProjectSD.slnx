@@ -3,10 +3,10 @@
   <Project Path="PhotonRealtime.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Shared.csproj" />
-  <Project Path="Application.csproj" />
   <Project Path="PhotonUnityNetworking.Demos.csproj" />
   <Project Path="PhotonUnityNetworking.Utilities.csproj" />
   <Project Path="PunDemos.DemoHubEditor.csproj" />
+  <Project Path="Application.csproj" />
   <Project Path="PhotonChat.csproj" />
   <Project Path="PhotonUnityNetworking.Editor.csproj" />
   <Project Path="Presentation.csproj" />

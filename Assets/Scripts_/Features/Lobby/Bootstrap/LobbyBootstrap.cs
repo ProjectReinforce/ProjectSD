@@ -15,6 +15,7 @@ namespace Features.Lobby.Bootstrap
     {
         [SerializeField] private LobbyView _view;
         [SerializeField] private SceneContext _sceneContext;
+        [SerializeField] private LobbyPhotonAdapter _photonAdapter;
 
         private void Awake()
         {
@@ -30,11 +31,24 @@ namespace Features.Lobby.Bootstrap
                 return;
             }
 
+            if (_photonAdapter == null)
+            {
+                _photonAdapter = GetComponent<LobbyPhotonAdapter>();
+                if (_photonAdapter == null)
+                {
+                    Debug.LogError("[Lobby] LobbyPhotonAdapter reference is missing.");
+                    return;
+                }
+            }
+
             var publisher  = _sceneContext.Publisher;
             var subscriber = _sceneContext.Subscriber;
             var repository = new LobbyRepository();
-            var network    = new LobbyPhotonAdapter();
+            var network    = _photonAdapter;
             var clock      = new ClockAdapter();
+
+            network.Initialize(publisher);
+            _ = new LobbyConfirmHandler(repository, publisher, subscriber);
 
             var createRoom = new CreateRoomUseCase(repository, network, clock, publisher);
             var joinRoom   = new JoinRoomUseCase(repository, network, clock, publisher);

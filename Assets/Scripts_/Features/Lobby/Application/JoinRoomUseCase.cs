@@ -9,11 +9,11 @@ namespace Features.Lobby.Application
     public sealed class JoinRoomUseCase
     {
         private readonly ILobbyRepository _repository;
-        private readonly ILobbyRoomNetworkPort _network;
+        private readonly ILobbyNetworkPort _network;
         private readonly IClockPort _clock;
         private readonly IEventPublisher _eventBus;
 
-        public JoinRoomUseCase(ILobbyRepository repository, ILobbyRoomNetworkPort network, IClockPort clock, IEventPublisher eventBus)
+        public JoinRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IClockPort clock, IEventPublisher eventBus)
         {
             _repository = repository;
             _network = network;
@@ -31,19 +31,10 @@ namespace Features.Lobby.Application
             var name = string.IsNullOrWhiteSpace(memberDisplayName) ? "Player" : memberDisplayName.Trim();
             var member = new RoomMember(_clock.NewId(), name, TeamType.None, false);
 
-            var addResult = room.AddMember(member);
-            if (addResult.IsFailure)
-                return Fail(addResult.Error);
-
-            var networkResult = _network.JoinRoom(roomId, member);
+            var networkResult = _network.RequestJoinRoom(roomId, member);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 
-            var saveResult = _repository.SaveLobby(lobby);
-            if (saveResult.IsFailure)
-                return Fail(saveResult.Error);
-
-            _eventBus.Publish(new RoomUpdatedEvent(room));
             return Result.Success();
         }
 
