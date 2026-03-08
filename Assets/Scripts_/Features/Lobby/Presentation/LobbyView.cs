@@ -1,4 +1,6 @@
+using Features.Lobby.Application.Events;
 using Features.Lobby.Domain;
+using Shared.EventBus;
 using UnityEngine;
 
 using DomainLobby = Features.Lobby.Domain.Lobby;
@@ -11,6 +13,14 @@ namespace Features.Lobby.Presentation
         [SerializeField] private RoomDetailView _roomDetailView;
 
         private LobbyInputHandler _inputHandler;
+
+        public void Initialize(IEventBus eventBus)
+        {
+            eventBus.Subscribe<LobbyUpdatedEvent>(e => RenderLobby(e.Lobby));
+            eventBus.Subscribe<RoomUpdatedEvent>(e => RenderRoom(e.Room));
+            eventBus.Subscribe<GameStartedEvent>(e => RenderStartGame(e.Room));
+            eventBus.Subscribe<LobbyErrorEvent>(e => RenderError(e.Message));
+        }
 
         public void SetInputHandler(LobbyInputHandler inputHandler)
         {

@@ -7,10 +7,10 @@
   <Project Path="Presentation.csproj" />
   <Project Path="PunDemos.DemoHubEditor.csproj" />
   <Project Path="Shared.csproj" />
+  <Project Path="Application.csproj" />
   <Project Path="PhotonChat.csproj" />
   <Project Path="PhotonUnityNetworking.Editor.csproj" />
   <Project Path="Infrastructure.csproj" />
-  <Project Path="Application.csproj" />
   <Project Path="Domain.csproj" />
   <Project Path="PhotonUnityNetworking.Utilities.PhotonPlayer.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />

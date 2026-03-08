@@ -1,4 +1,6 @@
+using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
+using Shared.EventBus;
 using Shared.Kernel;
 
 namespace Features.Lobby.Application
@@ -7,57 +9,44 @@ namespace Features.Lobby.Application
     {
         private readonly ILobbyRepository _repository;
         private readonly ILobbyNetworkPort _network;
+        private readonly IEventBus _eventBus;
 
-        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
+        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventBus eventBus)
         {
             _repository = repository;
             _network = network;
+            _eventBus = eventBus;
         }
 
-        public Result Execute(EntityId roomId, EntityId memberId, ILobbyOutputPort output)
+        public Result Execute(EntityId roomId, EntityId memberId)
         {
-            if (output == null)
-            {
-                return Result.Failure("Output port is required.");
-            }
-
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-            {
-                return Fail(output, "Room was not found.");
-            }
+                return Fail("Room was not found.");
 
             var leaveResult = room.RemoveMember(memberId);
             if (leaveResult.IsFailure)
-            {
-                return Fail(output, leaveResult.Error);
-            }
+                return Fail(leaveResult.Error);
 
             var networkResult = _network.LeaveRoom(roomId, memberId);
             if (networkResult.IsFailure)
-            {
-                return Fail(output, networkResult.Error);
-            }
+                return Fail(networkResult.Error);
 
             if (room.Members.Count == 0)
-            {
                 lobby.RemoveRoom(roomId);
-            }
 
             var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
-            {
-                return Fail(output, saveResult.Error);
-            }
+                return Fail(saveResult.Error);
 
-            output.ShowLobby(lobby);
+            _eventBus.Publish(new LobbyUpdatedEvent(lobby));
             return Result.Success();
         }
 
-        private static Result Fail(ILobbyOutputPort output, string message)
+        private Result Fail(string message)
         {
-            output.ShowError(message);
+            _eventBus.Publish(new LobbyErrorEvent(message));
             return Result.Failure(message);
         }
     }

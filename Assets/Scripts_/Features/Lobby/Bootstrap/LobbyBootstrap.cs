@@ -3,36 +3,40 @@ using Features.Lobby.Infrastructure;
 using Features.Lobby.Infrastructure.Persistence;
 using Features.Lobby.Infrastructure.Photon;
 using Features.Lobby.Presentation;
+using Shared.EventBus;
 using UnityEngine;
+
+using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Bootstrap
 {
     public sealed class LobbyBootstrap : MonoBehaviour
     {
-        [SerializeField] private LobbyEntryPoint _entryPoint;
+        [SerializeField] private LobbyView _view;
 
         private void Awake()
         {
-            if (_entryPoint == null)
+            if (_view == null)
             {
-                Debug.LogError("[Lobby] LobbyEntryPoint reference is missing.");
+                Debug.LogError("[Lobby] LobbyView reference is missing.");
                 return;
             }
 
+            var eventBus   = new EventBus();
             var repository = new LobbyRepository();
-            var network = new LobbyPhotonAdapter();
-            var clock = new ClockAdapter();
+            var network    = new LobbyPhotonAdapter();
+            var clock      = new ClockAdapter();
 
-            var presenter = new LobbyPresenter(
-                _entryPoint.View,
-                new CreateRoomUseCase(repository, network, clock),
-                new JoinRoomUseCase(repository, network, clock),
-                new LeaveRoomUseCase(repository, network),
-                new ChangeTeamUseCase(repository, network),
-                new SetReadyUseCase(repository, network),
-                new StartGameUseCase(repository, network));
+            var createRoom = new CreateRoomUseCase(repository, network, clock, eventBus);
+            var joinRoom   = new JoinRoomUseCase(repository, network, clock, eventBus);
+            var leaveRoom  = new LeaveRoomUseCase(repository, network, eventBus);
+            var changeTeam = new ChangeTeamUseCase(repository, network, eventBus);
+            var setReady   = new SetReadyUseCase(repository, network, eventBus);
+            var startGame  = new StartGameUseCase(repository, network, eventBus);
 
-            _entryPoint.Initialize(presenter, repository.LoadLobby());
+            _view.Initialize(eventBus);
+            _view.SetInputHandler(new LobbyInputHandler(createRoom, joinRoom, leaveRoom, changeTeam, setReady, startGame));
+            _view.RenderLobby(repository.LoadLobby() ?? new DomainLobby());
         }
     }
 }
