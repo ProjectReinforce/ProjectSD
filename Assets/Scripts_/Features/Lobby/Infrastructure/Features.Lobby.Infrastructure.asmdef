@@ -3,7 +3,9 @@
   "references": [
     "Shared",
     "Application",
-    "Domain"
+    "Domain", 
+    "PhotonRealtime",
+    "PhotonUnityNetworking"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

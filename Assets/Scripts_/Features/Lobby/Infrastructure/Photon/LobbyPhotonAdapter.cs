@@ -1,49 +1,71 @@
+using Photon.Pun;
+using Photon.Realtime;
+using Features.Lobby.Application;
 using Features.Lobby.Application.Ports;
-using Features.Lobby.Application.Events;
-using Features.Lobby.Domain;
 using ExitGames.Client.Photon;
-using Shared.EventBus;
+
 using UnityEngine;
 using EntityId = Shared.Kernel.EntityId;
 using Result = Shared.Kernel.Result;
+using Room = Features.Lobby.Domain.Room;
+using RoomMember = Features.Lobby.Domain.RoomMember;
 using TeamType = Features.Lobby.Domain.TeamType;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
-    public sealed class LobbyPhotonAdapter : MonoBehaviourPunCallbacks, ILobbyNetworkPort
+    /// <summary>
+    /// Port implementation for Photon network communication.
+    /// Single responsibility: implementing ILobbyNetworkPort contract.
+    /// Delegates to specialized managers:
+    /// - PhotonRequestManager: pending state tracking
+    /// - PhotonPlayerPropertyManager: player properties
+    /// - PhotonNetworkEventHandler: callback handling
+    /// </summary>
+    public sealed class LobbyPhotonAdapter : MonoBehaviour, ILobbyNetworkPort
     {
-        private const string MemberIdKey = "memberId";
-        private const string TeamKey = "team";
-        private const string IsReadyKey = "isReady";
-        private const string DisplayNameKey = "displayName";
         private const string RoomDisplayNameKey = "roomDisplayName";
         private const string DefaultGameSceneName = "GameScene";
+        private const byte GameStartedEventCode = 100;
 
-        private IEventPublisher _eventPublisher;
-        private Room _pendingCreateRoom;
-        private RoomMember _pendingJoinMember;
-        private EntityId _pendingJoinRoomId;
-        private EntityId _pendingLeaveRoomId;
-        private EntityId _pendingLeaveMemberId;
-        private bool _isLeavePending;
+        private readonly PhotonRequestManager _requestManager = new();
+        private readonly PhotonPlayerPropertyManager _propertyManager = new();
+        
+        private PhotonNetworkEventHandler _eventHandler;
+        private LobbyConfirmHandler _callback;
 
-        public void Initialize(IEventPublisher eventPublisher)
+        /// <summary>
+        /// Called by Bootstrap to wire up the callback handler and event handler.
+        /// </summary>
+        public void Initialize(LobbyConfirmHandler callback)
         {
-            _eventPublisher = eventPublisher;
+            _callback = callback;
+            
+            // Find or create event handler (separate GameObject or same)
+            _eventHandler = GetComponent<PhotonNetworkEventHandler>();
+            if (_eventHandler == null)
+            {
+                _eventHandler = gameObject.AddComponent<PhotonNetworkEventHandler>();
+            }
+            
+            _eventHandler.Initialize(callback, _requestManager);
         }
 
         public Result RequestCreateRoom(Room room)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
             if (room == null)
                 return Result.Failure("Room is required.");
-            if (!PhotonNetwork.IsConnectedAndReady)
-                return Result.Failure("Photon is not connected and ready.");
-            if (PhotonNetwork.InRoom)
-                return Result.Failure("Already in a room.");
-            if (_pendingCreateRoom != null)
+            
+            var connected = ValidateConnected();
+            if (!connected.IsSuccess)
+                return connected;
+            
+            var notInRoom = ValidateNotInRoom();
+            if (!notInRoom.IsSuccess)
+                return notInRoom;
+            
+            if (_requestManager.HasPendingCreate)
                 return Result.Failure("CreateRoom is already pending.");
+            
             if (room.Capacity > byte.MaxValue)
                 return Result.Failure("Room capacity exceeds Photon max byte size.");
 
@@ -51,10 +73,10 @@ namespace Features.Lobby.Infrastructure.Photon
             if (owner == null)
                 return Result.Failure("Room owner is required.");
 
-            if (!SetLocalMemberProperties(owner.Id, owner.DisplayName, owner.Team, owner.IsReady))
+            if (!_propertyManager.SetLocalMemberProperties(owner.Id, owner.DisplayName, owner.Team, owner.IsReady))
                 return Result.Failure("Local player is unavailable.");
 
-            _pendingCreateRoom = room;
+            _requestManager.SetPendingCreate(room);
 
             var options = new RoomOptions
             {
@@ -72,7 +94,7 @@ namespace Features.Lobby.Infrastructure.Photon
             var created = PhotonNetwork.CreateRoom(room.Id.Value, options, TypedLobby.Default);
             if (!created)
             {
-                _pendingCreateRoom = null;
+                _requestManager.ClearPendingCreate();
                 return Result.Failure("Failed to send CreateRoom request to Photon.");
             }
 
@@ -81,29 +103,32 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public Result RequestJoinRoom(EntityId roomId, RoomMember member)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
             if (member == null)
                 return Result.Failure("Member is required.");
+            
             if (string.IsNullOrWhiteSpace(roomId.Value))
                 return Result.Failure("Room id is required.");
-            if (!PhotonNetwork.IsConnectedAndReady)
-                return Result.Failure("Photon is not connected and ready.");
-            if (PhotonNetwork.InRoom)
-                return Result.Failure("Already in a room.");
-            if (_pendingJoinMember != null)
+            
+            var connected = ValidateConnected();
+            if (!connected.IsSuccess)
+                return connected;
+            
+            var notInRoom = ValidateNotInRoom();
+            if (!notInRoom.IsSuccess)
+                return notInRoom;
+            
+            if (_requestManager.HasPendingJoin)
                 return Result.Failure("JoinRoom is already pending.");
 
-            if (!SetLocalMemberProperties(member.Id, member.DisplayName, member.Team, member.IsReady))
+            if (!_propertyManager.SetLocalMemberProperties(member.Id, member.DisplayName, member.Team, member.IsReady))
                 return Result.Failure("Local player is unavailable.");
 
-            _pendingJoinRoomId = roomId;
-            _pendingJoinMember = member;
+            _requestManager.SetPendingJoin(roomId, member);
 
             var joined = PhotonNetwork.JoinRoom(roomId.Value);
             if (!joined)
             {
-                ClearPendingJoin();
+                _requestManager.ClearPendingJoin();
                 return Result.Failure("Failed to send JoinRoom request to Photon.");
             }
 
@@ -112,23 +137,22 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public Result RequestLeaveRoom(EntityId roomId, EntityId memberId)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
-            if (!PhotonNetwork.InRoom)
-                return Result.Failure("Cannot leave room outside a room.");
-            if (_isLeavePending)
+            var inRoom = ValidateInRoom();
+            if (!inRoom.IsSuccess)
+                return inRoom;
+            
+            if (_requestManager.HasPendingLeave)
                 return Result.Failure("LeaveRoom is already pending.");
+            
             if (!string.Equals(PhotonNetwork.CurrentRoom.Name, roomId.Value, System.StringComparison.Ordinal))
                 return Result.Failure("Current room does not match target room id.");
 
-            _pendingLeaveRoomId = roomId;
-            _pendingLeaveMemberId = memberId;
-            _isLeavePending = true;
+            _requestManager.SetPendingLeave(roomId, memberId);
 
             var left = PhotonNetwork.LeaveRoom();
             if (!left)
             {
-                ClearPendingLeave();
+                _requestManager.ClearPendingLeave();
                 return Result.Failure("Failed to send LeaveRoom request to Photon.");
             }
 
@@ -137,20 +161,22 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public Result RequestChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
-            if (!PhotonNetwork.InRoom)
-                return Result.Failure("Cannot change team outside a room.");
+            var inRoom = ValidateInRoom();
+            if (!inRoom.IsSuccess)
+                return inRoom;
+            
+            if (_requestManager.HasPendingChangeTeam)
+                return Result.Failure("ChangeTeam is already pending.");
 
-            if (!TryGetLocalMemberId(out var localMemberId))
-                return Result.Failure("Local member id is missing.");
+            var localMember = ValidateLocalMember(memberId);
+            if (!localMember.IsSuccess)
+                return localMember;
 
-            if (!localMemberId.Equals(memberId))
-                return Result.Failure("Can only change local member team.");
+            _requestManager.SetPendingChangeTeam(roomId, memberId, team);
 
             var props = new Hashtable
             {
-                [TeamKey] = (int)team
+                ["team"] = (int)team
             };
             PhotonNetwork.LocalPlayer.SetCustomProperties(props);
             return Result.Success();
@@ -158,20 +184,22 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public Result RequestSetReady(EntityId roomId, EntityId memberId, bool isReady)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
-            if (!PhotonNetwork.InRoom)
-                return Result.Failure("Cannot set ready outside a room.");
+            var inRoom = ValidateInRoom();
+            if (!inRoom.IsSuccess)
+                return inRoom;
+            
+            if (_requestManager.HasPendingSetReady)
+                return Result.Failure("SetReady is already pending.");
 
-            if (!TryGetLocalMemberId(out var localMemberId))
-                return Result.Failure("Local member id is missing.");
+            var localMember = ValidateLocalMember(memberId);
+            if (!localMember.IsSuccess)
+                return localMember;
 
-            if (!localMemberId.Equals(memberId))
-                return Result.Failure("Can only set local member ready state.");
+            _requestManager.SetPendingSetReady(roomId, memberId, isReady);
 
             var props = new Hashtable
             {
-                [IsReadyKey] = isReady
+                ["isReady"] = isReady
             };
             PhotonNetwork.LocalPlayer.SetCustomProperties(props);
             return Result.Success();
@@ -179,113 +207,55 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public Result RequestStartGame(EntityId roomId)
         {
-            if (_eventPublisher == null)
-                return Result.Failure("LobbyPhotonAdapter is not initialized.");
-            if (!PhotonNetwork.InRoom)
-                return Result.Failure("Cannot start game outside a room.");
+            var inRoom = ValidateInRoom();
+            if (!inRoom.IsSuccess)
+                return inRoom;
+            
             if (!PhotonNetwork.IsMasterClient)
                 return Result.Failure("Only the room master can start the game.");
 
             PhotonNetwork.LoadLevel(DefaultGameSceneName);
+            var raised = PhotonNetwork.RaiseEvent(
+                GameStartedEventCode,
+                roomId.Value,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable);
+            if (!raised)
+                return Result.Failure("Failed to raise game started event.");
             return Result.Success();
         }
 
-        public override void OnCreatedRoom()
-        {
-            if (_pendingCreateRoom == null)
-                return;
+        // --- Validation Helpers ---
 
-            Publish(new RoomCreatedEvent(_pendingCreateRoom));
-            _pendingCreateRoom = null;
+        private static Result ValidateConnected()
+        {
+            return PhotonNetwork.IsConnectedAndReady 
+                ? Result.Success() 
+                : Result.Failure("Photon is not connected and ready.");
         }
 
-        public override void OnCreateRoomFailed(short returnCode, string message)
+        private static Result ValidateNotInRoom()
         {
-            _pendingCreateRoom = null;
-            Publish(new LobbyErrorEvent($"Create room failed ({returnCode}): {message}"));
+            return !PhotonNetwork.InRoom 
+                ? Result.Success() 
+                : Result.Failure("Already in a room.");
         }
 
-        public override void OnJoinedRoom()
+        private static Result ValidateInRoom()
         {
-            if (_pendingJoinMember == null)
-                return;
-
-            Publish(new RoomJoinedEvent(_pendingJoinRoomId, _pendingJoinMember));
-            ClearPendingJoin();
+            return PhotonNetwork.InRoom 
+                ? Result.Success() 
+                : Result.Failure("Not in a room.");
         }
 
-        public override void OnJoinRoomFailed(short returnCode, string message)
+        private Result ValidateLocalMember(EntityId memberId)
         {
-            ClearPendingJoin();
-            Publish(new LobbyErrorEvent($"Join room failed ({returnCode}): {message}"));
-        }
-
-        public override void OnLeftRoom()
-        {
-            if (!_isLeavePending)
-                return;
-
-            Publish(new RoomLeftEvent(_pendingLeaveRoomId, _pendingLeaveMemberId));
-            ClearPendingLeave();
-        }
-
-        private static bool SetLocalMemberProperties(EntityId memberId, string displayName, TeamType team, bool isReady)
-        {
-            if (PhotonNetwork.LocalPlayer == null)
-                return false;
-
-            var props = new Hashtable
-            {
-                [MemberIdKey] = memberId.Value,
-                [DisplayNameKey] = string.IsNullOrWhiteSpace(displayName) ? "Player" : displayName.Trim(),
-                [TeamKey] = (int)team,
-                [IsReadyKey] = isReady
-            };
-
-            PhotonNetwork.LocalPlayer.NickName = string.IsNullOrWhiteSpace(displayName) ? "Player" : displayName.Trim();
-            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-            return true;
-        }
-
-        private static bool TryGetLocalMemberId(out EntityId memberId)
-        {
-            memberId = default;
-
-            if (PhotonNetwork.LocalPlayer == null)
-                return false;
-            if (!PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(MemberIdKey, out var value))
-                return false;
-
-            var raw = value as string;
-            if (string.IsNullOrWhiteSpace(raw))
-                return false;
-
-            memberId = new EntityId(raw);
-            return true;
-        }
-
-        private void Publish<T>(T e)
-        {
-            if (_eventPublisher == null)
-            {
-                Debug.LogError("[LobbyPhotonAdapter] EventPublisher is not initialized.");
-                return;
-            }
-
-            _eventPublisher.Publish(e);
-        }
-
-        private void ClearPendingJoin()
-        {
-            _pendingJoinMember = null;
-            _pendingJoinRoomId = default;
-        }
-
-        private void ClearPendingLeave()
-        {
-            _pendingLeaveRoomId = default;
-            _pendingLeaveMemberId = default;
-            _isLeavePending = false;
+            if (!_propertyManager.TryGetLocalMemberId(out var localMemberId))
+                return Result.Failure("Local member id is missing.");
+            
+            return localMemberId.Equals(memberId) 
+                ? Result.Success() 
+                : Result.Failure("Can only modify local member.");
         }
     }
 }

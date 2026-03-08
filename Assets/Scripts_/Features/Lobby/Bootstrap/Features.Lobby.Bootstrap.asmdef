@@ -5,7 +5,9 @@
     "Application",
     "Domain",
     "Presentation",
-    "Infrastructure"
+    "Infrastructure",
+    "PhotonRealtime",
+    "PhotonUnityNetworking"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

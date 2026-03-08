@@ -25,19 +25,13 @@ namespace Features.Lobby.Application
             if (room == null)
                 return Fail("Room was not found.");
 
-            var readyResult = room.SetReady(memberId, isReady);
-            if (readyResult.IsFailure)
-                return Fail(readyResult.Error);
+            if (room.FindMember(memberId) == null)
+                return Fail("Member was not found.");
 
             var networkResult = _network.RequestSetReady(roomId, memberId, isReady);
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 
-            var saveResult = _repository.SaveLobby(lobby);
-            if (saveResult.IsFailure)
-                return Fail(saveResult.Error);
-
-            _eventBus.Publish(new RoomUpdatedEvent(room));
             return Result.Success();
         }
 

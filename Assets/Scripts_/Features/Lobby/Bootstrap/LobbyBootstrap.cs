@@ -47,8 +47,8 @@ namespace Features.Lobby.Bootstrap
             var network    = _photonAdapter;
             var clock      = new ClockAdapter();
 
-            network.Initialize(publisher);
-            _ = new LobbyConfirmHandler(repository, publisher, subscriber);
+            var confirmHandler = new LobbyConfirmHandler(repository, publisher);
+            network.Initialize(confirmHandler);
 
             var createRoom = new CreateRoomUseCase(repository, network, clock, publisher);
             var joinRoom   = new JoinRoomUseCase(repository, network, clock, publisher);

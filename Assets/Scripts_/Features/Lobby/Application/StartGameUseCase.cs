@@ -34,11 +34,6 @@ namespace Features.Lobby.Application
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 
-            var saveResult = _repository.SaveLobby(lobby);
-            if (saveResult.IsFailure)
-                return Fail(saveResult.Error);
-
-            _eventBus.Publish(new GameStartedEvent(room));
             return Result.Success();
         }
 
