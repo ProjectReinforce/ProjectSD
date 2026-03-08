@@ -44,6 +44,12 @@ namespace SwDreams.Testing
 
         public event Action<int, int> OnHealthChanged;
         public event Action OnDied;
+        
+        /// <summary>부활 시 발생. DeathOverlayUI에서 구독.</summary>
+        public event Action OnRespawned;
+
+        // Phase 6: 사망/부활 상태
+        private bool isDead = false;
 
         private Rigidbody2D rb;
         private SkillManager skillManager;
@@ -86,14 +92,25 @@ namespace SwDreams.Testing
             {
                 LevelUpManager.Instance.RegisterLocalPlayer(skillManager);
             }
+            
+            // Phase 6: RespawnManager에 등록
+            if (PhotonNetwork.IsMasterClient && RespawnManager.Instance != null)
+                RespawnManager.Instance.RegisterPlayer(photonView.ViewID);
         }
 
         private void Update()
         {
             if (!photonView.IsMine) return;
 
+            if (isDead)
+            {
+                rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
             {
                 rb.linearVelocity = Vector2.zero;
                 return;
@@ -127,34 +144,7 @@ namespace SwDreams.Testing
                     Debug.Log("[Test] 강제 재개");
                 }
 
-                // J: 선택 스킵 — SubmitChoice 직접 호출 + UI 닫기
-                if (kb.jKey.wasPressedThisFrame && LevelUpManager.Instance != null)
-                {
-                    var choices = LevelUpManager.Instance.GetCurrentChoices();
-                    if (choices != null && choices.Length > 0)
-                    {
-                        int id = choices[0].skillId;
-                        Debug.Log($"[Test] 자동 선택: {choices[0].skillName} (ID:{id})");
-
-                        // 로컬 스킬 적용
-                        if (skillManager != null)
-                        {
-                            SkillData chosen = choices[0];
-                            skillManager.ApplyChoice(chosen);
-                        }
-
-                        // 호스트에 선택 알림 (호스트 자신이므로 RPC_PlayerSelected 직접 호출과 동일)
-                        LevelUpManager.Instance.SubmitChoice(id);
-                    }
-                    else
-                    {
-                        // 선택지가 없으면 (혼돈 스킬 미구현 등) 강제 재개
-                        GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
-                        UIManager.Instance?.HideLevelUp();
-                        Debug.Log("[Test] 선택지 없음 — 강제 재개");
-                    }
-                }
-
+                // P: 스탯 확인
                 if (kb.pKey.wasPressedThisFrame)
                 {
                     var stats = GetComponent<PlayerStats>();
@@ -168,6 +158,33 @@ namespace SwDreams.Testing
                     
                     if (skillManager != null)
                         skillManager.LogSlotStatus();
+                }
+
+                // T: 플레이어 즉사 (사망/부활 테스트)
+                if (kb.tKey.wasPressedThisFrame)
+                {
+                    TakeDamage(9999);
+                    Debug.Log("[Test] 강제 즉사");
+                }
+                
+                // B: 보스 즉시 소환
+                if (kb.bKey.wasPressedThisFrame)
+                {
+                    BossSpawner.Instance?.DebugSpawnBoss();
+                    Debug.Log("[Test] 보스 강제 소환");
+                }
+
+                // H: 보스 HP 30%로 설정 (Phase 3 테스트)
+                if (kb.hKey.wasPressedThisFrame)
+                {
+                    var boss = BossSpawner.Instance?.CurrentBoss;
+                    if (boss != null && boss.IsAlive)
+                    {
+                        int targetHP = Mathf.RoundToInt(boss.MaxHP * 0.3f);
+                        int dmg = boss.CurrentHP - targetHP;
+                        if (dmg > 0) boss.TakeDamage(dmg);
+                        Debug.Log($"[Test] 보스 HP → 30% ({targetHP})");
+                    }
                 }
             }
         }
@@ -192,10 +209,50 @@ namespace SwDreams.Testing
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
             Debug.Log($"[PlayerStub] HP: {CurrentHP}/{MaxHP} (dmg:{damage})");
 
-            if (!IsAlive)
+            if (!IsAlive && !isDead)
             {
+                isDead = true;
                 OnDied?.Invoke();
+                SetDeadVisual(true);
                 Debug.Log("[PlayerStub] 사망!");
+
+                // 호스트: RespawnManager에 부활 요청
+                if (PhotonNetwork.IsMasterClient && RespawnManager.Instance != null)
+                    RespawnManager.Instance.RequestRespawn(photonView.ViewID);
+            }
+        }
+
+        // ===== Phase 6: 사망/부활 =====
+
+        /// <summary>
+        /// RespawnManager의 RPC에서 호출. 모든 클라이언트에서 실행.
+        /// </summary>
+        public void LocalRespawn(int newHP)
+        {
+            CurrentHP = Mathf.Clamp(newHP, 1, MaxHP);
+            isDead = false;
+            SetDeadVisual(false);
+            OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+            OnRespawned?.Invoke();
+            Debug.Log($"[PlayerStub] 부활! HP: {CurrentHP}/{MaxHP}");
+        }
+
+        private void SetDeadVisual(bool dead)
+        {
+            // 반투명 처리
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr != null)
+            {
+                var c = sr.color;
+                c.a = dead ? 0.3f : 1f;
+                sr.color = c;
+            }
+
+            // 스킬 일시정지/재개
+            if (skillManager != null)
+            {
+                if (dead) skillManager.PauseAllSkills();
+                else skillManager.ResumeAllSkills();
             }
         }
     }

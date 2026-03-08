@@ -133,6 +133,10 @@ namespace SwDreams.Adapter.Entity
 
             foreach (var player in players)
             {
+                // Phase 6: 사망한 플레이어 제외
+                var damageable = player.GetComponent<Domain.Interfaces.IDamageable>();
+                if (damageable != null && !damageable.IsAlive) continue;
+
                 float dist = Vector2.Distance(transform.position, player.transform.position);
                 if (dist < minDist)
                 {

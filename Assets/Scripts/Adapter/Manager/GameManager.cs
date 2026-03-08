@@ -81,7 +81,7 @@ namespace SwDreams.Adapter.Manager
 
         private void Update()
         {
-            if (CurrentState == GameState.Playing)
+            if (CurrentState == GameState.Playing || CurrentState == GameState.BossFight)
                 GameTime += Time.deltaTime;
         }
 

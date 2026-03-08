@@ -217,6 +217,15 @@ namespace SwDreams.Adapter.Manager
             }
         }
 
+        /// <summary>
+        /// 일반 적 스폰 중단. BossSpawner에서 보스 등장 시 호출.
+        /// </summary>
+        public void StopSpawning()
+        {
+            isReady = false;
+            Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
+        }
+
         // ===== 중도 참가 처리 =====
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)

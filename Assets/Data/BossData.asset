@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a165e1d7ce6105d498a25d95eec99ed2, type: 3}
+  m_Name: BossData
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.BossData
+  bossName: "\uB4DC\uB9BC \uC774\uD130"
+  sprite: {fileID: 0}
+  baseHP: 8000
+  moveSpeed: 2.5
+  contactDamage: 30
+  knockbackForce: 5
+  phase2Threshold: 0.6
+  phase3Threshold: 0.3
+  p1ShockwaveCooldown: 5
+  p1ShockwaveDamage: 40
+  p1ShockwaveHalfAngle: 60
+  p1ShockwaveRange: 4
+  p2MoveSpeed: 3
+  p2ShockwaveCooldown: 3
+  p2CircleZoneCooldown: 10
+  p2CircleZoneDamage: 60
+  p2CircleZoneDelay: 3
+  p2CircleZoneRadius: 2.5
+  p3MoveSpeed: 3.5
+  p3ContactDamage: 50
+  p3ShockwaveCooldown: 2
+  p3CircleZoneCount: 2
+  p3SlowInterval: 5
+  p3SlowDuration: 3
+  p3SlowMultiplier: 0.5
+  hpMultiplier:
+  - 0.6
+  - 1
+  - 1.4
+  - 1.8
+  bossPrefab: {fileID: 0}
+  shockwaveEffectPrefab: {fileID: 0}
+  circleZoneEffectPrefab: {fileID: 0}
+  slowEffectPrefab: {fileID: 0}

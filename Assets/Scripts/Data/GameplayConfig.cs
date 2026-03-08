@@ -52,10 +52,32 @@ namespace SwDreams.Data
         [Header("게임 진행")]
         [Tooltip("총 게임 시간 (초). 10분 = 600초")]
         public float totalGameTime = 600f;
+        
+        // ===== 보스 =====
+        [Header("보스")]
+        [Tooltip("보스 등장 시간 (초). 10분 = 600초")]
+        public float bossSpawnTime = 600f;
 
-        // TODO Phase 6: 보스 관련 설정 추가
-        // public float bossSpawnTime = 300f;
-        // public float bossWarningDuration = 3f;
+        [Tooltip("보스 등장 경고 연출 시간 (초)")]
+        public float bossWarningDuration = 3f;
+
+        // ===== 사망/부활 =====
+        [Header("사망/부활")]
+        [Tooltip("사망 후 부활까지 대기 시간 (초)")]
+        public float respawnDelay = 10f;
+
+        [Tooltip("부활 시 HP 비율 (0.5 = 50%)")]
+        [Range(0f, 1f)]
+        public float respawnHPRatio = 0.5f;
+
+        // ===== 호스트 이탈 =====
+        [Header("호스트 이탈")]
+        [Tooltip("호스트 재연결 대기 시간 (초)")]
+        public float reconnectWaitTime = 5f;
+
+        [Tooltip("비상 보스전 시 보스 약화 기준 (이 비율 이전이면 약화)")]
+        [Range(0f, 1f)]
+        public float emergencyBossHPRatio = 0.7f;
 
         // ===== 오브젝트 풀링 =====
         [Header("오브젝트 풀링")]
