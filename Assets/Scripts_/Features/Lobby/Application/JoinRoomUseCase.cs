@@ -31,7 +31,24 @@ namespace Features.Lobby.Application
             var name = string.IsNullOrWhiteSpace(memberDisplayName) ? "Player" : memberDisplayName.Trim();
             var member = new RoomMember(_clock.NewId(), name, TeamType.None, false);
 
-            var networkResult = _network.RequestJoinRoom(roomId, member);
+            var networkResult = _network.RequestJoinRoom(roomId, member,
+                onSuccess: () =>
+                {
+                    var currentLobby = _repository.LoadLobby();
+                    var currentRoom = currentLobby.FindRoom(roomId);
+                    if (currentRoom == null) { _eventBus.Publish(new LobbyErrorEvent("Room was not found.")); return; }
+
+                    var addResult = currentRoom.AddMember(member);
+                    if (addResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(addResult.Error)); return; }
+
+                    var saveResult = _repository.SaveLobby(currentLobby);
+                    if (saveResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(saveResult.Error)); return; }
+
+                    _eventBus.Publish(new LobbyUpdatedEvent(currentLobby));
+                    _eventBus.Publish(new RoomUpdatedEvent(currentRoom));
+                },
+                onFailure: error => Fail(error));
+
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

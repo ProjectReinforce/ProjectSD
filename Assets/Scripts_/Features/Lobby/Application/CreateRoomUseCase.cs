@@ -40,7 +40,21 @@ namespace Features.Lobby.Application
                 return Fail(roomResult.Error);
 
             var room = roomResult.Value;
-            var networkResult = _network.RequestCreateRoom(room);
+            var networkResult = _network.RequestCreateRoom(room,
+                onSuccess: () =>
+                {
+                    var currentLobby = _repository.LoadLobby();
+                    var addResult = currentLobby.AddRoom(room);
+                    if (addResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(addResult.Error)); return; }
+
+                    var saveResult = _repository.SaveLobby(currentLobby);
+                    if (saveResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(saveResult.Error)); return; }
+
+                    _eventBus.Publish(new LobbyUpdatedEvent(currentLobby));
+                    _eventBus.Publish(new RoomUpdatedEvent(room));
+                },
+                onFailure: error => Fail(error));
+
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

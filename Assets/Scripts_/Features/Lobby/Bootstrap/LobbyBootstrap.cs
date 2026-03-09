@@ -1,5 +1,6 @@
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
+using Features.Lobby.Application.Ports;
 using Features.Lobby.Infrastructure;
 using Features.Lobby.Infrastructure.Persistence;
 using Features.Lobby.Infrastructure.Photon;
@@ -47,8 +48,7 @@ namespace Features.Lobby.Bootstrap
             var network    = _photonAdapter;
             var clock      = new ClockAdapter();
 
-            var confirmHandler = new LobbyConfirmHandler(repository, publisher);
-            network.Initialize(confirmHandler);
+            network.Initialize(repository, publisher);
 
             var createRoom = new CreateRoomUseCase(repository, network, clock, publisher);
             var joinRoom   = new JoinRoomUseCase(repository, network, clock, publisher);

@@ -28,7 +28,23 @@ namespace Features.Lobby.Application
             if (room.FindMember(memberId) == null)
                 return Fail("Member was not found.");
 
-            var networkResult = _network.RequestSetReady(roomId, memberId, isReady);
+            var networkResult = _network.RequestSetReady(roomId, memberId, isReady,
+                onSuccess: () =>
+                {
+                    var currentLobby = _repository.LoadLobby();
+                    var currentRoom = currentLobby.FindRoom(roomId);
+                    if (currentRoom == null) { _eventBus.Publish(new LobbyErrorEvent("Room was not found.")); return; }
+
+                    var readyResult = currentRoom.SetReady(memberId, isReady);
+                    if (readyResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(readyResult.Error)); return; }
+
+                    var saveResult = _repository.SaveLobby(currentLobby);
+                    if (saveResult.IsFailure) { _eventBus.Publish(new LobbyErrorEvent(saveResult.Error)); return; }
+
+                    _eventBus.Publish(new RoomUpdatedEvent(currentRoom));
+                },
+                onFailure: error => Fail(error));
+
             if (networkResult.IsFailure)
                 return Fail(networkResult.Error);
 

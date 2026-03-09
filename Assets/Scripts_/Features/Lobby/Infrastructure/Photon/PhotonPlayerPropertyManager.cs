@@ -1,7 +1,7 @@
 using ExitGames.Client.Photon;
 using Features.Lobby.Domain;
 using Photon.Pun;
-using Shared.Kernel;
+using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
@@ -16,21 +16,20 @@ namespace Features.Lobby.Infrastructure.Photon
         private const string IsReadyKey = "isReady";
         private const string DisplayNameKey = "displayName";
 
-        public bool SetLocalMemberProperties(EntityId memberId, string displayName, TeamType team, bool isReady)
+        public bool SetLocalMemberProperties(RoomMember member)
         {
             if (PhotonNetwork.LocalPlayer == null)
                 return false;
 
-            var displayNameValue = string.IsNullOrWhiteSpace(displayName) ? "Player" : displayName.Trim();
             var props = new Hashtable
             {
-                [MemberIdKey] = memberId.Value,
-                [DisplayNameKey] = displayNameValue,
-                [TeamKey] = (int)team,
-                [IsReadyKey] = isReady
+                [MemberIdKey]    = member.Id.Value,
+                [DisplayNameKey] = member.DisplayName,
+                [TeamKey]        = (int)member.Team,
+                [IsReadyKey]     = member.IsReady
             };
 
-            PhotonNetwork.LocalPlayer.NickName = displayNameValue;
+            PhotonNetwork.LocalPlayer.NickName = member.DisplayName;
             PhotonNetwork.LocalPlayer.SetCustomProperties(props);
             return true;
         }
