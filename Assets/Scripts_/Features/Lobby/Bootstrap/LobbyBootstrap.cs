@@ -56,9 +56,8 @@ namespace Features.Lobby.Bootstrap
             var changeTeam = new ChangeTeamUseCase(repository, network, publisher);
             var setReady   = new SetReadyUseCase(repository, network, publisher);
             var startGame  = new StartGameUseCase(repository, network, publisher);
-            var inputHandler = new LobbyInputHandler(createRoom, joinRoom, leaveRoom, changeTeam, setReady, startGame);
 
-            _view.Initialize(subscriber, inputHandler);
+            _view.Initialize(subscriber, createRoom, joinRoom, leaveRoom, changeTeam, setReady, startGame);
             publisher.Publish(new LobbyUpdatedEvent(repository.LoadLobby() ?? new DomainLobby()));
         }
     }

@@ -1,3 +1,4 @@
+using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
 using Features.Lobby.Domain;
 using Shared.EventBus;
@@ -12,11 +13,30 @@ namespace Features.Lobby.Presentation
         [SerializeField] private RoomListView _roomListView;
         [SerializeField] private RoomDetailView _roomDetailView;
 
-        private LobbyInputHandler _inputHandler;
-
-        public void Initialize(IEventSubscriber eventBus, LobbyInputHandler inputHandler)
+        public void Initialize(
+            IEventSubscriber eventBus,
+            CreateRoomUseCase createRoom,
+            JoinRoomUseCase joinRoom,
+            LeaveRoomUseCase leaveRoom,
+            ChangeTeamUseCase changeTeam,
+            SetReadyUseCase setReady,
+            StartGameUseCase startGame)
         {
-            _inputHandler = inputHandler;
+            if (_roomListView == null)
+            {
+                Debug.LogError("[LobbyView] _roomListView is not assigned.");
+                return;
+            }
+
+            if (_roomDetailView == null)
+            {
+                Debug.LogError("[LobbyView] _roomDetailView is not assigned.");
+                return;
+            }
+
+            _roomListView.Initialize(createRoom, joinRoom);
+            _roomDetailView.Initialize(leaveRoom, changeTeam, setReady, startGame);
+
             eventBus.Subscribe<LobbyUpdatedEvent>(e => RenderLobby(e.Lobby));
             eventBus.Subscribe<RoomUpdatedEvent>(e => RenderRoom(e.Room));
             eventBus.Subscribe<GameStartedEvent>(e => RenderStartGame(e.Room));
