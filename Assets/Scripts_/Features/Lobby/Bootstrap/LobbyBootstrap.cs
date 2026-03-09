@@ -1,7 +1,7 @@
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
-using Features.Lobby.Infrastructure;
+using Shared.Time;
 using Features.Lobby.Infrastructure.Persistence;
 using Features.Lobby.Infrastructure.Photon;
 using Features.Lobby.Presentation;
