@@ -9,15 +9,22 @@ namespace Features.Projectile.Domain
             OwnerId = ownerId;
             Spec = spec;
             IsAlive = true;
+            HitCount = 0;
         }
 
         public EntityId OwnerId { get; }
         public ProjectileSpec Spec { get; }
         public bool IsAlive { get; private set; }
+        public int HitCount { get; private set; }
 
         public void Destroy()
         {
             IsAlive = false;
+        }
+
+        public void RegisterHit()
+        {
+            HitCount++;
         }
     }
 }
