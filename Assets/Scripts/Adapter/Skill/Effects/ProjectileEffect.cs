@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Data;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -19,19 +20,41 @@ namespace SwDreams.Adapter.Skill
 
         private void Start()
         {
-            // Skill은 Player의 자식이므로 root가 Player
-            playerTransform = transform.root;
-            playerStats = playerTransform.GetComponent<PlayerStats>();
+            CachePlayerReferences();
 
             if (projectilePrefab != null)
                 PoolManager.Instance?.Prewarm(projectilePrefab, 20);
         }
 
+        private void CachePlayerReferences()
+        {
+            if (playerTransform != null) return;
+            // Skill은 Player의 자식이므로 root가 Player
+            playerTransform = transform.root;
+            if (playerTransform != null)
+                playerStats = playerTransform.GetComponent<PlayerStats>();
+        }
+
         public override void Execute(Skill skill)
         {
+            CachePlayerReferences();
             if (projectilePrefab == null || playerTransform == null) return;
 
             Vector2 direction = GetAimDirection();
+
+            // [Phase 5] 회오리바람: 플레이어 이동 반대 방향으로 발사
+            if (skill.Data.isTornado)
+            {
+                var rb = playerTransform.GetComponent<Rigidbody2D>();
+                if (rb != null && rb.linearVelocity.sqrMagnitude > 0.1f)
+                    direction = -rb.linearVelocity.normalized;
+                else
+                    direction = -direction;
+            }
+
+            // 방향이 zero면 기본값 (적과 완전 겹칠 때 등)
+            if (direction.sqrMagnitude < 0.01f)
+                direction = Vector2.right;
 
             // PlayerStats 보너스 적용
             int count = skill.Data.projectileCount;
@@ -45,7 +68,14 @@ namespace SwDreams.Adapter.Skill
 
             if (count <= 1)
             {
-                SpawnProjectile(skill, direction, speed);
+                SpawnProjectile(skill, direction, speed, 0, 1);
+            }
+            else if (skill.Data.isSpiral)
+            {
+                // 나선형: 360도 균등 분배 (장검처럼)
+                float angleStep = 360f / count;
+                for (int i = 0; i < count; i++)
+                    SpawnProjectile(skill, direction, speed, i, count);
             }
             else
             {
@@ -55,7 +85,7 @@ namespace SwDreams.Adapter.Skill
                 for (int i = 0; i < count; i++)
                 {
                     Vector2 dir = RotateVector(direction, startAngle + i * spreadAngle);
-                    SpawnProjectile(skill, dir, speed);
+                    SpawnProjectile(skill, dir, speed, i, count);
                 }
             }
         }
@@ -66,12 +96,14 @@ namespace SwDreams.Adapter.Skill
         public void SetProjectilePrefab(GameObject prefab)
         {
             projectilePrefab = prefab;
+            CachePlayerReferences();
 
             if (prefab != null)
                 PoolManager.Instance?.Prewarm(prefab, 20);
         }
 
-        private void SpawnProjectile(Skill skill, Vector2 direction, float speed)
+        private void SpawnProjectile(Skill skill, Vector2 direction, float speed,
+            int index = 0, int totalCount = 1)
         {
             GameObject obj = PoolManager.Instance.Get(projectilePrefab);
             var projectile = obj.GetComponent<Projectile>();
@@ -87,13 +119,67 @@ namespace SwDreams.Adapter.Skill
             if (playerStats != null)
                 damage = Mathf.RoundToInt(damage * playerStats.AttackMultiplier);
 
+            SkillData data = skill.Data;
+
             projectile.Initialize(
                 position: (Vector2)playerTransform.position,
                 direction: direction,
                 damage: damage,
                 speed: speed,
-                lifetime: skill.Data.projectileLifetime
+                lifetime: data.projectileLifetime
             );
+
+            // [Phase 5] 변형 투사체 추가 설정
+            if (data.isHoming)
+            {
+                var homing = projectile as HomingProjectile;
+                if (homing != null)
+                    homing.SetHoming(data.homingRotateSpeed);
+            }
+            else if (data.isBoomerang)
+            {
+                var boomerang = projectile as BoomerangProjectile;
+                if (boomerang != null)
+                {
+                    boomerang.SetBoomerang(playerTransform);
+
+                    // [진화: 그래비톤 부메랑] 복귀 경로 끌어당김
+                    if (data.hasPullOnReturn)
+                        boomerang.SetPullOnReturn(data.pullRadius, data.pullForce);
+                }
+            }
+            else if (data.isTornado)
+            {
+                var tornado = projectile as TornadoProjectile;
+                if (tornado != null)
+                    tornado.SetTornado(data.pullRadius, data.pullForce);
+            }
+
+            // [Phase 5 진화] 폭발/체인/나선
+            if (data.isExploding)
+            {
+                var exploding = projectile as ExplodingProjectile;
+                if (exploding != null)
+                    exploding.SetExplosion(data.explosionRadius);
+            }
+
+            if (data.chainCount > 0)
+            {
+                var chain = projectile as ChainProjectile;
+                if (chain != null)
+                    chain.SetChain(data.chainCount, data.chainRadius, data.homingRotateSpeed);
+            }
+
+            if (data.isSpiral)
+            {
+                var spiral = projectile as SpiralTornadoProjectile;
+                if (spiral != null)
+                {
+                    float startAngle = (totalCount > 1) ? (360f / totalCount) * index : 0f;
+                    spiral.SetSpiral(playerTransform, data.pullRadius, data.pullForce,
+                        data.spiralExpandSpeed, startAngle);
+                }
+            }
         }
 
         private Vector2 GetAimDirection()

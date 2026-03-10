@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ea246fd805350048bbef83eeadee99b, type: 3}
+  m_Name: 301_EvolvedShurikenData
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.SkillData
+  skillId: 301
+  skillName: "\uAC15\uD55C \uD45C\uCC3D"
+  skillType: 0
+  effectType: 1
+  chaosEffectType: 0
+  icon: {fileID: 0}
+  description: "\uB354 \uAC15\uD558\uAC8C \uAC00\uC7A5 \uAC00\uAE4C\uC6B4 \uC801
+    \uACF5\uACA9"
+  maxLevel: 2
+  damagePerLevel: 3c0000004600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  cooldownPerLevel:
+  - 1.5
+  - 1.4
+  - 1.3
+  - 1.2
+  - 1.1
+  - 1
+  - 0.9
+  bonusType: 1
+  bonusPerLevel: 1.5
+  projectilePrefab: {fileID: 2361586414690528474, guid: bb29ea3098f2cbb429223375dce2db33, type: 3}
+  projectileSpeed: 15
+  projectileCount: 3
+  projectileLifetime: 5
+  isHoming: 0
+  homingRotateSpeed: 300
+  isBoomerang: 0
+  isTornado: 0
+  pullRadius: 2
+  pullForce: 3
+  isExploding: 1
+  explosionRadius: 1.5
+  chainCount: 0
+  chainRadius: 4
+  hasPullOnReturn: 0
+  isSpiral: 0
+  spiralExpandSpeed: 1
+  appliesSlow: 0
+  slowMultiplier: 0.5
+  executeThreshold: 0
+  isDualZone: 0
+  areaRadius: 2
+  areaDuration: 3
+  tickRate: 0.5
+  isHealingEffect: 0
+  spawnAtRandomPosition: 0
+  randomSpawnRadius: 5
+  orbitRadius: 1.5
+  rotationSpeed: 180
+  objectCount: 3
+  knockbackForce: 2
+  attackRange: 5
+  attackCooldown: 0.5
+  alwaysCritical: 0
+  debuffDuration: 5
+  damageAmplify: 1.3
+  targetCount: 3
+  spreadOnDeathCount: 0
+  maxInstances: 3
+  effectPrefab: {fileID: 0}
+  evolutionPair: {fileID: 0}
+  evolvedSkill: {fileID: 0}

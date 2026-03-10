@@ -54,6 +54,16 @@ MonoBehaviour:
   - RPC_StartTimer
   - RPC_NotifyDamageApplied
   - RPC_NotifySkillTriggered
+  - RPC_SyncSkillAcquisition
+  - RPC_ExecuteRespawn
+  - RPC_StartRespawnCountdown
+  - RPC_ApplyGlobalSlow
+  - RPC_BossDied
+  - RPC_BossWarning
+  - RPC_RemoveGlobalSlow
+  - RPC_ShowCircleWarning
+  - RPC_ShowExplosion
+  - RPC_SyncHP
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

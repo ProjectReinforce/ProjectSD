@@ -2,13 +2,18 @@ using System;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Application;
+using SwDreams.Data;
 
 namespace SwDreams.Adapter.Manager
 {
     /// <summary>
     /// 게임 상태 + 경험치/레벨업 관리.
     /// 호스트가 경험치 계산 후 RPC로 전체 클라이언트에 동기화.
-    /// 
+    ///
+    /// [CHANGED] GameplayConfig SO를 소유.
+    /// 다른 매니저/엔티티는 GameManager.Instance.Config로 접근.
+    /// → Inspector 연결이 GameManager 한 곳에만 필요.
+    ///
     /// GameScene에 빈 GameObject → GameManager + PhotonView 부착.
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
@@ -25,6 +30,19 @@ namespace SwDreams.Adapter.Manager
             GameClear,
             GameOver
         }
+
+        // [CHANGED] 게임플레이 설정 SO. Inspector에서 연결.
+        // 모든 매니저/엔티티가 GameManager.Instance.Config로 접근.
+        [Header("게임 설정")]
+        [SerializeField] private GameplayConfig config;
+
+        /// <summary>
+        /// 게임플레이 설정 SO. 읽기 전용 접근.
+        /// null 체크 후 사용 권장:
+        ///   var cfg = GameManager.Instance?.Config;
+        ///   if (cfg != null) { ... }
+        /// </summary>
+        public GameplayConfig Config => config;
 
         // Application 서비스
         private ExperienceService expService = new ExperienceService();
@@ -49,6 +67,11 @@ namespace SwDreams.Adapter.Manager
                 Destroy(gameObject);
                 return;
             }
+
+            // [CHANGED] Config 누락 경고
+            if (config == null)
+                Debug.LogWarning("[GameManager] GameplayConfig SO가 연결되지 않았습니다. " +
+                                 "Inspector에서 연결하세요. 각 시스템이 기본값으로 동작합니다.");
         }
 
         private void OnDestroy()
@@ -58,7 +81,7 @@ namespace SwDreams.Adapter.Manager
 
         private void Update()
         {
-            if (CurrentState == GameState.Playing)
+            if (CurrentState == GameState.Playing || CurrentState == GameState.BossFight)
                 GameTime += Time.deltaTime;
         }
 

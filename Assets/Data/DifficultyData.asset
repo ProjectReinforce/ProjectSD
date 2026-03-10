@@ -48,7 +48,7 @@ MonoBehaviour:
     swarmRatio: 0.15
   - phaseName: "\uD6C4\uBC18"
     startTime: 42
-    endTime: 60
+    endTime: 600
     spawnInterval: 1.2
     maxEnemyCount: 90
     healthMultiplier: 2

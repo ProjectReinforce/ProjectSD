@@ -215,6 +215,9 @@ namespace SwDreams.Adapter.Manager
             // 저장 (타임아웃 시 랜덤 선택용)
             playerChoices[player.ActorNumber] = choiceIds;
 
+            Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} 선택지: " +
+                    string.Join(", ", System.Array.ConvertAll(choices, s => s.skillName)));
+
             // 해당 플레이어에게만 RPC 전송
             photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, false);
         }
@@ -328,6 +331,10 @@ namespace SwDreams.Adapter.Manager
                 }
             }
 
+            // [Phase 5] 다른 클라이언트에도 동기화
+            // → 선택한 본인(SubmitChoice에서 적용 완료)은 RPC_SyncSkillAcquisition에서 스킵
+            photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others, actorNumber, skillId);
+
             // 전원 선택 완료 체크
             CheckAllSelected();
         }
@@ -393,6 +400,9 @@ namespace SwDreams.Adapter.Manager
                     {
                         photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId);
                     }
+
+                    // [Phase 5] 다른 클라이언트에도 동기화
+                    photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others, actorNumber, randomId);
                 }
 
                 playerSelections[actorNumber] = true;
@@ -474,6 +484,35 @@ namespace SwDreams.Adapter.Manager
                 SkillData chosen = skillDatabase.GetSkillById(skillId);
                 if (chosen != null)
                     localSkillManager.ApplyChoice(chosen);
+            }
+        }
+
+        // ===== 스킬 동기화 (Phase 5) =====
+
+        /// <summary>
+        /// 호스트가 선택 확정 후 다른 클라이언트에 브로드캐스트.
+        /// 각 클라이언트에서 해당 플레이어의 SkillManager에 스킬 적용.
+        /// → 모든 클라이언트가 모든 플레이어의 스킬 이펙트를 로컬 실행.
+        /// </summary>
+        [PunRPC]
+        private void RPC_SyncSkillAcquisition(int actorNumber, int skillId)
+        {
+            // 자기 자신은 SubmitChoice에서 이미 적용했으므로 스킵
+            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                return;
+
+            SkillManager sm = FindSkillManagerForPlayer(actorNumber);
+            if (sm == null)
+            {
+                Debug.LogWarning($"[LevelUpManager] Sync 실패 — Actor {actorNumber}의 SkillManager 없음");
+                return;
+            }
+
+            SkillData chosen = skillDatabase.GetSkillById(skillId);
+            if (chosen != null)
+            {
+                sm.ApplyChoice(chosen);
+                Debug.Log($"[LevelUpManager] Sync 완료 — Actor {actorNumber}: {chosen.skillName}");
             }
         }
 

@@ -217,6 +217,15 @@ namespace SwDreams.Adapter.Manager
             }
         }
 
+        /// <summary>
+        /// 일반 적 스폰 중단. BossSpawner에서 보스 등장 시 호출.
+        /// </summary>
+        public void StopSpawning()
+        {
+            isReady = false;
+            Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
+        }
+
         // ===== 중도 참가 처리 =====
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -355,8 +364,26 @@ namespace SwDreams.Adapter.Manager
             enemy.OnDiedWithRef -= OnEnemyDied;
             enemy.OnForceReturned -= OnEnemyForceReturned;
 
+            // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
+            NotifyChaosManagers(enemy.transform.position);
+
             photonView.RPC(nameof(RPC_EnemyDied), RpcTarget.All,
                 enemy.EnemyId, (Vector2)enemy.transform.position, enemy.ExpValue);
+        }
+
+        /// <summary>
+        /// 모든 플레이어의 ChaosSkillManager에 적 사망 알림.
+        /// 연쇄 폭발 등 혼돈 스킬 효과 트리거.
+        /// </summary>
+        private void NotifyChaosManagers(Vector3 enemyPosition)
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
+                if (chaos != null)
+                    chaos.OnEnemyKilled(enemyPosition);
+            }
         }
 
         private void OnEnemyForceReturned(Enemy enemy)

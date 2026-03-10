@@ -94,13 +94,7 @@ namespace SwDreams.Presentation
             transform.localScale = Vector3.one;
 
             if (cardBackground != null)
-            {
-                Debug.Log($"{cardBackground.color}");
-
                 cardBackground.color = defaultCardColor;
-
-                Debug.Log($"{cardBackground.color}");
-            }
         }
 
         private void SetupLevelBadge(SkillData skillData)
@@ -108,6 +102,21 @@ namespace SwDreams.Presentation
             if (levelText == null) return;
 
             SkillManager sm = FindLocalSkillManager();
+
+            // 진화 스킬인지 확인
+            if (sm != null)
+            {
+                var evos = sm.GetPendingEvolutions();
+                for (int i = 0; i < evos.Count; i++)
+                {
+                    if (evos[i].evolvedSkillData.skillId == skillData.skillId)
+                    {
+                        levelText.text = "★ 진화";
+                        levelText.color = new Color(1f, 0.5f, 0f, 1f); // 주황
+                        return;
+                    }
+                }
+            }
 
             if (sm != null && sm.HasSkill(skillData.skillId))
             {

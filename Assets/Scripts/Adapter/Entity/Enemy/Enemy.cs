@@ -3,6 +3,7 @@ using UnityEngine;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Application;
 using SwDreams.Data;
+using SwDreams.Adapter.Skill;
 
 namespace SwDreams.Adapter.Entity
 {
@@ -86,6 +87,11 @@ namespace SwDreams.Adapter.Entity
         public void TakeDamage(int damage)
         {
             if (!IsAlive) return;
+
+            // [Phase 5] DebuffMark 추가 피해 적용
+            var debuff = GetComponent<DebuffMark>();
+            if (debuff != null)
+                damage = Mathf.RoundToInt(damage * debuff.DamageAmplify);
 
             var result = damageService.ProcessSkillAttack(damage);
             CurrentHP = Mathf.Max(0, CurrentHP - result.FinalDamage);

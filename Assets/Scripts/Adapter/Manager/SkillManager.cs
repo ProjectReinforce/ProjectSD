@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -11,32 +12,51 @@ namespace SwDreams.Adapter.Skill
     ///
     /// 역할:
     /// - 스킬 획득/레벨업/제거
-    /// - 6슬롯 제한 관리 (액티브 + 패시브 합계)
+    /// - 슬롯 제한 관리 (액티브 + 패시브 합계)
     /// - 진화 가능 여부 감지
     /// - 선택지 생성 (호스트용)
     /// - 패시브 스킬 → PlayerStats 반영
     ///
-    /// 프리팹 구성:
-    /// Player(또는 PlayerStub)의 자식에 빈 오브젝트 "Skills"
-    /// → SkillManager 부착
-    /// → 스킬 획득 시 자식으로 Skill 오브젝트 동적 생성
-    ///
-    /// 네트워크:
-    /// 호스트가 선택지 생성 + 결과 적용을 관리.
-    /// SkillManager 자체는 PhotonView 불필요 (LevelUpManager가 RPC 처리).
+    /// Phase 5 개선사항:
+    /// - [CHANGED] SkillEffectFactory 도입 → AddSkillEffect() switch문 제거
+    /// - [CHANGED] GameplayConfig는 GameManager.Instance.Config에서 접근
+    ///   (SkillManager가 직접 SO를 들고 있지 않음)
     /// </summary>
     public class SkillManager : MonoBehaviour
     {
+        /// <summary>
+        /// 진화 대기 정보. 어떤 2개 스킬이 어떤 진화 스킬로 변할 수 있는지.
+        /// </summary>
+        public struct EvolutionCandidate
+        {
+            public int activeSkillId;
+            public int passiveSkillId;
+            public SkillData evolvedSkillData;
+        }
+        
         // ===== 설정 =====
-        public const int MaxSlots = 6;
+        // [CHANGED] GameManager.Instance.Config에서 읽되, null이면 기본값 6 사용
+        private const int DefaultMaxSlots = 6;
+        public int MaxSlots
+        {
+            get
+            {
+                var cfg = GameManager.Instance?.Config;
+                return (cfg != null) ? cfg.maxSkillSlots : DefaultMaxSlots;
+            }
+        }
 
         [Header("스킬 프리팹")]
         [SerializeField] private GameObject skillSlotPrefab;
         // 빈 오브젝트에 Skill 컴포넌트만 붙은 프리팹.
-        // SkillEffect는 스킬 타입에 따라 동적 추가.
+        // SkillEffect는 SkillEffectFactory가 동적 추가.
 
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
+        private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
+
+        // [CHANGED] 팩토리 인스턴스. Awake()에서 초기화.
+        private SkillEffectFactory effectFactory;
 
         // 외부 읽기용
         public IReadOnlyList<Skill> EquippedSkills => equippedSkills;
@@ -59,6 +79,27 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>패시브 변경 시 발생. PlayerStats 재계산용.</summary>
         public event Action OnPassiveChanged;
+
+        // ===== 초기화 =====
+
+        // [CHANGED] Awake에서 팩토리 초기화
+        private void Awake()
+        {
+            effectFactory = new SkillEffectFactory();
+            effectFactory.RegisterDefaults();
+        }
+
+        // ===== Config 접근 헬퍼 =====
+
+        /// <summary>
+        /// GameplayConfig 단축 접근. null 가능.
+        /// 내부에서 반복 사용 시 로컬 변수에 캐싱 권장:
+        ///   var cfg = GetConfig();
+        /// </summary>
+        private GameplayConfig GetConfig()
+        {
+            return GameManager.Instance?.Config;
+        }
 
         // ===== 스킬 조회 =====
 
@@ -115,6 +156,14 @@ namespace SwDreams.Adapter.Skill
                     result.Add(equippedSkills[i]);
             }
             return result;
+        }
+
+        /// <summary>
+        /// 외부(LevelUpManager)에서 진화 후보 조회용.
+        /// </summary>
+        public List<EvolutionCandidate> GetPendingEvolutions()
+        {
+            return pendingEvolutions;
         }
 
         // ===== 스킬 획득 =====
@@ -225,48 +274,96 @@ namespace SwDreams.Adapter.Skill
         /// SkillData에 evolutionPair / evolvedSkill이 설정돼 있고,
         /// 둘 다 최대 레벨이면 진화 발동.
         /// </summary>
-        private void CheckEvolution(Skill changedSkill)
+        private void CheckEvolution(Skill skill)
         {
-            if (!changedSkill.IsMaxLevel) return;
+            if (skill.Data.evolutionPair == null || skill.Data.evolvedSkill == null)
+                return;
 
-            SkillData data = changedSkill.Data;
-            if (data.evolutionPair == null || data.evolvedSkill == null) return;
+            Skill partner = GetSkill(skill.Data.evolutionPair.skillId);
+            if (partner == null || !partner.IsMaxLevel || !skill.IsMaxLevel)
+                return;
 
-            // 짝이 되는 스킬도 보유 중이고 최대 레벨인지 체크
-            Skill partner = GetSkill(data.evolutionPair.skillId);
-            if (partner == null || !partner.IsMaxLevel) return;
-
-            // 진화 발동!
-            ExecuteEvolution(changedSkill, partner, data.evolvedSkill);
-        }
-
-        /// <summary>
-        /// 진화 실행. 2슬롯 → 1슬롯 변환.
-        /// </summary>
-        private void ExecuteEvolution(Skill skillA, Skill skillB, SkillData evolvedData)
-        {
-            Debug.Log($"[SkillManager] ★ 진화! {skillA.Data.skillName} + {skillB.Data.skillName} → {evolvedData.skillName}");
-
-            int idA = skillA.Data.skillId;
-            int idB = skillB.Data.skillId;
-
-            // 1) 기존 2개 제거
-            RemoveSkill(idA);
-            RemoveSkill(idB);
-
-            // 2) 진화 스킬 추가 (슬롯 여유 확보됨: 2개 제거 → 1개 추가)
-            Skill evolvedSkill = CreateSkillSlot(evolvedData);
-            if (evolvedSkill != null)
+            // 이미 같은 진화가 대기열에 있는지 확인
+            int evolvedId = skill.Data.evolvedSkill.skillId;
+            for (int i = 0; i < pendingEvolutions.Count; i++)
             {
-                equippedSkills.Add(evolvedSkill);
-                OnSkillAdded?.Invoke(evolvedSkill);
+                if (pendingEvolutions[i].evolvedSkillData.skillId == evolvedId)
+                    return;
             }
 
-            // 3) 패시브 재계산 (패시브가 제거됐으므로)
-            OnPassiveChanged?.Invoke();
+            // 어느 쪽이 액티브인지 판별
+            int activeId, passiveId;
+            if (skill.Data.skillType == SkillType.Active)
+            {
+                activeId = skill.Data.skillId;
+                passiveId = partner.Data.skillId;
+            }
+            else
+            {
+                activeId = partner.Data.skillId;
+                passiveId = skill.Data.skillId;
+            }
 
-            // 4) 진화 이벤트
-            OnEvolution?.Invoke(evolvedData);
+            pendingEvolutions.Add(new EvolutionCandidate
+            {
+                activeSkillId = activeId,
+                passiveSkillId = passiveId,
+                evolvedSkillData = skill.Data.evolvedSkill
+            });
+
+            Debug.Log($"[SkillManager] ★ 진화 가능 등록: {skill.Data.skillName} + {partner.Data.skillName} → {skill.Data.evolvedSkill.skillName}");
+        }
+
+        // [Phase 5] 진화로 제거된 스킬 ID 추적 (선택지에서 제외용)
+        private HashSet<int> removedByEvolutionIds = new HashSet<int>();
+
+        /// <summary>
+        /// 플레이어가 진화 스킬을 선택했을 때 호출.
+        /// 기존 2개 스킬 제거 + 진화 스킬 1개 생성.
+        /// </summary>
+        public bool TryExecuteEvolution(int evolvedSkillId)
+        {
+            EvolutionCandidate? target = null;
+            int targetIndex = -1;
+
+            for (int i = 0; i < pendingEvolutions.Count; i++)
+            {
+                if (pendingEvolutions[i].evolvedSkillData.skillId == evolvedSkillId)
+                {
+                    target = pendingEvolutions[i];
+                    targetIndex = i;
+                    break;
+                }
+            }
+
+            if (target == null)
+            {
+                Debug.LogError($"[SkillManager] 진화 실행 실패 — ID {evolvedSkillId} 대기열에 없음");
+                return false;
+            }
+
+            var evo = target.Value;
+
+            // 진화로 제거되는 스킬 ID 기록 (선택지 재등장 방지)
+            removedByEvolutionIds.Add(evo.activeSkillId);
+            removedByEvolutionIds.Add(evo.passiveSkillId);
+
+            // 기존 2개 스킬 제거
+            RemoveSkill(evo.activeSkillId);
+            RemoveSkill(evo.passiveSkillId);
+
+            // 진화 스킬 생성 + 리스트에 추가
+            Skill evolvedSkill = CreateSkillSlot(evo.evolvedSkillData);
+            if (evolvedSkill != null)
+                equippedSkills.Add(evolvedSkill);
+
+            // 대기열에서 제거
+            pendingEvolutions.RemoveAt(targetIndex);
+
+            Debug.Log($"[SkillManager] ★ 진화 완료: {evo.evolvedSkillData.skillName} (슬롯 {SlotCount}/{MaxSlots})");
+
+            OnEvolution?.Invoke(evo.evolvedSkillData);
+            return true;
         }
 
         /// <summary>
@@ -293,69 +390,112 @@ namespace SwDreams.Adapter.Skill
         // ===== 선택지 생성 (호스트용) =====
 
         /// <summary>
-        /// 레벨업 시 표시할 선택지 3개 생성.
-        /// 호스트에서 각 플레이어의 SkillManager 상태를 참조하여 호출.
+        /// 이 플레이어의 상태에 맞는 레벨업 선택지를 생성.
+        /// LevelUpManager.SendNormalChoices()에서 호출.
         /// </summary>
-        /// <param name="allSkills">전체 스킬 풀 (SkillDatabase에서 제공)</param>
-        /// <param name="count">선택지 수 (기본 3)</param>
-        /// <returns>선택지 SkillData 배열. 이미 보유 중이면 "레벨업" 의미.</returns>
-        public SkillData[] GenerateChoices(SkillData[] allSkills, int count = 3)
+        /// <param name="pool">SkillDatabase.GetNormalPool() 결과</param>
+        /// <param name="count">선택지 개수 (기본 3, Config 우선)</param>
+        /// <param name="evolutionChance">진화 등장 확률 (기본 0.7, Config 우선)</param>
+        public SkillData[] GenerateChoices(SkillData[] pool, int count = 3, float evolutionChance = 0.7f)
         {
-            List<SkillData> candidates = new List<SkillData>();
-
-            if (HasEmptySlot)
+            // [CHANGED] GameplayConfig 값 우선 사용
+            var cfg = GetConfig();
+            if (cfg != null)
             {
-                // 슬롯 여유 있음 → 전체 풀에서 후보 수집
-                for (int i = 0; i < allSkills.Length; i++)
-                {
-                    SkillData sd = allSkills[i];
-
-                    // 혼돈 스킬은 별도 시스템에서 처리
-                    if (sd.skillType == SkillType.Chaos) continue;
-
-                    // 이미 보유 + 최대 레벨이면 제외
-                    Skill existing = GetSkill(sd.skillId);
-                    if (existing != null && existing.IsMaxLevel) continue;
-
-                    candidates.Add(sd);
-                }
-            }
-            else
-            {
-                // 슬롯 꽉 참 → 보유 중이면서 레벨업 가능한 것만
-                for (int i = 0; i < equippedSkills.Count; i++)
-                {
-                    if (!equippedSkills[i].IsMaxLevel)
-                        candidates.Add(equippedSkills[i].Data);
-                }
+                count = cfg.choiceCount;
+                evolutionChance = cfg.evolutionChance;
             }
 
-            // 후보가 요청 수보다 적을 수 있음
-            int resultCount = Mathf.Min(count, candidates.Count);
-            SkillData[] result = new SkillData[resultCount];
+            // 1) 진화 후보 수집
+            SkillData evolutionChoice = null;
+            if (pendingEvolutions.Count > 0 && UnityEngine.Random.value < evolutionChance)
+            {
+                int evoIndex = UnityEngine.Random.Range(0, pendingEvolutions.Count);
+                evolutionChoice = pendingEvolutions[evoIndex].evolvedSkillData;
+            }
 
-            // Fisher-Yates 셔플로 랜덤 선택
-            for (int i = candidates.Count - 1; i > 0; i--)
+            // 2) 일반 후보 수집 (최대 레벨 제외, 슬롯 꽉 차면 미보유 제외)
+            List<SkillData> normalCandidates = new List<SkillData>();
+            for (int i = 0; i < pool.Length; i++)
+            {
+                if (pool[i] == null) continue;
+
+                // 진화 스킬과 중복 방지
+                if (evolutionChoice != null && pool[i].skillId == evolutionChoice.skillId)
+                    continue;
+
+                // [Phase 5] 진화로 제거된 스킬은 다시 등장하지 않음
+                if (removedByEvolutionIds.Contains(pool[i].skillId))
+                    continue;
+
+                // 보유 중이고 최대 레벨이면 제외
+                if (HasSkill(pool[i].skillId))
+                {
+                    var existing = GetSkill(pool[i].skillId);
+                    if (existing.IsMaxLevel) continue;
+                }
+                // 슬롯 꽉 찼으면 미보유 스킬 제외
+                else if (!HasEmptySlot)
+                {
+                    continue;
+                }
+
+                normalCandidates.Add(pool[i]);
+            }
+
+            // 3) 셔플
+            ShuffleList(normalCandidates);
+
+            // 4) 선택지 조합
+            List<SkillData> result = new List<SkillData>();
+
+            if (evolutionChoice != null)
+                result.Add(evolutionChoice);
+
+            for (int i = 0; i < normalCandidates.Count && result.Count < count; i++)
+                result.Add(normalCandidates[i]);
+
+            // 5) 최종 셔플 (진화가 항상 첫 자리가 아니도록)
+            ShuffleList(result);
+
+            return result.ToArray();
+        }
+
+        private void ShuffleList<T>(List<T> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
             {
                 int j = UnityEngine.Random.Range(0, i + 1);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+                T temp = list[i];
+                list[i] = list[j];
+                list[j] = temp;
             }
-
-            for (int i = 0; i < resultCount; i++)
-                result[i] = candidates[i];
-
-            return result;
         }
 
         /// <summary>
         /// 혼돈 스킬 선택지 생성 (Lv.5, 10, 15 전용).
         /// </summary>
         /// <param name="chaosSkills">혼돈 스킬 풀</param>
-        /// <param name="count">선택지 수 (기본 3)</param>
+        /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
         public SkillData[] GenerateChaosChoices(SkillData[] chaosSkills, int count = 3)
         {
-            // 혼돈 스킬은 슬롯을 차지하지 않으므로 단순 랜덤
-            List<SkillData> candidates = new List<SkillData>(chaosSkills);
+            var cfg = GetConfig();
+            if (cfg != null)
+                count = cfg.choiceCount;
+
+            // [Phase 5] 이미 보유한 혼돈 스킬 제외
+            var chaosManager = GetComponent<ChaosSkillManager>();
+            if (chaosManager == null)
+                chaosManager = GetComponentInParent<ChaosSkillManager>();
+
+            List<SkillData> candidates = new List<SkillData>();
+            foreach (var skill in chaosSkills)
+            {
+                if (skill == null) continue;
+                if (chaosManager != null && chaosManager.HasChaosEffect(skill.chaosEffectType))
+                    continue;
+                candidates.Add(skill);
+            }
 
             int resultCount = Mathf.Min(count, candidates.Count);
             SkillData[] result = new SkillData[resultCount];
@@ -376,21 +516,37 @@ namespace SwDreams.Adapter.Skill
         /// 선택지에서 플레이어가 고른 스킬을 적용.
         /// 호스트가 결과를 받아 각 플레이어에서 호출.
         /// </summary>
-        /// <returns>true: 성공</returns>
-        public bool ApplyChoice(SkillData chosenSkill)
+        public void ApplyChoice(SkillData chosenSkill)
         {
-            if (chosenSkill == null) return false;
+            // [Phase 5] 혼돈 스킬이면 ChaosSkillManager에 위임 (슬롯 미사용)
+            if (chosenSkill.skillType == SkillType.Chaos)
+            {
+                var chaosManager = GetComponent<ChaosSkillManager>();
+                if (chaosManager == null)
+                    chaosManager = GetComponentInParent<ChaosSkillManager>();
 
+                if (chaosManager != null)
+                    chaosManager.ApplyChaos(chosenSkill);
+                else
+                    Debug.LogWarning("[SkillManager] ChaosSkillManager 없음 — 혼돈 스킬 적용 실패");
+                return;
+            }
+
+            // 진화 스킬인지 확인
+            for (int i = 0; i < pendingEvolutions.Count; i++)
+            {
+                if (pendingEvolutions[i].evolvedSkillData.skillId == chosenSkill.skillId)
+                {
+                    TryExecuteEvolution(chosenSkill.skillId);
+                    return;
+                }
+            }
+
+            // 기존: 보유 중이면 레벨업, 아니면 신규
             if (HasSkill(chosenSkill.skillId))
-            {
-                // 이미 보유 → 레벨업
-                return LevelUpSkill(chosenSkill.skillId);
-            }
+                LevelUpSkill(chosenSkill.skillId);
             else
-            {
-                // 새 스킬 획득
-                return AcquireSkill(chosenSkill);
-            }
+                AcquireSkill(chosenSkill);
         }
 
         // ===== 내부: 스킬 슬롯 생성 =====
@@ -398,7 +554,7 @@ namespace SwDreams.Adapter.Skill
         /// <summary>
         /// 스킬 오브젝트 생성 + 활성화.
         /// SkillManager의 자식으로 생성.
-        /// SkillEffect는 SkillData의 effectType에 따라 동적 추가.
+        /// [CHANGED] SkillEffect는 SkillEffectFactory가 동적 추가.
         /// </summary>
         private Skill CreateSkillSlot(SkillData skillData)
         {
@@ -422,48 +578,21 @@ namespace SwDreams.Adapter.Skill
             if (skill == null)
                 skill = slotObj.AddComponent<Skill>();
 
-            // SkillEffect 동적 추가 (액티브 스킬만)
+            // [CHANGED] SkillEffect 생성을 팩토리에 위임 (액티브 스킬만)
             SkillEffect effect = null;
             if (skillData.skillType == SkillType.Active)
             {
-                effect = AddSkillEffect(slotObj, skillData);
+                effect = effectFactory.Create(skillData.effectType, slotObj, skillData);
             }
 
             skill.Activate(skillData, effect);
             return skill;
         }
 
-        /// <summary>
-        /// SkillData의 effectType에 따라 적절한 SkillEffect 컴포넌트 추가.
-        /// Phase 4: ProjectileEffect만. Phase 5에서 나머지 추가.
-        /// </summary>
-        private SkillEffect AddSkillEffect(GameObject slotObj, SkillData skillData)
-        {
-            switch (skillData.effectType)
-            {
-                case SkillEffectType.Projectile:
-                    var projEffect = slotObj.AddComponent<ProjectileEffect>();
-                    if (skillData.projectilePrefab != null)
-                        projEffect.SetProjectilePrefab(skillData.projectilePrefab);
-                    else
-                        Debug.LogWarning($"[SkillManager] {skillData.skillName}: projectilePrefab 미설정!");
-                    return projEffect;
-
-                // Phase 5 확장 지점:
-                // case SkillEffectType.Area:
-                //     return slotObj.AddComponent<AreaEffect>();
-                // case SkillEffectType.Orbital:
-                //     return slotObj.AddComponent<OrbitalEffect>();
-                // case SkillEffectType.Placed:
-                //     return slotObj.AddComponent<PlacedEffect>();
-                // case SkillEffectType.Debuff:
-                //     return slotObj.AddComponent<DebuffEffect>();
-
-                default:
-                    Debug.LogWarning($"[SkillManager] 미구현 SkillEffectType: {skillData.effectType}");
-                    return null;
-            }
-        }
+        // ===== [삭제됨] AddSkillEffect() switch문 =====
+        // 기존 switch(skillData.effectType) 로직이 SkillEffectFactory로 이동.
+        // 새 SkillEffect 타입 추가 시 SkillEffectFactory.RegisterDefaults()에
+        // Register() 한 줄만 추가하면 됨. SkillManager 수정 불필요.
 
         // ===== GameState 연동 =====
 
@@ -484,11 +613,19 @@ namespace SwDreams.Adapter.Skill
             for (int i = 0; i < equippedSkills.Count; i++)
             {
                 var skill = equippedSkills[i];
-                // 패시브는 Activate 불필요 (수치 보정만)
+                // [Phase 5 Fix] Activate 대신 Resume 사용 — Level 리셋 방지
                 if (skill.Data.skillType == SkillType.Active)
-                    skill.Activate(skill.Data);
+                    skill.Resume();
             }
         }
+
+        // ===== 외부 접근: 팩토리 =====
+
+        /// <summary>
+        /// 외부에서 런타임에 이펙트 타입을 추가 등록할 때 사용.
+        /// 예: Phase 5에서 모드별 커스텀 이펙트 지원 시.
+        /// </summary>
+        public SkillEffectFactory EffectFactory => effectFactory;
 
         // ===== 디버그 =====
 

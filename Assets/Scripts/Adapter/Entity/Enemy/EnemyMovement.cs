@@ -74,6 +74,15 @@ namespace SwDreams.Adapter.Entity
                 }
             }
 
+            // [Phase 5 진화] 슬로우 타이머
+            if (slowTimer > 0f)
+            {
+                slowTimer -= Time.deltaTime;
+                if (slowTimer <= 0f)
+                    slowMul = 1f;
+            }
+
+            float moveSpeed = enemy.MoveSpeed * slowMul;
             Transform target = FindClosestPlayer();
 
             // Swarm은 타겟 없어도 이동해야 함
@@ -81,7 +90,7 @@ namespace SwDreams.Adapter.Entity
             {
                 if (target != null || movementStrategy is SwarmMovement)
                 {
-                    movementStrategy.UpdateMovement(transform, target, enemy.MoveSpeed);
+                    movementStrategy.UpdateMovement(transform, target, moveSpeed);
                 }
             }
         }
@@ -101,6 +110,19 @@ namespace SwDreams.Adapter.Entity
             }
         }
 
+        // [Phase 5 진화: 뇌전역] 슬로우
+        private float slowTimer;
+        private float slowMul = 1f;
+
+        /// <summary>
+        /// 일시적 이동속도 감소. AreaZone에서 호출.
+        /// </summary>
+        public void ApplySlowTemporary(float multiplier, float duration)
+        {
+            slowMul = multiplier;
+            slowTimer = duration;
+        }
+
         private Transform FindClosestPlayer()
         {
             GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
@@ -111,6 +133,10 @@ namespace SwDreams.Adapter.Entity
 
             foreach (var player in players)
             {
+                // Phase 6: 사망한 플레이어 제외
+                var damageable = player.GetComponent<Domain.Interfaces.IDamageable>();
+                if (damageable != null && !damageable.IsAlive) continue;
+
                 float dist = Vector2.Distance(transform.position, player.transform.position);
                 if (dist < minDist)
                 {
