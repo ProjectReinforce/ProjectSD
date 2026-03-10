@@ -1,0 +1,9 @@
+using Features.Zone.Domain;
+
+namespace Features.Zone.Application.Ports
+{
+    public interface IZoneEffectPort
+    {
+        void Spawn(Zone zone);
+    }
+}

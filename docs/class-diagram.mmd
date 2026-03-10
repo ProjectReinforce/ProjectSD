@@ -1,0 +1,495 @@
+classDiagram
+    direction TB
+
+    %% ══════════════════════════════════════
+    %% DOMAIN LAYER
+    %% ══════════════════════════════════════
+
+    class Lobby {
+        <<sealed>>
+        -List~Room~ _rooms
+        +IReadOnlyList~Room~ Rooms
+        +Result AddRoom(Room)
+        +Result RemoveRoom(EntityId)
+        +Room FindRoom(EntityId)
+        +Room FindRoomByName(string)
+    }
+
+    class Room {
+        <<sealed>>
+        +string Name
+        +int Capacity
+        +EntityId OwnerId
+        +IReadOnlyList~RoomMember~ Members
+        +Result~Room~ Create(EntityId, string, int, RoomMember)$
+        +Result AddMember(RoomMember)
+        +Result RemoveMember(EntityId)
+        +Result ChangeTeam(EntityId, TeamType)
+        +Result SetReady(EntityId, bool)
+        +bool CanStartGame()
+        +RoomMember FindMember(EntityId)
+    }
+
+    class RoomMember {
+        <<sealed>>
+        +string DisplayName
+        +TeamType Team
+        +bool IsReady
+        +void ChangeTeam(TeamType)
+        +void SetReady(bool)
+    }
+
+    class TeamType {
+        <<enumeration>>
+        None
+        Red
+        Blue
+    }
+
+    class LobbyRule {
+        <<static>>
+        +Result ValidateRoomName(string)$
+        +Result EnsureUniqueRoomName(Lobby, string)$
+        +Result CanStartGame(Room)$
+    }
+
+    %% Domain relationships
+    Room --|> Entity : extends
+    RoomMember --|> Entity : extends
+    Lobby "1" *-- "*" Room : contains
+    Room "1" *-- "*" RoomMember : contains
+    RoomMember --> TeamType : uses
+    LobbyRule ..> Lobby : validates
+    LobbyRule ..> Room : validates
+
+    %% ══════════════════════════════════════
+    %% APPLICATION LAYER - Ports
+    %% ══════════════════════════════════════
+
+    class ILobbyRepository {
+        <<interface>>
+        +Lobby LoadLobby()
+        +Result SaveLobby(Lobby)
+    }
+
+    class ILobbyNetworkPort {
+        <<interface>>
+        +Result RequestCreateRoom(Room, Action, Action~string~)
+        +Result RequestJoinRoom(EntityId, RoomMember, Action, Action~string~)
+        +Result RequestLeaveRoom(EntityId, EntityId, Action, Action~string~)
+        +Result RequestChangeTeam(EntityId, EntityId, TeamType, Action, Action~string~)
+        +Result RequestSetReady(EntityId, EntityId, bool, Action, Action~string~)
+        +Result RequestStartGame(EntityId)
+    }
+
+    %% ══════════════════════════════════════
+    %% APPLICATION LAYER - UseCases
+    %% ══════════════════════════════════════
+
+    class CreateRoomUseCase {
+        <<sealed>>
+        +Result Execute(string, int, string)
+    }
+
+    class JoinRoomUseCase {
+        <<sealed>>
+        +Result Execute(EntityId, string)
+    }
+
+    class LeaveRoomUseCase {
+        <<sealed>>
+        +Result Execute(EntityId, EntityId)
+    }
+
+    class ChangeTeamUseCase {
+        <<sealed>>
+        +Result Execute(EntityId, EntityId, TeamType)
+    }
+
+    class SetReadyUseCase {
+        <<sealed>>
+        +Result Execute(EntityId, EntityId, bool)
+    }
+
+    class StartGameUseCase {
+        <<sealed>>
+        +Result Execute(EntityId)
+    }
+
+    class LobbyCallbackHelper {
+        <<static>>
+        +Result Fail(IEventPublisher, string)$
+        +Action CreateRoomCallback(...)$
+    }
+
+    %% UseCase dependencies (all share same pattern)
+    CreateRoomUseCase --> ILobbyRepository
+    CreateRoomUseCase --> ILobbyNetworkPort
+    CreateRoomUseCase --> IClockPort
+    CreateRoomUseCase --> IEventPublisher
+    JoinRoomUseCase --> ILobbyRepository
+    JoinRoomUseCase --> ILobbyNetworkPort
+    JoinRoomUseCase --> IClockPort
+    JoinRoomUseCase --> IEventPublisher
+    LeaveRoomUseCase --> ILobbyRepository
+    LeaveRoomUseCase --> ILobbyNetworkPort
+    LeaveRoomUseCase --> IEventPublisher
+    ChangeTeamUseCase --> ILobbyRepository
+    ChangeTeamUseCase --> ILobbyNetworkPort
+    ChangeTeamUseCase --> IEventPublisher
+    SetReadyUseCase --> ILobbyRepository
+    SetReadyUseCase --> ILobbyNetworkPort
+    SetReadyUseCase --> IEventPublisher
+    StartGameUseCase --> ILobbyRepository
+    StartGameUseCase --> ILobbyNetworkPort
+    StartGameUseCase --> IEventPublisher
+    LobbyCallbackHelper ..> ILobbyRepository
+    LobbyCallbackHelper ..> IEventPublisher
+
+    %% ══════════════════════════════════════
+    %% APPLICATION LAYER - Events & Snapshots
+    %% ══════════════════════════════════════
+
+    class LobbyUpdatedEvent {
+        <<struct>>
+        +LobbySnapshot Lobby
+    }
+
+    class RoomUpdatedEvent {
+        <<struct>>
+        +RoomSnapshot Room
+    }
+
+    class GameStartedEvent {
+        <<struct>>
+        +RoomSnapshot Room
+    }
+
+    class LobbyErrorEvent {
+        <<struct>>
+        +string Message
+    }
+
+    class LobbySnapshot {
+        <<struct>>
+        +IReadOnlyList~RoomSnapshot~ Rooms
+    }
+
+    class RoomSnapshot {
+        <<struct>>
+        +EntityId Id
+        +string Name
+        +int Capacity
+        +EntityId OwnerId
+        +IReadOnlyList~RoomMemberSnapshot~ Members
+    }
+
+    class RoomMemberSnapshot {
+        <<struct>>
+        +EntityId Id
+        +string DisplayName
+        +TeamType Team
+        +bool IsReady
+    }
+
+    LobbyUpdatedEvent *-- LobbySnapshot
+    RoomUpdatedEvent *-- RoomSnapshot
+    GameStartedEvent *-- RoomSnapshot
+    LobbySnapshot *-- RoomSnapshot
+    RoomSnapshot *-- RoomMemberSnapshot
+
+    %% ══════════════════════════════════════
+    %% PRESENTATION LAYER
+    %% ══════════════════════════════════════
+
+    class LobbyView {
+        <<sealed / MonoBehaviour>>
+        -RoomListView _roomListView
+        -RoomDetailView _roomDetailView
+        -IEventSubscriber _eventBus
+        +void Initialize(IEventSubscriber, UseCases...)
+        +void RenderLobby(LobbySnapshot)
+        +void RenderRoom(RoomSnapshot)
+        +void RenderStartGame(RoomSnapshot)
+        +void RenderError(string)
+    }
+
+    class RoomListView {
+        <<sealed / MonoBehaviour>>
+        -CreateRoomUseCase _createRoom
+        -JoinRoomUseCase _joinRoom
+        +void Initialize(CreateRoomUseCase, JoinRoomUseCase)
+        +Result CreateRoom(string, int, string)
+        +Result JoinRoom(EntityId, string)
+        +void Render(IReadOnlyList~RoomSnapshot~)
+    }
+
+    class RoomDetailView {
+        <<sealed / MonoBehaviour>>
+        -LeaveRoomUseCase _leaveRoom
+        -ChangeTeamUseCase _changeTeam
+        -SetReadyUseCase _setReady
+        -StartGameUseCase _startGame
+        +void Initialize(UseCases...)
+        +Result LeaveRoom(EntityId, EntityId)
+        +Result ChangeTeam(EntityId, EntityId, TeamType)
+        +Result SetReady(EntityId, EntityId, bool)
+        +Result StartGame(EntityId)
+        +void Render(RoomSnapshot)
+    }
+
+    LobbyView *-- RoomListView
+    LobbyView *-- RoomDetailView
+    LobbyView --> IEventSubscriber : subscribes
+    RoomListView --> CreateRoomUseCase : calls Execute
+    RoomListView --> JoinRoomUseCase : calls Execute
+    RoomDetailView --> LeaveRoomUseCase : calls Execute
+    RoomDetailView --> ChangeTeamUseCase : calls Execute
+    RoomDetailView --> SetReadyUseCase : calls Execute
+    RoomDetailView --> StartGameUseCase : calls Execute
+
+    %% ══════════════════════════════════════
+    %% INFRASTRUCTURE LAYER
+    %% ══════════════════════════════════════
+
+    class LobbyRepository {
+        <<sealed>>
+        -Lobby _lobby
+        +Lobby LoadLobby()
+        +Result SaveLobby(Lobby)
+    }
+
+    class LobbyPhotonAdapter {
+        <<sealed / MonoBehaviour>>
+        -PendingCallbackTracker~LobbyPhotonOperation~ _requestManager
+        -PhotonPlayerPropertyManager _propertyManager
+        -PhotonNetworkEventHandler _eventHandler
+        +void Initialize(ILobbyRepository, IEventPublisher)
+        +Result RequestCreateRoom(...)
+        +Result RequestJoinRoom(...)
+        +Result RequestLeaveRoom(...)
+        +Result RequestChangeTeam(...)
+        +Result RequestSetReady(...)
+        +Result RequestStartGame(...)
+    }
+
+    class PhotonNetworkEventHandler {
+        <<sealed / MonoBehaviourPunCallbacks>>
+        +void Initialize(PendingCallbackTracker, ILobbyRepository, IEventPublisher)
+        +void OnCreatedRoom()
+        +void OnCreateRoomFailed(short, string)
+        +void OnJoinedRoom()
+        +void OnJoinRoomFailed(short, string)
+        +void OnLeftRoom()
+        +void OnPlayerEnteredRoom(Player)
+        +void OnPlayerLeftRoom(Player)
+        +void OnPlayerPropertiesUpdate(Player, Hashtable)
+        +void OnEvent(EventData)
+    }
+
+    class PhotonPlayerPropertyManager {
+        <<sealed>>
+        +bool SetLocalMemberProperties(RoomMember)
+        +bool TryGetLocalMemberId(out EntityId)
+    }
+
+    class LobbyPhotonOperation {
+        <<enumeration>>
+        Create
+        Join
+        Leave
+        ChangeTeam
+        SetReady
+    }
+
+    class LobbyPhotonConstants {
+        <<static>>
+        +byte GameStartedEventCode$
+        +string RoomDisplayNameKey$
+        +string MemberIdKey$
+        +string TeamKey$
+        +string IsReadyKey$
+        +string DisplayNameKey$
+    }
+
+    LobbyRepository ..|> ILobbyRepository : implements
+    LobbyPhotonAdapter ..|> ILobbyNetworkPort : implements
+    LobbyPhotonAdapter *-- PhotonNetworkEventHandler
+    LobbyPhotonAdapter *-- PhotonPlayerPropertyManager
+    LobbyPhotonAdapter *-- PendingCallbackTracker~LobbyPhotonOperation~
+    PhotonNetworkEventHandler --> ILobbyRepository : reads/saves
+    PhotonNetworkEventHandler --> IEventPublisher : publishes events
+
+    %% ══════════════════════════════════════
+    %% BOOTSTRAP LAYER
+    %% ══════════════════════════════════════
+
+    class LobbyBootstrap {
+        <<sealed / MonoBehaviour>>
+        -LobbyView _view
+        -SceneContext _sceneContext
+        -LobbyPhotonAdapter _photonAdapter
+        -void Awake()
+    }
+
+    LobbyBootstrap --> LobbyView : initializes
+    LobbyBootstrap --> SceneContext : reads ports
+    LobbyBootstrap --> LobbyPhotonAdapter : initializes
+    LobbyBootstrap ..> CreateRoomUseCase : creates
+    LobbyBootstrap ..> JoinRoomUseCase : creates
+    LobbyBootstrap ..> LeaveRoomUseCase : creates
+    LobbyBootstrap ..> ChangeTeamUseCase : creates
+    LobbyBootstrap ..> SetReadyUseCase : creates
+    LobbyBootstrap ..> StartGameUseCase : creates
+    LobbyBootstrap ..> LobbyRepository : creates
+    LobbyBootstrap ..> ClockAdapter : creates
+
+    %% ══════════════════════════════════════
+    %% SHARED LAYER
+    %% ══════════════════════════════════════
+
+    class Entity {
+        <<abstract>>
+        +EntityId Id
+        #Entity(EntityId id)
+    }
+
+    class EntityId {
+        <<struct>>
+        +string Value
+        +EntityId New()$
+        +bool Equals(EntityId)
+    }
+
+    class Result {
+        <<struct>>
+        +bool IsSuccess
+        +bool IsFailure
+        +string Error
+        +Result Success()$
+        +Result Failure(string)$
+    }
+
+    class Result~T~ {
+        <<struct>>
+        +T Value
+        +bool IsSuccess
+        +bool IsFailure
+        +string Error
+        +Result~T~ Success(T)$
+        +Result~T~ Failure(string)$
+    }
+
+    class ValueObject {
+        <<abstract>>
+        #IEnumerable~object~ GetEqualityComponents()*
+    }
+
+    class IEventPublisher {
+        <<interface>>
+        +void Publish~T~(T e)
+    }
+
+    class IEventSubscriber {
+        <<interface>>
+        +void Subscribe~T~(Action~T~)
+        +void Unsubscribe~T~(Action~T~)
+    }
+
+    class EventBus {
+        <<sealed>>
+        -Dictionary~Type，List~Delegate~~ _handlers
+        +void Publish~T~(T e)
+        +void Subscribe~T~(Action~T~)
+        +void Unsubscribe~T~(Action~T~)
+    }
+
+    class IClockPort {
+        <<interface>>
+        +DateTime UtcNow
+        +EntityId NewId()
+    }
+
+    class ClockAdapter {
+        <<sealed>>
+        +DateTime UtcNow
+        +EntityId NewId()
+    }
+
+    class SceneContext {
+        <<sealed / MonoBehaviour>>
+        +IEventPublisher Publisher
+        +IEventSubscriber Subscriber
+        +IUiCommandPublisher UiCommandPublisher
+        +IUiCommandSubscriber UiCommandSubscriber
+    }
+
+    class PendingCallbackTracker~TOperation~ {
+        <<sealed>>
+        +bool IsPending(TOperation)
+        +void Set(TOperation, Action, Action~string~)
+        +PendingCallback Consume(TOperation)
+        +void Clear(TOperation)
+    }
+
+    class IUiCommandPublisher {
+        <<interface>>
+        +void Push(string panelId)
+        +void Pop()
+        +void Clear()
+    }
+
+    class IUiCommandSubscriber {
+        <<interface>>
+        +void Subscribe(Action~UiStackCommand~)
+        +void Unsubscribe(Action~UiStackCommand~)
+    }
+
+    class UiStackCommandBus {
+        <<sealed>>
+        +void Push(string)
+        +void Pop()
+        +void Clear()
+        +void Subscribe(Action~UiStackCommand~)
+        +void Unsubscribe(Action~UiStackCommand~)
+    }
+
+    class UiStack {
+        <<sealed>>
+        +IReadOnlyList~string~ Panels
+        +string Top
+        +bool Push(string)
+        +bool Pop()
+        +void Clear()
+    }
+
+    class UiShellView {
+        <<sealed / MonoBehaviour>>
+        -UiStack _stack
+        +void Initialize(IUiCommandSubscriber)
+    }
+
+    class UiStackCommand {
+        <<struct>>
+        +UiStackCommandType Type
+        +string PanelId
+    }
+
+    class UiStackCommandType {
+        <<enumeration>>
+        Push
+        Pop
+        Clear
+    }
+
+    EventBus ..|> IEventPublisher : implements
+    EventBus ..|> IEventSubscriber : implements
+    ClockAdapter ..|> IClockPort : implements
+    UiStackCommandBus ..|> IUiCommandPublisher : implements
+    UiStackCommandBus ..|> IUiCommandSubscriber : implements
+    SceneContext *-- EventBus : owns
+    SceneContext *-- UiStackCommandBus : owns
+    UiShellView --> IUiCommandSubscriber : subscribes
+    UiShellView *-- UiStack
+    UiStackCommand --> UiStackCommandType
+    Entity *-- EntityId
