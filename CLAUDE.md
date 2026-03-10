@@ -71,11 +71,11 @@ Shared -> (no feature dependency)
 - Business logic inside View or InputHandler
 - Networking or Unity API inside Domain
 - Feature-specific code inside Shared
-- Generic abstractions without real duplication
 - Bootstrap becoming a god class
 - One port handling unrelated responsibilities
 - Layers not defined in architecture.md
 - Silent failure on null — use `Debug.LogError` for missing SerializeField/injected dependencies; do not add null checks for internal data (let NullReferenceException surface naturally)
+- Behavioral switch on type enums — use Factory + Strategy pattern instead; switch is fine for command dispatch and simple value mapping
 
 **When unsure:** keep code inside the current feature rather than moving it to Shared.
 

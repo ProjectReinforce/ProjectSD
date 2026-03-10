@@ -1,0 +1,60 @@
+현재 프로젝트를 나비 모양으로 그려보면 이렇습니다:
+
+
+   User 쪽 (입력/출력)                          Server 쪽 (외부 시스템)
+                                  
+                                  
+  ┌─────────┐                                          ┌─────────┐
+  │Unity UI │                                          │ Photon  │
+  │         │                                          │ Server  │
+  │ Button  │                                          │         │
+  │ Panel   │                                          │         │
+  │ Toggle  │                                          │ Memory  │
+  └────┬────┘                                          └────┬────┘
+       │                                                    │
+       │ Serialize                                          │ Photon
+       │ Field                                              │ SDK
+       │                                                    │
+  ┌────┴──────────┐    ┌──────────────────┐    ┌────────────┴───────┐
+  │ Presentation  │    │   Application    │    │  Infrastructure    │
+  │               │    │                  │    │                    │
+  │  LobbyView    │    │  CreateRoom      │    │  PhotonAdapter     │
+  │  RoomListView ├───►│  JoinRoom    ┌───┼───►│  (INetworkPort)    │
+  │  RoomDetail   │    │  LeaveRoom   │   │    │                    │
+  │    View       │Execute()  ChangeTeam  │    │  LobbyRepository   │
+  │               │    │  SetReady    │   │    │  (ILobbyRepository)│
+  │               │◄───┤  StartGame   │   │◄───│                    │
+  │               │    │          ────┘   │    │  ClockAdapter      │
+  └───────────────┘    │   ┌──────────┐   │    │  (IClockPort)      │
+       ▲          Event│   │  Domain  │   │    └────────────────────┘
+       │          Bus  │   │          │   │              ▲
+       │               │   │  Lobby   │   │              │
+       │               │   │  Room    │   │Callback      │
+       └───────────────┤   │  Room    │   │(Action)      │
+         Subscribe     │   │  Member  │   │              │
+                       │   │          │   │              │
+                       │   └──────────┘   │              │
+                       └──────────────────┘              │
+                                ▲                        │
+                                │                        │
+                       ┌────────┴────────────────────────┘
+                       │         Bootstrap
+                       │     (LobbyBootstrap)
+                       │
+                       │      ┌──────────┐
+                       └──────│  Shared   │
+                              │ EventBus  │
+                              │ IClockPort│
+                              │ Result    │
+                              │ UiCommand │
+                              └──────────┘
+원본 다이어그램과 비교
+원본 (iOS/VIPER)	이 프로젝트
+중심	UseCase + Entity	동일
+왼쪽 날개	UI → ViewController → ViewModel → InputPort	Unity UI → View → Execute() 직접 호출
+오른쪽 날개	ResponsePort → Repository → Persistence → DB	Callback → Adapter → Photon/Memory
+되돌아오는 경로	OutputPort → ViewController	EventBus → View.Subscribe()
+레이어 수	좌우 각 4~5겹	좌우 각 2~3겹
+원본보다 날개가 짧고 단순한 나비입니다. iOS VIPER는 ViewController/ViewModel/Router/InputPort/OutputPort로 날개를 넓게 펼치는데, 이 프로젝트는 View 하나 + EventBus로 같은 일을 해결하니까요.
+
+좁은 나비지만 중심(Domain)의 독립성은 똑같이 지켜지고 있어서, 군더더기 없는 좋은 형태입니다.
