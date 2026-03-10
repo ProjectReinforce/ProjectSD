@@ -23,10 +23,10 @@ namespace Features.Lobby.Application
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Fail("Room was not found.");
+                return LobbyCallbackHelper.Fail(_eventBus, "Room was not found.");
 
             if (room.FindMember(memberId) == null)
-                return Fail("Member was not found.");
+                return LobbyCallbackHelper.Fail(_eventBus, "Member was not found.");
 
             var networkResult = _network.RequestLeaveRoom(roomId, memberId,
                 onSuccess: () =>
@@ -48,18 +48,12 @@ namespace Features.Lobby.Application
                     if (currentRoom.Members.Count > 0)
                         _eventBus.Publish(new RoomUpdatedEvent(currentRoom));
                 },
-                onFailure: error => Fail(error));
+                onFailure: error => LobbyCallbackHelper.Fail(_eventBus, error));
 
             if (networkResult.IsFailure)
-                return Fail(networkResult.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, networkResult.Error);
 
             return Result.Success();
-        }
-
-        private Result Fail(string message)
-        {
-            _eventBus.Publish(new LobbyErrorEvent(message));
-            return Result.Failure(message);
         }
     }
 }

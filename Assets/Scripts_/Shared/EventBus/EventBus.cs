@@ -27,8 +27,12 @@ namespace Shared.EventBus
         public void Publish<T>(T e)
         {
             if (!_handlers.TryGetValue(typeof(T), out var list)) return;
-            foreach (var handler in list)
-                ((Action<T>)handler)(e);
+            var count = list.Count;
+            if (count == 0) return;
+            var snapshot = new Delegate[count];
+            list.CopyTo(snapshot);
+            for (var i = 0; i < count; i++)
+                ((Action<T>)snapshot[i])(e);
         }
     }
 }

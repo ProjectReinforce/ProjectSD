@@ -9,7 +9,7 @@ namespace Shared.Ui
         Clear = 2
     }
 
-    public struct UiStackCommand
+    public readonly struct UiStackCommand
     {
         public UiStackCommand(UiStackCommandType type, string panelId)
         {
@@ -21,32 +21,51 @@ namespace Shared.Ui
         public string PanelId { get; }
     }
 
-    public static class UiStackCommandBus
+    public interface IUiCommandPublisher
     {
-        public static event Action<UiStackCommand> CommandPublished;
+        void Push(string panelId);
+        void Pop();
+        void Clear();
+    }
 
-        public static void Publish(UiStackCommand command)
+    public interface IUiCommandSubscriber
+    {
+        void Subscribe(Action<UiStackCommand> handler);
+        void Unsubscribe(Action<UiStackCommand> handler);
+    }
+
+    public sealed class UiStackCommandBus : IUiCommandPublisher, IUiCommandSubscriber
+    {
+        private Action<UiStackCommand> _commandPublished;
+
+        public void Subscribe(Action<UiStackCommand> handler)
         {
-            var handler = CommandPublished;
-            if (handler != null)
-            {
-                handler(command);
-            }
+            _commandPublished += handler;
         }
 
-        public static void Push(string panelId)
+        public void Unsubscribe(Action<UiStackCommand> handler)
+        {
+            _commandPublished -= handler;
+        }
+
+        public void Push(string panelId)
         {
             Publish(new UiStackCommand(UiStackCommandType.Push, panelId));
         }
 
-        public static void Pop()
+        public void Pop()
         {
             Publish(new UiStackCommand(UiStackCommandType.Pop, string.Empty));
         }
 
-        public static void Clear()
+        public void Clear()
         {
             Publish(new UiStackCommand(UiStackCommandType.Clear, string.Empty));
+        }
+
+        private void Publish(UiStackCommand command)
+        {
+            _commandPublished?.Invoke(command);
         }
     }
 }

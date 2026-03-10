@@ -1,6 +1,6 @@
 using Features.Lobby.Application;
+using Features.Lobby.Application.Events;
 using System.Collections.Generic;
-using Features.Lobby.Domain;
 using Shared.Kernel;
 using UnityEngine;
 
@@ -23,7 +23,7 @@ namespace Features.Lobby.Presentation
         public Result JoinRoom(Shared.Kernel.EntityId roomId, string memberDisplayName)
             => _joinRoom.Execute(roomId, memberDisplayName);
 
-        public void Render(IReadOnlyList<Room> rooms)
+        public void Render(IReadOnlyList<RoomSnapshot> rooms)
         {
             Debug.Log($"[Lobby] Room list updated. Count={rooms.Count}");
         }

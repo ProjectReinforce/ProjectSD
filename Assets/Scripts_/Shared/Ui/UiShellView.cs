@@ -11,14 +11,20 @@ namespace Shared.Ui
 
         private readonly UiStack _stack = new UiStack();
 
-        private void OnEnable()
+        private IUiCommandSubscriber _commandBus;
+        private Action<UiStackCommand> _onCommand;
+
+        public void Initialize(IUiCommandSubscriber commandBus)
         {
-            UiStackCommandBus.CommandPublished += HandleCommand;
+            _commandBus = commandBus;
+            _onCommand = HandleCommand;
+            _commandBus.Subscribe(_onCommand);
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
-            UiStackCommandBus.CommandPublished -= HandleCommand;
+            if (_commandBus == null) return;
+            _commandBus.Unsubscribe(_onCommand);
         }
 
         private void HandleCommand(UiStackCommand command)

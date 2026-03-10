@@ -20,8 +20,6 @@ namespace Features.Lobby.Infrastructure.Photon
     /// </summary>
     public sealed class PhotonNetworkEventHandler : MonoBehaviourPunCallbacks, IOnEventCallback
     {
-        private const byte GameStartedEventCode = 100;
-
         private PendingCallbackTracker<LobbyPhotonOperation> _requestManager;
         private ILobbyRepository _repository;
         private IEventPublisher _publisher;
@@ -89,6 +87,83 @@ namespace Features.Lobby.Infrastructure.Photon
             _requestManager.Consume(Op.Leave).OnSuccess();
         }
 
+        // --- Remote Player Join/Leave Callbacks ---
+
+        public override void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            if (!PhotonNetwork.InRoom) return;
+            if (newPlayer == PhotonNetwork.LocalPlayer) return;
+
+            if (!newPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var memberIdRaw)
+                || memberIdRaw is not string memberIdStr)
+            {
+                Debug.LogWarning("[PhotonEventHandler] Remote player entered but has no memberId property.");
+                return;
+            }
+
+            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
+            var memberId = new EntityId(memberIdStr);
+
+            var displayName = newPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.DisplayNameKey, out var nameRaw) && nameRaw is string nameStr
+                ? nameStr : newPlayer.NickName ?? "Player";
+
+            var team = newPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.TeamKey, out var teamRaw) && teamRaw is int teamInt
+                ? (TeamType)teamInt : TeamType.None;
+
+            var isReady = newPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var readyRaw) && readyRaw is bool readyBool
+                && readyBool;
+
+            var member = new RoomMember(memberId, displayName, team, isReady);
+
+            var lobby = _repository.LoadLobby();
+            var room = lobby.FindRoom(roomId);
+            if (room == null)
+            {
+                Debug.LogWarning("[PhotonEventHandler] Remote player entered but room not found in domain.");
+                return;
+            }
+
+            var addResult = room.AddMember(member);
+            if (addResult.IsFailure)
+            {
+                Debug.LogWarning($"[PhotonEventHandler] Failed to add remote player: {addResult.Error}");
+                return;
+            }
+
+            _repository.SaveLobby(lobby);
+            _publisher.Publish(new RoomUpdatedEvent(room));
+        }
+
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            if (!PhotonNetwork.InRoom) return;
+            if (otherPlayer == PhotonNetwork.LocalPlayer) return;
+
+            if (!otherPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var memberIdRaw)
+                || memberIdRaw is not string memberIdStr)
+            {
+                Debug.LogWarning("[PhotonEventHandler] Remote player left but has no memberId property.");
+                return;
+            }
+
+            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
+            var memberId = new EntityId(memberIdStr);
+
+            var lobby = _repository.LoadLobby();
+            var room = lobby.FindRoom(roomId);
+            if (room == null) return;
+
+            var removeResult = room.RemoveMember(memberId);
+            if (removeResult.IsFailure)
+            {
+                Debug.LogWarning($"[PhotonEventHandler] Failed to remove remote player: {removeResult.Error}");
+                return;
+            }
+
+            _repository.SaveLobby(lobby);
+            _publisher.Publish(new RoomUpdatedEvent(room));
+        }
+
         // --- Player Properties Update Callbacks ---
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
@@ -101,7 +176,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
         private void HandleLocalPlayerPropertyUpdate(Hashtable changedProps)
         {
-            if (changedProps.ContainsKey("team"))
+            if (changedProps.ContainsKey(LobbyPhotonConstants.TeamKey))
             {
                 if (!_requestManager.IsPending(Op.ChangeTeam))
                     Debug.LogWarning("[PhotonEventHandler] Unexpected Team update: no pending change team.");
@@ -109,7 +184,7 @@ namespace Features.Lobby.Infrastructure.Photon
                     _requestManager.Consume(Op.ChangeTeam).OnSuccess();
             }
 
-            if (changedProps.ContainsKey("isReady"))
+            if (changedProps.ContainsKey(LobbyPhotonConstants.IsReadyKey))
             {
                 if (!_requestManager.IsPending(Op.SetReady))
                     Debug.LogWarning("[PhotonEventHandler] Unexpected Ready update: no pending set ready.");
@@ -123,7 +198,7 @@ namespace Features.Lobby.Infrastructure.Photon
             if (!PhotonNetwork.InRoom)
                 return;
 
-            if (!remotePlayer.CustomProperties.TryGetValue("memberId", out var memberIdRaw) || memberIdRaw is not string memberIdStr)
+            if (!remotePlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var memberIdRaw) || memberIdRaw is not string memberIdStr)
                 return;
 
             var roomId = new Shared.Kernel.EntityId(PhotonNetwork.CurrentRoom.Name);
@@ -135,7 +210,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
             var changed = false;
 
-            if (changedProps.ContainsKey("team") && changedProps["team"] is int teamInt)
+            if (changedProps.ContainsKey(LobbyPhotonConstants.TeamKey) && changedProps[LobbyPhotonConstants.TeamKey] is int teamInt)
             {
                 var result = room.ChangeTeam(memberId, (TeamType)teamInt);
                 if (result.IsFailure)
@@ -144,7 +219,7 @@ namespace Features.Lobby.Infrastructure.Photon
                     changed = true;
             }
 
-            if (changedProps.ContainsKey("isReady") && changedProps["isReady"] is bool isReady)
+            if (changedProps.ContainsKey(LobbyPhotonConstants.IsReadyKey) && changedProps[LobbyPhotonConstants.IsReadyKey] is bool isReady)
             {
                 var result = room.SetReady(memberId, isReady);
                 if (result.IsFailure)
@@ -164,7 +239,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
         public void OnEvent(EventData photonEvent)
         {
-            if (photonEvent.Code != GameStartedEventCode)
+            if (photonEvent.Code != LobbyPhotonConstants.GameStartedEventCode)
                 return;
 
             if (photonEvent.CustomData is not string roomIdValue || string.IsNullOrWhiteSpace(roomIdValue))

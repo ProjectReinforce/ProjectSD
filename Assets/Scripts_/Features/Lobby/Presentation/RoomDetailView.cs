@@ -1,4 +1,5 @@
 using Features.Lobby.Application;
+using Features.Lobby.Application.Events;
 using Features.Lobby.Domain;
 using Shared.Kernel;
 using UnityEngine;
@@ -36,7 +37,7 @@ namespace Features.Lobby.Presentation
         public Result StartGame(Shared.Kernel.EntityId roomId)
             => _startGame.Execute(roomId);
 
-        public void Render(Room room)
+        public void Render(RoomSnapshot room)
         {
             Debug.Log($"[Lobby] Room detail updated: {room.Name} ({room.Members.Count}/{room.Capacity})");
         }

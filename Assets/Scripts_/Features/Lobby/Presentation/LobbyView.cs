@@ -1,10 +1,8 @@
+using System;
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
-using Features.Lobby.Domain;
 using Shared.EventBus;
 using UnityEngine;
-
-using DomainLobby = Features.Lobby.Domain.Lobby;
 
 namespace Features.Lobby.Presentation
 {
@@ -12,6 +10,12 @@ namespace Features.Lobby.Presentation
     {
         [SerializeField] private RoomListView _roomListView;
         [SerializeField] private RoomDetailView _roomDetailView;
+
+        private IEventSubscriber _eventBus;
+        private Action<LobbyUpdatedEvent> _onLobbyUpdated;
+        private Action<RoomUpdatedEvent> _onRoomUpdated;
+        private Action<GameStartedEvent> _onGameStarted;
+        private Action<LobbyErrorEvent> _onLobbyError;
 
         public void Initialize(
             IEventSubscriber eventBus,
@@ -37,13 +41,28 @@ namespace Features.Lobby.Presentation
             _roomListView.Initialize(createRoom, joinRoom);
             _roomDetailView.Initialize(leaveRoom, changeTeam, setReady, startGame);
 
-            eventBus.Subscribe<LobbyUpdatedEvent>(e => RenderLobby(e.Lobby));
-            eventBus.Subscribe<RoomUpdatedEvent>(e => RenderRoom(e.Room));
-            eventBus.Subscribe<GameStartedEvent>(e => RenderStartGame(e.Room));
-            eventBus.Subscribe<LobbyErrorEvent>(e => RenderError(e.Message));
+            _eventBus = eventBus;
+            _onLobbyUpdated = e => RenderLobby(e.Lobby);
+            _onRoomUpdated = e => RenderRoom(e.Room);
+            _onGameStarted = e => RenderStartGame(e.Room);
+            _onLobbyError = e => RenderError(e.Message);
+
+            _eventBus.Subscribe(_onLobbyUpdated);
+            _eventBus.Subscribe(_onRoomUpdated);
+            _eventBus.Subscribe(_onGameStarted);
+            _eventBus.Subscribe(_onLobbyError);
         }
 
-        public void RenderLobby(DomainLobby lobby)
+        private void OnDestroy()
+        {
+            if (_eventBus == null) return;
+            _eventBus.Unsubscribe(_onLobbyUpdated);
+            _eventBus.Unsubscribe(_onRoomUpdated);
+            _eventBus.Unsubscribe(_onGameStarted);
+            _eventBus.Unsubscribe(_onLobbyError);
+        }
+
+        public void RenderLobby(LobbySnapshot lobby)
         {
             if (_roomListView == null)
             {
@@ -54,7 +73,7 @@ namespace Features.Lobby.Presentation
             _roomListView.Render(lobby.Rooms);
         }
 
-        public void RenderRoom(Room room)
+        public void RenderRoom(RoomSnapshot room)
         {
             if (_roomDetailView == null)
             {
@@ -65,7 +84,7 @@ namespace Features.Lobby.Presentation
             _roomDetailView.Render(room);
         }
 
-        public void RenderStartGame(Room room)
+        public void RenderStartGame(RoomSnapshot room)
         {
             Debug.Log($"[Lobby] Start game: {room.Name}");
         }

@@ -21,9 +21,7 @@ namespace Features.Lobby.Infrastructure.Photon
     /// </summary>
     public sealed class LobbyPhotonAdapter : MonoBehaviour, ILobbyNetworkPort
     {
-        private const string RoomDisplayNameKey = "roomDisplayName";
         private const string DefaultGameSceneName = "GameScene";
-        private const byte GameStartedEventCode = 100;
 
         private readonly PendingCallbackTracker<LobbyPhotonOperation> _requestManager = new();
         private readonly PhotonPlayerPropertyManager _propertyManager = new();
@@ -71,8 +69,8 @@ namespace Features.Lobby.Infrastructure.Photon
                 IsVisible = true,
                 IsOpen = true,
                 CleanupCacheOnLeave = true,
-                CustomRoomProperties = new Hashtable { [RoomDisplayNameKey] = room.Name },
-                CustomRoomPropertiesForLobby = new[] { RoomDisplayNameKey }
+                CustomRoomProperties = new Hashtable { [LobbyPhotonConstants.RoomDisplayNameKey] = room.Name },
+                CustomRoomPropertiesForLobby = new[] { LobbyPhotonConstants.RoomDisplayNameKey }
             };
 
             var created = PhotonNetwork.CreateRoom(room.Id.Value, options, TypedLobby.Default);
@@ -153,7 +151,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
             _requestManager.Set(Op.ChangeTeam, onSuccess, onFailure);
 
-            PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { ["team"] = (int)team });
+            PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { [LobbyPhotonConstants.TeamKey] = (int)team });
             return Result.Success();
         }
 
@@ -170,7 +168,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
             _requestManager.Set(Op.SetReady, onSuccess, onFailure);
 
-            PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { ["isReady"] = isReady });
+            PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { [LobbyPhotonConstants.IsReadyKey] = isReady });
             return Result.Success();
         }
 
@@ -183,7 +181,7 @@ namespace Features.Lobby.Infrastructure.Photon
                 return Result.Failure("Only the room master can start the game.");
 
             var raised = PhotonNetwork.RaiseEvent(
-                GameStartedEventCode,
+                LobbyPhotonConstants.GameStartedEventCode,
                 roomId.Value,
                 new RaiseEventOptions { Receivers = ReceiverGroup.All },
                 SendOptions.SendReliable);

@@ -27,18 +27,18 @@ namespace Features.Lobby.Application
             var lobby = _repository.LoadLobby();
             var roomNameValidation = LobbyRule.ValidateRoomName(roomName);
             if (roomNameValidation.IsFailure)
-                return Fail(roomNameValidation.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, roomNameValidation.Error);
 
             var uniqueRoomValidation = LobbyRule.EnsureUniqueRoomName(lobby, roomName);
             if (uniqueRoomValidation.IsFailure)
-                return Fail(uniqueRoomValidation.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, uniqueRoomValidation.Error);
 
             var ownerName = string.IsNullOrWhiteSpace(ownerDisplayName) ? "Host" : ownerDisplayName.Trim();
             var owner = new RoomMember(_clock.NewId(), ownerName, TeamType.None, false);
 
             var roomResult = Room.Create(_clock.NewId(), roomName.Trim(), capacity, owner);
             if (roomResult.IsFailure)
-                return Fail(roomResult.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, roomResult.Error);
 
             var room = roomResult.Value;
             var networkResult = _network.RequestCreateRoom(room,
@@ -54,18 +54,12 @@ namespace Features.Lobby.Application
                     _eventBus.Publish(new LobbyUpdatedEvent(currentLobby));
                     _eventBus.Publish(new RoomUpdatedEvent(room));
                 },
-                onFailure: error => Fail(error));
+                onFailure: error => LobbyCallbackHelper.Fail(_eventBus, error));
 
             if (networkResult.IsFailure)
-                return Fail(networkResult.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, networkResult.Error);
 
             return Result.Success();
-        }
-
-        private Result Fail(string message)
-        {
-            _eventBus.Publish(new LobbyErrorEvent(message));
-            return Result.Failure(message);
         }
     }
 }

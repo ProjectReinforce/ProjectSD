@@ -1,4 +1,3 @@
-using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
 using Features.Lobby.Domain;
 using Shared.EventBus;
@@ -24,23 +23,17 @@ namespace Features.Lobby.Application
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Fail("Room was not found.");
+                return LobbyCallbackHelper.Fail(_eventBus, "Room was not found.");
 
             var ruleResult = LobbyRule.CanStartGame(room);
             if (ruleResult.IsFailure)
-                return Fail(ruleResult.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, ruleResult.Error);
 
             var networkResult = _network.RequestStartGame(roomId);
             if (networkResult.IsFailure)
-                return Fail(networkResult.Error);
+                return LobbyCallbackHelper.Fail(_eventBus, networkResult.Error);
 
             return Result.Success();
-        }
-
-        private Result Fail(string message)
-        {
-            _eventBus.Publish(new LobbyErrorEvent(message));
-            return Result.Failure(message);
         }
     }
 }

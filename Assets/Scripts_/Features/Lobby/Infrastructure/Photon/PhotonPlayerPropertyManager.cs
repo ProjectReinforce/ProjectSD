@@ -11,11 +11,6 @@ namespace Features.Lobby.Infrastructure.Photon
     /// </summary>
     public sealed class PhotonPlayerPropertyManager
     {
-        private const string MemberIdKey = "memberId";
-        private const string TeamKey = "team";
-        private const string IsReadyKey = "isReady";
-        private const string DisplayNameKey = "displayName";
-
         public bool SetLocalMemberProperties(RoomMember member)
         {
             if (PhotonNetwork.LocalPlayer == null)
@@ -23,10 +18,10 @@ namespace Features.Lobby.Infrastructure.Photon
 
             var props = new Hashtable
             {
-                [MemberIdKey]    = member.Id.Value,
-                [DisplayNameKey] = member.DisplayName,
-                [TeamKey]        = (int)member.Team,
-                [IsReadyKey]     = member.IsReady
+                [LobbyPhotonConstants.MemberIdKey]    = member.Id.Value,
+                [LobbyPhotonConstants.DisplayNameKey] = member.DisplayName,
+                [LobbyPhotonConstants.TeamKey]        = (int)member.Team,
+                [LobbyPhotonConstants.IsReadyKey]     = member.IsReady
             };
 
             PhotonNetwork.LocalPlayer.NickName = member.DisplayName;
@@ -40,7 +35,7 @@ namespace Features.Lobby.Infrastructure.Photon
 
             if (PhotonNetwork.LocalPlayer == null)
                 return false;
-            if (!PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(MemberIdKey, out var value))
+            if (!PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var value))
                 return false;
 
             var raw = value as string;

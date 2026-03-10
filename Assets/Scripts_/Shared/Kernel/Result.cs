@@ -1,6 +1,6 @@
 namespace Shared.Kernel
 {
-    public sealed class Result
+    public readonly struct Result
     {
         private Result(bool isSuccess, string error)
         {
@@ -9,11 +9,7 @@ namespace Shared.Kernel
         }
 
         public bool IsSuccess { get; }
-        public bool IsFailure
-        {
-            get { return !IsSuccess; }
-        }
-
+        public bool IsFailure => !IsSuccess;
         public string Error { get; }
 
         public static Result Success()
@@ -27,7 +23,7 @@ namespace Shared.Kernel
         }
     }
 
-    public sealed class Result<T>
+    public readonly struct Result<T>
     {
         private Result(T value, bool isSuccess, string error)
         {
@@ -38,11 +34,7 @@ namespace Shared.Kernel
 
         public T Value { get; }
         public bool IsSuccess { get; }
-        public bool IsFailure
-        {
-            get { return !IsSuccess; }
-        }
-
+        public bool IsFailure => !IsSuccess;
         public string Error { get; }
 
         public static Result<T> Success(T value)
@@ -53,7 +45,7 @@ namespace Shared.Kernel
         public static Result<T> Failure(string error)
         {
             return new Result<T>(
-                default(T),
+                default,
                 false,
                 string.IsNullOrWhiteSpace(error) ? "Unknown error." : error.Trim());
         }
