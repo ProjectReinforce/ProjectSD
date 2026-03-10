@@ -13,5 +13,10 @@ namespace Shared.Context
         public IEventSubscriber Subscriber => _eventBus;
         public IUiCommandPublisher UiCommandPublisher => _uiCommandBus;
         public IUiCommandSubscriber UiCommandSubscriber => _uiCommandBus;
+
+        private void OnDestroy()
+        {
+            _eventBus.Clear();
+        }
     }
 }

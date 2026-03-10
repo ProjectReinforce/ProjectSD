@@ -1,6 +1,8 @@
+using System;
+
 namespace Shared.Math
 {
-    public readonly struct Float3
+    public readonly struct Float3 : IEquatable<Float3>
     {
         public readonly float X;
         public readonly float Y;
@@ -56,5 +58,30 @@ namespace Shared.Math
             var dot = Dot(direction, normal);
             return direction - normal * (2f * dot);
         }
+
+        public bool Equals(Float3 other)
+        {
+            return X == other.X && Y == other.Y && Z == other.Z;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Float3 other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = hash * 31 + X.GetHashCode();
+                hash = hash * 31 + Y.GetHashCode();
+                hash = hash * 31 + Z.GetHashCode();
+                return hash;
+            }
+        }
+
+        public static bool operator ==(Float3 a, Float3 b) => a.Equals(b);
+        public static bool operator !=(Float3 a, Float3 b) => !a.Equals(b);
     }
 }

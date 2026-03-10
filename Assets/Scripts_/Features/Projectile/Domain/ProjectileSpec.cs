@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Shared.Kernel;
 
 namespace Features.Projectile.Domain
@@ -18,12 +17,26 @@ namespace Features.Projectile.Domain
         public float Speed { get; }
         public float Radius { get; }
 
-        protected override IEnumerable<object> GetEqualityComponents()
+        public override bool Equals(object obj)
         {
-            yield return TrajectoryType;
-            yield return HitType;
-            yield return Speed;
-            yield return Radius;
+            if (obj is not ProjectileSpec other) return false;
+            return TrajectoryType == other.TrajectoryType
+                && HitType == other.HitType
+                && Speed == other.Speed
+                && Radius == other.Radius;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = hash * 31 + TrajectoryType.GetHashCode();
+                hash = hash * 31 + HitType.GetHashCode();
+                hash = hash * 31 + Speed.GetHashCode();
+                hash = hash * 31 + Radius.GetHashCode();
+                return hash;
+            }
         }
     }
 }

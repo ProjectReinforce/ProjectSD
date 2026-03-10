@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Shared.Kernel;
 
 namespace Features.Skill.Domain
@@ -18,12 +17,26 @@ namespace Features.Skill.Domain
         public float Range { get; }
         public DeliveryType DeliveryType { get; }
 
-        protected override IEnumerable<object> GetEqualityComponents()
+        public override bool Equals(object obj)
         {
-            yield return Damage;
-            yield return Cooldown;
-            yield return Range;
-            yield return DeliveryType;
+            if (obj is not SkillSpec other) return false;
+            return Damage == other.Damage
+                && Cooldown == other.Cooldown
+                && Range == other.Range
+                && DeliveryType == other.DeliveryType;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = hash * 31 + Damage.GetHashCode();
+                hash = hash * 31 + Cooldown.GetHashCode();
+                hash = hash * 31 + Range.GetHashCode();
+                hash = hash * 31 + DeliveryType.GetHashCode();
+                return hash;
+            }
         }
     }
 }

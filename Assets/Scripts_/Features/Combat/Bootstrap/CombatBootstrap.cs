@@ -17,8 +17,7 @@ namespace Features.Combat.Bootstrap
         {
             _subscriber = _sceneContext.Subscriber;
 
-            ICombatTargetPort targetPort = null; // TODO: Infrastructure 구현체 주입
-            _applyDamage = new ApplyDamageUseCase(targetPort, _sceneContext.Publisher);
+            throw new System.NotImplementedException("ICombatTargetPort infrastructure 구현체가 필요합니다.");
         }
     }
 }

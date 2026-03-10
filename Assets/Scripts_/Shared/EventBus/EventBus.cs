@@ -32,7 +32,21 @@ namespace Shared.EventBus
             var snapshot = new Delegate[count];
             list.CopyTo(snapshot);
             for (var i = 0; i < count; i++)
-                ((Action<T>)snapshot[i])(e);
+            {
+                try
+                {
+                    ((Action<T>)snapshot[i])(e);
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogException(ex);
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            _handlers.Clear();
         }
     }
 }
