@@ -24,7 +24,7 @@ namespace Features.Projectile.Application
 
         public Result Execute(EntityId ownerId, ProjectileSpec spec)
         {
-            var projectile = new Projectile(_clock.NewId(), ownerId, spec);
+            var projectile = new Domain.Projectile(_clock.NewId(), ownerId, spec);
             var trajectory = TrajectoryFactory.Create(spec.TrajectoryType);
             var hitResolver = HitResolverFactory.Create(spec.HitType);
 

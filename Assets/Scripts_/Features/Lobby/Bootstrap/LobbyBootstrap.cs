@@ -50,12 +50,12 @@ namespace Features.Lobby.Bootstrap
 
             network.Initialize(repository, publisher);
 
-            var createRoom = new CreateRoomUseCase(repository, network, clock, publisher);
-            var joinRoom   = new JoinRoomUseCase(repository, network, clock, publisher);
-            var leaveRoom  = new LeaveRoomUseCase(repository, network, publisher);
-            var changeTeam = new ChangeTeamUseCase(repository, network, publisher);
-            var setReady   = new SetReadyUseCase(repository, network, publisher);
-            var startGame  = new StartGameUseCase(repository, network, publisher);
+            var createRoom = new CreateRoomUseCase(repository, network, clock);
+            var joinRoom   = new JoinRoomUseCase( network, clock);
+            var leaveRoom  = new LeaveRoomUseCase(repository, network);
+            var changeTeam = new ChangeTeamUseCase(repository, network);
+            var setReady   = new SetReadyUseCase(repository, network);
+            var startGame  = new StartGameUseCase(repository, network);
 
             _view.Initialize(subscriber, createRoom, joinRoom, leaveRoom, changeTeam, setReady, startGame);
             publisher.Publish(new LobbyUpdatedEvent(repository.LoadLobby() ?? new DomainLobby()));

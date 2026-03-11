@@ -4,6 +4,6 @@ namespace Features.Zone.Application.Ports
 {
     public interface IZoneEffectPort
     {
-        void Spawn(Zone zone);
+        void Spawn(Domain.Zone zone);
     }
 }

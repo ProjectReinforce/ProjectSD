@@ -6,6 +6,6 @@ namespace Features.Projectile.Application.Ports
 {
     public interface IProjectilePhysicsPort
     {
-        void Spawn(Projectile projectile, ITrajectory trajectory, IHitResolver hitResolver);
+        void Spawn(Domain.Projectile projectile, ITrajectory trajectory, IHitResolver hitResolver);
     }
 }

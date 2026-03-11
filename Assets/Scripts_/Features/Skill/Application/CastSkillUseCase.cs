@@ -3,6 +3,8 @@ using Features.Skill.Domain;
 using Shared.EventBus;
 using Shared.Kernel;
 
+using DomainSkill = Features.Skill.Domain.Skill;
+
 namespace Features.Skill.Application
 {
     public sealed class CastSkillUseCase
@@ -14,7 +16,7 @@ namespace Features.Skill.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(Skill skill, EntityId casterId, float currentTime, float lastCastTime)
+        public Result Execute(DomainSkill skill, EntityId casterId, float currentTime, float lastCastTime)
         {
             var cooldownCheck = CooldownRule.CanCast(skill, currentTime, lastCastTime);
             if (cooldownCheck.IsFailure)

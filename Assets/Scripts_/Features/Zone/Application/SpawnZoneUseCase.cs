@@ -22,7 +22,7 @@ namespace Features.Zone.Application
 
         public Result Execute(EntityId casterId, ZoneSpec spec)
         {
-            var zone = new Zone(_clock.NewId(), casterId, spec);
+            var zone = new Domain.Zone(_clock.NewId(), casterId, spec);
 
             _zoneEffect.Spawn(zone);
             _eventBus.Publish(new ZoneSpawnedEvent(zone.Id, casterId));

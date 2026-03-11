@@ -25,7 +25,7 @@ namespace Features.Skill.Bootstrap
             subscriber.Subscribe<SkillCastedEvent>(OnSkillCasted);
 
             var useCase = new CastSkillUseCase(publisher);
-            var casterId = EntityId.New();
+            var casterId = Shared.Kernel.EntityId.New();
             var currentTime = 100f;
             var lastCastTime = -999f;
 

@@ -1,6 +1,5 @@
 using Features.Lobby.Application.Ports;
 using Features.Lobby.Domain;
-using Shared.EventBus;
 using Shared.Kernel;
 
 namespace Features.Lobby.Application
@@ -9,13 +8,11 @@ namespace Features.Lobby.Application
     {
         private readonly ILobbyRepository _repository;
         private readonly ILobbyNetworkPort _network;
-        private readonly IEventPublisher _eventBus;
 
-        public StartGameUseCase(ILobbyRepository repository, ILobbyNetworkPort network, IEventPublisher eventBus)
+        public StartGameUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
         {
             _repository = repository;
             _network = network;
-            _eventBus = eventBus;
         }
 
         public Result Execute(EntityId roomId)
@@ -23,17 +20,13 @@ namespace Features.Lobby.Application
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return LobbyCallbackHelper.Fail(_eventBus, "Room was not found.");
+                return Result.Failure("Room was not found.");
 
             var ruleResult = LobbyRule.CanStartGame(room);
             if (ruleResult.IsFailure)
-                return LobbyCallbackHelper.Fail(_eventBus, ruleResult.Error);
+                return Result.Failure(ruleResult.Error);
 
-            var networkResult = _network.RequestStartGame(roomId);
-            if (networkResult.IsFailure)
-                return LobbyCallbackHelper.Fail(_eventBus, networkResult.Error);
-
-            return Result.Success();
+            return _network.StartGame(roomId);
         }
     }
 }
