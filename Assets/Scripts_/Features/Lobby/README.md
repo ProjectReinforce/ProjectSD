@@ -18,6 +18,15 @@ Lobby/
 │       └── TeamType.cs        - 팀 열거형
 │
 ├── Application/
+│   ├── UseCases/
+│   │   ├── CreateRoomUseCase.cs
+│   │   ├── JoinRoomUseCase.cs
+│   │   ├── LeaveRoomUseCase.cs
+│   │   ├── ChangeTeamUseCase.cs
+│   │   ├── SetReadyUseCase.cs
+│   │   └── StartGameUseCase.cs
+│   ├── Handlers/
+│   │   └── LobbyStateSyncHandler.cs - Photon 콜백 후 로비 상태 동기화/이벤트 발행
 │   ├── Ports/
 │   │   ├── ILobbyRepository.cs   - 로컬 상태 저장소 포트
 │   │   └── ILobbyNetworkPort.cs  - 네트워크 통신 포트
@@ -28,19 +37,12 @@ Lobby/
 │   │   ├── LobbyErrorEvent.cs    - 비동기 에러 알림
 │   │   ├── LobbySnapshot.cs      - 이벤트용 로비 스냅샷 (불변)
 │   │   └── RoomSnapshot.cs       - 이벤트용 방/멤버 스냅샷 (불변)
-│   ├── CreateRoomUseCase.cs
-│   ├── JoinRoomUseCase.cs
-│   ├── LeaveRoomUseCase.cs
-│   ├── ChangeTeamUseCase.cs
-│   ├── SetReadyUseCase.cs
-│   └── StartGameUseCase.cs
-│
 ├── Infrastructure/
 │   ├── Persistence/
 │   │   └── LobbyRepository.cs         - 인메모리 로컬 상태 저장소
 │   └── Photon/
 │       ├── LobbyPhotonAdapter.cs       - ILobbyNetworkPort 구현, 커맨드 발사
-│       ├── PhotonNetworkEventHandler.cs - Photon 콜백 수신 → 도메인 업데이트
+│       ├── PhotonNetworkEventHandler.cs - Photon 콜백 수신 → Application Handler 호출
 │       ├── PhotonPlayerPropertyManager.cs - Photon CustomProperties 읽기/쓰기
 │       └── LobbyPhotonConstants.cs     - Photon key 상수
 │
@@ -65,6 +67,7 @@ Presentation
 Application  ──────────────────────────────────────────────────────────
     │  포트 호출 (ILobbyRepository, ILobbyNetworkPort)               │
     │  비즈니스 규칙은 Domain에 위임                                   │
+    │  Photon 콜백 후처리는 Handler가 담당                              │
     ▼                                                               │
 Domain                                                              │
     Lobby, Room, RoomMember, LobbyRule                              │
@@ -79,14 +82,15 @@ Infrastructure ─────────────────────�
 ## 핵심 설계: Photon 이벤트 드리븐
 
 > UseCase는 커맨드만 발사하고 끝낸다.
-> 도메인 상태 업데이트와 이벤트 발행은 `PhotonNetworkEventHandler`의 Photon 콜백이 처리한다.
+> Photon 콜백 해석은 `PhotonNetworkEventHandler`가 맡고,
+> 도메인 상태 업데이트와 이벤트 발행은 `LobbyStateSyncHandler`가 처리한다.
 
 ### 에러 처리 분리
 
 | 에러 종류 | 처리 방식 |
 |---|---|
 | 동기 유효성 에러 (방 이름 중복 등) | UseCase가 `Result.Failure` 반환 → View에서 즉시 처리 |
-| 비동기 네트워크 에러 (방 입장 실패 등) | `PhotonNetworkEventHandler`가 `LobbyErrorEvent` 발행 → View가 구독하여 처리 |
+| 비동기 네트워크 에러 (방 입장 실패 등) | `PhotonNetworkEventHandler` → `LobbyStateSyncHandler`가 `LobbyErrorEvent` 발행 → View가 구독하여 처리 |
 
 ---
 
@@ -112,10 +116,11 @@ LobbyView.OnCreateClick()
                                ↓ Photon 서버 응답
 
 PhotonNetworkEventHandler.OnCreatedRoom()
-  └─ lobby.AddRoom(pendingCreateRoom)
-  └─ repository.SaveLobby(lobby)
-  └─ Publish(LobbyUpdatedEvent)
-  └─ Publish(RoomUpdatedEvent)
+  └─ LobbyStateSyncHandler.HandleCreateRoomSucceeded(room)
+       ├─ lobby.AddRoom(room)
+       ├─ repository.SaveLobby(lobby)
+       ├─ Publish(LobbyUpdatedEvent)
+       └─ Publish(RoomUpdatedEvent)
 
 PhotonNetworkEventHandler.OnJoinedRoom()   ← 방 만든 사람도 수신
   └─ _pendingJoin == false → return (무시, 위에서 이미 처리)
@@ -141,11 +146,12 @@ LobbyView.OnJoinClick(roomId)
 
 OnJoinedRoom()                          OnPlayerEnteredRoom(newPlayer)
   └─ PhotonNetwork.CurrentRoom에서         └─ BuildMemberFromPlayer(player)
-     전체 멤버 포함 Room 재구성               └─ room.AddMember(member)
-  └─ lobby.AddRoom(room)                  └─ repository.SaveLobby(lobby)
-  └─ repository.SaveLobby(lobby)          └─ Publish(RoomUpdatedEvent)
-  └─ Publish(LobbyUpdatedEvent)
-  └─ Publish(RoomUpdatedEvent)
+      전체 멤버 포함 Room 재구성               └─ room.AddMember(member)
+  └─ LobbyStateSyncHandler                   └─ LobbyStateSyncHandler
+       ├─ lobby.AddRoom(room)                    ├─ repository.SaveLobby(lobby)
+       ├─ repository.SaveLobby(lobby)            └─ Publish(RoomUpdatedEvent)
+       ├─ Publish(LobbyUpdatedEvent)
+       └─ Publish(RoomUpdatedEvent)
 ```
 
 > 핵심: Guest의 `OnJoinedRoom`에서 `PhotonNetwork.CurrentRoom`으로 방 전체 상태를 복원한다.
@@ -167,11 +173,12 @@ LeaveRoomUseCase.Execute(roomId, memberId)
 
 PhotonNetworkEventHandler.OnLeftRoom()
   └─ pendingLeaveRoomId/memberId 사용
-  └─ room.RemoveMember(memberId)
-  └─ 빈 방이면 lobby.RemoveRoom(roomId)
-  └─ repository.SaveLobby(lobby)
-  └─ Publish(LobbyUpdatedEvent)
-  └─ Publish(RoomUpdatedEvent)   ← 멤버가 남아있을 때만
+  └─ LobbyStateSyncHandler.HandleLeaveRoomSucceeded(roomId, memberId)
+       ├─ room.RemoveMember(memberId)
+       ├─ 빈 방이면 lobby.RemoveRoom(roomId)
+       ├─ repository.SaveLobby(lobby)
+       ├─ Publish(LobbyUpdatedEvent)
+       └─ Publish(RoomUpdatedEvent)   ← 멤버가 남아있을 때만
 ```
 
 > `SetPendingLeave`가 필요한 이유: `OnLeftRoom` 시점에는 이미 방을 나간 상태라
@@ -192,9 +199,10 @@ ChangeTeamUseCase / SetReadyUseCase
                                ↓ Photon 서버 응답 (전체 클라이언트)
 
 PhotonNetworkEventHandler.OnPlayerPropertiesUpdate(player, changedProps)
-  └─ room.ChangeTeam(memberId, team) / room.SetReady(memberId, isReady)
-  └─ repository.SaveLobby(lobby)
-  └─ Publish(RoomUpdatedEvent)
+  └─ LobbyStateSyncHandler.HandleTeamChanged(...) / HandleReadyChanged(...)
+       ├─ room.ChangeTeam(memberId, team) / room.SetReady(memberId, isReady)
+       ├─ repository.SaveLobby(lobby)
+       └─ Publish(RoomUpdatedEvent)
 ```
 
 > 로컬/원격 플레이어 모두 동일한 콜백으로 처리한다.
@@ -219,8 +227,9 @@ StartGameUseCase.Execute(roomId)
 
 PhotonNetworkEventHandler.OnEvent(photonEvent)
   └─ GameStartedEventCode 확인
-  └─ Publish(GameStartedEvent(room))
-     → LobbyView.RenderStartGame()
+  └─ LobbyStateSyncHandler.HandleGameStarted(roomId)
+       └─ Publish(GameStartedEvent(room))
+          → LobbyView.RenderStartGame()
 ```
 
 ---

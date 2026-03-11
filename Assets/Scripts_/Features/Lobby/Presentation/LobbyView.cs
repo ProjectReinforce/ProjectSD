@@ -1,6 +1,6 @@
 using System;
-using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
+using Features.Lobby.Application.UseCases;
 using Shared.EventBus;
 using UnityEngine;
 

@@ -3,7 +3,7 @@ using Shared.Time;
 using Features.Lobby.Domain;
 using Shared.Kernel;
 
-namespace Features.Lobby.Application
+namespace Features.Lobby.Application.UseCases
 {
     public sealed class JoinRoomUseCase
     {

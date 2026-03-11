@@ -1,6 +1,6 @@
-using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
-using Features.Lobby.Application.Ports;
+using Features.Lobby.Application.Handlers;
+using Features.Lobby.Application.UseCases;
 using Shared.Time;
 using Features.Lobby.Infrastructure.Persistence;
 using Features.Lobby.Infrastructure.Photon;
@@ -48,10 +48,12 @@ namespace Features.Lobby.Bootstrap
             var network    = _photonAdapter;
             var clock      = new ClockAdapter();
 
-            network.Initialize(repository, publisher);
+            var syncHandler = new LobbyStateSyncHandler(repository, publisher);
+
+            network.Initialize(syncHandler);
 
             var createRoom = new CreateRoomUseCase(repository, network, clock);
-            var joinRoom   = new JoinRoomUseCase( network, clock);
+            var joinRoom   = new JoinRoomUseCase(network, clock);
             var leaveRoom  = new LeaveRoomUseCase(repository, network);
             var changeTeam = new ChangeTeamUseCase(repository, network);
             var setReady   = new SetReadyUseCase(repository, network);

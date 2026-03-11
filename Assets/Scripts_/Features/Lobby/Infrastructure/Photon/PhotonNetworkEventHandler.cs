@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
+using Features.Lobby.Application.Handlers;
+using Features.Lobby.Domain;
 using Photon.Pun;
 using Photon.Realtime;
-using Features.Lobby.Application.Events;
-using Features.Lobby.Application.Ports;
-using Features.Lobby.Domain;
-using Shared.EventBus;
 using UnityEngine;
 using EntityId = Shared.Kernel.EntityId;
 
@@ -16,21 +14,17 @@ namespace Features.Lobby.Infrastructure.Photon
 {
     public sealed class PhotonNetworkEventHandler : MonoBehaviourPunCallbacks, IOnEventCallback
     {
-        private ILobbyRepository _repository;
-        private IEventPublisher _publisher;
-        private PhotonPlayerPropertyManager _propertyManager;
-
+        private LobbyStateSyncHandler _syncHandler;
+        
         // Pending state (data only, no callbacks)
         private DomainRoom _pendingCreateRoom;
         private bool _pendingJoin;
         private EntityId _pendingLeaveRoomId;
         private EntityId _pendingLeaveMemberId;
 
-        internal void Initialize(ILobbyRepository repository, IEventPublisher publisher, PhotonPlayerPropertyManager propertyManager)
+        internal void Initialize(LobbyStateSyncHandler syncHandler)
         {
-            _repository = repository;
-            _publisher = publisher;
-            _propertyManager = propertyManager;
+            _syncHandler = syncHandler;
         }
 
         internal void SetPendingCreate(DomainRoom room)
@@ -72,23 +66,17 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            var lobby = _repository.LoadLobby();
-            var addResult = lobby.AddRoom(room);
-            if (addResult.IsFailure)
+            var result = _syncHandler.HandleCreateRoomSucceeded(room);
+            if (result.IsFailure)
             {
-                Debug.LogError($"[PhotonEventHandler] OnCreatedRoom: {addResult.Error}");
-                return;
+                Debug.LogError($"[PhotonEventHandler] OnCreatedRoom: {result.Error}");
             }
-
-            _repository.SaveLobby(lobby);
-            _publisher.Publish(new LobbyUpdatedEvent(lobby));
-            _publisher.Publish(new RoomUpdatedEvent(room));
         }
 
         public override void OnCreateRoomFailed(short returnCode, string message)
         {
             _pendingCreateRoom = null;
-            _publisher.Publish(new LobbyErrorEvent($"Create room failed ({returnCode}): {message}"));
+            _syncHandler.PublishError($"Create room failed ({returnCode}): {message}");
         }
 
         // --- Room Join Callbacks ---
@@ -134,23 +122,17 @@ namespace Features.Lobby.Infrastructure.Photon
                 room.AddMember(member);
             }
 
-            var lobby = _repository.LoadLobby();
-            var addResult = lobby.AddRoom(room);
-            if (addResult.IsFailure)
+            var result = _syncHandler.HandleJoinRoomSucceeded(room);
+            if (result.IsFailure)
             {
-                Debug.LogError($"[PhotonEventHandler] OnJoinedRoom: {addResult.Error}");
-                return;
+                Debug.LogError($"[PhotonEventHandler] OnJoinedRoom: {result.Error}");
             }
-
-            _repository.SaveLobby(lobby);
-            _publisher.Publish(new LobbyUpdatedEvent(lobby));
-            _publisher.Publish(new RoomUpdatedEvent(room));
         }
 
         public override void OnJoinRoomFailed(short returnCode, string message)
         {
             _pendingJoin = false;
-            _publisher.Publish(new LobbyErrorEvent($"Join room failed ({returnCode}): {message}"));
+            _syncHandler.PublishError($"Join room failed ({returnCode}): {message}");
         }
 
         // --- Room Leave Callbacks ---
@@ -168,20 +150,9 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null) return;
-
-            room.RemoveMember(memberId);
-
-            if (room.Members.Count == 0)
-                lobby.RemoveRoom(roomId);
-
-            _repository.SaveLobby(lobby);
-            _publisher.Publish(new LobbyUpdatedEvent(lobby));
-
-            if (room.Members.Count > 0)
-                _publisher.Publish(new RoomUpdatedEvent(room));
+            var result = _syncHandler.HandleLeaveRoomSucceeded(roomId, memberId);
+            if (result.IsFailure)
+                Debug.LogWarning($"[PhotonEventHandler] OnLeftRoom: {result.Error}");
         }
 
         // --- Remote Player Join/Leave Callbacks ---
@@ -199,23 +170,11 @@ namespace Features.Lobby.Infrastructure.Photon
             }
 
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null)
+            var result = _syncHandler.HandleRemotePlayerEntered(roomId, member);
+            if (result.IsFailure)
             {
-                Debug.LogWarning("[PhotonEventHandler] Remote player entered but room not found in domain.");
-                return;
+                Debug.LogWarning($"[PhotonEventHandler] Failed to add remote player: {result.Error}");
             }
-
-            var addResult = room.AddMember(member);
-            if (addResult.IsFailure)
-            {
-                Debug.LogWarning($"[PhotonEventHandler] Failed to add remote player: {addResult.Error}");
-                return;
-            }
-
-            _repository.SaveLobby(lobby);
-            _publisher.Publish(new RoomUpdatedEvent(room));
         }
 
         public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -233,19 +192,11 @@ namespace Features.Lobby.Infrastructure.Photon
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
             var memberId = new EntityId(memberIdStr);
 
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null) return;
-
-            var removeResult = room.RemoveMember(memberId);
-            if (removeResult.IsFailure)
+            var result = _syncHandler.HandleRemotePlayerLeft(roomId, memberId);
+            if (result.IsFailure)
             {
-                Debug.LogWarning($"[PhotonEventHandler] Failed to remove remote player: {removeResult.Error}");
-                return;
+                Debug.LogWarning($"[PhotonEventHandler] Failed to remove remote player: {result.Error}");
             }
-
-            _repository.SaveLobby(lobby);
-            _publisher.Publish(new RoomUpdatedEvent(room));
         }
 
         // --- Player Properties Update Callbacks ---
@@ -254,36 +205,25 @@ namespace Features.Lobby.Infrastructure.Photon
         {
             if (!PhotonNetwork.InRoom) return;
 
-            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null) return;
-
             if (!targetPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var midRaw)
                 || midRaw is not string midStr)
                 return;
 
+            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
             var memberId = new EntityId(midStr);
-            var changed = false;
 
             if (changedProps.ContainsKey(LobbyPhotonConstants.TeamKey) && changedProps[LobbyPhotonConstants.TeamKey] is int teamInt)
             {
-                var result = room.ChangeTeam(memberId, (TeamType)teamInt);
-                if (result.IsSuccess) changed = true;
-                else Debug.LogWarning($"[PhotonEventHandler] ChangeTeam failed: {result.Error}");
+                var result = _syncHandler.HandleTeamChanged(roomId, memberId, (TeamType)teamInt);
+                if (result.IsFailure)
+                    Debug.LogWarning($"[PhotonEventHandler] ChangeTeam failed: {result.Error}");
             }
 
             if (changedProps.ContainsKey(LobbyPhotonConstants.IsReadyKey) && changedProps[LobbyPhotonConstants.IsReadyKey] is bool isReady)
             {
-                var result = room.SetReady(memberId, isReady);
-                if (result.IsSuccess) changed = true;
-                else Debug.LogWarning($"[PhotonEventHandler] SetReady failed: {result.Error}");
-            }
-
-            if (changed)
-            {
-                _repository.SaveLobby(lobby);
-                _publisher.Publish(new RoomUpdatedEvent(room));
+                var result = _syncHandler.HandleReadyChanged(roomId, memberId, isReady);
+                if (result.IsFailure)
+                    Debug.LogWarning($"[PhotonEventHandler] SetReady failed: {result.Error}");
             }
         }
 
@@ -301,15 +241,9 @@ namespace Features.Lobby.Infrastructure.Photon
             }
 
             var roomId = new EntityId(roomIdValue);
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null)
-            {
-                Debug.LogWarning("[PhotonEventHandler] GameStarted event received but room not found.");
-                return;
-            }
-
-            _publisher.Publish(new GameStartedEvent(room));
+            var result = _syncHandler.HandleGameStarted(roomId);
+            if (result.IsFailure)
+                Debug.LogWarning($"[PhotonEventHandler] GameStarted event received but could not be applied: {result.Error}");
         }
 
         // --- Helpers ---

@@ -1,30 +1,32 @@
 using Features.Lobby.Application.Ports;
+using Features.Lobby.Domain;
 using Shared.Kernel;
 
-namespace Features.Lobby.Application
+namespace Features.Lobby.Application.UseCases
 {
-    public sealed class LeaveRoomUseCase
+    public sealed class StartGameUseCase
     {
         private readonly ILobbyRepository _repository;
         private readonly ILobbyNetworkPort _network;
 
-        public LeaveRoomUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
+        public StartGameUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
         {
             _repository = repository;
             _network = network;
         }
 
-        public Result Execute(EntityId roomId, EntityId memberId)
+        public Result Execute(EntityId roomId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
                 return Result.Failure("Room was not found.");
 
-            if (room.FindMember(memberId) == null)
-                return Result.Failure("Member was not found.");
+            var ruleResult = LobbyRule.CanStartGame(room);
+            if (ruleResult.IsFailure)
+                return Result.Failure(ruleResult.Error);
 
-            return _network.LeaveRoom(roomId, memberId);
+            return _network.StartGame(roomId);
         }
     }
 }

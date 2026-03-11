@@ -33,6 +33,7 @@ Legacy area:
 When generating or modifying code:
 
 * Always follow dependency direction rules.
+* When investigating files for a feature, first read `Assets/Scripts_/Features/<FeatureName>/README.md` if it exists.
 * Prefer adding code inside the current feature.
 * Avoid introducing new shared abstractions.
 * Keep domain logic inside Domain layer.

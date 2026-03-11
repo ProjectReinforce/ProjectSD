@@ -1,9 +1,9 @@
 using System;
+using Features.Lobby.Application.Handlers;
 using Photon.Pun;
 using Photon.Realtime;
-using Features.Lobby.Application.Ports;
 using ExitGames.Client.Photon;
-using Shared.EventBus;
+using Features.Lobby.Application.Ports;
 using UnityEngine;
 using EntityId = Shared.Kernel.EntityId;
 using Result = Shared.Kernel.Result;
@@ -21,13 +21,13 @@ namespace Features.Lobby.Infrastructure.Photon
 
         private PhotonNetworkEventHandler _eventHandler;
 
-        public void Initialize(ILobbyRepository repository, IEventPublisher publisher)
+        public void Initialize(LobbyStateSyncHandler syncHandler)
         {
             _eventHandler = GetComponent<PhotonNetworkEventHandler>();
             if (_eventHandler == null)
                 _eventHandler = gameObject.AddComponent<PhotonNetworkEventHandler>();
 
-            _eventHandler.Initialize(repository, publisher, _propertyManager);
+            _eventHandler.Initialize(syncHandler);
         }
 
         public Result CreateRoom(Room room)

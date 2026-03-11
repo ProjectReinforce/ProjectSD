@@ -1,20 +1,21 @@
 using Features.Lobby.Application.Ports;
+using Features.Lobby.Domain;
 using Shared.Kernel;
 
-namespace Features.Lobby.Application
+namespace Features.Lobby.Application.UseCases
 {
-    public sealed class SetReadyUseCase
+    public sealed class ChangeTeamUseCase
     {
         private readonly ILobbyRepository _repository;
         private readonly ILobbyNetworkPort _network;
 
-        public SetReadyUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
+        public ChangeTeamUseCase(ILobbyRepository repository, ILobbyNetworkPort network)
         {
             _repository = repository;
             _network = network;
         }
 
-        public Result Execute(EntityId roomId, EntityId memberId, bool isReady)
+        public Result Execute(EntityId roomId, EntityId memberId, TeamType team)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -24,7 +25,7 @@ namespace Features.Lobby.Application
             if (room.FindMember(memberId) == null)
                 return Result.Failure("Member was not found.");
 
-            return _network.SetReady(memberId, isReady);
+            return _network.ChangeTeam(memberId, team);
         }
     }
 }

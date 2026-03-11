@@ -18,6 +18,7 @@ Shared/
 ```
 
 - Each feature is self-contained and grows independently.
+- When investigating files for a feature, first read `Assets/Scripts_/Features/<FeatureName>/README.md` if it exists.
 - `Shared` contains only reusable cross-feature utilities — never feature-specific code.
 - Cross-feature dependency is allowed as long as layer direction is respected (same-or-inner layer only).
 - Only split a feature into two when a concept gains an independent lifecycle.

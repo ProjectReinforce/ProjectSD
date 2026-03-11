@@ -1,5 +1,5 @@
-using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
+using Features.Lobby.Application.UseCases;
 using System.Collections.Generic;
 using Shared.Kernel;
 using UnityEngine;
