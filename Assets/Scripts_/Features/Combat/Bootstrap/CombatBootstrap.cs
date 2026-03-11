@@ -16,7 +16,6 @@ namespace Features.Combat.Bootstrap
         private void Awake()
         {
             _subscriber = _sceneContext.Subscriber;
-
             throw new System.NotImplementedException("ICombatTargetPort infrastructure 구현체가 필요합니다.");
         }
     }
