@@ -22,8 +22,7 @@ Bootstrap/
 
 Rules:
 
-* Features must not depend on other feature internals.
-* Cross-feature communication must happen through ports or events.
+* Cross-feature dependency is allowed as long as layer direction is respected (same-or-inner layer only).
 * Wiring/composition across a feature's layers must live in that feature's Bootstrap.
 
 Keep concepts inside a feature unless they have an independent lifecycle.

@@ -1,5 +1,6 @@
-using Features.Skill.Application.Delivery;
+using Features.Skill.Application.Events;
 using Features.Skill.Domain;
+using Features.Skill.Domain.Delivery;
 using Shared.EventBus;
 using Shared.Kernel;
 
@@ -20,8 +21,9 @@ namespace Features.Skill.Application
             if (cooldownCheck.IsFailure)
                 return cooldownCheck;
 
-            var delivery = DeliveryFactory.Create(skill.Spec.DeliveryType, _eventBus);
+            var delivery = DeliveryFactory.Create(skill.Spec.DeliveryType);
             delivery.Deliver(skill.Id, casterId, skill.Spec);
+            _eventBus.Publish(new SkillCastedEvent(skill.Id, casterId, skill.Spec));
             return Result.Success();
         }
     }

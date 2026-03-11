@@ -19,7 +19,7 @@ Shared/
 
 - Each feature is self-contained and grows independently.
 - `Shared` contains only reusable cross-feature utilities — never feature-specific code.
-- Features communicate via ports or events, never by directly referencing each other's internals.
+- Cross-feature dependency is allowed as long as layer direction is respected (same-or-inner layer only).
 - Only split a feature into two when a concept gains an independent lifecycle.
 
 ---
@@ -33,9 +33,9 @@ Shared -> (no feature dependency)
 ```
 
 - `Domain`: no Unity API, no Photon API, no IO, no database.
-- `Application`: depends on Domain and Shared only.
-- `Presentation`: depends on Application, Domain and Shared only.
-- `Infrastructure`: depends on Application, Domain and Shared only; implements Application ports; no business logic.
+- `Application`: depends on Domain, Shared, and other features' Application or Domain.
+- `Presentation`: depends on Application, Domain, Shared, and other features' same-or-inner layers.
+- `Infrastructure`: depends on Application, Domain, Shared, and other features' same-or-inner layers; implements Application ports; no business logic.
 
 ---
 

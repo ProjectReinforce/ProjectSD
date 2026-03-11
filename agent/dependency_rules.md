@@ -18,11 +18,11 @@ Rules:
 
 * Domain must not depend on Infrastructure.
 
-* Application may depend on Domain and Shared only.
+* Application may depend on Domain, Shared, and other features' Application or Domain.
 
-* Presentation may depend on Application, Domain and Shared only.
+* Presentation may depend on Application, Domain, Shared, and other features' same-or-inner layers.
 
-* Infrastructure may depend on Application, Domain and Shared only.
+* Infrastructure may depend on Application, Domain, Shared, and other features' same-or-inner layers.
 
 Never reference:
 
