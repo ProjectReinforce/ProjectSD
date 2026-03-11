@@ -1,7 +1,22 @@
 using System;
+using Shared.Math;
 
-namespace Features.Projectile.Domain
+namespace Features.Projectile.Domain.Trajectory
 {
+    public enum TrajectoryType
+    {
+        Linear = 0,
+        Parabolic = 1,
+        Homing = 2,
+        Orbit = 3,
+        Boomerang = 4
+    }
+
+    public interface ITrajectory
+    {
+        Float3 Calculate(in TrajectoryInput input);
+    }
+
     public static class TrajectoryFactory
     {
         public static ITrajectory Create(TrajectoryType type)

@@ -1,6 +1,8 @@
 using Features.Projectile.Application.Events;
 using Features.Projectile.Application.Ports;
 using Features.Projectile.Domain;
+using Features.Projectile.Domain.Hit;
+using Features.Projectile.Domain.Trajectory;
 using Shared.EventBus;
 using Shared.Kernel;
 using Shared.Time;

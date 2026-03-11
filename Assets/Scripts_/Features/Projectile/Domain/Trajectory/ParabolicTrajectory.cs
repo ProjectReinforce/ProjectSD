@@ -1,6 +1,6 @@
 using Shared.Math;
 
-namespace Features.Projectile.Domain
+namespace Features.Projectile.Domain.Trajectory
 {
     public sealed class ParabolicTrajectory : ITrajectory
     {

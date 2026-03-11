@@ -1,3 +1,5 @@
+using Features.Projectile.Domain.Hit;
+using Features.Projectile.Domain.Trajectory;
 using Shared.Kernel;
 
 namespace Features.Projectile.Domain

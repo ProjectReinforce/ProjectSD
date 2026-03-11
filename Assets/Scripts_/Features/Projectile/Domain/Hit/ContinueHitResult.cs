@@ -1,4 +1,4 @@
-namespace Features.Projectile.Domain
+namespace Features.Projectile.Domain.Hit
 {
     public sealed class ContinueHitResult : IHitResult
     {
