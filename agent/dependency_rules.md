@@ -10,19 +10,14 @@ Infrastructure -> Application
 
 Shared -> no feature dependency
 
-Rules:
+Cross-feature dependency is encouraged. 모든 레이어에서 레이어 방향만 지키면 피처 간 적극적으로 의존한다. 피처 간 의존을 피하기 위해 Shared에 추상화를 추가하지 않는다.
 
-* Domain must not depend on Application.
+Each layer may depend on:
 
-* Domain must not depend on Presentation.
-
-* Domain must not depend on Infrastructure.
-
-* Application may depend on Domain, Shared, and other features' Application or Domain.
-
-* Presentation may depend on Application, Domain, Shared, and other features' same-or-inner layers.
-
-* Infrastructure may depend on Application, Domain, Shared, and other features' same-or-inner layers.
+* Domain: other features' Domain.
+* Application: Domain, Shared, other features' Application or Domain.
+* Presentation: Application, Domain, Shared, other features' same-or-inner layers.
+* Infrastructure: Application, Domain, Shared, other features' same-or-inner layers.
 
 Never reference:
 

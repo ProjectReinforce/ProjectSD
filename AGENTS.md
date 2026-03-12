@@ -42,3 +42,8 @@ When generating or modifying code:
 * If a new feature is introduced, create the same 5-layer folder layout under `Assets/Scripts_/Features/<NewFeature>/`.
 
 If rules conflict, follow the priority order above.
+
+## Agent Reasoning
+
+* 질문을 받았을 때 "맞다/아니다"부터 정하지 말고, 프로젝트 규칙과 현재 코드를 먼저 확인한 뒤 근거 위에서 답한다.
+* 결론부터 말하고 근거를 끼워 맞추지 않는다.

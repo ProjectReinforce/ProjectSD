@@ -1,3 +1,6 @@
+using Features.Projectile.Domain;
+using Features.Projectile.Domain.Hit;
+using Features.Projectile.Domain.Trajectory;
 using Features.Skill.Domain.Delivery;
 using Shared.Kernel;
 
@@ -9,12 +12,14 @@ namespace Features.Skill.Domain
         public static Skill Fireball() => new Skill(
             EntityId.New(),
             new SkillSpec(damage: 50f, cooldown: 2.0f, range: 15f),
-            new ProjectileDelivery());
+            new ProjectileDelivery(new ProjectileSpec(
+                TrajectoryType.Linear, HitType.Single, speed: 20f, radius: 0.5f)));
 
         public static Skill IceLance() => new Skill(
             EntityId.New(),
             new SkillSpec(damage: 30f, cooldown: 1.0f, range: 20f),
-            new ProjectileDelivery());
+            new ProjectileDelivery(new ProjectileSpec(
+                TrajectoryType.Linear, HitType.Piercing, speed: 30f, radius: 0.3f)));
 
         // Zone
         public static Skill Blizzard() => new Skill(

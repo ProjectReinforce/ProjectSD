@@ -20,7 +20,7 @@ Shared/
 - Each feature is self-contained and grows independently.
 - When investigating files for a feature, first read `Assets/Scripts_/Features/<FeatureName>/README.md` if it exists.
 - `Shared` contains only reusable cross-feature utilities — never feature-specific code.
-- Cross-feature dependency is allowed as long as layer direction is respected (same-or-inner layer only).
+- Cross-feature dependency is encouraged — layer direction만 지키면 피처 간 적극적으로 의존한다.
 - Only split a feature into two when a concept gains an independent lifecycle.
 
 ---
@@ -79,6 +79,13 @@ Shared -> (no feature dependency)
 - Behavioral switch on type enums — use Factory + Strategy pattern instead; switch is fine for command dispatch and simple value mapping
 
 **When unsure:** keep code inside the current feature rather than moving it to Shared.
+
+---
+
+## Agent Reasoning
+
+- 질문을 받았을 때 "맞다/아니다"부터 정하지 말고, 프로젝트 규칙과 현재 코드를 먼저 확인한 뒤 근거 위에서 답한다.
+- 결론부터 말하고 근거를 끼워 맞추지 않는다.
 
 ---
 
