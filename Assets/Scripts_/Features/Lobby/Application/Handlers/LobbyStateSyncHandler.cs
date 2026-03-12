@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
 using Features.Lobby.Domain;
@@ -29,8 +30,26 @@ namespace Features.Lobby.Application.Handlers
             return AddRoomAndPublish(room);
         }
 
-        public Result HandleJoinRoomSucceeded(Room room)
+        public Result HandleJoinRoomSucceeded(
+            EntityId roomId, string roomName, int capacity,
+            List<RoomMember> members, EntityId masterMemberId)
         {
+            if (members == null || members.Count == 0)
+                return Result.Failure("No members provided.");
+
+            var owner = members.Find(m => m.Id.Equals(masterMemberId)) ?? members[0];
+
+            var roomResult = Room.Create(roomId, roomName, capacity, owner);
+            if (roomResult.IsFailure)
+                return Result.Failure(roomResult.Error);
+
+            var room = roomResult.Value;
+            foreach (var member in members)
+            {
+                if (member.Id.Equals(owner.Id)) continue;
+                room.AddMember(member);
+            }
+
             return AddRoomAndPublish(room);
         }
 
@@ -101,30 +120,27 @@ namespace Features.Lobby.Application.Handlers
             return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
         }
 
-        public Result HandleTeamChanged(EntityId roomId, EntityId memberId, TeamType team)
+        public Result HandlePlayerPropertiesChanged(
+            EntityId roomId, EntityId memberId, TeamType? team, bool? isReady)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
                 return Result.Failure("Room was not found.");
 
-            var changeResult = room.ChangeTeam(memberId, team);
-            if (changeResult.IsFailure)
-                return changeResult;
+            if (team.HasValue)
+            {
+                var changeResult = room.ChangeTeam(memberId, team.Value);
+                if (changeResult.IsFailure)
+                    return changeResult;
+            }
 
-            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
-        }
-
-        public Result HandleReadyChanged(EntityId roomId, EntityId memberId, bool isReady)
-        {
-            var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
-            if (room == null)
-                return Result.Failure("Room was not found.");
-
-            var readyResult = room.SetReady(memberId, isReady);
-            if (readyResult.IsFailure)
-                return readyResult;
+            if (isReady.HasValue)
+            {
+                var readyResult = room.SetReady(memberId, isReady.Value);
+                if (readyResult.IsFailure)
+                    return readyResult;
+            }
 
             return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
         }

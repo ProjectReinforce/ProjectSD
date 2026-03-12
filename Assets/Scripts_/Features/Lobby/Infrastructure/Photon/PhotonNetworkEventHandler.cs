@@ -99,30 +99,16 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            RoomMember ownerMember = null;
+            EntityId masterMemberId = default;
             if (photonRoom.Players.TryGetValue(photonRoom.MasterClientId, out var masterPlayer))
             {
                 var m = BuildMemberFromPlayer(masterPlayer);
                 if (m != null)
-                    ownerMember = members.Find(x => x.Id.Equals(m.Id));
-            }
-            ownerMember ??= members[0];
-
-            var roomResult = DomainRoom.Create(roomId, roomName, photonRoom.MaxPlayers, ownerMember);
-            if (roomResult.IsFailure)
-            {
-                Debug.LogError($"[PhotonEventHandler] OnJoinedRoom: {roomResult.Error}");
-                return;
+                    masterMemberId = m.Id;
             }
 
-            var room = roomResult.Value;
-            foreach (var member in members)
-            {
-                if (member.Id.Equals(ownerMember.Id)) continue;
-                room.AddMember(member);
-            }
-
-            var result = _syncHandler.HandleJoinRoomSucceeded(room);
+            var result = _syncHandler.HandleJoinRoomSucceeded(
+                roomId, roomName, photonRoom.MaxPlayers, members, masterMemberId);
             if (result.IsFailure)
             {
                 Debug.LogError($"[PhotonEventHandler] OnJoinedRoom: {result.Error}");
@@ -209,22 +195,19 @@ namespace Features.Lobby.Infrastructure.Photon
                 || midRaw is not string midStr)
                 return;
 
+            TeamType? team = changedProps.TryGetValue(LobbyPhotonConstants.TeamKey, out var tRaw) && tRaw is int teamInt
+                ? (TeamType)teamInt : null;
+            bool? isReady = changedProps.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var rRaw) && rRaw is bool readyBool
+                ? readyBool : null;
+
+            if (!team.HasValue && !isReady.HasValue) return;
+
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
             var memberId = new EntityId(midStr);
 
-            if (changedProps.ContainsKey(LobbyPhotonConstants.TeamKey) && changedProps[LobbyPhotonConstants.TeamKey] is int teamInt)
-            {
-                var result = _syncHandler.HandleTeamChanged(roomId, memberId, (TeamType)teamInt);
-                if (result.IsFailure)
-                    Debug.LogWarning($"[PhotonEventHandler] ChangeTeam failed: {result.Error}");
-            }
-
-            if (changedProps.ContainsKey(LobbyPhotonConstants.IsReadyKey) && changedProps[LobbyPhotonConstants.IsReadyKey] is bool isReady)
-            {
-                var result = _syncHandler.HandleReadyChanged(roomId, memberId, isReady);
-                if (result.IsFailure)
-                    Debug.LogWarning($"[PhotonEventHandler] SetReady failed: {result.Error}");
-            }
+            var result = _syncHandler.HandlePlayerPropertiesChanged(roomId, memberId, team, isReady);
+            if (result.IsFailure)
+                Debug.LogWarning($"[PhotonEventHandler] PropertiesChanged failed: {result.Error}");
         }
 
         // --- Custom Event Callbacks ---
