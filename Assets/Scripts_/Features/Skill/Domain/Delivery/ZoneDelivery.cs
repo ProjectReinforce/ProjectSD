@@ -6,8 +6,7 @@ namespace Features.Skill.Domain.Delivery
     {
         public DeliveryResult Deliver(EntityId skillId, EntityId casterId, SkillSpec spec)
         {
-            return new DeliveryResult(
-                $"[ZoneDelivery] skill={skillId} caster={casterId} dmg={spec.Damage} range={spec.Range}");
+            return new ZoneDeliveryResult();
         }
     }
 }

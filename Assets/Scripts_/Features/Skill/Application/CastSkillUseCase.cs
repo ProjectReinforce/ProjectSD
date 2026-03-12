@@ -1,5 +1,7 @@
+using Features.Projectile.Application.Events;
 using Features.Skill.Application.Events;
 using Features.Skill.Domain;
+using Features.Skill.Domain.Delivery;
 using Shared.EventBus;
 using Shared.Kernel;
 
@@ -23,7 +25,11 @@ namespace Features.Skill.Application
                 return cooldownCheck;
 
             var result = skill.Delivery.Deliver(skill.Id, casterId, skill.Spec);
-            _eventBus.Publish(new SkillCastedEvent(skill.Id, casterId, skill.Spec, result.Description));
+
+            if (result is ProjectileDeliveryResult pr)
+                _eventBus.Publish(new ProjectileRequestedEvent(casterId, pr.ProjectileSpec));
+
+            _eventBus.Publish(new SkillCastedEvent(skill.Id, casterId, skill.Spec));
             return Result.Success();
         }
     }

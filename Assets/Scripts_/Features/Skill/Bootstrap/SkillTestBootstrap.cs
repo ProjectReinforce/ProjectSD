@@ -1,6 +1,6 @@
+using Features.Projectile.Application.Events;
 using Features.Skill.Application;
 using Features.Skill.Application.Events;
-using Features.Skill.Domain;
 using Shared.Context;
 using Shared.Kernel;
 using UnityEngine;
@@ -23,6 +23,7 @@ namespace Features.Skill.Bootstrap
             var subscriber = _sceneContext.Subscriber;
 
             subscriber.Subscribe<SkillCastedEvent>(OnSkillCasted);
+            subscriber.Subscribe<ProjectileRequestedEvent>(OnProjectileRequested);
 
             var useCase = new CastSkillUseCase(publisher);
             var casterId = Shared.Kernel.EntityId.New();
@@ -52,13 +53,21 @@ namespace Features.Skill.Bootstrap
 
         private void OnSkillCasted(SkillCastedEvent e)
         {
-            Debug.Log($"[SkillTest] Cast OK — {e.DeliveryDescription}");
+            Debug.Log($"[SkillTest] Cast OK — skill={e.SkillId} caster={e.CasterId} dmg={e.Spec.Damage}");
+        }
+
+        private void OnProjectileRequested(ProjectileRequestedEvent e)
+        {
+            Debug.Log($"[SkillTest] Projectile requested — owner={e.OwnerId} speed={e.Spec.Speed} trajectory={e.Spec.TrajectoryType}");
         }
 
         private void OnDestroy()
         {
             if (_sceneContext != null)
+            {
                 _sceneContext.Subscriber.Unsubscribe<SkillCastedEvent>(OnSkillCasted);
+                _sceneContext.Subscriber.Unsubscribe<ProjectileRequestedEvent>(OnProjectileRequested);
+            }
         }
     }
 }

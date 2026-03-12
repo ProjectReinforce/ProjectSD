@@ -2,11 +2,13 @@ namespace Features.Skill.Domain
 {
     public sealed class SkillSpec : Shared.Kernel.ValueObject
     {
+        private const int Precision = 4;
+
         public SkillSpec(float damage, float cooldown, float range)
         {
-            Damage = damage;
-            Cooldown = cooldown;
-            Range = range;
+            Damage = (float)System.Math.Round(damage, Precision);
+            Cooldown = (float)System.Math.Round(cooldown, Precision);
+            Range = (float)System.Math.Round(range, Precision);
         }
 
         public float Damage { get; }

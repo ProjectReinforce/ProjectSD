@@ -6,12 +6,14 @@ namespace Features.Projectile.Domain
 {
     public sealed class ProjectileSpec : ValueObject
     {
+        private const int Precision = 4;
+
         public ProjectileSpec(TrajectoryType trajectoryType, HitType hitType, float speed, float radius)
         {
             TrajectoryType = trajectoryType;
             HitType = hitType;
-            Speed = speed;
-            Radius = radius;
+            Speed = (float)System.Math.Round(speed, Precision);
+            Radius = (float)System.Math.Round(radius, Precision);
         }
 
         public TrajectoryType TrajectoryType { get; }
