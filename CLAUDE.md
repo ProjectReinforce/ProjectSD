@@ -67,25 +67,20 @@ Shared -> (no feature dependency)
 
 ---
 
-## Anti-Patterns (Never Do)
+## Design Principles
 
-- Business logic inside View or InputHandler
-- Networking or Unity API inside Domain
-- Feature-specific code inside Shared
-- Bootstrap becoming a god class
-- One port handling unrelated responsibilities
-- Layers not defined in architecture.md
-- Silent failure on null — use `Debug.LogError` for missing SerializeField/injected dependencies; do not add null checks for internal data (let NullReferenceException surface naturally)
-- Behavioral switch on type enums — use Factory + Strategy pattern instead; switch is fine for command dispatch and simple value mapping
+- Colocate code that changes for the same reason — if a single requirement change forces edits across multiple classes or files, those pieces belong together. Conversely, if one class changes for multiple unrelated reasons, split it.
+- Minimize the ripple effect of changes — a class exposes only what it does (interface), never how it does it (implementation). If changing an implementation forces callers to change too, the boundary is wrong.
 
-**When unsure:** keep code inside the current feature rather than moving it to Shared.
+
 
 ---
 
 ## Agent Reasoning
 
-- 질문을 받았을 때 "맞다/아니다"부터 정하지 말고, 프로젝트 규칙과 현재 코드를 먼저 확인한 뒤 근거 위에서 답한다.
-- 결론부터 말하고 근거를 끼워 맞추지 않는다.
+- Do not jump to yes/no — first check project rules and current code, then answer based on evidence.
+- Do not start with the conclusion and retrofit the reasoning.
+- If a user request conflicts with or shows signs of violating Design Principles, flag it before proceeding.
 
 ---
 

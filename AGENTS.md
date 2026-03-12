@@ -30,6 +30,12 @@ Legacy area:
 
 * `Assets/Scripts/*` exists, but new feature-first code should be added under `Assets/Scripts_/*` unless the task explicitly targets legacy files.
 
+Design principles:
+
+* Colocate code that changes for the same reason — if a single requirement change forces edits across multiple classes or files, those pieces belong together. Conversely, if one class changes for multiple unrelated reasons, split it.
+* Minimize the ripple effect of changes — a class exposes only what it does (interface), never how it does it (implementation). If changing an implementation forces callers to change too, the boundary is wrong.
+
+
 When generating or modifying code:
 
 * Always follow dependency direction rules.
@@ -45,5 +51,6 @@ If rules conflict, follow the priority order above.
 
 ## Agent Reasoning
 
-* 질문을 받았을 때 "맞다/아니다"부터 정하지 말고, 프로젝트 규칙과 현재 코드를 먼저 확인한 뒤 근거 위에서 답한다.
-* 결론부터 말하고 근거를 끼워 맞추지 않는다.
+* Do not jump to yes/no — first check project rules and current code, then answer based on evidence.
+* Do not start with the conclusion and retrofit the reasoning.
+* If a user request conflicts with or shows signs of violating Design Principles, flag it before proceeding.

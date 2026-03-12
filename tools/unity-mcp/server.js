@@ -1,7 +1,9 @@
 "use strict";
 
+const fs = require("node:fs");
 const http = require("node:http");
 const https = require("node:https");
+const path = require("node:path");
 const { URL } = require("node:url");
 
 const SERVER_INFO = {
@@ -13,7 +15,7 @@ const DEFAULT_PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_BASE_URL = "http://127.0.0.1:51234/";
 const DEFAULT_TIMEOUT_MS = 5000;
 
-const baseUrl = normalizeBaseUrl(process.env.UNITY_MCP_BASE_URL || DEFAULT_BASE_URL);
+const baseUrl = normalizeBaseUrl(process.env.UNITY_MCP_BASE_URL || loadBaseUrlFromProjectSettings());
 const requestTimeoutMs = parsePositiveInt(process.env.UNITY_MCP_HTTP_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
 
 const tools = [
@@ -66,6 +68,162 @@ const tools = [
           description: "Maximum number of entries to return. Default is 20."
         }
       },
+      additionalProperties: false
+    }
+  },
+  // --- Scene manipulation tools ---
+  {
+    name: "unity_scene_hierarchy",
+    description: "Get the scene hierarchy tree. Returns GameObjects with their components and children.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        depth: {
+          type: "integer",
+          minimum: 1,
+          maximum: 50,
+          description: "Maximum hierarchy depth to traverse. Default is 10."
+        },
+        path: {
+          type: "string",
+          description: "Optional: only return hierarchy under this GameObject path (e.g. '/Canvas/Panel')."
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_gameobject_find",
+    description: "Find a GameObject by name or hierarchy path. Returns its components and serialized properties.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "GameObject name to search for."
+        },
+        path: {
+          type: "string",
+          description: "Full hierarchy path (e.g. '/Canvas/Panel/Button'). More precise than name."
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_gameobject_create",
+    description: "Create a new GameObject in the scene. Optionally set parent and add components.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Name for the new GameObject."
+        },
+        parent: {
+          type: "string",
+          description: "Parent GameObject path (e.g. '/Canvas'). If omitted, created at scene root."
+        },
+        components: {
+          type: "array",
+          items: { type: "string" },
+          description: "Component types to add (e.g. ['Image', 'Button', 'TextMeshProUGUI'])."
+        }
+      },
+      required: ["name"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_gameobject_destroy",
+    description: "Destroy a GameObject by path. Supports undo.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "GameObject path to destroy (e.g. '/Canvas/OldPanel')."
+        }
+      },
+      required: ["path"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_component_add",
+    description: "Add a component to an existing GameObject.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gameObjectPath: {
+          type: "string",
+          description: "Path of the target GameObject."
+        },
+        componentType: {
+          type: "string",
+          description: "Component type name (e.g. 'Image', 'Button', 'TextMeshProUGUI', 'VerticalLayoutGroup')."
+        }
+      },
+      required: ["gameObjectPath", "componentType"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_component_set",
+    description: "Set a serialized property on a component. Supports int, float, bool, string, enum, color (#RRGGBB), vectors, and object references (by asset path).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gameObjectPath: {
+          type: "string",
+          description: "Path of the target GameObject."
+        },
+        componentType: {
+          type: "string",
+          description: "Component type name (e.g. 'Image', 'RectTransform')."
+        },
+        propertyName: {
+          type: "string",
+          description: "Serialized property name (e.g. 'm_Color', 'm_Sprite', 'm_Text', 'm_AnchorMin')."
+        },
+        value: {
+          type: "string",
+          description: "Value to set. Format depends on type: '42', 'true', 'Hello', '#FF0000', '(0.5,0.5)', asset path for ObjectReference."
+        },
+        assetPath: {
+          type: "string",
+          description: "For ObjectReference properties: asset path (e.g. 'Assets/Sprites/icon.png'). Takes precedence over value."
+        }
+      },
+      required: ["gameObjectPath", "componentType", "propertyName", "value"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_component_get",
+    description: "Get all serialized properties of a component on a GameObject.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gameObjectPath: {
+          type: "string",
+          description: "Path of the target GameObject."
+        },
+        componentType: {
+          type: "string",
+          description: "Component type name (e.g. 'Image', 'Button', 'RectTransform')."
+        }
+      },
+      required: ["gameObjectPath", "componentType"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_scene_save",
+    description: "Save the currently active scene.",
+    inputSchema: {
+      type: "object",
+      properties: {},
       additionalProperties: false
     }
   }
@@ -229,9 +387,89 @@ async function callTool(name, args) {
       const clamped = Math.max(1, Math.min(100, limit));
       return requestUnityJson("GET", `/console/errors?limit=${clamped}`);
     }
+    // --- Scene manipulation ---
+    case "unity_scene_hierarchy": {
+      const depth = args.depth || 10;
+      const pathParam = args.path ? `&path=${encodeURIComponent(args.path)}` : "";
+      return requestUnityJson("GET", `/scene/hierarchy?depth=${depth}${pathParam}`);
+    }
+    case "unity_gameobject_find":
+      return requestUnityJsonWithBody("POST", "/gameobject/find", args);
+    case "unity_gameobject_create":
+      return requestUnityJsonWithBody("POST", "/gameobject/create", args);
+    case "unity_gameobject_destroy":
+      return requestUnityJsonWithBody("POST", "/gameobject/destroy", { path: args.path });
+    case "unity_component_add":
+      return requestUnityJsonWithBody("POST", "/component/add", args);
+    case "unity_component_set":
+      return requestUnityJsonWithBody("POST", "/component/set", args);
+    case "unity_component_get":
+      return requestUnityJsonWithBody("POST", "/component/get", args);
+    case "unity_scene_save":
+      return requestUnityJsonWithBody("POST", "/scene/save", {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
+}
+
+function requestUnityJsonWithBody(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(path, baseUrl);
+    const transport = url.protocol === "https:" ? https : http;
+    const bodyBuffer = Buffer.from(JSON.stringify(body), "utf8");
+    const options = {
+      method,
+      hostname: url.hostname,
+      port: url.port || (url.protocol === "https:" ? 443 : 80),
+      path: `${url.pathname}${url.search}`,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": bodyBuffer.length
+      }
+    };
+
+    const request = transport.request(options, (response) => {
+      let responseBody = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        responseBody += chunk;
+      });
+      response.on("end", () => {
+        const statusCode = response.statusCode || 0;
+        if (statusCode < 200 || statusCode >= 300) {
+          reject(
+            new Error(
+              `Unity bridge request failed (${statusCode}) ${method} ${path}: ${truncate(responseBody, 400)}`
+            )
+          );
+          return;
+        }
+
+        if (responseBody.trim().length === 0) {
+          resolve({});
+          return;
+        }
+
+        try {
+          resolve(JSON.parse(responseBody));
+        } catch (error) {
+          reject(new Error(`Unity bridge returned non-JSON response: ${truncate(responseBody, 400)}`));
+        }
+      });
+    });
+
+    request.setTimeout(requestTimeoutMs, () => {
+      request.destroy(new Error(`Unity bridge timeout after ${requestTimeoutMs}ms`));
+    });
+
+    request.on("error", (error) => {
+      reject(error);
+    });
+
+    request.write(bodyBuffer);
+    request.end();
+  });
 }
 
 function requestUnityJson(method, path) {
@@ -357,6 +595,24 @@ function normalizeBaseUrl(value) {
     return DEFAULT_BASE_URL;
   }
   return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+}
+
+function loadBaseUrlFromProjectSettings() {
+  try {
+    const portConfigPath = path.resolve(__dirname, "../../ProjectSettings/UnityMcpPort.txt");
+    if (!fs.existsSync(portConfigPath)) {
+      return DEFAULT_BASE_URL;
+    }
+
+    const configuredPort = fs.readFileSync(portConfigPath, "utf8").trim();
+    if (/^\d+$/.test(configuredPort)) {
+      return `http://127.0.0.1:${configuredPort}/`;
+    }
+  } catch (error) {
+    logError("failed to read Unity MCP port config", error);
+  }
+
+  return DEFAULT_BASE_URL;
 }
 
 function parsePositiveInt(value, fallbackValue) {

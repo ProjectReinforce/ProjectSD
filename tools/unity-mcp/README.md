@@ -5,7 +5,8 @@ This folder provides a minimal bridge between Unity Editor and Codex MCP tools.
 ## What it adds
 
 - Unity editor bridge: `Assets/Editor/UnityMcp/UnityMcpBridge.cs`
-  - Starts an HTTP endpoint at `http://127.0.0.1:51234/`
+  - Starts an HTTP endpoint at the port defined in `ProjectSettings/UnityMcpPort.txt`
+  - Default endpoint: `http://127.0.0.1:51234/`
   - Endpoints:
     - `GET /health`
     - `GET /scene/current`
@@ -27,7 +28,7 @@ This folder provides a minimal bridge between Unity Editor and Codex MCP tools.
 2. In Unity, confirm the bridge is running:
    - Menu: `Tools > Unity MCP > Print Status`
    - Optional test in PowerShell:
-     - `Invoke-RestMethod http://127.0.0.1:51234/health`
+     - `Invoke-RestMethod ("http://127.0.0.1:{0}/health" -f (Get-Content .\ProjectSettings\UnityMcpPort.txt))`
 3. Register MCP server in Codex:
    - `powershell -ExecutionPolicy Bypass -File .\tools\unity-mcp\register-codex-mcp.ps1`
 4. Verify registration:
@@ -45,4 +46,5 @@ This folder provides a minimal bridge between Unity Editor and Codex MCP tools.
 ## Notes
 
 - The bridge is editor-only and auto-starts on script reload.
-- If port `51234` is in use, change `ListenerPrefix` in `UnityMcpBridge.cs`.
+- Change `ProjectSettings/UnityMcpPort.txt` if port `51234` is already in use.
+- `register-codex-mcp.ps1` and `server.js` read the same port file automatically when no explicit URL is provided.

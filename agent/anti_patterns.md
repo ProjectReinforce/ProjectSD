@@ -4,11 +4,11 @@
 
 Never do these:
 
-* Put business logic inside Presenter.
+* Put business logic inside View or InputHandler.
 * Put networking logic inside Domain.
 * Put Unity API usage inside Domain.
 * Put feature-specific code inside Shared.
-* Let EntryPoint become a god class.
+* Let Bootstrap become a god class.
 * Make one port responsible for unrelated behaviors.
 * Introduce architectural layers not defined in architecture.md.
 

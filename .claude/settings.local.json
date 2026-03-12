@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c \"c:/Users/SOL/Documents/ProjectSD/tools/unity-mcp/server.js\")",
+      "Bash(curl -s http://127.0.0.1:51234/health)"
+    ]
+  }
+}
