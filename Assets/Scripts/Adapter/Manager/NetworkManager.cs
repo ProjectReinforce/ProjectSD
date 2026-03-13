@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using Photon.Pun;
@@ -9,11 +9,11 @@ namespace Adapter.Manager
 {
     public class NetworkManager : MonoBehaviourPunCallbacks
     {
-        // 플레이어 커스텀 프로퍼티 키.
+        // ?뚮젅?댁뼱 而ㅼ뒪? ?꾨줈?쇳떚 ??
         public const string CharacterIdKey = "characterId";
         public const string IsReadyKey = "isReady";
 
-        // 방 커스텀 프로퍼티 키.
+        // 諛?而ㅼ뒪? ?꾨줈?쇳떚 ??
         public const string HasPasswordKey = "hasPw";
         public const string PasswordKey = "pw";
 
@@ -78,7 +78,7 @@ namespace Adapter.Manager
 
             if (PhotonNetwork.IsConnected)
             {
-                // 연결 진행 중이거나 GameServer 상태면 콜백을 기다린다.
+                // ?곌껐 吏꾪뻾 以묒씠嫄곕굹 GameServer ?곹깭硫?肄쒕갚??湲곕떎由곕떎.
                 return;
             }
 
@@ -105,7 +105,7 @@ namespace Adapter.Manager
             {
                 isCreatingRoom = true;
                 var roomName = $"Solo_{UnityEngine.Random.Range(1000, 9999)}";
-                // 솔로 방은 로비 방 목록에서 노출되지 않도록 설정.
+                // ?붾줈 諛⑹? 濡쒕퉬 諛?紐⑸줉?먯꽌 ?몄텧?섏? ?딅룄濡??ㅼ젙.
                 var options = new RoomOptions
                 {
                     MaxPlayers = 1,
@@ -128,8 +128,8 @@ namespace Adapter.Manager
                 }
 
                 var hasPassword = !string.IsNullOrWhiteSpace(password);
-                // 비밀번호 여부/값을 방 프로퍼티에 저장해
-                // 클라이언트가 입장 전에 비밀번호 입력 필요 여부를 판단할 수 있게 함.
+                // 鍮꾨?踰덊샇 ?щ?/媛믪쓣 諛??꾨줈?쇳떚????ν빐
+                // ?대씪?댁뼵?멸? ?낆옣 ?꾩뿉 鍮꾨?踰덊샇 ?낅젰 ?꾩슂 ?щ?瑜??먮떒?????덇쾶 ??
                 var customProps = new Hashtable
                 {
                     [HasPasswordKey] = hasPassword
@@ -146,7 +146,7 @@ namespace Adapter.Manager
                     IsOpen = true,
                     CleanupCacheOnLeave = true,
                     CustomRoomProperties = customProps,
-                    // 로비에는 hasPw만 노출하고, 실제 비밀번호 값은 노출하지 않음.
+                    // 濡쒕퉬?먮뒗 hasPw留??몄텧?섍퀬, ?ㅼ젣 鍮꾨?踰덊샇 媛믪? ?몄텧?섏? ?딆쓬.
                     CustomRoomPropertiesForLobby = new[] { HasPasswordKey }
                 };
 
@@ -264,22 +264,9 @@ namespace Adapter.Manager
             }
 
             var players = PhotonNetwork.PlayerList;
-            if (players.Length <= 1)
-            {
-                // 솔로(방장 1인)는 즉시 시작 가능.
-                return true;
-            }
-
             for (var i = 0; i < players.Length; i++)
             {
-                var player = players[i];
-                if (player.IsMasterClient)
-                {
-                    // 방장은 Ready 조건에서 제외.
-                    continue;
-                }
-
-                if (!IsPlayerReady(player))
+                if (!IsPlayerReady(players[i]))
                 {
                     return false;
                 }
@@ -288,9 +275,10 @@ namespace Adapter.Manager
             return true;
         }
 
+
         public override void OnConnectedToMaster()
         {
-            // Master 접속만으로는 매치메이킹 준비 완료가 아니므로 로비 진입을 먼저 수행한다.
+            // Master ?묒냽留뚯쑝濡쒕뒗 留ㅼ튂硫붿씠??以鍮??꾨즺媛 ?꾨땲誘濡?濡쒕퉬 吏꾩엯??癒쇱? ?섑뻾?쒕떎.
             ConnectionStateChanged?.Invoke(false);
             PhotonNetwork.JoinLobby();
             Debug.Log("Connected to Photon Master.");
@@ -334,7 +322,7 @@ namespace Adapter.Manager
 
         public override void OnJoinedRoom()
         {
-            // 비밀번호 방은 입장 직후 검증하고, 불일치 시 즉시 퇴장 처리.
+            // 鍮꾨?踰덊샇 諛⑹? ?낆옣 吏곹썑 寃利앺븯怨? 遺덉씪移???利됱떆 ?댁옣 泥섎━.
             if (!isCreatingRoom && IsCurrentRoomPasswordMismatch())
             {
                 LeaveRoom();
@@ -416,7 +404,7 @@ namespace Adapter.Manager
                 return false;
             }
 
-            // 비밀번호 방인데 실제 비밀번호 메타가 없으면 비정상 방으로 간주.
+            // 鍮꾨?踰덊샇 諛⑹씤???ㅼ젣 鍮꾨?踰덊샇 硫뷀?媛 ?놁쑝硫?鍮꾩젙??諛⑹쑝濡?媛꾩＜.
             if (!PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(PasswordKey, out var pwValue))
             {
                 return true;
@@ -441,7 +429,7 @@ namespace Adapter.Manager
 
             if (PhotonNetwork.InRoom)
             {
-                // 이미 방(게임서버)에 있으면 먼저 방을 나간 뒤 로비에서 작업 실행.
+                // ?대? 諛?寃뚯엫?쒕쾭)???덉쑝硫?癒쇱? 諛⑹쓣 ?섍컙 ??濡쒕퉬?먯꽌 ?묒뾽 ?ㅽ뻾.
                 pendingMatchmakingAction = action;
                 leavingRoomForMatchmaking = true;
                 LeaveRoom();
@@ -450,7 +438,7 @@ namespace Adapter.Manager
 
             if (!PhotonNetwork.InLobby)
             {
-                // 로비 콜백(OnJoinedLobby) 이후 실행.
+                // 濡쒕퉬 肄쒕갚(OnJoinedLobby) ?댄썑 ?ㅽ뻾.
                 pendingMatchmakingAction = action;
                 PhotonNetwork.JoinLobby();
                 return;
@@ -472,3 +460,4 @@ namespace Adapter.Manager
         }
     }
 }
+

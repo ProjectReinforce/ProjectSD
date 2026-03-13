@@ -95,7 +95,7 @@ namespace Adapter.UI.Menu
             }
 
             NetworkManager.Instance.SetLocalReady(ready);
-            SetStateText(ready ? "Ready." : "Not Ready.");
+            SetStateText(ready ? "준비 완료." : "준비 취소.");
             RefreshRoleUi();
         }
 
@@ -103,12 +103,6 @@ namespace Adapter.UI.Menu
         {
             if (!PhotonNetwork.InRoom || NetworkManager.Instance == null)
             {
-                return;
-            }
-
-            if (PhotonNetwork.IsMasterClient)
-            {
-                TryStartByHost();
                 return;
             }
 
@@ -137,11 +131,22 @@ namespace Adapter.UI.Menu
             RefreshRoomUi();
             RefreshRoleUi();
 
-            if (IsCountdownActive() &&
-                PhotonNetwork.IsMasterClient &&
-                (NetworkManager.Instance == null || !NetworkManager.Instance.CanMasterStartGameInCurrentRoom()))
+            if (!PhotonNetwork.IsMasterClient || NetworkManager.Instance == null)
             {
-                SetStateText("Countdown canceled: readiness changed.");
+                return;
+            }
+
+            var canStart = NetworkManager.Instance.CanMasterStartGameInCurrentRoom();
+            if (canStart && !IsCountdownActive())
+            {
+                SetStateText("전원 준비 완료. 카운트다운 시작...");
+                StartCountdown();
+                return;
+            }
+
+            if (IsCountdownActive() && !canStart)
+            {
+                SetStateText("카운트다운 취소: 준비 상태가 변경되었습니다.");
                 CancelCountdown();
             }
         }
@@ -160,38 +165,27 @@ namespace Adapter.UI.Menu
 
         private void RefreshRoleUi()
         {
-            var isMaster = PhotonNetwork.IsMasterClient;
-
             if (readyToggle != null)
             {
-                readyToggle.interactable = !isMaster;
-                if (isMaster)
+                readyToggle.interactable = true;
+                if (NetworkManager.Instance != null && PhotonNetwork.InRoom)
                 {
-                    readyToggle.isOn = false;
+                    readyToggle.isOn = NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
                 }
             }
 
             if (startButton != null)
             {
                 startButton.gameObject.SetActive(true);
-                startButton.interactable = isMaster
-                    ? NetworkManager.Instance != null && NetworkManager.Instance.CanMasterStartGameInCurrentRoom()
-                    : true;
+                startButton.interactable = PhotonNetwork.InRoom;
             }
 
             if (readyStartButtonText != null)
             {
-                if (isMaster)
-                {
-                    readyStartButtonText.text = "Start";
-                }
-                else
-                {
-                    var isReady = NetworkManager.Instance != null &&
-                                  PhotonNetwork.InRoom &&
-                                  NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
-                    readyStartButtonText.text = isReady ? "Cancel Ready" : "Ready";
-                }
+                var isReady = NetworkManager.Instance != null &&
+                              PhotonNetwork.InRoom &&
+                              NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
+                readyStartButtonText.text = isReady ? "준비취소" : "준비";
             }
         }
 
@@ -366,9 +360,7 @@ namespace Adapter.UI.Menu
                 var player = players[i];
                 var isYou = player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
                 var role = player.IsMasterClient ? "Host" : "Client";
-                var ready = player.IsMasterClient
-                    ? "HOST"
-                    : NetworkManager.Instance.IsPlayerReady(player) ? "READY" : "WAIT";
+                var ready = NetworkManager.Instance.IsPlayerReady(player) ? "준비" : "대기";
                 var character = NetworkManager.Instance.TryGetCharacterId(player, out var id) ? id.ToString() : "-";
 
                 sb.Append("P")
@@ -395,19 +387,7 @@ namespace Adapter.UI.Menu
 
         private void TryStartByHost()
         {
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                return;
-            }
-
-            if (NetworkManager.Instance == null || !NetworkManager.Instance.CanMasterStartGameInCurrentRoom())
-            {
-                SetStateText("All other players must be Ready.");
-                return;
-            }
-
-            SetStateText("Starting countdown...");
-            StartCountdown();
+            OnClickReadyOrStart();
         }
 
         private void EnsureUiReferences()
