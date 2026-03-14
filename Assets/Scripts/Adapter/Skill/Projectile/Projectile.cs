@@ -46,7 +46,8 @@ namespace SwDreams.Adapter.Skill
         protected virtual void Update()
         {
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             MoveStep();

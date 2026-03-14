@@ -54,7 +54,8 @@ namespace SwDreams.Adapter.Skill
             if (!isActive) return;
 
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             // 수명 체크

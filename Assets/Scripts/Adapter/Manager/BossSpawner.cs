@@ -124,6 +124,10 @@ namespace SwDreams.Adapter.Manager
                 // BossPhaseManager에 전투 시작 알림
                 if (BossPhaseManager.Instance != null)
                     BossPhaseManager.Instance.StartBossFight(currentBoss, bossData);
+
+                // 보스 혼돈 스킬 적용
+                if (BossChaosApplicator.Instance != null)
+                    BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
             }
 
             // 상태 전환
@@ -157,6 +161,10 @@ namespace SwDreams.Adapter.Manager
 
                 if (BossPhaseManager.Instance != null)
                     BossPhaseManager.Instance.StartBossFight(currentBoss, bossData);
+
+                // 보스 혼돈 스킬 적용
+                if (BossChaosApplicator.Instance != null)
+                    BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
             }
 
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.BossFight);

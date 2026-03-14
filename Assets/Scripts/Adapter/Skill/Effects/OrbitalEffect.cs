@@ -115,7 +115,8 @@ namespace SwDreams.Adapter.Skill
 
             // 게임 일시정지 시 정지
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             // 스킬 데이터에서 회전 속도 가져오기 (Skill 컴포넌트 참조)

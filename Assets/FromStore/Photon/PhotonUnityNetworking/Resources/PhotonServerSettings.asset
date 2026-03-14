@@ -64,6 +64,7 @@ MonoBehaviour:
   - RPC_ShowCircleWarning
   - RPC_ShowExplosion
   - RPC_SyncHP
+  - RPC_SetBossChaosSkill
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
