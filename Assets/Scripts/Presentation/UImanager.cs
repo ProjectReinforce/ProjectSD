@@ -1,5 +1,6 @@
 using UnityEngine;
 using DG.Tweening;
+using SwDreams.Domain;
 
 namespace SwDreams.Presentation
 {
@@ -13,6 +14,7 @@ namespace SwDreams.Presentation
 
         [Header("패널 참조")]
         [SerializeField] private LevelUpPanel levelUpPanel;
+        [SerializeField] private ResultPanelUI resultPanel;
 
         private void Awake()
         {
@@ -29,12 +31,34 @@ namespace SwDreams.Presentation
             // 패널 비활성화
             if (levelUpPanel != null)
                 levelUpPanel.gameObject.SetActive(false);
+            if (resultPanel != null)
+                resultPanel.gameObject.SetActive(false);
         }
 
         private void OnDestroy()
         {
             if (Instance == this)
                 Instance = null;
+        }
+
+        // ===== 결과 화면 =====
+
+        public void ShowResult(GameResult result)
+        {
+            if (resultPanel == null)
+            {
+                Debug.LogError("[UIManager] ResultPanelUI 참조 없음!");
+                return;
+            }
+
+            Debug.Log("[UIManager] ShowResult 호출");
+            resultPanel.Show(result);
+        }
+
+        public void HideResult()
+        {
+            if (resultPanel != null)
+                resultPanel.Hide();
         }
 
         // ===== LevelUpManager에서 직접 호출 =====

@@ -364,6 +364,9 @@ namespace SwDreams.Adapter.Manager
             enemy.OnDiedWithRef -= OnEnemyDied;
             enemy.OnForceReturned -= OnEnemyForceReturned;
 
+            // Phase 7: 킬 카운트 추적
+            GameStatTracker.Instance?.RecordKill();
+
             // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
             NotifyChaosManagers(enemy.transform.position);
 

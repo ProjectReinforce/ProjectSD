@@ -51,8 +51,77 @@ namespace SwDreams.Testing
         // Phase 6: 사망/부활 상태
         private bool isDead = false;
 
+        // Phase 7: 캐릭터 데이터 연동
+        private bool isInitialized = false;
+        private CharacterData characterData;
+
         private Rigidbody2D rb;
         private SkillManager skillManager;
+
+        /// <summary>
+        /// PhotonView.InstantiationData에서 characterId를 읽어 자동 초기화.
+        /// GamePlayerSpawner 경유 시: InstantiationData[0] = characterId (int).
+        /// TestPlayerSpawner 경유 시: InstantiationData가 null → 아무 일도 안 함.
+        /// </summary>
+        private void TryInitializeFromInstantiationData()
+        {
+            if (photonView.InstantiationData == null || photonView.InstantiationData.Length == 0)
+                return;
+
+            int characterId = (int)photonView.InstantiationData[0];
+            var db = GameManager.Instance?.CharacterDB;
+            if (db == null)
+            {
+                Debug.LogWarning("[PlayerStub] CharacterDatabase를 찾을 수 없습니다. " +
+                                 "GameManager에 CharacterDatabase SO를 연결하세요.");
+                return;
+            }
+
+            var data = db.GetById(characterId);
+            if (data == null)
+            {
+                Debug.LogWarning($"[PlayerStub] CharacterData ID {characterId}를 찾을 수 없습니다. " +
+                                 "기본 캐릭터로 폴백합니다.");
+                data = db.GetDefault();
+            }
+
+            if (data != null)
+                Initialize(data);
+        }
+
+        /// <summary>
+        /// 정상 플로우: GamePlayerSpawner가 스폰 후 Start() 이전에 호출.
+        /// CharacterData 기반으로 스탯/시작스킬/고유특성 초기화.
+        /// 
+        /// 테스트 모드: 호출되지 않으면 기존 인스펙터 값(startingSkillData, maxHP 등) 사용.
+        /// </summary>
+        public void Initialize(CharacterData data)
+        {
+            if (data == null)
+            {
+                Debug.LogWarning("[PlayerStub] Initialize: CharacterData가 null입니다.");
+                return;
+            }
+
+            characterData = data;
+            isInitialized = true;
+
+            // 캐릭터 base 스탯 적용
+            maxHP = data.maxHP;
+            moveSpeed = data.moveSpeed;
+            CurrentHP = maxHP;
+
+            // PlayerStats에 캐릭터 base 스탯 전달
+            var stats = GetComponent<PlayerStats>();
+            if (stats != null)
+                stats.ApplyCharacterBase(data);
+
+            Debug.Log($"[PlayerStub] 캐릭터 초기화: {data.displayName} " +
+                      $"(HP:{maxHP}, Speed:{moveSpeed})");
+        }
+
+        /// <summary>현재 캐릭터 데이터. 결과 화면에서 빌드 요약 시 사용.</summary>
+        public CharacterData CharacterData => characterData;
 
         private void Awake()
         {
@@ -67,16 +136,49 @@ namespace SwDreams.Testing
 
         private void Start()
         {
-            // 모든 클라이언트에서 모든 플레이어의 스킬 실행.
-            // 투사체는 로컬 렌더링, 데미지는 호스트만 처리.
-            if (startingSkillData != null && skillManager != null)
+            // Phase 7: InstantiationData에서 캐릭터 ID 자동 감지 (정상 플로우)
+            // GamePlayerSpawner가 instantiationData로 characterId를 넘김.
+            // 테스트 모드(TestPlayerSpawner)에서는 InstantiationData가 null → 스킵.
+            if (!isInitialized)
+                TryInitializeFromInstantiationData();
+
+            // 시작 스킬 결정: Initialize() 호출 여부에 따라 분기
+            SkillData activeToAcquire = null;
+            SkillData passiveToAcquire = null;
+
+            if (isInitialized && characterData != null)
             {
-                skillManager.AcquireSkill(startingSkillData);
-                Debug.Log($"[PlayerStub] 시작 스킬 획득: {startingSkillData.skillName}");
+                // 정상 플로우: CharacterData의 시작 액티브 + 패시브
+                activeToAcquire = characterData.startingActiveSkill;
+                passiveToAcquire = characterData.startingPassiveSkill;
             }
             else
             {
-                Debug.LogWarning("[PlayerStub] startingSkillData 또는 SkillManager 없음");
+                // 테스트 모드: 인스펙터에 설정된 스킬 (액티브만)
+                activeToAcquire = startingSkillData;
+            }
+
+            if (skillManager != null)
+            {
+                if (activeToAcquire != null)
+                {
+                    skillManager.AcquireSkill(activeToAcquire);
+                    Debug.Log($"[PlayerStub] 시작 액티브 획득: {activeToAcquire.skillName}" +
+                              $"{(isInitialized ? " (캐릭터)" : " (테스트)")}");
+                }
+
+                if (passiveToAcquire != null)
+                {
+                    skillManager.AcquireSkill(passiveToAcquire);
+                    Debug.Log($"[PlayerStub] 시작 패시브 획득: {passiveToAcquire.skillName}");
+                }
+
+                if (activeToAcquire == null)
+                    Debug.LogWarning("[PlayerStub] 시작 액티브 스킬 없음");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerStub] SkillManager 없음");
             }
 
             // 패시브 테스트 (임시)

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dc9260732e3cd9478475c45718b94e0, type: 3}
+  m_Name: AData
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.CharacterData
+  id: 0
+  displayName: A
+  portrait: {fileID: 0}
+  startingActiveSkill: {fileID: 11400000, guid: 7739e571ff109f542a287284ac1e47eb, type: 2}
+  startingPassiveSkill: {fileID: 11400000, guid: e12fa716c93844f41b5c4f111f903436, type: 2}
+  maxHP: 100
+  moveSpeed: 5.5
+  attackMultiplier: 1
+  projectileSpeed: 0
+  projectileCount: 0
+  skillRange: 0
+  cooldownReduction: 0
+  knockback: 1
+  critDamage: 1.5
+  expMultiplier: 1
+  defenseMultiplier: 1
+  healMultiplier: 1
+  skillDuration: 0

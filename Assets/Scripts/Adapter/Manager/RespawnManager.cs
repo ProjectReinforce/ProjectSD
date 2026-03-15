@@ -99,6 +99,9 @@ namespace SwDreams.Adapter.Manager
             deadPlayers[photonViewID] = true;
             respawnTimers[photonViewID] = RespawnDelay;
 
+            // Phase 7: 사망 카운트 추적
+            GameStatTracker.Instance?.RecordDeath();
+
             Debug.Log($"[RespawnManager] 부활 요청: ViewID {photonViewID}, {RespawnDelay}초 후 부활");
 
             // 전원 사망 체크
