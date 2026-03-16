@@ -228,5 +228,34 @@ namespace SwDreams.Adapter.Skill
         {
             return baseSpeed + ProjectileSpeedBonus;
         }
+
+        // ===== Phase 7: 캐릭터 데이터 연동 =====
+
+        /// <summary>
+        /// CharacterData의 base 스탯으로 전체 base 값 덮어쓰기.
+        /// PlayerStub.Initialize()에서 호출.
+        /// 테스트 모드에서는 호출되지 않음 → 인스펙터 base 값 그대로 유지.
+        /// </summary>
+        public void ApplyCharacterBase(CharacterData data)
+        {
+            if (data == null) return;
+
+            baseAttackMultiplier = data.attackMultiplier;
+            baseMoveSpeed = data.moveSpeed;
+            baseMaxHP = data.maxHP;
+            baseProjectileSpeed = data.projectileSpeed;
+            baseProjectileCount = data.projectileCount;
+            baseSkillRange = data.skillRange;
+            baseCooldownReduction = data.cooldownReduction;
+            baseKnockback = data.knockback;
+            baseCritDamage = data.critDamage;
+            baseExpMultiplier = data.expMultiplier;
+            baseDefenseMultiplier = data.defenseMultiplier;
+            baseHealMultiplier = data.healMultiplier;
+            baseSkillDuration = data.skillDuration;
+
+            OnStatsChanged?.Invoke();
+            Debug.Log($"[PlayerStats] 캐릭터 base 스탯 적용: {data.displayName}");
+        }
     }
 }

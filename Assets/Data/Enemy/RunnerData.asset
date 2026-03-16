@@ -16,7 +16,7 @@ MonoBehaviour:
   enemyType: 1
   sprite: {fileID: 0}
   baseHP: 30
-  moveSpeed: 5.5
+  moveSpeed: 4.5
   contactDamage: 10
   expValue: 5
   knockbackResistance: 0

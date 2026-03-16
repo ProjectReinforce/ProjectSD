@@ -64,6 +64,10 @@ MonoBehaviour:
   - RPC_ShowCircleWarning
   - RPC_ShowExplosion
   - RPC_SyncHP
+  - RPC_SetBossChaosSkill
+  - RPC_RequestRetry
+  - RPC_SendBuildToHost
+  - RPC_ShowResult
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

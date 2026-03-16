@@ -36,6 +36,9 @@ namespace SwDreams.Adapter.Manager
         [Header("게임 설정")]
         [SerializeField] private GameplayConfig config;
 
+        // Phase 7: 캐릭터 데이터베이스. Inspector에서 연결.
+        [SerializeField] private CharacterDatabase characterDatabase;
+
         /// <summary>
         /// 게임플레이 설정 SO. 읽기 전용 접근.
         /// null 체크 후 사용 권장:
@@ -43,6 +46,11 @@ namespace SwDreams.Adapter.Manager
         ///   if (cfg != null) { ... }
         /// </summary>
         public GameplayConfig Config => config;
+
+        /// <summary>
+        /// 캐릭터 데이터베이스. PlayerStub 초기화 시 사용.
+        /// </summary>
+        public CharacterDatabase CharacterDB => characterDatabase;
 
         // Application 서비스
         private ExperienceService expService = new ExperienceService();

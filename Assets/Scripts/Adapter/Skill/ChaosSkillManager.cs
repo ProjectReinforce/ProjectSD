@@ -203,7 +203,8 @@ namespace SwDreams.Adapter.Skill
         private void Update()
         {
             if (GameManager.Instance == null) return;
-            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight) return;
 
             bool needRecalc = false;
 

@@ -10,7 +10,7 @@ namespace SwDreams.Domain.Interfaces
     public interface IBossChaosEffect
     {
         /// <summary>보스 스폰 시 효과 적용.</summary>
-        // void ApplyToBoss(SwDreams.Adapter.Entity.Boss boss);
+        void ApplyToBoss(SwDreams.Adapter.Entity.Boss boss);
 
         /// <summary>보스전 중 지속 효과 갱신 (호스트만).</summary>
         void OnBossUpdate(float deltaTime);

@@ -41,7 +41,8 @@ namespace SwDreams.Adapter.Skill
         protected override void Update()
         {
             if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing)
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing &&
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
                 return;
 
             MoveStep();

@@ -45,6 +45,12 @@ namespace SwDreams.Adapter.Manager
         // ===== 상태 =====
         private bool isLevelUpActive = false;
         private float timeoutTimer;
+        
+        // Phase 6: 현재 처리 중인 레벨 (보스 혼돈 스킬 결정용)
+        private int currentProcessingLevel;
+
+        // Phase 6: 레벨업 진입 전 상태 저장 (보스전 중 레벨업 대응)
+        private GameManager.GameState stateBeforeLevelUp;
 
         // 레벨업 큐: 진행 중일 때 추가 레벨업이 발생하면 대기열에 저장
         private Queue<int> pendingLevelUps = new Queue<int>();
@@ -149,6 +155,7 @@ namespace SwDreams.Adapter.Manager
 
             Debug.Log($"[LevelUpManager] 팀 레벨업! Lv.{newLevel}");
 
+            currentProcessingLevel = newLevel;
             bool isChaosLevel = (newLevel == 5 || newLevel == 10 || newLevel == 15);
             StartLevelUpSequence(isChaosLevel);
         }
@@ -162,6 +169,9 @@ namespace SwDreams.Adapter.Manager
             playerSelections.Clear();
             playerChoices.Clear();
 
+            // 현재 상태 저장 (Playing 또는 BossFight)
+            if (GameManager.Instance.CurrentState != GameManager.GameState.Paused)
+                stateBeforeLevelUp = GameManager.Instance.CurrentState;
             // 게임 일시정지
             GameManager.Instance.ChangeStateNetwork(GameManager.GameState.Paused);
 
@@ -431,6 +441,14 @@ namespace SwDreams.Adapter.Manager
         private void EndLevelUpSequence()
         {
             isLevelUpActive = false;
+
+            // Phase 6: Lv15 선택 완료 → 보스 혼돈 스킬 결정
+            if (PhotonNetwork.IsMasterClient && currentProcessingLevel == 15)
+            {
+                if (BossChaosApplicator.Instance != null)
+                    BossChaosApplicator.Instance.DetermineBossChaosSkill();
+            }
+
             playerSelections.Clear();
             playerChoices.Clear();
 
@@ -438,6 +456,7 @@ namespace SwDreams.Adapter.Manager
             if (pendingLevelUps.Count > 0)
             {
                 int nextLevel = pendingLevelUps.Dequeue();
+                currentProcessingLevel = nextLevel;
                 Debug.Log($"[LevelUpManager] 대기열 레벨업 처리: Lv.{nextLevel} (남은 대기: {pendingLevelUps.Count}개)");
 
                 bool isChaosLevel = (nextLevel == 5 || nextLevel == 10 || nextLevel == 15);
@@ -451,10 +470,48 @@ namespace SwDreams.Adapter.Manager
             }
 
             // 게임 재개
-            GameManager.Instance.ChangeStateNetwork(GameManager.GameState.Playing);
+            // // 레벨업 진입 전 상태로 복원 (Playing 또는 BossFight)
+            // Phase 6: 호스트 마이그레이션 후 레벨업 완료 → 비상 보스전
+            if (HostMigrationHandler.Instance != null &&
+                HostMigrationHandler.Instance.PendingEmergencyBoss)
+            {
+                // 비상 보스전 대기 중 → Playing 복원 건너뛰고 바로 비상 보스전 시작
+                HostMigrationHandler.Instance.OnLevelUpCompleted();
+                // OnLevelUpCompleted 내부에서 BossFight로 전환됨
+            }
+            else
+            {
+                // 정상 플로우: 이전 상태로 복원
+                GameManager.Instance.ChangeStateNetwork(stateBeforeLevelUp);
+            }
 
             // UI 닫기 알림
             photonView.RPC(nameof(RPC_LevelUpEnded), RpcTarget.All);
+        }
+
+        /// <summary>
+        /// 호스트 마이그레이션 시 레벨업 세션 인수.
+        /// 클라이언트 선택지는 유지, 새 호스트가 선택 결과 수신 준비.
+        /// </summary>
+        public void AdoptLevelUpSession()
+        {
+            pendingLevelUps.Clear();
+
+            isLevelUpActive = true;
+            playerSelections.Clear();
+            playerChoices.Clear();
+
+            // 레벨업 완료 후 복원할 상태 (Playing으로 복원 → 이후 비상 보스전이 BossFight로 전환)
+            stateBeforeLevelUp = GameManager.GameState.Playing;
+
+            foreach (var player in PhotonNetwork.PlayerList)
+            {
+                playerSelections[player.ActorNumber] = false;
+            }
+
+            timeoutTimer = selectionTimeout;
+
+            Debug.Log($"[LevelUpManager] 레벨업 세션 인수 — {playerSelections.Count}명 대기");
         }
 
         [PunRPC]

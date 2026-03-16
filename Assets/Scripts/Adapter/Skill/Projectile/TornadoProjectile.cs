@@ -60,6 +60,7 @@ namespace SwDreams.Adapter.Skill
 
             foreach (var hit in hits)
             {
+                if (hit.GetComponent<Entity.Boss>() != null) continue;
                 if (!hit.CompareTag("Enemy")) continue;
                 if (!hit.gameObject.activeInHierarchy) continue;
 

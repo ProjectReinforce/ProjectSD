@@ -70,6 +70,6 @@ MonoBehaviour:
   targetCount: 3
   spreadOnDeathCount: 0
   maxInstances: 3
-  effectPrefab: {fileID: 0}
+  effectPrefab: {fileID: 2361586414690528474, guid: 8408a6d7693a3f74fb3dc9894e6a9422, type: 3}
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

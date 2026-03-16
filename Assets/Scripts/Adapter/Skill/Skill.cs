@@ -92,7 +92,8 @@ namespace SwDreams.Adapter.Skill
             if (!isActive || skillData == null || skillEffect == null) return;
 
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             if (CooldownRemaining > 0f)

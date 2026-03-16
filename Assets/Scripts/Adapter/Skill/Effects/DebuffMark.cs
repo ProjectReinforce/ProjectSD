@@ -77,7 +77,8 @@ namespace SwDreams.Adapter.Skill
         private void Update()
         {
             if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             aliveTime += Time.deltaTime;

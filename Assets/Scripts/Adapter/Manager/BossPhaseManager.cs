@@ -43,6 +43,10 @@ namespace SwDreams.Adapter.Manager
         private float slowTimer;
         private float currentSlowMultiplier = 1f;
 
+        // Phase 6 Step 3: 보스 혼돈 스킬 modifier
+        private float cooldownMultiplier = 1f;   // 폭주 모드: 0.5
+        private int shockwaveFanCount = 1;       // 도박꾼: 3
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -80,6 +84,7 @@ namespace SwDreams.Adapter.Manager
         public void EndBossFight()
         {
             isActive = false;
+            CleanupChaosEffects();
             pendingExplosions.Clear();
             slowTimer = 0f;
             currentSlowMultiplier = 1f;
@@ -108,7 +113,8 @@ namespace SwDreams.Adapter.Manager
                     bossData.p1ShockwaveDamage,
                     bossData.p1ShockwaveHalfAngle,
                     bossData.p1ShockwaveRange,
-                    bossData.shockwaveEffectPrefab))
+                    bossData.shockwaveEffectPrefab,
+                    shockwaveFanCount))
             };
 
             // Phase 2: 빠른 충격파 + 원형 지대
@@ -119,7 +125,8 @@ namespace SwDreams.Adapter.Manager
                     bossData.p1ShockwaveDamage,
                     bossData.p1ShockwaveHalfAngle,
                     bossData.p1ShockwaveRange,
-                    bossData.shockwaveEffectPrefab)),
+                    bossData.shockwaveEffectPrefab,
+                    shockwaveFanCount)),
                 new AttackEntry(new CircleZoneAttack(
                     bossData.p2CircleZoneCooldown,
                     bossData.p2CircleZoneDamage,
@@ -137,7 +144,8 @@ namespace SwDreams.Adapter.Manager
                     bossData.p1ShockwaveDamage,
                     bossData.p1ShockwaveHalfAngle,
                     bossData.p1ShockwaveRange,
-                    bossData.shockwaveEffectPrefab)),
+                    bossData.shockwaveEffectPrefab,
+                    shockwaveFanCount)),
                 new AttackEntry(new CircleZoneAttack(
                     bossData.p2CircleZoneCooldown,
                     bossData.p2CircleZoneDamage,
@@ -163,6 +171,10 @@ namespace SwDreams.Adapter.Manager
             // 공격 패턴 실행
             UpdateAttacks();
 
+            // 보스 혼돈 스킬 효과 갱신
+            if (BossChaosApplicator.Instance != null)
+                BossChaosApplicator.Instance.UpdateBossEffect(Time.deltaTime);
+
             // 지연 폭발 처리
             UpdateDelayedExplosions();
 
@@ -180,8 +192,10 @@ namespace SwDreams.Adapter.Manager
             foreach (var entry in phaseAttacks[phase])
             {
                 entry.timer += Time.deltaTime;
-
-                if (entry.pattern.CanExecute(entry.timer))
+                
+                // 쿨다운에 multiplier 적용 (폭주 모드 시 0.5배)
+                float effectiveTimer = entry.timer / cooldownMultiplier;
+                if (entry.pattern.CanExecute(effectiveTimer))
                 {
                     entry.pattern.Execute(currentBoss.transform, target);
                     entry.timer = 0f;
@@ -343,6 +357,33 @@ namespace SwDreams.Adapter.Manager
             public int damage;
             public float radius;
             public GameObject effectPrefab;
+        }
+
+        // ===== Phase 6 Step 3: 보스 혼돈 스킬 지원 =====
+
+        /// <summary>폭주 모드: 쿨다운 배율 변경.</summary>
+        public void SetCooldownMultiplier(float multiplier)
+        {
+            cooldownMultiplier = Mathf.Max(0.1f, multiplier);
+            Debug.Log($"[BossPhaseManager] 쿨다운 배율: {cooldownMultiplier}");
+        }
+
+        /// <summary>도박꾼: 충격파 갈래 수 변경. 페이즈 공격 세트 재구성.</summary>
+        public void SetShockwaveFanCount(int count)
+        {
+            shockwaveFanCount = count;
+            // 이미 구성된 공격 세트를 재구성
+            if (bossData != null) SetupPhaseAttacks();
+            Debug.Log($"[BossPhaseManager] 충격파 갈래: {shockwaveFanCount}");
+        }
+
+        /// <summary>EndBossFight 시 혼돈 효과 정리.</summary>
+        private void CleanupChaosEffects()
+        {
+            cooldownMultiplier = 1f;
+            shockwaveFanCount = 1;
+            if (BossChaosApplicator.Instance != null)
+                BossChaosApplicator.Instance.CleanupBossEffect();
         }
     }
 }

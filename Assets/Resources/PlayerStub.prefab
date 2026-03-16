@@ -225,7 +225,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlayerStub
   maxHP: 100
   moveSpeed: 5
-  startingSkillData: {fileID: 11400000, guid: 95033975ff04f024ebb1694cd41dfb7c, type: 2}
+  startingSkillData: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
 --- !u!114 &-1036550334346602213
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -73,6 +73,7 @@ namespace SwDreams.Adapter.Skill
             var hits = Physics2D.OverlapCircleAll(transform.position, pullRadius);
             foreach (var hit in hits)
             {
+                if (hit.GetComponent<SwDreams.Adapter.Entity.Boss>() != null) continue;
                 if (!hit.CompareTag("Enemy")) continue;
                 if (!hit.gameObject.activeInHierarchy) continue;
 

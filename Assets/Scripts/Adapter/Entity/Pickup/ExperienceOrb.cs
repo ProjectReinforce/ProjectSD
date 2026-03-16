@@ -41,8 +41,9 @@ namespace SwDreams.Adapter.Entity
             if (isCollected) return;
 
             // [Phase 5] 일시정지 중 이동 안 함
-            if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing)
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
+                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
             if (isAttracted && attractTarget != null)
