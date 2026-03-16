@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
+using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
-using Features.Lobby.Application.UseCases;
 using Shared.EventBus;
 using TMPro;
 using UnityEngine;
@@ -11,16 +11,25 @@ namespace Features.Lobby.Presentation
     public sealed class LobbyView : MonoBehaviour
     {
         [Header("Panels")]
-        [SerializeField] private GameObject _roomListPanel;
-        [SerializeField] private GameObject _roomDetailPanel;
+        [SerializeField]
+        private GameObject _roomListPanel;
+
+        [SerializeField]
+        private GameObject _roomDetailPanel;
 
         [Header("Views")]
-        [SerializeField] private RoomListView _roomListView;
-        [SerializeField] private RoomDetailView _roomDetailView;
+        [SerializeField]
+        private RoomListView _roomListView;
+
+        [SerializeField]
+        private RoomDetailView _roomDetailView;
 
         [Header("Error")]
-        [SerializeField] private TMP_Text _errorText;
-        [SerializeField] private float _errorDisplayDuration = 3f;
+        [SerializeField]
+        private TMP_Text _errorText;
+
+        [SerializeField]
+        private float _errorDisplayDuration = 3f;
 
         private IEventSubscriber _eventBus;
         private Action<LobbyUpdatedEvent> _onLobbyUpdated;
@@ -29,14 +38,7 @@ namespace Features.Lobby.Presentation
         private Action<LobbyErrorEvent> _onLobbyError;
         private Coroutine _errorCoroutine;
 
-        public void Initialize(
-            IEventSubscriber eventBus,
-            CreateRoomUseCase createRoom,
-            JoinRoomUseCase joinRoom,
-            LeaveRoomUseCase leaveRoom,
-            ChangeTeamUseCase changeTeam,
-            SetReadyUseCase setReady,
-            StartGameUseCase startGame)
+        public void Initialize(IEventSubscriber eventBus, LobbyUseCases useCases)
         {
             if (_roomListView == null)
             {
@@ -50,8 +52,8 @@ namespace Features.Lobby.Presentation
                 return;
             }
 
-            _roomListView.Initialize(createRoom, joinRoom);
-            _roomDetailView.Initialize(leaveRoom, changeTeam, setReady, startGame);
+            _roomListView.Initialize(useCases);
+            _roomDetailView.Initialize(useCases);
 
             _eventBus = eventBus;
             _onLobbyUpdated = e => RenderLobby(e.Lobby);
@@ -69,7 +71,8 @@ namespace Features.Lobby.Presentation
 
         private void OnDestroy()
         {
-            if (_eventBus == null) return;
+            if (_eventBus == null)
+                return;
             _eventBus.Unsubscribe(_onLobbyUpdated);
             _eventBus.Unsubscribe(_onRoomUpdated);
             _eventBus.Unsubscribe(_onGameStarted);
@@ -78,14 +81,16 @@ namespace Features.Lobby.Presentation
 
         public void RenderLobby(LobbySnapshot lobby)
         {
-            if (_roomListView == null) return;
+            if (_roomListView == null)
+                return;
             _roomListView.Render(lobby.Rooms);
             ShowRoomList();
         }
 
         public void RenderRoom(RoomSnapshot room)
         {
-            if (_roomDetailView == null) return;
+            if (_roomDetailView == null)
+                return;
             _roomDetailView.Render(room);
             ShowRoomDetail();
         }
@@ -99,7 +104,8 @@ namespace Features.Lobby.Presentation
         {
             Debug.LogWarning($"[Lobby] Error: {message}");
 
-            if (_errorText == null) return;
+            if (_errorText == null)
+                return;
 
             _errorText.text = message;
             _errorText.gameObject.SetActive(true);
@@ -111,14 +117,18 @@ namespace Features.Lobby.Presentation
 
         private void ShowRoomList()
         {
-            if (_roomListPanel != null) _roomListPanel.SetActive(true);
-            if (_roomDetailPanel != null) _roomDetailPanel.SetActive(false);
+            if (_roomListPanel != null)
+                _roomListPanel.SetActive(true);
+            if (_roomDetailPanel != null)
+                _roomDetailPanel.SetActive(false);
         }
 
         private void ShowRoomDetail()
         {
-            if (_roomListPanel != null) _roomListPanel.SetActive(false);
-            if (_roomDetailPanel != null) _roomDetailPanel.SetActive(true);
+            if (_roomListPanel != null)
+                _roomListPanel.SetActive(false);
+            if (_roomDetailPanel != null)
+                _roomDetailPanel.SetActive(true);
         }
 
         private IEnumerator HideErrorAfterDelay()

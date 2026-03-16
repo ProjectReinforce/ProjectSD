@@ -1,11 +1,10 @@
 using System.Collections.Generic;
+using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
-using Features.Lobby.Application.UseCases;
 using Shared.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
 using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Presentation
@@ -13,33 +12,41 @@ namespace Features.Lobby.Presentation
     public sealed class RoomListView : MonoBehaviour
     {
         [Header("Create Room")]
-        [SerializeField] private TMP_InputField _roomNameInput;
-        [SerializeField] private TMP_InputField _capacityInput;
-        [SerializeField] private TMP_InputField _displayNameInput;
-        [SerializeField] private Button _createRoomButton;
+        [SerializeField]
+        private TMP_InputField _roomNameInput;
+
+        [SerializeField]
+        private TMP_InputField _capacityInput;
+
+        [SerializeField]
+        private TMP_InputField _displayNameInput;
+
+        [SerializeField]
+        private Button _createRoomButton;
 
         [Header("Room List")]
-        [SerializeField] private Transform _roomListContent;
-        [SerializeField] private RoomItemView _roomItemPrefab;
+        [SerializeField]
+        private Transform _roomListContent;
 
-        private CreateRoomUseCase _createRoom;
-        private JoinRoomUseCase _joinRoom;
+        [SerializeField]
+        private RoomItemView _roomItemPrefab;
+
+        private LobbyUseCases _useCases;
         private readonly List<RoomItemView> _spawnedItems = new List<RoomItemView>();
 
-        public void Initialize(CreateRoomUseCase createRoom, JoinRoomUseCase joinRoom)
+        public void Initialize(LobbyUseCases useCases)
         {
-            _createRoom = createRoom;
-            _joinRoom = joinRoom;
+            _useCases = useCases;
 
             if (_createRoomButton != null)
                 _createRoomButton.onClick.AddListener(HandleCreateRoom);
         }
 
-        public Result CreateRoom(string roomName, int capacity, string ownerDisplayName)
-            => _createRoom.Execute(roomName, capacity, ownerDisplayName);
+        public Result CreateRoom(string roomName, int capacity, string ownerDisplayName) =>
+            _useCases.CreateRoom(roomName, capacity, ownerDisplayName);
 
-        public Result JoinRoom(EntityId roomId, string memberDisplayName)
-            => _joinRoom.Execute(roomId, memberDisplayName);
+        public Result JoinRoom(EntityId roomId, string memberDisplayName) =>
+            _useCases.JoinRoom(roomId, memberDisplayName);
 
         public void Render(IReadOnlyList<RoomSnapshot> rooms)
         {
@@ -47,7 +54,9 @@ namespace Features.Lobby.Presentation
 
             if (_roomItemPrefab == null || _roomListContent == null)
             {
-                Debug.Log($"[Lobby] Room list updated. Count={rooms.Count} (no prefab/content assigned)");
+                Debug.Log(
+                    $"[Lobby] Room list updated. Count={rooms.Count} (no prefab/content assigned)"
+                );
                 return;
             }
 
@@ -68,7 +77,7 @@ namespace Features.Lobby.Presentation
             if (!int.TryParse(capacityText, out var capacity))
                 capacity = 4;
 
-            var result = _createRoom.Execute(roomName, capacity, displayName);
+            var result = _useCases.CreateRoom(roomName, capacity, displayName);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Create room failed: {result.Error}");
         }
@@ -76,7 +85,7 @@ namespace Features.Lobby.Presentation
         private void OnJoinRoomClicked(EntityId roomId)
         {
             var displayName = _displayNameInput != null ? _displayNameInput.text : "Player";
-            var result = _joinRoom.Execute(roomId, displayName);
+            var result = _useCases.JoinRoom(roomId, displayName);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Join room failed: {result.Error}");
         }

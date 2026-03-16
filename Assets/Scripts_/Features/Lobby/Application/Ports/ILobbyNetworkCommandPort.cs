@@ -3,7 +3,7 @@ using Shared.Kernel;
 
 namespace Features.Lobby.Application.Ports
 {
-    public interface ILobbyNetworkPort
+    public interface ILobbyNetworkCommandPort
     {
         Result CreateRoom(Room room);
         Result JoinRoom(EntityId roomId, RoomMember localMember);

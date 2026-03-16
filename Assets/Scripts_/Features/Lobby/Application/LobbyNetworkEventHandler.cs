@@ -1,26 +1,38 @@
-using System.Collections.Generic;
 using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
 using Features.Lobby.Domain;
 using Shared.EventBus;
 using Shared.Kernel;
-
 using DomainLobby = Features.Lobby.Domain.Lobby;
+using EntityId = Shared.Kernel.EntityId;
 
-namespace Features.Lobby.Application.Handlers
+namespace Features.Lobby.Application
 {
-    public sealed class LobbyStateSyncHandler
+    public sealed class LobbyNetworkEventHandler
     {
         private readonly ILobbyRepository _repository;
         private readonly IEventPublisher _publisher;
 
-        public LobbyStateSyncHandler(ILobbyRepository repository, IEventPublisher publisher)
+        public LobbyNetworkEventHandler(
+            ILobbyRepository repository,
+            IEventPublisher publisher,
+            ILobbyNetworkCallbackPort networkEvents
+        )
         {
             _repository = repository;
             _publisher = publisher;
+
+            networkEvents.OnErrorOccurred = HandleError;
+            networkEvents.OnCreateRoomSucceeded = HandleCreateRoomSucceeded;
+            networkEvents.OnJoinRoomSucceeded = HandleJoinRoomSucceeded;
+            networkEvents.OnLeaveRoomSucceeded = HandleLeaveRoomSucceeded;
+            networkEvents.OnRemotePlayerEntered = HandleRemotePlayerEntered;
+            networkEvents.OnRemotePlayerLeft = HandleRemotePlayerLeft;
+            networkEvents.OnPlayerPropertiesChanged = HandlePlayerPropertiesChanged;
+            networkEvents.OnGameStarted = HandleGameStarted;
         }
 
-        public void PublishError(string message)
+        private void HandleError(string message)
         {
             _publisher.Publish(new LobbyErrorEvent(message));
         }
@@ -30,37 +42,26 @@ namespace Features.Lobby.Application.Handlers
             return AddRoomAndPublish(room);
         }
 
-        public Result HandleJoinRoomSucceeded(
-            EntityId roomId, string roomName, int capacity,
-            List<RoomMember> members, EntityId masterMemberId)
+        public Result HandleJoinRoomSucceeded(JoinRoomData data)
         {
-            if (members == null || members.Count == 0)
+            if (data.Members == null || data.Members.Count == 0)
                 return Result.Failure("No members provided.");
 
-            var owner = members.Find(m => m.Id.Equals(masterMemberId)) ?? members[0];
+            var owner = data.Members.Find(m => m.Id.Equals(data.MasterMemberId)) ?? data.Members[0];
 
-            var roomResult = Room.Create(roomId, roomName, capacity, owner);
+            var roomResult = Room.Create(data.RoomId, data.RoomName, data.Capacity, owner);
             if (roomResult.IsFailure)
                 return Result.Failure(roomResult.Error);
 
             var room = roomResult.Value;
-            foreach (var member in members)
+            foreach (var member in data.Members)
             {
-                if (member.Id.Equals(owner.Id)) continue;
+                if (member.Id.Equals(owner.Id))
+                    continue;
                 room.AddMember(member);
             }
 
             return AddRoomAndPublish(room);
-        }
-
-        private Result AddRoomAndPublish(Room room)
-        {
-            var lobby = _repository.LoadLobby();
-            var addResult = lobby.AddRoom(room);
-            if (addResult.IsFailure)
-                return addResult;
-
-            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: true);
         }
 
         public Result HandleLeaveRoomSucceeded(EntityId roomId, EntityId memberId)
@@ -120,24 +121,23 @@ namespace Features.Lobby.Application.Handlers
             return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
         }
 
-        public Result HandlePlayerPropertiesChanged(
-            EntityId roomId, EntityId memberId, TeamType? team, bool? isReady)
+        public Result HandlePlayerPropertiesChanged(PlayerPropertiesData data)
         {
             var lobby = _repository.LoadLobby();
-            var room = lobby.FindRoom(roomId);
+            var room = lobby.FindRoom(data.RoomId);
             if (room == null)
                 return Result.Failure("Room was not found.");
 
-            if (team.HasValue)
+            if (data.Team.HasValue)
             {
-                var changeResult = room.ChangeTeam(memberId, team.Value);
+                var changeResult = room.ChangeTeam(data.MemberId, data.Team.Value);
                 if (changeResult.IsFailure)
                     return changeResult;
             }
 
-            if (isReady.HasValue)
+            if (data.IsReady.HasValue)
             {
-                var readyResult = room.SetReady(memberId, isReady.Value);
+                var readyResult = room.SetReady(data.MemberId, data.IsReady.Value);
                 if (readyResult.IsFailure)
                     return readyResult;
             }
@@ -156,7 +156,21 @@ namespace Features.Lobby.Application.Handlers
             return Result.Success();
         }
 
-        private Result SaveLobbyAndPublishRoom(DomainLobby lobby, Room room, bool publishLobbyUpdated)
+        private Result AddRoomAndPublish(Room room)
+        {
+            var lobby = _repository.LoadLobby();
+            var addResult = lobby.AddRoom(room);
+            if (addResult.IsFailure)
+                return addResult;
+
+            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: true);
+        }
+
+        private Result SaveLobbyAndPublishRoom(
+            DomainLobby lobby,
+            Room room,
+            bool publishLobbyUpdated
+        )
         {
             var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)

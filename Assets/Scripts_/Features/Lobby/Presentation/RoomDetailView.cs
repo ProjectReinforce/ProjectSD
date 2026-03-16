@@ -1,12 +1,11 @@
 using System.Collections.Generic;
+using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
-using Features.Lobby.Application.UseCases;
 using Features.Lobby.Domain;
 using Shared.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
 using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Presentation
@@ -14,41 +13,48 @@ namespace Features.Lobby.Presentation
     public sealed class RoomDetailView : MonoBehaviour
     {
         [Header("Room Info")]
-        [SerializeField] private TMP_Text _roomNameText;
-        [SerializeField] private TMP_Text _memberCountText;
+        [SerializeField]
+        private TMP_Text _roomNameText;
+
+        [SerializeField]
+        private TMP_Text _memberCountText;
 
         [Header("Member List")]
-        [SerializeField] private Transform _memberListContent;
-        [SerializeField] private MemberItemView _memberItemPrefab;
+        [SerializeField]
+        private Transform _memberListContent;
+
+        [SerializeField]
+        private MemberItemView _memberItemPrefab;
 
         [Header("Actions")]
-        [SerializeField] private Button _leaveButton;
-        [SerializeField] private Button _teamRedButton;
-        [SerializeField] private Button _teamBlueButton;
-        [SerializeField] private Button _readyButton;
-        [SerializeField] private TMP_Text _readyButtonText;
-        [SerializeField] private Button _startGameButton;
+        [SerializeField]
+        private Button _leaveButton;
 
-        private LeaveRoomUseCase _leaveRoom;
-        private ChangeTeamUseCase _changeTeam;
-        private SetReadyUseCase _setReady;
-        private StartGameUseCase _startGame;
+        [SerializeField]
+        private Button _teamRedButton;
+
+        [SerializeField]
+        private Button _teamBlueButton;
+
+        [SerializeField]
+        private Button _readyButton;
+
+        [SerializeField]
+        private TMP_Text _readyButtonText;
+
+        [SerializeField]
+        private Button _startGameButton;
+
+        private LobbyUseCases _useCases;
 
         private EntityId _currentRoomId;
         private EntityId _localMemberId;
         private bool _localIsReady;
         private readonly List<MemberItemView> _spawnedItems = new List<MemberItemView>();
 
-        public void Initialize(
-            LeaveRoomUseCase leaveRoom,
-            ChangeTeamUseCase changeTeam,
-            SetReadyUseCase setReady,
-            StartGameUseCase startGame)
+        public void Initialize(LobbyUseCases useCases)
         {
-            _leaveRoom = leaveRoom;
-            _changeTeam = changeTeam;
-            _setReady = setReady;
-            _startGame = startGame;
+            _useCases = useCases;
 
             if (_leaveButton != null)
                 _leaveButton.onClick.AddListener(HandleLeave);
@@ -65,19 +71,19 @@ namespace Features.Lobby.Presentation
         public void SetLocalMemberId(EntityId memberId)
         {
             _localMemberId = memberId;
+            _localMemberId = memberId;
         }
 
-        public Result LeaveRoom(EntityId roomId, EntityId memberId)
-            => _leaveRoom.Execute(roomId, memberId);
+        public Result LeaveRoom(EntityId roomId, EntityId memberId) =>
+            _useCases.LeaveRoom(roomId, memberId);
 
-        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
-            => _changeTeam.Execute(roomId, memberId, team);
+        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team) =>
+            _useCases.ChangeTeam(roomId, memberId, team);
 
-        public Result SetReady(EntityId roomId, EntityId memberId, bool isReady)
-            => _setReady.Execute(roomId, memberId, isReady);
+        public Result SetReady(EntityId roomId, EntityId memberId, bool isReady) =>
+            _useCases.SetReady(roomId, memberId, isReady);
 
-        public Result StartGame(EntityId roomId)
-            => _startGame.Execute(roomId);
+        public Result StartGame(EntityId roomId) => _useCases.StartGame(roomId);
 
         public void Render(RoomSnapshot room)
         {
@@ -126,28 +132,28 @@ namespace Features.Lobby.Presentation
 
         private void HandleLeave()
         {
-            var result = _leaveRoom.Execute(_currentRoomId, _localMemberId);
+            var result = _useCases.LeaveRoom(_currentRoomId, _localMemberId);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Leave failed: {result.Error}");
         }
 
         private void HandleChangeTeam(TeamType team)
         {
-            var result = _changeTeam.Execute(_currentRoomId, _localMemberId, team);
+            var result = _useCases.ChangeTeam(_currentRoomId, _localMemberId, team);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Change team failed: {result.Error}");
         }
 
         private void HandleToggleReady()
         {
-            var result = _setReady.Execute(_currentRoomId, _localMemberId, !_localIsReady);
+            var result = _useCases.SetReady(_currentRoomId, _localMemberId, !_localIsReady);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Set ready failed: {result.Error}");
         }
 
         private void HandleStartGame()
         {
-            var result = _startGame.Execute(_currentRoomId);
+            var result = _useCases.StartGame(_currentRoomId);
             if (result.IsFailure)
                 Debug.LogWarning($"[Lobby] Start game failed: {result.Error}");
         }
