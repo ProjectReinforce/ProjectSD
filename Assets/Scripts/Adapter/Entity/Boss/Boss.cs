@@ -47,6 +47,11 @@ namespace SwDreams.Adapter.Entity
         private float contactCooldown = 0.5f;
         private float contactTimer;
 
+        // Phase 7: HP RPC 쓰로틀링 (토네이도 고빈도 히트 대응)
+        private float hpSyncInterval = 0.1f;
+        private float hpSyncTimer = 0f;
+        private bool hpDirty = false;
+
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
 
@@ -99,6 +104,14 @@ namespace SwDreams.Adapter.Entity
             // 접촉 데미지 타이머
             if (contactTimer > 0f)
                 contactTimer -= Time.deltaTime;
+
+            // Phase 7: HP 동기화 쓰로틀링 (호스트만)
+            if (PhotonNetwork.IsMasterClient && hpDirty)
+            {
+                hpSyncTimer -= Time.deltaTime;
+                if (hpSyncTimer <= 0f)
+                    FlushHPSync();
+            }
         }
 
         // ===== 데미지 =====
@@ -117,14 +130,36 @@ namespace SwDreams.Adapter.Entity
 
             bool phaseChanged = newPhase != CurrentPhase;
 
-            // 모든 클라이언트에 동기화
-            photonView.RPC(nameof(RPC_SyncHP), RpcTarget.All,
-                CurrentHP, MaxHP, (int)newPhase, phaseChanged);
-
-            if (!IsAlive)
+            // 사망 또는 페이즈 전환 시 즉시 동기화
+            if (!IsAlive || phaseChanged)
             {
-                photonView.RPC(nameof(RPC_BossDied), RpcTarget.All);
+                hpDirty = false;
+                photonView.RPC(nameof(RPC_SyncHP), RpcTarget.All,
+                    CurrentHP, MaxHP, (int)newPhase, phaseChanged);
+
+                if (!IsAlive)
+                    photonView.RPC(nameof(RPC_BossDied), RpcTarget.All);
+                return;
             }
+
+            // 일반 데미지: 쓰로틀링 (0.1초 간격 배치)
+            hpDirty = true;
+            if (hpSyncTimer <= 0f)
+                hpSyncTimer = hpSyncInterval;
+        }
+
+        /// <summary>배치된 HP를 클라이언트에 전송.</summary>
+        private void FlushHPSync()
+        {
+            hpDirty = false;
+            hpSyncTimer = 0f;
+
+            var phaseService = new Application.BossPhaseService();
+            BossPhase phase = phaseService.DeterminePhase(
+                CurrentHP, MaxHP, bossData.phase2Threshold, bossData.phase3Threshold);
+
+            photonView.RPC(nameof(RPC_SyncHP), RpcTarget.All,
+                CurrentHP, MaxHP, (int)phase, false);
         }
 
         [PunRPC]

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
+using DG.Tweening;
 using SwDreams.Domain;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Data;
@@ -307,31 +308,103 @@ namespace SwDreams.Adapter.Manager
         [PunRPC]
         private void RPC_ShowCircleWarning(float x, float y, float radius, float delay)
         {
-            // TODO: 원형 경고 이펙트 생성 (빨간 원 → 점점 채워짐)
-            Debug.Log($"[BossPhaseManager] 원형 지대 경고: ({x:F1},{y:F1}), 반경={radius}, {delay}초 후 폭발");
+            // 원형 경고 이펙트: 빨간 원이 점점 채워지며 폭발 예고
+            var warningGO = new GameObject("CircleWarning");
+            warningGO.transform.position = new Vector3(x, y, 0f);
+
+            var sr = warningGO.AddComponent<SpriteRenderer>();
+            sr.sprite = CreateCircleSprite();
+            sr.color = new Color(1f, 0.2f, 0.2f, 0.15f);
+            sr.sortingOrder = 90;
+            warningGO.transform.localScale = Vector3.zero;
+
+            // 점점 커지는 연출
+            float targetScale = radius * 2f;
+            warningGO.transform.DOScale(targetScale, delay)
+                .SetEase(Ease.Linear)
+                .OnComplete(() => Object.Destroy(warningGO));
+
+            // 알파 점멸
+            sr.DOFade(0.5f, delay * 0.3f).SetLoops(-1, LoopType.Yoyo);
         }
 
         [PunRPC]
         private void RPC_ShowExplosion(float x, float y, float radius)
         {
-            // TODO: 폭발 이펙트 생성
-            Debug.Log($"[BossPhaseManager] 원형 지대 폭발: ({x:F1},{y:F1}), 반경={radius}");
+            // 폭발 이펙트: 흰색 원이 빠르게 확장 후 사라짐
+            var explosionGO = new GameObject("Explosion");
+            explosionGO.transform.position = new Vector3(x, y, 0f);
+
+            var sr = explosionGO.AddComponent<SpriteRenderer>();
+            sr.sprite = CreateCircleSprite();
+            sr.color = new Color(1f, 0.6f, 0.2f, 0.8f);
+            sr.sortingOrder = 95;
+
+            float targetScale = radius * 2.5f;
+            explosionGO.transform.localScale = Vector3.one * radius;
+
+            var seq = DOTween.Sequence();
+            seq.Append(explosionGO.transform.DOScale(targetScale, 0.15f).SetEase(Ease.OutQuad));
+            seq.Join(sr.DOFade(0f, 0.3f));
+            seq.OnComplete(() => Object.Destroy(explosionGO));
         }
 
         [PunRPC]
         private void RPC_ApplyGlobalSlow(float multiplier, float duration)
         {
-            // 로컬 플레이어 이동속도 감소
-            // PlayerStub의 moveSpeed에 임시 배율 적용
-            // TODO: PlayerStub에 ApplySlow(multiplier) 메서드 추가
+            // 로컬 플레이어에 슬로우 적용
+            var localPlayer = FindLocalPlayerStub();
+            if (localPlayer != null)
+                localPlayer.ApplySlow(multiplier);
+
             Debug.Log($"[BossPhaseManager] 전체 슬로우 적용: {multiplier * 100}%, {duration}초");
         }
 
         [PunRPC]
         private void RPC_RemoveGlobalSlow()
         {
-            // 슬로우 해제
+            var localPlayer = FindLocalPlayerStub();
+            if (localPlayer != null)
+                localPlayer.RemoveSlow();
+
             Debug.Log("[BossPhaseManager] 슬로우 해제");
+        }
+
+        private SwDreams.Testing.PlayerStub FindLocalPlayerStub()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var go in players)
+            {
+                var pv = go.GetComponent<PhotonView>();
+                if (pv != null && pv.IsMine)
+                    return go.GetComponent<SwDreams.Testing.PlayerStub>();
+            }
+            return null;
+        }
+
+        /// <summary>런타임 원형 스프라이트 생성 (이펙트용).</summary>
+        private static Sprite cachedCircleSprite;
+        private static Sprite CreateCircleSprite()
+        {
+            if (cachedCircleSprite != null) return cachedCircleSprite;
+
+            int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = size / 2f;
+            float radiusSq = center * center;
+
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center, dy = y - center;
+                tex.SetPixel(x, y, dx * dx + dy * dy <= radiusSq
+                    ? Color.white : Color.clear);
+            }
+            tex.Apply();
+
+            cachedCircleSprite = Sprite.Create(tex,
+                new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            return cachedCircleSprite;
         }
 
         // ===== 내부 구조체 =====

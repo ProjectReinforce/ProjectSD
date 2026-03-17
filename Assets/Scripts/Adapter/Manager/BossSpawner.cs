@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
 using SwDreams.Adapter.Entity;
+using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Manager
 {
@@ -194,7 +195,11 @@ namespace SwDreams.Adapter.Manager
         [PunRPC]
         private void RPC_BossWarning(float duration)
         {
-            // TODO: UI 연출 — 화면 흔들림 + "보스 등장!" 텍스트 + 혼돈 스킬 아이콘
+            // Phase 7: 보스 경고 UI 표시
+            BossWarningUI.Show(duration,
+                BossChaosApplicator.Instance != null
+                    ? BossChaosApplicator.Instance.BossChaosType
+                    : SwDreams.Data.ChaosEffectType.None);
             Debug.Log($"[BossSpawner] 보스 경고 UI ({duration}초)");
         }
 
