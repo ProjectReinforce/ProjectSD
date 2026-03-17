@@ -39,9 +39,6 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 대기실 진입 시 씬 동기화 복구 (결과창에서 해제했을 수 있음)
-            PhotonNetwork.AutomaticallySyncScene = true;
-
             // ready 상태 초기화 (이전 게임의 ready가 남아있을 수 있음)
             NetworkManager.Instance.SetLocalReady(false);
             isLoadingGameScene = false;
