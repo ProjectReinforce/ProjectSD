@@ -151,12 +151,19 @@ namespace Adapter.UI.Menu
             RefreshRoomUi();
             RefreshRoleUi();
 
-            if (!PhotonNetwork.IsMasterClient || NetworkManager.Instance == null)
-            {
-                return;
-            }
+            if (NetworkManager.Instance == null) return;
 
             var canStart = NetworkManager.Instance.CanMasterStartGameInCurrentRoom();
+
+            // 모든 클라이언트: 전원 준비 완료 시 씬 동기화 활성화
+            // 호스트의 LoadLevel을 따라갈 준비
+            if (canStart)
+            {
+                PhotonNetwork.AutomaticallySyncScene = true;
+            }
+
+            if (!PhotonNetwork.IsMasterClient) return;
+
             if (canStart && !IsCountdownActive())
             {
                 SetStateText("전원 준비 완료. 카운트다운 시작...");
