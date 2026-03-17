@@ -101,10 +101,12 @@ namespace Adapter.Manager
 
         public void CreateSoloRoom()
         {
+            Debug.Log($"[NetworkManager] CreateSoloRoom 호출 — InRoom:{PhotonNetwork.InRoom}, InLobby:{PhotonNetwork.InLobby}");
             RunWhenMatchmakingReady(() =>
             {
                 isCreatingRoom = true;
                 var roomName = $"Solo_{UnityEngine.Random.Range(1000, 9999)}";
+                Debug.Log($"[NetworkManager] CreateRoom 요청: {roomName}");
                 // ?붾줈 諛⑹? 濡쒕퉬 諛?紐⑸줉?먯꽌 ?몄텧?섏? ?딅룄濡??ㅼ젙.
                 var options = new RoomOptions
                 {

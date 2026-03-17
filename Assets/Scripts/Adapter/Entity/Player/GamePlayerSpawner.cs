@@ -36,6 +36,13 @@ namespace SwDreams.Adapter.Entity.Player
             }
 
             SpawnLocalPlayer();
+
+            // 호스트가 게임 시작 상태로 전환
+            if (PhotonNetwork.IsMasterClient)
+            {
+                SwDreams.Adapter.Manager.GameManager.Instance?.ChangeStateNetwork(
+                    SwDreams.Adapter.Manager.GameManager.GameState.Playing);
+            }
         }
 
         private void SpawnLocalPlayer()

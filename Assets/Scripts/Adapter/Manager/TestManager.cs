@@ -19,7 +19,7 @@ namespace Adapter.Manager
         public static TestManager Instance { get; private set; }
 
         [SerializeField] private string menuSceneName = "MenuScene";
-        [SerializeField] private string gameSceneName = "SampleScene";
+        [SerializeField] private string gameSceneName = "GameScene";
 
         public GameState CurrentState { get; private set; } = GameState.None;
 

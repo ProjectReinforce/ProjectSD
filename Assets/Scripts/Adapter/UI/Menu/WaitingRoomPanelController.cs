@@ -39,11 +39,24 @@ namespace Adapter.UI.Menu
                 return;
             }
 
+            // 대기실 진입 시 씬 동기화 복구 (결과창에서 해제했을 수 있음)
+            PhotonNetwork.AutomaticallySyncScene = true;
+
+            // ready 상태 초기화 (이전 게임의 ready가 남아있을 수 있음)
+            NetworkManager.Instance.SetLocalReady(false);
+            isLoadingGameScene = false;
+
+            // 이전 게임의 카운트다운 잔존 데이터 제거 (마스터만)
+            if (PhotonNetwork.IsMasterClient)
+            {
+                CancelCountdown();
+            }
+
             NetworkManager.Instance.PlayersInRoomChanged += HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom += HandleLeftRoom;
 
-            HandlePlayersChanged();
-            UpdateCountdownUiAndStart();
+            RefreshRoomUi();
+            RefreshRoleUi();
         }
 
         public override void OnDisable()
@@ -61,6 +74,16 @@ namespace Adapter.UI.Menu
         private void Update()
         {
             UpdateCountdownUiAndStart();
+        }
+
+        public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+        {
+            string playerName = otherPlayer.NickName;
+            if (string.IsNullOrEmpty(playerName))
+                playerName = $"Player {otherPlayer.ActorNumber}";
+
+            SetStateText($"{playerName} 님이 퇴장했습니다.");
+            Debug.Log($"[WaitingRoom] {playerName} 퇴장 (남은 인원: {PhotonNetwork.CurrentRoom.PlayerCount})");
         }
 
         public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)

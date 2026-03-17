@@ -5,6 +5,15 @@ using UnityEngine.UI;
 
 namespace Adapter.UI.Menu
 {
+    /// <summary>
+    /// 타이틀 패널.
+    /// 혼자하기 / 같이하기 / 설정 / 종료 버튼 처리.
+    ///
+    /// Update()에서 InRoom 폴링:
+    ///   NetworkManager가 DontDestroyOnLoad이므로 씬 전환 후
+    ///   Photon 콜백(OnJoinedRoom)이 누락될 수 있음.
+    ///   InRoom 상태를 매 프레임 체크해서 대기실 전환을 보장.
+    /// </summary>
     public class TitlePanelController : MonoBehaviour
     {
         [SerializeField] private MenuSceneManager menuSceneManager;
@@ -41,14 +50,10 @@ namespace Adapter.UI.Menu
 
         private void Update()
         {
-            // 콜백 타이밍 이슈가 있어도 이미 방에 들어간 상태라면 대기실로 강제 전환.
+            // 방 입장 완료 감지 (콜백 누락 대비 폴링).
+            // CreateSoloRoom() 후 OnJoinedRoom 콜백이 오지 않는 경우를 커버.
             if (PhotonNetwork.InRoom)
             {
-                if (menuSceneManager == null)
-                {
-                    menuSceneManager = FindAnyObjectByType<MenuSceneManager>();
-                }
-
                 menuSceneManager?.ShowWaitingRoom();
                 return;
             }
@@ -63,7 +68,6 @@ namespace Adapter.UI.Menu
 
         public void OnClickSoloPlay()
         {
-            // 혼자하기 흐름: (필요 시) 접속 -> 비노출 솔로 방 생성 -> 대기실 이동.
             pendingSoloCreate = true;
             pendingGoRoomList = false;
             TryConnectOrRunPendingAction();
@@ -71,7 +75,6 @@ namespace Adapter.UI.Menu
 
         public void OnClickJoinMultiplayer()
         {
-            // 같이하기 흐름: (필요 시) 접속 -> 공개 방 목록 화면 이동.
             pendingSoloCreate = false;
             pendingGoRoomList = true;
             TryConnectOrRunPendingAction();
@@ -100,7 +103,6 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 접속이 끝나면 콜백에서 보류 중인 액션을 실행.
             NetworkManager.Instance.Connect();
         }
 

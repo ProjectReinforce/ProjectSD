@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
-using ExitGames.Client.Photon;
 using SwDreams.Domain;
 using SwDreams.Data;
 using SwDreams.Adapter.Skill;
@@ -26,8 +25,6 @@ namespace SwDreams.Adapter.Manager
     public class ResultManager : MonoBehaviourPun
     {
         public static ResultManager Instance { get; private set; }
-
-        private const string ReturnToWaitingRoomKey = "returnToWaitingRoom";
 
         // 호스트: 수집된 빌드 데이터
         private Dictionary<int, PlayerBuildData> collectedBuilds = new();
@@ -285,42 +282,30 @@ namespace SwDreams.Adapter.Manager
 
         // ===== 씬 전환 =====
 
-        /// <summary>다시 하기 버튼. 방 유지 + 대기실 복귀.</summary>
+        /// <summary>
+        /// 다시 하기 버튼. 각 클라이언트가 독립적으로 처리.
+        /// 방에 남은 채 MenuScene으로 이동 → 대기실 표시.
+        /// </summary>
         public void OnRetry()
         {
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                // 클라이언트는 호스트에게 요청
-                photonView.RPC(nameof(RPC_RequestRetry), RpcTarget.MasterClient);
-                return;
-            }
+            // 씬 동기화 해제 (각 클라이언트가 독립적으로 씬 전환하기 위해)
+            PhotonNetwork.AutomaticallySyncScene = false;
 
-            ExecuteRetry();
+            // ready 초기화
+            NetworkManager.Instance?.SetLocalReady(false);
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
+            Debug.Log("[ResultManager] 다시 하기 → MenuScene (방 유지)");
         }
 
-        [PunRPC]
-        private void RPC_RequestRetry()
-        {
-            if (PhotonNetwork.IsMasterClient)
-                ExecuteRetry();
-        }
-
-        private void ExecuteRetry()
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-
-            // Room CustomProperties에 플래그 설정
-            var props = new Hashtable { [ReturnToWaitingRoomKey] = true };
-            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
-
-            // 메뉴씬 로드 (방 유지, 전체 클라이언트 동시 전환)
-            PhotonNetwork.LoadLevel("MenuScene");
-            Debug.Log("[ResultManager] 다시 하기 → MenuScene (대기실)");
-        }
-
-        /// <summary>나가기 버튼. 방 퇴장 + 타이틀 복귀.</summary>
+        /// <summary>
+        /// 나가기 버튼. 방 퇴장 후 MenuScene으로 이동 → 타이틀 표시.
+        /// </summary>
         public void OnExit()
         {
+            // 씬 동기화 해제
+            PhotonNetwork.AutomaticallySyncScene = false;
+
             if (NetworkManager.Instance != null && PhotonNetwork.InRoom)
             {
                 NetworkManager.Instance.LeftRoom += OnLeftRoomForExit;
@@ -328,7 +313,6 @@ namespace SwDreams.Adapter.Manager
             }
             else
             {
-                // 테스트 모드 또는 이미 방에 없는 경우 바로 전환
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
             }
             Debug.Log("[ResultManager] 나가기 요청");

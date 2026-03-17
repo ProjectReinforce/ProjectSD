@@ -182,12 +182,12 @@ namespace SwDreams.Adapter.Entity
                 lastPhysicsSyncFrame = Time.frameCount;
             }
 
-            int overlapCount = enemyCollider.OverlapCollider(overlapFilter, overlapResults);
+            int overlapCount = enemyCollider.Overlap(overlapFilter, overlapResults);
 
             if (overlapCount >= overlapResults.Length)
             {
                 System.Array.Resize(ref overlapResults, overlapResults.Length * 2);
-                overlapCount = enemyCollider.OverlapCollider(overlapFilter, overlapResults);
+                overlapCount = enemyCollider.Overlap(overlapFilter, overlapResults);
             }
 
             if (overlapCount <= 0) return;
