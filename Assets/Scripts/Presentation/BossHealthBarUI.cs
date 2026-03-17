@@ -89,9 +89,9 @@ namespace SwDreams.Presentation
             // 초기 HP
             UpdateHealth(boss.CurrentHP, boss.MaxHP);
 
-            // // 페이즈 구분선 — 레이아웃 계산 후 배치
-            // if (boss.Data != null)
-            //     StartCoroutine(SetMarkersDelayed(boss.Data.phase2Threshold, boss.Data.phase3Threshold));
+            // 페이즈 구분선 — 레이아웃 계산 후 배치
+            if (boss.Data != null)
+                StartCoroutine(SetMarkersDelayed(boss.Data.phase2Threshold, boss.Data.phase3Threshold));
 
             // 이벤트 구독
             boss.OnHealthChanged += UpdateHealth;
@@ -157,7 +157,7 @@ namespace SwDreams.Presentation
                 .OnComplete(() =>
                 {
                     DetachFromBoss();
-                    SetVisible(true);
+                    SetVisible(false);
                 });
         }
 
@@ -180,7 +180,16 @@ namespace SwDreams.Presentation
 
         private System.Collections.IEnumerator SetMarkersDelayed(float p2, float p3)
         {
-            yield return null; // 1프레임 대기 — 레이아웃 계산 완료
+            // stretch 레이아웃에서 RectTransform.rect.width가 0일 수 있음
+            // LayoutRebuilder로 강제 계산 후 배치
+            yield return null; // 1프레임 대기
+
+            var sliderRect = healthSlider != null ? healthSlider.GetComponent<RectTransform>() : null;
+            if (sliderRect != null)
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(sliderRect);
+
+            yield return null; // 재계산 후 1프레임 더 대기
+
             SetMarkerPosition(phase2Marker, p2);
             SetMarkerPosition(phase3Marker, p3);
         }

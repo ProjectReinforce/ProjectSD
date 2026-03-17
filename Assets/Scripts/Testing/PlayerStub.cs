@@ -51,6 +51,9 @@ namespace SwDreams.Testing
         // Phase 6: 사망/부활 상태
         private bool isDead = false;
 
+        // Phase 7: 슬로우 상태
+        private float slowMultiplier = 1f;
+
         // Phase 7: 캐릭터 데이터 연동
         private bool isInitialized = false;
         private CharacterData characterData;
@@ -228,7 +231,7 @@ namespace SwDreams.Testing
             if (kb.aKey.isPressed) input.x -= 1f;
             input = input.normalized;
 
-            rb.linearVelocity = input * moveSpeed;
+            rb.linearVelocity = input * moveSpeed * slowMultiplier;
 
             if (PhotonNetwork.IsMasterClient && GameManager.Instance != null)
             {
@@ -289,6 +292,24 @@ namespace SwDreams.Testing
                     }
                 }
             }
+        }
+
+        // ===== Phase 7: 슬로우 =====
+
+        /// <summary>
+        /// 이동속도에 배율 적용. BossPhaseManager.RPC_ApplyGlobalSlow에서 호출.
+        /// multiplier = 0.5 → 이동속도 50%
+        /// </summary>
+        public void ApplySlow(float multiplier)
+        {
+            slowMultiplier = Mathf.Clamp01(multiplier);
+            Debug.Log($"[PlayerStub] 슬로우 적용: {multiplier * 100}%");
+        }
+
+        public void RemoveSlow()
+        {
+            slowMultiplier = 1f;
+            Debug.Log("[PlayerStub] 슬로우 해제");
         }
 
         /// <summary>

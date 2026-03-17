@@ -367,6 +367,9 @@ namespace SwDreams.Adapter.Manager
             // Phase 7: 킬 카운트 추적
             GameStatTracker.Instance?.RecordKill();
 
+            // Phase 7: 적 사망 SFX
+            GameAudioConnector.Instance?.OnEnemyDied();
+
             // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
             NotifyChaosManagers(enemy.transform.position);
 
