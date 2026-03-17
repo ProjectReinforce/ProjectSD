@@ -35,6 +35,10 @@ namespace SwDreams.Adapter.Entity.Player
                 return;
             }
 
+            // 게임씬 진입 시 ready 초기화 (대기실 복귀 시 카운트다운 즉시 시작 방지)
+            if (NetworkManager.Instance != null)
+                NetworkManager.Instance.SetLocalReady(false);
+
             SpawnLocalPlayer();
 
             // 호스트가 게임 시작 상태로 전환

@@ -843,9 +843,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Adapter.UI.Menu.TitlePanelController
   menuSceneManager: {fileID: 0}
-  soloPlayButton: {fileID: 0}
-  multiPlayButton: {fileID: 0}
-  settingsButton: {fileID: 0}
+  soloPlayButton: {fileID: 7229152121973366988}
+  multiPlayButton: {fileID: 89043564038109553}
+  settingsButton: {fileID: 824146353768940598}
 --- !u!1 &7050599973932605490
 GameObject:
   m_ObjectHideFlags: 0
