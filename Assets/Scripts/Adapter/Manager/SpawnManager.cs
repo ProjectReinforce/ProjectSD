@@ -331,6 +331,9 @@ namespace SwDreams.Adapter.Manager
 
             SpawnExpOrb(deathPosition, expValue);
 
+            // 적 사망 SFX (모든 클라이언트)
+            GameAudioConnector.Instance?.OnEnemyDied();
+
             Debug.Log($"[SpawnManager] 적 사망 ID:{enemyId}, 남은: {activeEnemies.Count}");
         }
 
@@ -366,9 +369,6 @@ namespace SwDreams.Adapter.Manager
 
             // Phase 7: 킬 카운트 추적
             GameStatTracker.Instance?.RecordKill();
-
-            // Phase 7: 적 사망 SFX
-            GameAudioConnector.Instance?.OnEnemyDied();
 
             // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
             NotifyChaosManagers(enemy.transform.position);

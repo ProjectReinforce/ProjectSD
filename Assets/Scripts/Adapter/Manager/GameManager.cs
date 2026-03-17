@@ -57,9 +57,13 @@ namespace SwDreams.Adapter.Manager
 
         // 상태
         public GameState CurrentState { get; private set; } = GameState.Loading;
-        public int TeamLevel => expService.CurrentLevel;
-        public int TeamExp => expService.CurrentExp;
         public float GameTime { get; private set; }
+
+        // 경험치/레벨: 클라이언트 동기화용 필드 (RPC_SyncExp에서 갱신)
+        private int syncedLevel = 1;
+        private int syncedExp = 0;
+        public int TeamLevel => syncedLevel;
+        public int TeamExp => syncedExp;
 
         // 이벤트
         public event Action<int, int> OnExpChanged;     // current, required
@@ -110,6 +114,10 @@ namespace SwDreams.Adapter.Manager
         [PunRPC]
         private void RPC_SyncExp(int currentExp, int requiredExp, int level, int levelUpCount)
         {
+            // 클라이언트 동기화 필드 갱신
+            syncedLevel = level;
+            syncedExp = currentExp;
+
             OnExpChanged?.Invoke(currentExp, requiredExp);
 
             // 레벨업 횟수만큼 이벤트 발행 → LevelUpManager가 큐에 쌓음

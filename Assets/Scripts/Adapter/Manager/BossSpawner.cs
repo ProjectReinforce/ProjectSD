@@ -129,6 +129,11 @@ namespace SwDreams.Adapter.Manager
                 // 보스 혼돈 스킬 적용
                 if (BossChaosApplicator.Instance != null)
                     BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
+
+                // 클라이언트에 보스 초기 데이터 동기화
+                int bossViewID = bossObj.GetComponent<PhotonView>().ViewID;
+                photonView.RPC(nameof(RPC_InitBoss), RpcTarget.Others,
+                    bossViewID, currentBoss.MaxHP);
             }
 
             // 상태 전환
@@ -166,6 +171,11 @@ namespace SwDreams.Adapter.Manager
                 // 보스 혼돈 스킬 적용
                 if (BossChaosApplicator.Instance != null)
                     BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
+
+                // 클라이언트에 보스 초기 데이터 동기화
+                int bossViewID = bossObj.GetComponent<PhotonView>().ViewID;
+                photonView.RPC(nameof(RPC_InitBoss), RpcTarget.Others,
+                    bossViewID, currentBoss.MaxHP);
             }
 
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.BossFight);
@@ -201,6 +211,29 @@ namespace SwDreams.Adapter.Manager
                     ? BossChaosApplicator.Instance.BossChaosType
                     : SwDreams.Data.ChaosEffectType.None);
             Debug.Log($"[BossSpawner] 보스 경고 UI ({duration}초)");
+        }
+
+        /// <summary>
+        /// 클라이언트에서 보스 초기 상태 설정.
+        /// PhotonView.ViewID로 보스 오브젝트를 찾아 HP 초기화 + 참조 캐싱.
+        /// </summary>
+        [PunRPC]
+        private void RPC_InitBoss(int bossViewID, int maxHP)
+        {
+            PhotonView bossView = PhotonView.Find(bossViewID);
+            if (bossView == null)
+            {
+                Debug.LogWarning($"[BossSpawner] 클라이언트: 보스 ViewID {bossViewID} 찾기 실패");
+                return;
+            }
+
+            currentBoss = bossView.GetComponent<Boss>();
+            if (currentBoss != null)
+            {
+                currentBoss.InitializeFromNetwork(maxHP);
+                bossSpawned = true;
+                Debug.Log($"[BossSpawner] 클라이언트: 보스 초기화 완료 (HP:{maxHP})");
+            }
         }
 
         // ===== 디버그 =====

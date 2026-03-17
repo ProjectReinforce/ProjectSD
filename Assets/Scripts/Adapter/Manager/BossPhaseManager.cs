@@ -169,6 +169,11 @@ namespace SwDreams.Adapter.Manager
             if (!PhotonNetwork.IsMasterClient) return;
             if (currentBoss == null || !currentBoss.IsAlive) return;
 
+            // 레벨업 등 일시정지 중에는 보스 공격 중단
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState == GameManager.GameState.Paused)
+                return;
+
             // 공격 패턴 실행
             UpdateAttacks();
 
