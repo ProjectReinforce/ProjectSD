@@ -335,6 +335,7 @@ namespace Adapter.UI.Menu
 
             isLoadingGameScene = true;
             CancelCountdown(false);
+            PhotonNetwork.AutomaticallySyncScene = true;
             TestManager.Instance?.EnterGameSceneByMaster();
         }
 
