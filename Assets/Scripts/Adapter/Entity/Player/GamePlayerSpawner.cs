@@ -9,15 +9,11 @@ namespace SwDreams.Adapter.Entity.Player
     /// 대기실에서 선택한 캐릭터 정보를 기반으로 플레이어를 스폰.
     ///
     /// 동작 흐름:
-    ///   1. CustomProperties에서 characterId 읽기
-    ///   2. PhotonNetwork.Instantiate + instantiationData로 characterId 전달
-    ///   3. PlayerStub.Start()에서 InstantiationData 감지 → Initialize(CharacterData)
-    ///
-    /// 사용법 (GameScene 하이어라키):
-    ///   - TestPlayerSpawner (기존) — 테스트 시 활성화, 정상 플로우 시 비활성화
-    ///   - GamePlayerSpawner (이 스크립트) — 정상 플로우 시 활성화, 테스트 시 비활성화
-    ///
-    /// 기존 PlayerSpawner(TestPlayerSpawner)는 한 줄도 수정하지 않음.
+    ///   1. AutomaticallySyncScene = false (결과창 이후 독립 전환 대비)
+    ///   2. ready 초기화 (대기실 복귀 시 카운트다운 즉시 시작 방지)
+    ///   3. CustomProperties에서 characterId 읽기
+    ///   4. PhotonNetwork.Instantiate + instantiationData로 characterId 전달
+    ///   5. 호스트: GameState → Playing
     /// </summary>
     public class GamePlayerSpawner : MonoBehaviour
     {
@@ -35,7 +31,7 @@ namespace SwDreams.Adapter.Entity.Player
                 return;
             }
 
-            // 게임씬 진입 시 ready 초기화 (대기실 복귀 시 카운트다운 즉시 시작 방지)
+            // ready 초기화 (대기실 복귀 시 이전 ready 잔존 방지)
             if (NetworkManager.Instance != null)
                 NetworkManager.Instance.SetLocalReady(false);
 

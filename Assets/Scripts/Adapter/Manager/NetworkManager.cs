@@ -82,6 +82,7 @@ namespace Adapter.Manager
                 return;
             }
 
+            PhotonNetwork.AutomaticallySyncScene = true;
             PhotonNetwork.ConnectUsingSettings();
         }
 

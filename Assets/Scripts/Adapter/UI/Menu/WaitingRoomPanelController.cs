@@ -329,6 +329,9 @@ namespace Adapter.UI.Menu
 
             ShowCountdownText(string.Empty);
 
+            // 모든 클라이언트: 게임 시작 대비 씬 동기화 활성화
+            PhotonNetwork.AutomaticallySyncScene = true;
+
             if (!PhotonNetwork.IsMasterClient || isLoadingGameScene)
             {
                 return;
