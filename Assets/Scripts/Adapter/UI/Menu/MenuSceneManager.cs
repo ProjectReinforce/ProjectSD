@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Photon.Pun;
+using SwDreams.Adapter.Manager;
 
 namespace Adapter.UI.Menu
 {
@@ -11,6 +12,9 @@ namespace Adapter.UI.Menu
 
         private void Start()
         {
+            // Phase 7: 메뉴 BGM
+            AudioManager.Instance?.PlayMenuBGM();
+
             // 방에 있으면 대기실 (다시 하기로 돌아온 경우)
             // 방에 없으면 타이틀 (나가기로 돌아왔거나 최초 진입)
             if (PhotonNetwork.InRoom)
