@@ -17,9 +17,11 @@ namespace Adapter.UI.Menu
     public class TitlePanelController : MonoBehaviour
     {
         [SerializeField] private MenuSceneManager menuSceneManager;
+        [Header("연결 대기")]
         [SerializeField] private Button soloPlayButton;
         [SerializeField] private Button multiPlayButton;
         [SerializeField] private Button settingsButton;
+        [SerializeField] private GameObject connectingPanel;
 
         private bool pendingSoloCreate;
         private bool pendingGoRoomList;
@@ -164,6 +166,10 @@ namespace Adapter.UI.Menu
         {
             var interactable = IsMenuActionReady();
             lastInteractableState = interactable;
+
+            // 연결 완료 전까지 차단 패널 표시
+            if (connectingPanel != null)
+                connectingPanel.SetActive(!interactable);
 
             if (soloPlayButton != null)
             {
