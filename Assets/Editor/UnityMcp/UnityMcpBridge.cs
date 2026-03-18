@@ -103,25 +103,17 @@ namespace ProjectSD.EditorTools.UnityMcp
                 return;
             }
 
-            StopBridge(logWhenAlreadyStopped: false);
+            StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
 
-            if (IsPortInUse(port))
+            // 포트가 점유된 경우, 기존 브릿지가 살아있으면 재사용
+            if (IsPortInUse(port) && IsBridgeAlive(listenerPrefix, out var probeDetail))
             {
-                if (IsBridgeAlive(listenerPrefix, out var probeDetail))
-                {
-                    Debug.Log("[Unity MCP] Bridge already alive at " + listenerPrefix + " (" + probeDetail + "). Reusing existing listener.");
-                    return;
-                }
-
-                Debug.LogError(
-                    "[Unity MCP] Cannot start bridge at " + listenerPrefix +
-                    " because the port is already in use and /health did not respond. " +
-                    "Another process or a stale listener is blocking the port. " +
-                    "Close the process using this port or change " + PortConfigRelativePath + ". " +
-                    "Probe result: " + probeDetail);
+                Debug.Log("[Unity MCP] Bridge already alive at " + listenerPrefix + " (" + probeDetail + "). Reusing existing listener.");
                 return;
             }
 
+            // 포트가 stale 리스너에 의해 점유됐더라도 HttpListener.Start()를 직접 시도.
+            // HttpListener는 동일 프로세스 내 같은 prefix를 재바인딩할 수 있다.
             try
             {
                 _listenerCts = new CancellationTokenSource();
@@ -131,10 +123,19 @@ namespace ProjectSD.EditorTools.UnityMcp
                 _ = Task.Run(() => ListenLoopAsync(_listenerCts.Token));
                 Debug.Log("[Unity MCP] Bridge started at " + listenerPrefix + " (config: " + PortConfigRelativePath + ")");
             }
+            catch (HttpListenerException ex)
+            {
+                Debug.LogError(
+                    "[Unity MCP] Cannot start bridge at " + listenerPrefix +
+                    " — port is blocked by another process. " +
+                    "Close the process using this port or change " + PortConfigRelativePath + ". " +
+                    "Detail: " + ex.Message);
+                StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
+            }
             catch (Exception ex)
             {
                 Debug.LogError("[Unity MCP] Failed to start bridge at " + listenerPrefix + ": " + ex.Message);
-                StopBridge(logWhenAlreadyStopped: false);
+                StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
             }
         }
 
@@ -180,17 +181,33 @@ namespace ProjectSD.EditorTools.UnityMcp
 
         private static void StopBridge()
         {
-            StopBridge(logWhenAlreadyStopped: true);
+            StopBridge(logWhenAlreadyStopped: true, logWhenStopped: true);
         }
 
         private static void StopBridge(bool logWhenAlreadyStopped)
         {
+            StopBridge(logWhenAlreadyStopped, logWhenStopped: true);
+        }
+
+        private static void StopBridge(bool logWhenAlreadyStopped, bool logWhenStopped)
+        {
             var listener = _listener;
             var listenerCts = _listenerCts;
 
-            _listener = null;
-            _listenerCts = null;
+            if (listener == null)
+            {
+                _listener = null;
+                _listenerCts = null;
 
+                if (logWhenAlreadyStopped)
+                {
+                    Debug.Log("[Unity MCP] Bridge already stopped.");
+                }
+
+                return;
+            }
+
+            // 1) Cancel → ListenLoopAsync와 진행 중인 핸들러에 종료 신호
             try
             {
                 if (listenerCts != null && !listenerCts.IsCancellationRequested)
@@ -203,16 +220,7 @@ namespace ProjectSD.EditorTools.UnityMcp
                 Debug.LogWarning("[Unity MCP] Failed to cancel listener token: " + ex.Message);
             }
 
-            if (listener == null)
-            {
-                if (logWhenAlreadyStopped)
-                {
-                    Debug.Log("[Unity MCP] Bridge already stopped.");
-                }
-
-                return;
-            }
-
+            // 2) Stop/Close → 소켓 해제
             try
             {
                 if (listener.IsListening)
@@ -221,11 +229,19 @@ namespace ProjectSD.EditorTools.UnityMcp
                 }
 
                 listener.Close();
-                Debug.Log("[Unity MCP] Bridge stopped.");
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[Unity MCP] Stop encountered a socket cleanup issue, but the bridge state was cleared: " + ex.Message);
+                Debug.LogWarning("[Unity MCP] Stop encountered a socket cleanup issue: " + ex.Message);
+            }
+
+            // 3) 참조 해제는 Close 이후에 — IsRunning 체크와의 경합 방지
+            _listener = null;
+            _listenerCts = null;
+
+            if (logWhenStopped)
+            {
+                Debug.Log("[Unity MCP] Bridge stopped.");
             }
         }
 

@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
@@ -32,10 +31,6 @@ namespace Features.Lobby.Presentation
         private float _errorDisplayDuration = 3f;
 
         private IEventSubscriber _eventBus;
-        private Action<LobbyUpdatedEvent> _onLobbyUpdated;
-        private Action<RoomUpdatedEvent> _onRoomUpdated;
-        private Action<GameStartedEvent> _onGameStarted;
-        private Action<LobbyErrorEvent> _onLobbyError;
         private Coroutine _errorCoroutine;
 
         public void Initialize(IEventSubscriber eventBus, LobbyUseCases useCases)
@@ -56,27 +51,17 @@ namespace Features.Lobby.Presentation
             _roomDetailView.Initialize(useCases);
 
             _eventBus = eventBus;
-            _onLobbyUpdated = e => RenderLobby(e.Lobby);
-            _onRoomUpdated = e => RenderRoom(e.Room);
-            _onGameStarted = e => RenderStartGame(e.Room);
-            _onLobbyError = e => RenderError(e.Message);
-
-            _eventBus.Subscribe(_onLobbyUpdated);
-            _eventBus.Subscribe(_onRoomUpdated);
-            _eventBus.Subscribe(_onGameStarted);
-            _eventBus.Subscribe(_onLobbyError);
+            _eventBus.Subscribe<LobbyUpdatedEvent>(this, e => RenderLobby(e.Lobby));
+            _eventBus.Subscribe<RoomUpdatedEvent>(this, e => RenderRoom(e));
+            _eventBus.Subscribe<GameStartedEvent>(this, e => RenderStartGame(e.Room));
+            _eventBus.Subscribe<LobbyErrorEvent>(this, e => RenderError(e.Message));
 
             ShowRoomList();
         }
 
         private void OnDestroy()
         {
-            if (_eventBus == null)
-                return;
-            _eventBus.Unsubscribe(_onLobbyUpdated);
-            _eventBus.Unsubscribe(_onRoomUpdated);
-            _eventBus.Unsubscribe(_onGameStarted);
-            _eventBus.Unsubscribe(_onLobbyError);
+            _eventBus?.UnsubscribeAll(this);
         }
 
         public void RenderLobby(LobbySnapshot lobby)
@@ -87,11 +72,12 @@ namespace Features.Lobby.Presentation
             ShowRoomList();
         }
 
-        public void RenderRoom(RoomSnapshot room)
+        public void RenderRoom(RoomUpdatedEvent e)
         {
             if (_roomDetailView == null)
                 return;
-            _roomDetailView.Render(room);
+            _roomDetailView.SetLocalMemberId(e.LocalMemberId);
+            _roomDetailView.Render(e.Room);
             ShowRoomDetail();
         }
 

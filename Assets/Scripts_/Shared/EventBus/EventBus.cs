@@ -6,6 +6,8 @@ namespace Shared.EventBus
     public sealed class EventBus : IEventPublisher, IEventSubscriber
     {
         private readonly Dictionary<Type, List<Delegate>> _handlers = new Dictionary<Type, List<Delegate>>();
+        private readonly Dictionary<object, List<(Type type, Delegate handler)>> _ownerMap =
+            new Dictionary<object, List<(Type, Delegate)>>();
 
         public void Subscribe<T>(Action<T> handler)
         {
@@ -18,10 +20,36 @@ namespace Shared.EventBus
             list.Add(handler);
         }
 
+        public void Subscribe<T>(object owner, Action<T> handler)
+        {
+            Subscribe(handler);
+
+            if (!_ownerMap.TryGetValue(owner, out var list))
+            {
+                list = new List<(Type, Delegate)>();
+                _ownerMap[owner] = list;
+            }
+            list.Add((typeof(T), handler));
+        }
+
         public void Unsubscribe<T>(Action<T> handler)
         {
             if (_handlers.TryGetValue(typeof(T), out var list))
                 list.Remove(handler);
+        }
+
+        public void UnsubscribeAll(object owner)
+        {
+            if (!_ownerMap.TryGetValue(owner, out var list))
+                return;
+
+            foreach (var (type, handler) in list)
+            {
+                if (_handlers.TryGetValue(type, out var handlers))
+                    handlers.Remove(handler);
+            }
+
+            _ownerMap.Remove(owner);
         }
 
         public void Publish<T>(T e)
@@ -47,6 +75,7 @@ namespace Shared.EventBus
         public void Clear()
         {
             _handlers.Clear();
+            _ownerMap.Clear();
         }
     }
 }

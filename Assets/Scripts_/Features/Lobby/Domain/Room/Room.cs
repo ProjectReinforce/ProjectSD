@@ -33,9 +33,9 @@ namespace Features.Lobby.Domain
                 return Result<Room>.Failure("Room name is required.");
             }
 
-            if (capacity < 2)
+            if (capacity < 1)
             {
-                return Result<Room>.Failure("Capacity must be at least 2.");
+                return Result<Room>.Failure("Capacity must be at least 1.");
             }
 
             if (owner == null)
@@ -110,7 +110,7 @@ namespace Features.Lobby.Domain
 
         public bool CanStartGame()
         {
-            if (_members.Count < 2)
+            if (_members.Count < 1)
             {
                 return false;
             }

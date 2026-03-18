@@ -6,17 +6,21 @@ using Features.Lobby.Domain;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using EntityId = Shared.Kernel.EntityId;
-using Result = Shared.Kernel.Result;
-
 using DomainRoom = Features.Lobby.Domain.Room;
+using EntityId = Shared.Kernel.EntityId;
 using PhotonRoom = Photon.Realtime.Room;
+using Result = Shared.Kernel.Result;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
-    public sealed class LobbyPhotonAdapter : MonoBehaviourPunCallbacks, ILobbyNetworkCommandPort, IOnEventCallback, ILobbyNetworkCallbackPort
+    public sealed class LobbyPhotonAdapter
+        : MonoBehaviourPunCallbacks,
+            ILobbyNetworkCommandPort,
+            IOnEventCallback,
+            ILobbyNetworkCallbackPort
     {
-        private const string DefaultGameSceneName = "GameScene";
+        [SerializeField]
+        private string DefaultGameSceneName = "JG_GameScene";
 
         private readonly PhotonPlayerPropertyManager _propertyManager = new();
 
@@ -27,14 +31,14 @@ namespace Features.Lobby.Infrastructure.Photon
         private EntityId _pendingLeaveMemberId;
 
         // ILobbyNetworkCallbackPort callbacks
-        public Func<DomainRoom, Result> OnCreateRoomSucceeded { get; set; }
+        public Action<DomainRoom> OnCreateRoomSucceeded { get; set; }
         public Action<string> OnErrorOccurred { get; set; }
-        public Func<JoinRoomData, Result> OnJoinRoomSucceeded { get; set; }
-        public Func<EntityId, EntityId, Result> OnLeaveRoomSucceeded { get; set; }
-        public Func<EntityId, RoomMember, Result> OnRemotePlayerEntered { get; set; }
-        public Func<EntityId, EntityId, Result> OnRemotePlayerLeft { get; set; }
-        public Func<PlayerPropertiesData, Result> OnPlayerPropertiesChanged { get; set; }
-        public Func<EntityId, Result> OnGameStarted { get; set; }
+        public Action<JoinRoomData> OnJoinRoomSucceeded { get; set; }
+        public Action<EntityId, EntityId> OnLeaveRoomSucceeded { get; set; }
+        public Action<EntityId, RoomMember> OnRemotePlayerEntered { get; set; }
+        public Action<EntityId, EntityId> OnRemotePlayerLeft { get; set; }
+        public Action<PlayerPropertiesData> OnPlayerPropertiesChanged { get; set; }
+        public Action<EntityId> OnGameStarted { get; set; }
 
         // ===== ILobbyNetworkCommandPort =====
 
@@ -125,7 +129,13 @@ namespace Features.Lobby.Infrastructure.Photon
             if (!inRoom.IsSuccess)
                 return inRoom;
 
-            if (!string.Equals(PhotonNetwork.CurrentRoom.Name, roomId.Value, StringComparison.Ordinal))
+            if (
+                !string.Equals(
+                    PhotonNetwork.CurrentRoom.Name,
+                    roomId.Value,
+                    StringComparison.Ordinal
+                )
+            )
                 return Result.Failure("Current room does not match target room id.");
 
             _pendingLeaveRoomId = roomId;
@@ -204,13 +214,13 @@ namespace Features.Lobby.Infrastructure.Photon
 
             if (room == null)
             {
-                Debug.LogWarning("[LobbyPhotonAdapter] Unexpected OnCreatedRoom: no pending create.");
+                Debug.LogWarning(
+                    "[LobbyPhotonAdapter] Unexpected OnCreatedRoom: no pending create."
+                );
                 return;
             }
 
-            var result = OnCreateRoomSucceeded?.Invoke(room) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnCreatedRoom: {result.Error}");
+            OnCreateRoomSucceeded?.Invoke(room);
         }
 
         public override void OnCreateRoomFailed(short returnCode, string message)
@@ -222,18 +232,26 @@ namespace Features.Lobby.Infrastructure.Photon
         public override void OnJoinedRoom()
         {
             // Creator also receives OnJoinedRoom after OnCreatedRoom — skip it
-            if (!_pendingJoin) return;
+            if (!_pendingJoin)
+                return;
             _pendingJoin = false;
 
             var photonRoom = PhotonNetwork.CurrentRoom;
             var roomId = new EntityId(photonRoom.Name);
-            var roomName = photonRoom.CustomProperties.TryGetValue(LobbyPhotonConstants.RoomDisplayNameKey, out var nameRaw) && nameRaw is string nameStr
-                ? nameStr : photonRoom.Name;
+            var roomName =
+                photonRoom.CustomProperties.TryGetValue(
+                    LobbyPhotonConstants.RoomDisplayNameKey,
+                    out var nameRaw
+                ) && nameRaw is string nameStr
+                    ? nameStr
+                    : photonRoom.Name;
 
             var members = BuildMembersFromPlayers(photonRoom);
             if (members.Count == 0)
             {
-                Debug.LogError("[LobbyPhotonAdapter] OnJoinedRoom: no members could be built from players.");
+                Debug.LogError(
+                    "[LobbyPhotonAdapter] OnJoinedRoom: no members could be built from players."
+                );
                 return;
             }
 
@@ -245,9 +263,19 @@ namespace Features.Lobby.Infrastructure.Photon
                     masterMemberId = m.Id;
             }
 
-            var result = OnJoinRoomSucceeded?.Invoke(new JoinRoomData(roomId, roomName, photonRoom.MaxPlayers, members, masterMemberId)) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnJoinedRoom: {result.Error}");
+            var localMember = BuildMemberFromPlayer(PhotonNetwork.LocalPlayer);
+            var localMemberId = localMember != null ? localMember.Id : default;
+
+            OnJoinRoomSucceeded?.Invoke(
+                new JoinRoomData(
+                    roomId,
+                    roomName,
+                    photonRoom.MaxPlayers,
+                    members,
+                    masterMemberId,
+                    localMemberId
+                )
+            );
         }
 
         public override void OnJoinRoomFailed(short returnCode, string message)
@@ -265,74 +293,94 @@ namespace Features.Lobby.Infrastructure.Photon
 
             if (string.IsNullOrWhiteSpace(roomId.Value))
             {
-                Debug.LogWarning("[LobbyPhotonAdapter] Unexpected OnLeftRoom: no pending leave info.");
+                Debug.LogWarning(
+                    "[LobbyPhotonAdapter] Unexpected OnLeftRoom: no pending leave info."
+                );
                 return;
             }
 
-            var result = OnLeaveRoomSucceeded?.Invoke(roomId, memberId) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnLeftRoom: {result.Error}");
+            OnLeaveRoomSucceeded?.Invoke(roomId, memberId);
         }
 
         public override void OnPlayerEnteredRoom(Player newPlayer)
         {
-            if (!PhotonNetwork.InRoom) return;
-            if (newPlayer == PhotonNetwork.LocalPlayer) return;
+            if (!PhotonNetwork.InRoom)
+                return;
+            if (newPlayer == PhotonNetwork.LocalPlayer)
+                return;
 
             var member = BuildMemberFromPlayer(newPlayer);
             if (member == null)
             {
-                Debug.LogWarning("[LobbyPhotonAdapter] Remote player entered but has no memberId property.");
+                Debug.LogWarning(
+                    "[LobbyPhotonAdapter] Remote player entered but has no memberId property."
+                );
                 return;
             }
 
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
-            var result = OnRemotePlayerEntered?.Invoke(roomId, member) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnPlayerEnteredRoom: {result.Error}");
+            OnRemotePlayerEntered?.Invoke(roomId, member);
         }
 
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            if (!PhotonNetwork.InRoom) return;
-            if (otherPlayer == PhotonNetwork.LocalPlayer) return;
+            if (!PhotonNetwork.InRoom)
+                return;
+            if (otherPlayer == PhotonNetwork.LocalPlayer)
+                return;
 
-            if (!otherPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var memberIdRaw)
-                || memberIdRaw is not string memberIdStr)
+            if (
+                !otherPlayer.CustomProperties.TryGetValue(
+                    LobbyPhotonConstants.MemberIdKey,
+                    out var memberIdRaw
+                ) || memberIdRaw is not string memberIdStr
+            )
             {
-                Debug.LogWarning("[LobbyPhotonAdapter] Remote player left but has no memberId property.");
+                Debug.LogWarning(
+                    "[LobbyPhotonAdapter] Remote player left but has no memberId property."
+                );
                 return;
             }
 
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
             var memberId = new EntityId(memberIdStr);
 
-            var result = OnRemotePlayerLeft?.Invoke(roomId, memberId) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnPlayerLeftRoom: {result.Error}");
+            OnRemotePlayerLeft?.Invoke(roomId, memberId);
         }
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
         {
-            if (!PhotonNetwork.InRoom) return;
-
-            if (!targetPlayer.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var midRaw)
-                || midRaw is not string midStr)
+            if (!PhotonNetwork.InRoom)
                 return;
 
-            TeamType? team = changedProps.TryGetValue(LobbyPhotonConstants.TeamKey, out var tRaw) && tRaw is int teamInt
-                ? (TeamType)teamInt : null;
-            bool? isReady = changedProps.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var rRaw) && rRaw is bool readyBool
-                ? readyBool : null;
+            if (
+                !targetPlayer.CustomProperties.TryGetValue(
+                    LobbyPhotonConstants.MemberIdKey,
+                    out var midRaw
+                ) || midRaw is not string midStr
+            )
+                return;
 
-            if (!team.HasValue && !isReady.HasValue) return;
+            TeamType? team =
+                changedProps.TryGetValue(LobbyPhotonConstants.TeamKey, out var tRaw)
+                && tRaw is int teamInt
+                    ? (TeamType)teamInt
+                    : null;
+            bool? isReady =
+                changedProps.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var rRaw)
+                && rRaw is bool readyBool
+                    ? readyBool
+                    : null;
+
+            if (!team.HasValue && !isReady.HasValue)
+                return;
 
             var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
             var memberId = new EntityId(midStr);
 
-            var result = OnPlayerPropertiesChanged?.Invoke(new PlayerPropertiesData(roomId, memberId, team, isReady)) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnPlayerPropertiesUpdate: {result.Error}");
+            OnPlayerPropertiesChanged?.Invoke(
+                new PlayerPropertiesData(roomId, memberId, team, isReady)
+            );
         }
 
         public void OnEvent(EventData photonEvent)
@@ -340,16 +388,19 @@ namespace Features.Lobby.Infrastructure.Photon
             if (photonEvent.Code != LobbyPhotonConstants.GameStartedEventCode)
                 return;
 
-            if (photonEvent.CustomData is not string roomIdValue || string.IsNullOrWhiteSpace(roomIdValue))
+            if (
+                photonEvent.CustomData is not string roomIdValue
+                || string.IsNullOrWhiteSpace(roomIdValue)
+            )
             {
-                Debug.LogWarning("[LobbyPhotonAdapter] Received GameStarted event with invalid payload.");
+                Debug.LogWarning(
+                    "[LobbyPhotonAdapter] Received GameStarted event with invalid payload."
+                );
                 return;
             }
 
             var roomId = new EntityId(roomIdValue);
-            var result = OnGameStarted?.Invoke(roomId) ?? Result.Success();
-            if (result.IsFailure)
-                Debug.LogWarning($"[LobbyPhotonAdapter] OnEvent(GameStarted): {result.Error}");
+            OnGameStarted?.Invoke(roomId);
         }
 
         // ===== Helpers =====
@@ -364,16 +415,31 @@ namespace Features.Lobby.Infrastructure.Photon
 
         private static RoomMember BuildMemberFromPlayer(Player player)
         {
-            if (!player.CustomProperties.TryGetValue(LobbyPhotonConstants.MemberIdKey, out var midRaw)
-                || midRaw is not string midStr)
+            if (
+                !player.CustomProperties.TryGetValue(
+                    LobbyPhotonConstants.MemberIdKey,
+                    out var midRaw
+                ) || midRaw is not string midStr
+            )
                 return null;
 
             var memberId = new EntityId(midStr);
-            var displayName = player.CustomProperties.TryGetValue(LobbyPhotonConstants.DisplayNameKey, out var dnRaw) && dnRaw is string dnStr
-                ? dnStr : player.NickName ?? "Player";
-            var team = player.CustomProperties.TryGetValue(LobbyPhotonConstants.TeamKey, out var tRaw) && tRaw is int tInt
-                ? (TeamType)tInt : TeamType.None;
-            var isReady = player.CustomProperties.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var rRaw) && rRaw is bool rBool && rBool;
+            var displayName =
+                player.CustomProperties.TryGetValue(
+                    LobbyPhotonConstants.DisplayNameKey,
+                    out var dnRaw
+                ) && dnRaw is string dnStr
+                    ? dnStr
+                    : player.NickName ?? "Player";
+            var team =
+                player.CustomProperties.TryGetValue(LobbyPhotonConstants.TeamKey, out var tRaw)
+                && tRaw is int tInt
+                    ? (TeamType)tInt
+                    : TeamType.None;
+            var isReady =
+                player.CustomProperties.TryGetValue(LobbyPhotonConstants.IsReadyKey, out var rRaw)
+                && rRaw is bool rBool
+                && rBool;
 
             return new RoomMember(memberId, displayName, team, isReady);
         }

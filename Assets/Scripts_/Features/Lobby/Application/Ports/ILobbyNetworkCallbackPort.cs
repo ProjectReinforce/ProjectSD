@@ -15,15 +15,17 @@ namespace Features.Lobby.Application.Ports
         public int Capacity { get; }
         public List<RoomMember> Members { get; }
         public EntityId MasterMemberId { get; }
+        public EntityId LocalMemberId { get; }
 
         public JoinRoomData(EntityId roomId, string roomName, int capacity,
-            List<RoomMember> members, EntityId masterMemberId)
+            List<RoomMember> members, EntityId masterMemberId, EntityId localMemberId)
         {
             RoomId = roomId;
             RoomName = roomName;
             Capacity = capacity;
             Members = members;
             MasterMemberId = masterMemberId;
+            LocalMemberId = localMemberId;
         }
     }
 
@@ -48,13 +50,13 @@ namespace Features.Lobby.Application.Ports
 
     public interface ILobbyNetworkCallbackPort
     {
-        Func<Room, Result> OnCreateRoomSucceeded { set; }
+        Action<Room> OnCreateRoomSucceeded { set; }
         Action<string> OnErrorOccurred { set; }
-        Func<JoinRoomData, Result> OnJoinRoomSucceeded { set; }
-        Func<EntityId, EntityId, Result> OnLeaveRoomSucceeded { set; }
-        Func<EntityId, RoomMember, Result> OnRemotePlayerEntered { set; }
-        Func<EntityId, EntityId, Result> OnRemotePlayerLeft { set; }
-        Func<PlayerPropertiesData, Result> OnPlayerPropertiesChanged { set; }
-        Func<EntityId, Result> OnGameStarted { set; }
+        Action<JoinRoomData> OnJoinRoomSucceeded { set; }
+        Action<EntityId, EntityId> OnLeaveRoomSucceeded { set; }
+        Action<EntityId, RoomMember> OnRemotePlayerEntered { set; }
+        Action<EntityId, EntityId> OnRemotePlayerLeft { set; }
+        Action<PlayerPropertiesData> OnPlayerPropertiesChanged { set; }
+        Action<EntityId> OnGameStarted { set; }
     }
 }

@@ -71,7 +71,6 @@ namespace Features.Lobby.Presentation
         public void SetLocalMemberId(EntityId memberId)
         {
             _localMemberId = memberId;
-            _localMemberId = memberId;
         }
 
         public Result LeaveRoom(EntityId roomId, EntityId memberId) =>

@@ -12,24 +12,25 @@ namespace Features.Lobby.Application
     {
         private readonly ILobbyRepository _repository;
         private readonly IEventPublisher _publisher;
+        private EntityId _localMemberId;
 
         public LobbyNetworkEventHandler(
             ILobbyRepository repository,
             IEventPublisher publisher,
-            ILobbyNetworkCallbackPort networkEvents
+            ILobbyNetworkCallbackPort networkCallbacks
         )
         {
             _repository = repository;
             _publisher = publisher;
 
-            networkEvents.OnErrorOccurred = HandleError;
-            networkEvents.OnCreateRoomSucceeded = HandleCreateRoomSucceeded;
-            networkEvents.OnJoinRoomSucceeded = HandleJoinRoomSucceeded;
-            networkEvents.OnLeaveRoomSucceeded = HandleLeaveRoomSucceeded;
-            networkEvents.OnRemotePlayerEntered = HandleRemotePlayerEntered;
-            networkEvents.OnRemotePlayerLeft = HandleRemotePlayerLeft;
-            networkEvents.OnPlayerPropertiesChanged = HandlePlayerPropertiesChanged;
-            networkEvents.OnGameStarted = HandleGameStarted;
+            networkCallbacks.OnErrorOccurred = HandleError;
+            networkCallbacks.OnCreateRoomSucceeded = HandleCreateRoomSucceeded;
+            networkCallbacks.OnJoinRoomSucceeded = HandleJoinRoomSucceeded;
+            networkCallbacks.OnLeaveRoomSucceeded = HandleLeaveRoomSucceeded;
+            networkCallbacks.OnRemotePlayerEntered = HandleRemotePlayerEntered;
+            networkCallbacks.OnRemotePlayerLeft = HandleRemotePlayerLeft;
+            networkCallbacks.OnPlayerPropertiesChanged = HandlePlayerPropertiesChanged;
+            networkCallbacks.OnGameStarted = HandleGameStarted;
         }
 
         private void HandleError(string message)
@@ -37,21 +38,32 @@ namespace Features.Lobby.Application
             _publisher.Publish(new LobbyErrorEvent(message));
         }
 
-        public Result HandleCreateRoomSucceeded(Room room)
+        private void HandleCreateRoomSucceeded(Room room)
         {
-            return AddRoomAndPublish(room);
+            _localMemberId = room.OwnerId;
+            var result = AddRoomAndPublish(room);
+            if (result.IsFailure)
+                PublishError(result.Error);
         }
 
-        public Result HandleJoinRoomSucceeded(JoinRoomData data)
+        private void HandleJoinRoomSucceeded(JoinRoomData data)
         {
             if (data.Members == null || data.Members.Count == 0)
-                return Result.Failure("No members provided.");
+            {
+                PublishError("No members provided.");
+                return;
+            }
+
+            _localMemberId = data.LocalMemberId;
 
             var owner = data.Members.Find(m => m.Id.Equals(data.MasterMemberId)) ?? data.Members[0];
 
             var roomResult = Room.Create(data.RoomId, data.RoomName, data.Capacity, owner);
             if (roomResult.IsFailure)
-                return Result.Failure(roomResult.Error);
+            {
+                PublishError(roomResult.Error);
+                return;
+            }
 
             var room = roomResult.Value;
             foreach (var member in data.Members)
@@ -61,99 +73,140 @@ namespace Features.Lobby.Application
                 room.AddMember(member);
             }
 
-            return AddRoomAndPublish(room);
+            var result = AddRoomAndPublish(room);
+            if (result.IsFailure)
+                PublishError(result.Error);
         }
 
-        public Result HandleLeaveRoomSucceeded(EntityId roomId, EntityId memberId)
+        private void HandleLeaveRoomSucceeded(EntityId roomId, EntityId memberId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Result.Failure("Room was not found.");
+            {
+                PublishError("Room was not found.");
+                return;
+            }
 
             var removeResult = room.RemoveMember(memberId);
             if (removeResult.IsFailure)
-                return removeResult;
+            {
+                PublishError(removeResult.Error);
+                return;
+            }
 
             if (room.Members.Count == 0)
             {
                 var removeRoomResult = lobby.RemoveRoom(roomId);
                 if (removeRoomResult.IsFailure)
-                    return removeRoomResult;
+                {
+                    PublishError(removeRoomResult.Error);
+                    return;
+                }
             }
 
             var saveResult = _repository.SaveLobby(lobby);
             if (saveResult.IsFailure)
-                return saveResult;
+            {
+                PublishError(saveResult.Error);
+                return;
+            }
 
             _publisher.Publish(new LobbyUpdatedEvent(lobby));
             if (room.Members.Count > 0)
-                _publisher.Publish(new RoomUpdatedEvent(room));
-
-            return Result.Success();
+                _publisher.Publish(new RoomUpdatedEvent(room, _localMemberId));
         }
 
-        public Result HandleRemotePlayerEntered(EntityId roomId, RoomMember member)
+        private void HandleRemotePlayerEntered(EntityId roomId, RoomMember member)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Result.Failure("Room was not found.");
+            {
+                PublishError("Room was not found.");
+                return;
+            }
 
             var addResult = room.AddMember(member);
             if (addResult.IsFailure)
-                return addResult;
+            {
+                PublishError(addResult.Error);
+                return;
+            }
 
-            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            var result = SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            if (result.IsFailure)
+                PublishError(result.Error);
         }
 
-        public Result HandleRemotePlayerLeft(EntityId roomId, EntityId memberId)
+        private void HandleRemotePlayerLeft(EntityId roomId, EntityId memberId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Result.Failure("Room was not found.");
+            {
+                PublishError("Room was not found.");
+                return;
+            }
 
             var removeResult = room.RemoveMember(memberId);
             if (removeResult.IsFailure)
-                return removeResult;
+            {
+                PublishError(removeResult.Error);
+                return;
+            }
 
-            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            var result = SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            if (result.IsFailure)
+                PublishError(result.Error);
         }
 
-        public Result HandlePlayerPropertiesChanged(PlayerPropertiesData data)
+        private void HandlePlayerPropertiesChanged(PlayerPropertiesData data)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(data.RoomId);
             if (room == null)
-                return Result.Failure("Room was not found.");
+            {
+                PublishError("Room was not found.");
+                return;
+            }
 
             if (data.Team.HasValue)
             {
                 var changeResult = room.ChangeTeam(data.MemberId, data.Team.Value);
                 if (changeResult.IsFailure)
-                    return changeResult;
+                {
+                    PublishError(changeResult.Error);
+                    return;
+                }
             }
 
             if (data.IsReady.HasValue)
             {
                 var readyResult = room.SetReady(data.MemberId, data.IsReady.Value);
                 if (readyResult.IsFailure)
-                    return readyResult;
+                {
+                    PublishError(readyResult.Error);
+                    return;
+                }
             }
 
-            return SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            var result = SaveLobbyAndPublishRoom(lobby, room, publishLobbyUpdated: false);
+            if (result.IsFailure)
+                PublishError(result.Error);
         }
 
-        public Result HandleGameStarted(EntityId roomId)
+        private void HandleGameStarted(EntityId roomId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
             if (room == null)
-                return Result.Failure("Room was not found.");
+            {
+                PublishError("Room was not found.");
+                return;
+            }
 
             _publisher.Publish(new GameStartedEvent(room));
-            return Result.Success();
         }
 
         private Result AddRoomAndPublish(Room room)
@@ -179,8 +232,13 @@ namespace Features.Lobby.Application
             if (publishLobbyUpdated)
                 _publisher.Publish(new LobbyUpdatedEvent(lobby));
 
-            _publisher.Publish(new RoomUpdatedEvent(room));
+            _publisher.Publish(new RoomUpdatedEvent(room, _localMemberId));
             return Result.Success();
+        }
+
+        private void PublishError(string message)
+        {
+            _publisher.Publish(new LobbyErrorEvent(message));
         }
     }
 }
