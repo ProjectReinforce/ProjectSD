@@ -7,7 +7,21 @@ using UnityEngine;
 
 namespace Adapter.UI.Menu
 {
-    public class RoomListPanelController : MonoBehaviour
+    /// <summary>
+    /// 방 리스트 패널의 전체 흐름을 관리하는 Controller.
+    ///
+    /// 변경 사항 (1번 작업):
+    ///   - 기존: StringBuilder로 TMP_Text 한 줄에 모든 방 표시
+    ///   - 변경: RoomListView를 통해 개별 RoomListItem 프리팹으로 표시
+    ///   - IRoomListItemHandler 구현으로 아이템 클릭 이벤트 처리
+    ///
+    /// 책임(SRP):
+    ///   - NetworkManager 이벤트 구독/해제
+    ///   - 방 생성/참가 요청 중계
+    ///   - 비밀번호 팝업 흐름 관리
+    ///   - UI 아이템의 실제 생성/재활용은 RoomListView에 위임
+    /// </summary>
+    public class RoomListPanelController : MonoBehaviour, IRoomListItemHandler
     {
         [SerializeField] private MenuSceneManager menuSceneManager;
         [SerializeField] private string defaultRoomName = "Room_0001";
@@ -24,8 +38,9 @@ namespace Adapter.UI.Menu
         [SerializeField] private TMP_InputField joinPasswordPopupInputField;
 
         [Header("Display")]
-        [SerializeField] private TMP_Text roomListText;
+        [SerializeField] private RoomListView roomListView;
         [SerializeField] private TMP_Text statusText;
+        [SerializeField] private TMP_Text emptyListText;
 
         private string pendingJoinRoomName = string.Empty;
 
@@ -59,7 +74,31 @@ namespace Adapter.UI.Menu
             NetworkManager.Instance.JoinRoomFailed -= HandleJoinRoomFailed;
             NetworkManager.Instance.CreateRoomFailed -= HandleCreateRoomFailed;
             NetworkManager.Instance.RoomListChanged -= HandleRoomListChanged;
+
+            // 패널이 비활성화될 때 아이템 정리
+            if (roomListView != null)
+            {
+                roomListView.ClearAll();
+            }
         }
+
+        // ===== IRoomListItemHandler 구현 =====
+
+        /// <summary>
+        /// RoomListItem에서 클릭 이벤트가 올라올 때 호출.
+        /// 인터페이스를 통해 전달되므로 RoomListItem은 이 Controller를 모른다.
+        /// </summary>
+        public void OnRoomItemClicked(RoomInfo roomInfo)
+        {
+            if (roomInfo == null)
+            {
+                return;
+            }
+
+            TryJoinRoom(roomInfo.Name);
+        }
+
+        // ===== 버튼 핸들러 =====
 
         public void OnClickRefreshRoomList()
         {
@@ -73,7 +112,6 @@ namespace Adapter.UI.Menu
             SetStatus("Enter room options.");
         }
 
-        // 기존 씬 이벤트 호환용: MakeRoomBtn에서 이 함수를 호출하면 생성 팝업을 연다.
         public void OnClickCreateRoom()
         {
             OnClickOpenCreateRoomPopup();
@@ -148,6 +186,8 @@ namespace Adapter.UI.Menu
             SetJoinPasswordPopup(false);
         }
 
+        // ===== 내부 로직 =====
+
         private string ReadCreateRoomNameOrDefault()
         {
             var raw = roomNameInputField != null ? roomNameInputField.text : string.Empty;
@@ -207,7 +247,7 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 비밀번호 팝업이 있으면 팝업으로 입력받고, 없으면 인라인 입력 필드를 사용.
+            // 비밀번호 팝업
             if (joinPasswordPopup != null && joinPasswordPopupInputField != null)
             {
                 pendingJoinRoomName = targetRoom.Name;
@@ -247,6 +287,8 @@ namespace Adapter.UI.Menu
             return null;
         }
 
+        // ===== 이벤트 핸들러 =====
+
         private void HandleJoinedRoom()
         {
             SetStatus("Joined room.");
@@ -267,46 +309,50 @@ namespace Adapter.UI.Menu
             Debug.LogWarning($"Create room failed ({returnCode}): {message}");
         }
 
+        /// <summary>
+        /// 방 목록이 변경될 때마다 호출.
+        /// 기존: StringBuilder → TMP_Text
+        /// 변경: RoomListView.SyncItems()로 아이템 단위 diff 갱신
+        /// </summary>
         private void HandleRoomListChanged()
         {
-            if (roomListText == null)
+            if (roomListView == null)
             {
                 return;
             }
 
             if (NetworkManager.Instance == null)
             {
-                roomListText.text = "NetworkManager not found.";
+                roomListView.ClearAll();
+                SetEmptyListText("NetworkManager not found.");
                 return;
             }
 
             var rooms = NetworkManager.Instance.CachedRoomList;
             var search = roomSearchInputField != null ? roomSearchInputField.text?.Trim() : string.Empty;
 
-            var sb = new StringBuilder();
-            var count = 0;
-            for (var i = 0; i < rooms.Length; i++)
-            {
-                var room = rooms[i];
-                if (!string.IsNullOrWhiteSpace(search) &&
-                    room.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0)
+            // RoomListView에 동기화 위임
+            // filter: 검색어가 있으면 방 이름에 포함된 것만 표시
+            // isPasswordProtected: 자물쇠 아이콘 표시 여부 판단 위임
+            roomListView.SyncItems(
+                rooms,
+                handler: this,
+                isPasswordProtected: room => NetworkManager.Instance.IsRoomPasswordProtected(room),
+                filter: room =>
                 {
-                    continue;
-                }
+                    if (string.IsNullOrWhiteSpace(search))
+                    {
+                        return true;
+                    }
 
-                var lockMark = NetworkManager.Instance.IsRoomPasswordProtected(room) ? " [PW]" : string.Empty;
-                sb.Append(room.Name)
-                    .Append(lockMark)
-                    .Append(" (")
-                    .Append(room.PlayerCount)
-                    .Append("/")
-                    .Append(room.MaxPlayers)
-                    .AppendLine(")");
-                count++;
-            }
+                    return room.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+                });
 
-            roomListText.text = count == 0 ? "No rooms available." : sb.ToString();
+            // 빈 목록 안내 텍스트
+            SetEmptyListText(roomListView.ActiveItemCount == 0 ? "No rooms available." : string.Empty);
         }
+
+        // ===== UI 헬퍼 =====
 
         private void SetCreateRoomPanel(bool active)
         {
@@ -329,6 +375,15 @@ namespace Adapter.UI.Menu
             if (statusText != null)
             {
                 statusText.text = message;
+            }
+        }
+
+        private void SetEmptyListText(string message)
+        {
+            if (emptyListText != null)
+            {
+                emptyListText.text = message;
+                emptyListText.gameObject.SetActive(!string.IsNullOrEmpty(message));
             }
         }
     }
