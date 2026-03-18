@@ -48,6 +48,27 @@ namespace Features.Lobby.Application.Ports
         }
     }
 
+    /// <summary>
+    /// Photon 로비 방 목록에서 전달되는 개별 방 정보.
+    /// </summary>
+    public sealed class RoomListItem
+    {
+        public EntityId RoomId { get; }
+        public string RoomName { get; }
+        public int PlayerCount { get; }
+        public int MaxPlayers { get; }
+        public bool IsOpen { get; }
+
+        public RoomListItem(EntityId roomId, string roomName, int playerCount, int maxPlayers, bool isOpen)
+        {
+            RoomId = roomId;
+            RoomName = roomName;
+            PlayerCount = playerCount;
+            MaxPlayers = maxPlayers;
+            IsOpen = isOpen;
+        }
+    }
+
     public interface ILobbyNetworkCallbackPort
     {
         Action<Room> OnCreateRoomSucceeded { set; }
@@ -58,5 +79,6 @@ namespace Features.Lobby.Application.Ports
         Action<EntityId, EntityId> OnRemotePlayerLeft { set; }
         Action<PlayerPropertiesData> OnPlayerPropertiesChanged { set; }
         Action<EntityId> OnGameStarted { set; }
+        Action<List<RoomListItem>> OnRoomListUpdated { set; }
     }
 }

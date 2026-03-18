@@ -39,6 +39,7 @@ namespace Features.Lobby.Infrastructure.Photon
         public Action<EntityId, EntityId> OnRemotePlayerLeft { get; set; }
         public Action<PlayerPropertiesData> OnPlayerPropertiesChanged { get; set; }
         public Action<EntityId> OnGameStarted { get; set; }
+        public Action<List<RoomListItem>> OnRoomListUpdated { get; set; }
 
         // ===== ILobbyNetworkCommandPort =====
 
@@ -401,6 +402,29 @@ namespace Features.Lobby.Infrastructure.Photon
 
             var roomId = new EntityId(roomIdValue);
             OnGameStarted?.Invoke(roomId);
+        }
+
+        public override void OnRoomListUpdate(List<RoomInfo> roomList)
+        {
+            var items = new List<RoomListItem>();
+            foreach (var info in roomList)
+            {
+                if (info.RemovedFromList || !info.IsVisible)
+                    continue;
+
+                var roomId = new EntityId(info.Name);
+                string displayName = info.Name;
+                if (info.CustomProperties.TryGetValue(
+                        LobbyPhotonConstants.RoomDisplayNameKey, out var nameRaw)
+                    && nameRaw is string nameStr)
+                {
+                    displayName = nameStr;
+                }
+
+                items.Add(new RoomListItem(roomId, displayName, info.PlayerCount, info.MaxPlayers, info.IsOpen));
+            }
+
+            OnRoomListUpdated?.Invoke(items);
         }
 
         // ===== Helpers =====

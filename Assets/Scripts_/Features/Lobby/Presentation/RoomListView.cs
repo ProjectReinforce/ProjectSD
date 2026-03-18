@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
+using Features.Lobby.Application.Ports;
 using Shared.Kernel;
 using TMPro;
 using UnityEngine;
@@ -53,12 +54,22 @@ namespace Features.Lobby.Presentation
             ClearList();
 
             if (_roomItemPrefab == null || _roomListContent == null)
-            {
-                Debug.Log(
-                    $"[Lobby] Room list updated. Count={rooms.Count} (no prefab/content assigned)"
-                );
                 return;
+
+            foreach (var room in rooms)
+            {
+                var item = Instantiate(_roomItemPrefab, _roomListContent);
+                item.Bind(room, OnJoinRoomClicked);
+                _spawnedItems.Add(item);
             }
+        }
+
+        public void Render(IReadOnlyList<RoomListItem> rooms)
+        {
+            ClearList();
+
+            if (_roomItemPrefab == null || _roomListContent == null)
+                return;
 
             foreach (var room in rooms)
             {

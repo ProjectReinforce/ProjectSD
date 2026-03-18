@@ -53,6 +53,7 @@ namespace Features.Lobby.Presentation
             _eventBus = eventBus;
             _eventBus.Subscribe<LobbyUpdatedEvent>(this, e => RenderLobby(e.Lobby));
             _eventBus.Subscribe<RoomUpdatedEvent>(this, e => RenderRoom(e));
+            _eventBus.Subscribe<RoomListReceivedEvent>(this, e => RenderRoomList(e));
             _eventBus.Subscribe<GameStartedEvent>(this, e => RenderStartGame(e.Room));
             _eventBus.Subscribe<LobbyErrorEvent>(this, e => RenderError(e.Message));
 
@@ -70,6 +71,13 @@ namespace Features.Lobby.Presentation
                 return;
             _roomListView.Render(lobby.Rooms);
             ShowRoomList();
+        }
+
+        public void RenderRoomList(RoomListReceivedEvent e)
+        {
+            if (_roomListView == null)
+                return;
+            _roomListView.Render(e.Rooms);
         }
 
         public void RenderRoom(RoomUpdatedEvent e)

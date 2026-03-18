@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Features.Lobby.Application.Events;
 using Features.Lobby.Application.Ports;
 using Features.Lobby.Domain;
@@ -31,6 +32,7 @@ namespace Features.Lobby.Application
             networkCallbacks.OnRemotePlayerLeft = HandleRemotePlayerLeft;
             networkCallbacks.OnPlayerPropertiesChanged = HandlePlayerPropertiesChanged;
             networkCallbacks.OnGameStarted = HandleGameStarted;
+            networkCallbacks.OnRoomListUpdated = HandleRoomListUpdated;
         }
 
         private void HandleError(string message)
@@ -234,6 +236,11 @@ namespace Features.Lobby.Application
 
             _publisher.Publish(new RoomUpdatedEvent(room, _localMemberId));
             return Result.Success();
+        }
+
+        private void HandleRoomListUpdated(List<RoomListItem> rooms)
+        {
+            _publisher.Publish(new RoomListReceivedEvent(rooms));
         }
 
         private void PublishError(string message)
