@@ -69,6 +69,7 @@ MonoBehaviour:
   - RPC_SendBuildToHost
   - RPC_ShowResult
   - RPC_LoadGameScene
+  - RPC_InitBoss
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

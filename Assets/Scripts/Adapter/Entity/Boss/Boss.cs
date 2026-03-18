@@ -195,7 +195,9 @@ namespace SwDreams.Adapter.Entity
             {
                 BossPhase newPhase = (BossPhase)phaseInt;
                 CurrentPhase = newPhase;
-                currentMoveSpeed = bossData.GetMoveSpeedForPhase(newPhase);
+                // 이동속도는 호스트만 사용하므로 bossData null 시 스킵
+                if (bossData != null)
+                    currentMoveSpeed = bossData.GetMoveSpeedForPhase(newPhase);
                 OnPhaseChanged?.Invoke(newPhase);
                 Debug.Log($"[Boss] 페이즈 전환 → {newPhase} (HP: {CurrentHP}/{MaxHP})");
             }
