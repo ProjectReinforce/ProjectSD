@@ -228,18 +228,16 @@ namespace SwDreams.Adapter.Manager
 
         /// <summary>
         /// 호스트 마이그레이션 시 호출. 현재 활성 적 정리 + 스폰 재개.
-        /// 시작 딜레이 없이 즉시 현재 GameTime 웨이브부터 재개.
+        /// 1초 딜레이 후 현재 GameTime 웨이브부터 재개.
         /// HostMigrationHandler에서 호출.
         /// </summary>
         public void ResetForMigration()
         {
             // 활성 적 전부 정리 (이전 호스트의 네트워크 오브젝트는 이미 파괴됨)
-            // 클라이언트에도 남아있는 로컬 적 오브젝트 정리
             var remainingEnemies = GameObject.FindGameObjectsWithTag("Enemy");
             int cleanedCount = 0;
             foreach (var enemyObj in remainingEnemies)
             {
-                // Boss는 BossSpawner에서 별도 처리
                 if (enemyObj.GetComponent<Boss>() != null) continue;
                 enemyObj.SetActive(false);
                 cleanedCount++;
@@ -247,13 +245,58 @@ namespace SwDreams.Adapter.Manager
 
             activeEnemies.Clear();
 
-            // 스폰 즉시 재개 (시작 딜레이 스킵)
-            isReady = true;
-            startDelayTimer = 0f;
+            // 잔존 스킬 투사체/이펙트 정리
+            CleanupProjectiles();
+
+            // 1초 딜레이 후 스폰 재개
+            isReady = false;
+            startDelayTimer = 1f;
             spawnTimer = 0f;
             currentPhaseName = "";
 
-            Debug.Log($"[SpawnManager] 마이그레이션 리셋 — 기존 적 {cleanedCount}마리 정리, 스폰 재개");
+            Debug.Log($"[SpawnManager] 마이그레이션 리셋 — 적 {cleanedCount}마리 정리, 1초 후 스폰 재개");
+        }
+
+        /// <summary>
+        /// 씬에 남아있는 투사체/스킬 이펙트 오브젝트 정리.
+        /// 풀에 반환 가능하면 반환, 아니면 비활성화.
+        /// </summary>
+        private void CleanupProjectiles()
+        {
+            int count = 0;
+
+            // Projectile 컴포넌트를 가진 모든 오브젝트
+            var projectiles = FindObjectsByType<SwDreams.Adapter.Skill.Projectile>(
+                FindObjectsSortMode.None);
+            foreach (var proj in projectiles)
+            {
+                if (proj.gameObject.activeInHierarchy)
+                {
+                    if (PoolManager.Instance != null)
+                        PoolManager.Instance.Return(proj.gameObject);
+                    else
+                        proj.gameObject.SetActive(false);
+                    count++;
+                }
+            }
+
+            // SkillEffect 산하 AreaZone 등 독립 이펙트 (Enemy 태그가 아닌 것만)
+            var zones = FindObjectsByType<SwDreams.Adapter.Skill.AreaZone>(
+                FindObjectsSortMode.None);
+            foreach (var zone in zones)
+            {
+                if (zone.gameObject.activeInHierarchy)
+                {
+                    if (PoolManager.Instance != null)
+                        PoolManager.Instance.Return(zone.gameObject);
+                    else
+                        zone.gameObject.SetActive(false);
+                    count++;
+                }
+            }
+
+            if (count > 0)
+                Debug.Log($"[SpawnManager] 투사체/이펙트 {count}개 정리");
         }
 
         // ===== 중도 참가 처리 =====

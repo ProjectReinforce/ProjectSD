@@ -405,10 +405,15 @@ namespace SwDreams.Adapter.Manager
                             sm.ApplyChoice(chosen);
                     }
 
-                    Photon.Realtime.Player targetPlayer = FindPhotonPlayer(actorNumber);
-                    if (targetPlayer != null)
+                    // 원격 플레이어에게만 ForceChoice 전송
+                    // 호스트 자신은 위에서 sm.ApplyChoice로 이미 적용됨 → 중복 방지
+                    if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                     {
-                        photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId);
+                        Photon.Realtime.Player targetPlayer = FindPhotonPlayer(actorNumber);
+                        if (targetPlayer != null)
+                        {
+                            photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId);
+                        }
                     }
 
                     // [Phase 5] 다른 클라이언트에도 동기화
