@@ -241,7 +241,8 @@ namespace SwDreams.Presentation
 
             // 네트워크
             string role = PhotonNetwork.IsMasterClient ? "Host" : "Client";
-            sb.AppendLine($"{role}  Players:{PhotonNetwork.CurrentRoom?.PlayerCount ?? 0}");
+            int ping = PhotonNetwork.GetPing();
+            sb.AppendLine($"{role}  Players:{PhotonNetwork.CurrentRoom?.PlayerCount ?? 0}  Ping:{ping}ms");
 
             // 배경 크기 자동 조정
             displayText.text = sb.ToString();

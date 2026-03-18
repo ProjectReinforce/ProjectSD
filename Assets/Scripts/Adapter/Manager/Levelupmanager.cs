@@ -470,14 +470,12 @@ namespace SwDreams.Adapter.Manager
             }
 
             // 게임 재개
-            // // 레벨업 진입 전 상태로 복원 (Playing 또는 BossFight)
-            // Phase 6: 호스트 마이그레이션 후 레벨업 완료 → 비상 보스전
+            // 호스트 마이그레이션 후 레벨업 완료 → GameTime 기준 게임 재개
             if (HostMigrationHandler.Instance != null &&
-                HostMigrationHandler.Instance.PendingEmergencyBoss)
+                HostMigrationHandler.Instance.PendingGameResume)
             {
-                // 비상 보스전 대기 중 → Playing 복원 건너뛰고 바로 비상 보스전 시작
+                // 마이그레이션 대기 중 → 이전 상태 복원 대신 ResumeGameFromCurrentTime 실행
                 HostMigrationHandler.Instance.OnLevelUpCompleted();
-                // OnLevelUpCompleted 내부에서 BossFight로 전환됨
             }
             else
             {

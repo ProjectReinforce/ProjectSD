@@ -8,17 +8,19 @@ using SwDreams.Adapter.Entity;
 namespace SwDreams.Adapter.Manager
 {
     /// <summary>
-    /// 호스트 이탈 감지 + 재연결 대기 + 비상 보스전 트리거.
+    /// 호스트 이탈 감지 + 재연결 대기 + GameTime 기준 게임 재개.
     ///
     /// Photon PUN2의 자동 MasterClient 전환 활용:
     /// - OnMasterClientSwitched: 호스트 변경 감지
     /// - OnPlayerLeftRoom: 플레이어 퇴장 감지
     ///
     /// 플로우:
-    /// 1. 호스트 퇴장 감지 (OnPlayerLeftRoom에서 이전 호스트인지 확인)
+    /// 1. 호스트 퇴장 감지
     /// 2. 게임 일시정지 + ReconnectUI 표시
     /// 3. reconnectWaitTime 초 대기
-    /// 4. 새 MasterClient가 비상 보스전 시작
+    /// 4. 모든 적/보스 정리 → Playing 상태로 전환
+    /// 5. SpawnManager/BossSpawner가 GameTime 기준으로 자연 재개
+    ///    (새 인원수 기준 스케일링 자동 적용)
     ///
     /// 셋업: GameScene에 빈 GameObject "HostMigrationHandler"
     ///        → HostMigrationHandler 부착 (PhotonView 불필요 — 콜백만 사용)
@@ -109,10 +111,10 @@ namespace SwDreams.Adapter.Manager
         // ===== 호스트 이탈 처리 =====
 
         /// <summary>
-        /// 레벨업 종료 후 비상 보스전을 시작해야 하는지 플래그.
+        /// 레벨업 종료 후 게임을 재개해야 하는지 플래그.
         /// LevelUpManager.EndLevelUpSequence()에서 확인.
         /// </summary>
-        public bool PendingEmergencyBoss { get; private set; } = false;
+        public bool PendingGameResume { get; private set; } = false;
 
         private IEnumerator HandleHostMigration()
         {
@@ -126,18 +128,17 @@ namespace SwDreams.Adapter.Manager
 
             if (wasInLevelUp)
             {
-                // 레벨업 중: 5초 대기 없이 즉시 세션 인수
-                // 플레이어는 선택 계속, 완료 후 비상 보스전 시작
+                // 레벨업 중: 대기 없이 즉시 세션 인수
+                // 레벨업 완료 후 ResumeGameFromCurrentTime 호출
                 Debug.Log("[HostMigration] 레벨업 중 호스트 이탈 — 세션 인수");
 
                 if (PhotonNetwork.IsMasterClient)
                 {
-                    AdoptOrphanedEnemies();
-
                     if (LevelUpManager.Instance != null)
                         LevelUpManager.Instance.AdoptLevelUpSession();
 
-                    PendingEmergencyBoss = true;
+                    // 레벨업 완료 시 ResumeGameFromCurrentTime 호출 예약
+                    PendingGameResume = true;
                 }
 
                 isMigrating = false;
@@ -145,7 +146,7 @@ namespace SwDreams.Adapter.Manager
             }
             else
             {
-                // 일반 상태(Playing/BossFight): 5초 대기 후 비상 보스전
+                // Playing/BossFight: 잠시 대기 후 GameTime 기준으로 게임 재개
                 Time.timeScale = 0f;
                 Debug.Log($"[HostMigration] 재연결 대기 시작 ({ReconnectWaitTime}초)");
 
@@ -164,82 +165,54 @@ namespace SwDreams.Adapter.Manager
                 OnMigrationCompleted?.Invoke();
 
                 if (PhotonNetwork.IsMasterClient)
-                {
-                    AdoptOrphanedEnemies();
-                    StartEmergencyBoss();
-                }
+                    ResumeGameFromCurrentTime();
             }
         }
 
         /// <summary>
         /// LevelUpManager.EndLevelUpSequence()에서 호출.
-        /// 레벨업 완료 후 대기 중이던 비상 보스전 시작.
+        /// 레벨업 완료 후 대기 중이던 게임 재개 실행.
         /// </summary>
         public void OnLevelUpCompleted()
         {
-            if (!PendingEmergencyBoss) return;
-            PendingEmergencyBoss = false;
+            if (!PendingGameResume) return;
+            PendingGameResume = false;
 
-            Debug.Log("[HostMigration] 레벨업 완료 → 비상 보스전 시작");
-            StartEmergencyBoss();
+            Debug.Log("[HostMigration] 레벨업 완료 → GameTime 기준 게임 재개");
+            ResumeGameFromCurrentTime();
         }
 
-        private void StartEmergencyBoss()
-        {
-            // 이미 보스전이면 스킵
-            if (GameManager.Instance.CurrentState == GameManager.GameState.BossFight)
-            {
-                Debug.Log("[HostMigration] 이미 보스전 중 — 비상 보스전 스킵");
-                return;
-            }
-
-            // 일반 적 스폰 중단
-            if (SpawnManager.Instance != null)
-                SpawnManager.Instance.StopSpawning();
-
-            // 비상 보스전 HP 약화: 게임 시간이 bossSpawnTime의 70% 이전이면 약화
-            float bossTime = GameManager.Instance.Config?.bossSpawnTime ?? 600f;
-            float emergencyRatio = GameManager.Instance.Config?.emergencyBossHPRatio ?? 0.7f;
-            float timeRatio = GameManager.Instance.GameTime / bossTime;
-            float hpMul = timeRatio < emergencyRatio ? timeRatio : 1f;
-
-            if (BossSpawner.Instance != null)
-            {
-                BossSpawner.Instance.SpawnEmergencyBoss(hpMul);
-                Debug.Log($"[HostMigration] 비상 보스 스폰 (시간비율: {timeRatio:F2}, HP배율: {hpMul:F2})");
-            }
-            else
-            {
-                Debug.LogError("[HostMigration] BossSpawner 없음!");
-                // 폴백: 그냥 게임 종료
-                GameManager.Instance.ChangeStateNetwork(GameManager.GameState.GameOver);
-            }
-        }
-
-        // ===== 기존 적 인수 =====
+        // ===== 게임 재개 (새 전략) =====
 
         /// <summary>
-        /// 호스트 전환 후 기존 적 처리.
-        /// 이전 호스트가 관리하던 적들은 AI가 멈춘 상태.
-        /// 비상 보스전 시작 시 일반 적은 필요 없으므로 전부 정리.
+        /// 모든 적/보스를 정리하고 GameTime 기준으로 게임을 재개.
+        /// - GameTime >= bossSpawnTime → BossSpawner.Update()가 보스 재스폰
+        /// - GameTime < bossSpawnTime → SpawnManager가 해당 웨이브부터 재개
+        /// 인원수 변동이 자연스럽게 반영됨.
         /// </summary>
-        private void AdoptOrphanedEnemies()
+        private void ResumeGameFromCurrentTime()
         {
-            var enemies = GameObject.FindGameObjectsWithTag("Enemy");
-            int count = 0;
+            float gameTime = GameManager.Instance?.GameTime ?? 0f;
+            float bossTime = GameManager.Instance?.Config?.bossSpawnTime ?? 600f;
+            Debug.Log($"[HostMigration] 게임 재개 — GameTime:{gameTime:F1}s, BossTime:{bossTime:F1}s");
 
-            foreach (var enemyObj in enemies)
-            {
-                // Boss는 건드리지 않음
-                if (enemyObj.GetComponent<Boss>() != null) continue;
+            // 1) BossPhaseManager 정리 (보스전 중이었으면)
+            if (BossPhaseManager.Instance != null)
+                BossPhaseManager.Instance.EndBossFight();
 
-                // ForceReturn은 이벤트 구독이 끊겨 동작 안 함
-                // 직접 비활성화로 처리
-                enemyObj.SetActive(false);
-                count++;
-            }
+            // 2) 모든 적 + 보스 정리 → 스폰 상태 리셋
+            if (SpawnManager.Instance != null)
+                SpawnManager.Instance.ResetForMigration();
 
-            Debug.Log($"[HostMigration] 기존 적 {count}마리 정리 완료");
+            if (BossSpawner.Instance != null)
+                BossSpawner.Instance.ResetForMigration();
+
+            // 3) Playing 상태로 전환
+            //    → SpawnManager.Update()가 GameTime 기반으로 적 스폰 재개
+            //    → BossSpawner.Update()가 GameTime >= bossTime이면 보스 경고 → 스폰
+            GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
+
+            Debug.Log("[HostMigration] 게임 재개 완료 — 새 인원수 기준으로 리스폰");
         }
 
         // ===== 일반 플레이어 퇴장 처리 =====

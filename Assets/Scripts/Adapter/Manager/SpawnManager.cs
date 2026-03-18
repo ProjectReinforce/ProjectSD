@@ -226,6 +226,36 @@ namespace SwDreams.Adapter.Manager
             Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
         }
 
+        /// <summary>
+        /// 호스트 마이그레이션 시 호출. 현재 활성 적 정리 + 스폰 재개.
+        /// 시작 딜레이 없이 즉시 현재 GameTime 웨이브부터 재개.
+        /// HostMigrationHandler에서 호출.
+        /// </summary>
+        public void ResetForMigration()
+        {
+            // 활성 적 전부 정리 (이전 호스트의 네트워크 오브젝트는 이미 파괴됨)
+            // 클라이언트에도 남아있는 로컬 적 오브젝트 정리
+            var remainingEnemies = GameObject.FindGameObjectsWithTag("Enemy");
+            int cleanedCount = 0;
+            foreach (var enemyObj in remainingEnemies)
+            {
+                // Boss는 BossSpawner에서 별도 처리
+                if (enemyObj.GetComponent<Boss>() != null) continue;
+                enemyObj.SetActive(false);
+                cleanedCount++;
+            }
+
+            activeEnemies.Clear();
+
+            // 스폰 즉시 재개 (시작 딜레이 스킵)
+            isReady = true;
+            startDelayTimer = 0f;
+            spawnTimer = 0f;
+            currentPhaseName = "";
+
+            Debug.Log($"[SpawnManager] 마이그레이션 리셋 — 기존 적 {cleanedCount}마리 정리, 스폰 재개");
+        }
+
         // ===== 중도 참가 처리 =====
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)

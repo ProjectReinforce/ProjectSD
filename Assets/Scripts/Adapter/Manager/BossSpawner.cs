@@ -183,6 +183,23 @@ namespace SwDreams.Adapter.Manager
             Debug.Log($"[BossSpawner] 비상 보스 스폰 (HP배율: {hpMultiplier})");
         }
 
+        // ===== 호스트 마이그레이션 지원 =====
+
+        /// <summary>
+        /// 호스트 마이그레이션 시 상태 리셋.
+        /// 이전 호스트의 보스 오브젝트가 CleanupCacheOnLeave로 파괴되므로,
+        /// 새 호스트가 GameTime 기준으로 보스를 다시 스폰할 수 있도록 플래그 초기화.
+        /// HostMigrationHandler에서 호출.
+        /// </summary>
+        public void ResetForMigration()
+        {
+            currentBoss = null;
+            bossSpawned = false;
+            warningStarted = false;
+            warningTimer = 0f;
+            Debug.Log("[BossSpawner] 마이그레이션 리셋 완료 — GameTime 기준 보스 재트리거 대기");
+        }
+
         private Vector2 CalculateSpawnPosition()
         {
             // 간단 구현: 플레이어 평균 위치에서 spawnDistance만큼 떨어진 랜덤 방향

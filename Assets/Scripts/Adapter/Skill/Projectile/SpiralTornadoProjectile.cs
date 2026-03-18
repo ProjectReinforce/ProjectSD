@@ -7,7 +7,7 @@ namespace SwDreams.Adapter.Skill
 {
     /// <summary>
     /// 나선형 회오리. 대선풍 진화용.
-    /// 플레이어 중심으로 나선형으로 점점 멀어지며 회전.
+    /// 발사 지점을 중심으로 나선형으로 점점 멀어지며 회전.
     /// TornadoProjectile과 동일하게 끌어당김 + 지속 데미지.
     /// </summary>
     public class SpiralTornadoProjectile : Projectile
@@ -19,7 +19,8 @@ namespace SwDreams.Adapter.Skill
         private float tickTimer;
 
         // 나선 상태
-        private Transform playerTransform;
+        private Vector2 originPosition; // 발사 시점의 고정 원점
+        private bool hasOrigin;
         private float currentAngle;
         private float currentRadius;
         private float angularSpeed = 180f; // 도/초
@@ -27,7 +28,9 @@ namespace SwDreams.Adapter.Skill
         public void SetSpiral(Transform player, float pullRadius, float pullForce,
             float expandSpeed, float startAngle = 0f)
         {
-            playerTransform = player;
+            // 플레이어 현재 위치를 고정 원점으로 저장 (이후 따라가지 않음)
+            originPosition = player != null ? (Vector2)player.position : (Vector2)transform.position;
+            hasOrigin = true;
             this.pullRadius = pullRadius;
             this.pullForce = pullForce;
             spiralExpandSpeed = expandSpeed;
@@ -38,7 +41,7 @@ namespace SwDreams.Adapter.Skill
 
         protected override void MoveStep()
         {
-            if (playerTransform == null)
+            if (!hasOrigin)
             {
                 ReturnToPool();
                 return;
@@ -50,7 +53,7 @@ namespace SwDreams.Adapter.Skill
 
             float rad = currentAngle * Mathf.Deg2Rad;
             Vector2 offset = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * currentRadius;
-            transform.position = (Vector2)playerTransform.position + offset;
+            transform.position = originPosition + offset;
 
             // 회전 연출
             transform.Rotate(0, 0, 360f * Time.deltaTime);
@@ -114,7 +117,7 @@ namespace SwDreams.Adapter.Skill
             currentAngle = 0f;
             currentRadius = 0.5f;
             tickTimer = 0f;
-            playerTransform = null;
+            hasOrigin = false;
         }
     }
 }
