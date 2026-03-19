@@ -361,6 +361,7 @@ GameObject:
   - component: {fileID: 2168850951331931471}
   - component: {fileID: 2172971667933012880}
   - component: {fileID: 6792702509574862841}
+  - component: {fileID: 9202522811150211711}
   m_Layer: 5
   m_Name: Slot_RoomList
   m_TagString: Untagged
@@ -474,6 +475,24 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9202522811150211711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3391538382183004035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c3cf5a130dee49478867e172bc422bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Adapter.UI.Menu.RoomListItem
+  mapImage: {fileID: 355811824378067823}
+  lockOffIcon: {fileID: 1526413300737017845}
+  lockOnIcon: {fileID: 6484261066798258632}
+  roomNameText: {fileID: 3846795971104791637}
+  difficultyText: {fileID: 4460647994140276766}
+  playerCountText: {fileID: 6808406044887282029}
 --- !u!1 &5149799025189605632
 GameObject:
   m_ObjectHideFlags: 0
@@ -824,9 +843,9 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 0
+  m_overflowMode: 1
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0

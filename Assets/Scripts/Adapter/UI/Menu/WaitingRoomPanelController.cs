@@ -47,8 +47,14 @@ namespace Adapter.UI.Menu
             if (PhotonNetwork.IsMasterClient)
             {
                 CancelCountdown();
-            }
 
+                // 게임씬에서 돌아왔을 때 로비 목록에 다시 표시
+                if (PhotonNetwork.CurrentRoom != null)
+                {
+                    PhotonNetwork.CurrentRoom.IsVisible = true;
+                    PhotonNetwork.CurrentRoom.IsOpen = true;
+                }
+            }
             NetworkManager.Instance.PlayersInRoomChanged += HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom += HandleLeftRoom;
 
@@ -155,13 +161,6 @@ namespace Adapter.UI.Menu
 
             var canStart = NetworkManager.Instance.CanMasterStartGameInCurrentRoom();
 
-            // 모든 클라이언트: 전원 준비 완료 시 씬 동기화 활성화
-            // 호스트의 LoadLevel을 따라갈 준비
-            if (canStart)
-            {
-                PhotonNetwork.AutomaticallySyncScene = true;
-            }
-
             if (!PhotonNetwork.IsMasterClient) return;
 
             if (canStart && !IsCountdownActive())
@@ -228,6 +227,9 @@ namespace Adapter.UI.Menu
                 return;
             }
 
+            // 카운트다운 중 외부 입장 차단
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+
             var props = new Hashtable
             {
                 [CountdownActiveKey] = true,
@@ -251,6 +253,9 @@ namespace Adapter.UI.Menu
             {
                 return;
             }
+
+            // 카운트다운 취소 시 다시 입장 허용
+            PhotonNetwork.CurrentRoom.IsOpen = true;
 
             var props = new Hashtable
             {
@@ -345,6 +350,14 @@ namespace Adapter.UI.Menu
 
             isLoadingGameScene = true;
             CancelCountdown(false);
+
+            // 게임씬 진입 시 로비 목록에서 숨김 (마스터만 방 속성 변경 가능)
+            if (PhotonNetwork.CurrentRoom != null)
+            {
+                PhotonNetwork.CurrentRoom.IsVisible = false;
+                PhotonNetwork.CurrentRoom.IsOpen = false;
+            }
+
             TestManager.Instance?.EnterGameSceneByMaster();
         }
 

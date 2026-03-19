@@ -6,6 +6,7 @@ using SwDreams.Data;
 using SwDreams.Adapter.Skill;
 using SwDreams.Presentation;
 using Adapter.Manager;
+using Adapter.UI.Menu;
 
 namespace SwDreams.Adapter.Manager
 {
@@ -294,17 +295,28 @@ namespace SwDreams.Adapter.Manager
             // ready 초기화
             NetworkManager.Instance?.SetLocalReady(false);
 
+            // 대기실로 복귀하므로 로비 목록에 다시 표시
+            if (PhotonNetwork.IsMasterClient
+                && PhotonNetwork.CurrentRoom != null)
+            {
+                PhotonNetwork.CurrentRoom.IsVisible = true;
+                PhotonNetwork.CurrentRoom.IsOpen = true;
+            }
+            
             UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
             Debug.Log("[ResultManager] 다시 하기 → MenuScene (방 유지)");
         }
 
         /// <summary>
-        /// 나가기 버튼. 방 퇴장 후 MenuScene으로 이동 → 타이틀 표시.
+        /// 나가기 버튼. 방 퇴장 후 MenuScene으로 이동 → 방 리스트 표시.
         /// </summary>
         public void OnExit()
         {
             // 씬 동기화 해제
             PhotonNetwork.AutomaticallySyncScene = false;
+
+            // MenuScene 진입 시 방 리스트로 바로 가도록 플래그 설정
+            MenuSceneManager.ReturnToRoomList = true;
 
             if (NetworkManager.Instance != null && PhotonNetwork.InRoom)
             {
@@ -315,7 +327,7 @@ namespace SwDreams.Adapter.Manager
             {
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
             }
-            Debug.Log("[ResultManager] 나가기 요청");
+            Debug.Log("[ResultManager] 나가기 요청 -> 방 리스트로 이동");
         }
 
         private void OnLeftRoomForExit()
