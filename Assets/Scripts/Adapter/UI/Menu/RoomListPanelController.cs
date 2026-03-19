@@ -1,25 +1,26 @@
 using System;
-using System.Text;
 using Adapter.Manager;
 using Photon.Realtime;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Adapter.UI.Menu
 {
     /// <summary>
     /// 방 리스트 패널의 전체 흐름을 관리하는 Controller.
     ///
-    /// 변경 사항 (1번 작업):
-    ///   - 기존: StringBuilder로 TMP_Text 한 줄에 모든 방 표시
-    ///   - 변경: RoomListView를 통해 개별 RoomListItem 프리팹으로 표시
-    ///   - IRoomListItemHandler 구현으로 아이템 클릭 이벤트 처리
-    ///
     /// 책임(SRP):
     ///   - NetworkManager 이벤트 구독/해제
     ///   - 방 생성/참가 요청 중계
     ///   - 비밀번호 팝업 흐름 관리
+    ///   - 새로고침 버튼 쿨다운 제어
     ///   - UI 아이템의 실제 생성/재활용은 RoomListView에 위임
+    ///
+    /// 새로고침 정책:
+    ///   Photon PUN2는 로비에 있으면 서버가 방 목록 변경을 자동 푸시한다.
+    ///   따라서 수동 새로고침 버튼은 현재 캐시된 목록으로 UI를 다시 그리는 역할이며,
+    ///   연타 방지를 위한 쿨다운만 적용한다.
     /// </summary>
     public class RoomListPanelController : MonoBehaviour, IRoomListItemHandler
     {
@@ -42,7 +43,13 @@ namespace Adapter.UI.Menu
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private TMP_Text emptyListText;
 
+        [Header("Refresh")]
+        [SerializeField] private Button refreshButton;
+        [Tooltip("새로고침 버튼 연타 방지 쿨다운 (초)")]
+        [SerializeField] private float refreshCooldown = 2f;
+
         private string pendingJoinRoomName = string.Empty;
+        private float refreshCooldownTimer;
 
         private void OnEnable()
         {
@@ -58,8 +65,12 @@ namespace Adapter.UI.Menu
 
             SetCreateRoomPanel(false);
             SetJoinPasswordPopup(false);
+            ClearAllInputFields();
+
+            refreshCooldownTimer = 0f;
 
             HandleRoomListChanged();
+            UpdateRefreshButtonState();
             SetStatus("Connected. Search, create, or join a room.");
         }
 
@@ -75,19 +86,28 @@ namespace Adapter.UI.Menu
             NetworkManager.Instance.CreateRoomFailed -= HandleCreateRoomFailed;
             NetworkManager.Instance.RoomListChanged -= HandleRoomListChanged;
 
-            // 패널이 비활성화될 때 아이템 정리
             if (roomListView != null)
             {
                 roomListView.ClearAll();
             }
         }
 
+        private void Update()
+        {
+            // 쿨다운 타이머 감소 및 버튼 상태 갱신
+            if (refreshCooldownTimer > 0f)
+            {
+                refreshCooldownTimer -= Time.unscaledDeltaTime;
+                if (refreshCooldownTimer <= 0f)
+                {
+                    refreshCooldownTimer = 0f;
+                    UpdateRefreshButtonState();
+                }
+            }
+        }
+
         // ===== IRoomListItemHandler 구현 =====
 
-        /// <summary>
-        /// RoomListItem에서 클릭 이벤트가 올라올 때 호출.
-        /// 인터페이스를 통해 전달되므로 RoomListItem은 이 Controller를 모른다.
-        /// </summary>
         public void OnRoomItemClicked(RoomInfo roomInfo)
         {
             if (roomInfo == null)
@@ -100,10 +120,24 @@ namespace Adapter.UI.Menu
 
         // ===== 버튼 핸들러 =====
 
+        /// <summary>
+        /// 새로고침 버튼 클릭.
+        /// Photon이 로비에서 방 목록을 자동 푸시하므로,
+        /// 수동 버튼은 현재 캐시된 목록으로 UI를 다시 그리는 역할.
+        /// 연타 방지를 위해 쿨다운을 적용한다.
+        /// </summary>
         public void OnClickRefreshRoomList()
         {
-            NetworkManager.Instance?.RefreshRoomList();
-            SetStatus("Refreshing room list...");
+            if (refreshCooldownTimer > 0f)
+            {
+                return;
+            }
+
+            refreshCooldownTimer = refreshCooldown;
+            UpdateRefreshButtonState();
+
+            HandleRoomListChanged();
+            SetStatus("Room list refreshed.");
         }
 
         public void OnClickOpenCreateRoomPopup()
@@ -162,6 +196,7 @@ namespace Adapter.UI.Menu
 
         public void OnClickBack()
         {
+            ClearAllInputFields();
             menuSceneManager?.ShowTitle();
         }
 
@@ -184,6 +219,22 @@ namespace Adapter.UI.Menu
         {
             pendingJoinRoomName = string.Empty;
             SetJoinPasswordPopup(false);
+        }
+
+        // ===== 새로고침 =====
+
+        /// <summary>
+        /// 쿨다운 타이머에 따라 버튼 interactable을 토글.
+        /// 쿨다운 중이면 비활성화, 끝나면 활성화.
+        /// </summary>
+        private void UpdateRefreshButtonState()
+        {
+            if (refreshButton == null)
+            {
+                return;
+            }
+
+            refreshButton.interactable = refreshCooldownTimer <= 0f;
         }
 
         // ===== 내부 로직 =====
@@ -247,7 +298,6 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 비밀번호 팝업
             if (joinPasswordPopup != null && joinPasswordPopupInputField != null)
             {
                 pendingJoinRoomName = targetRoom.Name;
@@ -294,6 +344,7 @@ namespace Adapter.UI.Menu
             SetStatus("Joined room.");
             SetCreateRoomPanel(false);
             SetJoinPasswordPopup(false);
+            ClearAllInputFields();
             menuSceneManager?.ShowWaitingRoom();
         }
 
@@ -309,11 +360,6 @@ namespace Adapter.UI.Menu
             Debug.LogWarning($"Create room failed ({returnCode}): {message}");
         }
 
-        /// <summary>
-        /// 방 목록이 변경될 때마다 호출.
-        /// 기존: StringBuilder → TMP_Text
-        /// 변경: RoomListView.SyncItems()로 아이템 단위 diff 갱신
-        /// </summary>
         private void HandleRoomListChanged()
         {
             if (roomListView == null)
@@ -331,9 +377,6 @@ namespace Adapter.UI.Menu
             var rooms = NetworkManager.Instance.CachedRoomList;
             var search = roomSearchInputField != null ? roomSearchInputField.text?.Trim() : string.Empty;
 
-            // RoomListView에 동기화 위임
-            // filter: 검색어가 있으면 방 이름에 포함된 것만 표시
-            // isPasswordProtected: 자물쇠 아이콘 표시 여부 판단 위임
             roomListView.SyncItems(
                 rooms,
                 handler: this,
@@ -348,7 +391,6 @@ namespace Adapter.UI.Menu
                     return room.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
                 });
 
-            // 빈 목록 안내 텍스트
             SetEmptyListText(roomListView.ActiveItemCount == 0 ? "No rooms available." : string.Empty);
         }
 
@@ -385,6 +427,40 @@ namespace Adapter.UI.Menu
                 emptyListText.text = message;
                 emptyListText.gameObject.SetActive(!string.IsNullOrEmpty(message));
             }
+        }
+
+        /// <summary>
+        /// 모든 입력 필드를 초기화.
+        /// 호출 시점: OnEnable(패널 열림), HandleJoinedRoom(방 진입), OnClickBack(뒤로가기)
+        /// </summary>
+        private void ClearAllInputFields()
+        {
+            if (roomNameInputField != null)
+            {
+                roomNameInputField.text = string.Empty;
+            }
+
+            if (createRoomPasswordInputField != null)
+            {
+                createRoomPasswordInputField.text = string.Empty;
+            }
+
+            if (roomSearchInputField != null)
+            {
+                roomSearchInputField.text = string.Empty;
+            }
+
+            if (joinRoomPasswordInputField != null)
+            {
+                joinRoomPasswordInputField.text = string.Empty;
+            }
+
+            if (joinPasswordPopupInputField != null)
+            {
+                joinPasswordPopupInputField.text = string.Empty;
+            }
+
+            pendingJoinRoomName = string.Empty;
         }
     }
 }
