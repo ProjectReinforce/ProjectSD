@@ -64,10 +64,7 @@ namespace SwDreams.Adapter.Manager
 
             Debug.Log($"[ResultManager] 게임 종료 감지: {newState}");
 
-            // 각 클라이언트: 로컬 빌드를 호스트에 전송
-            SendLocalBuildToHost();
-
-            // 호스트: 수집 시작
+            // 호스트: 수집 준비 (Clear를 먼저 해야 SendLocalBuildToHost의 결과가 날아가지 않음)
             if (PhotonNetwork.IsMasterClient)
             {
                 resultBroadcasted = false;
@@ -77,6 +74,9 @@ namespace SwDreams.Adapter.Manager
                 // 2초 후 강제 브로드캐스트 (빌드 미도착 클라이언트 대비)
                 Invoke(nameof(ForceBroadcastResult), 2f);
             }
+
+            // 각 클라이언트: 로컬 빌드를 호스트에 전송
+            SendLocalBuildToHost();
         }
 
         // ===== 로컬 빌드 수집 + 전송 =====

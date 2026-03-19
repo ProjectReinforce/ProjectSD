@@ -61,6 +61,11 @@ namespace SwDreams.Adapter.Manager
         private bool isReady = false;
         private float startDelayTimer = -1f;
 
+        // 적 위치 동기화 (호스트 → 클라이언트)
+        [Header("위치 동기화")]
+        [SerializeField] private float positionSyncInterval = 0.2f;
+        private float positionSyncTimer;
+
         // EnemyType → EnemyData 매핑
         private Dictionary<EnemyType, EnemyData> enemyDataMap;
 
@@ -111,7 +116,18 @@ namespace SwDreams.Adapter.Manager
         {
             if (!PhotonNetwork.IsMasterClient) return;
             if (GameManager.Instance == null) return;
-            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+
+            var state = GameManager.Instance.CurrentState;
+
+            // 적 위치 동기화: Playing + BossFight에서 동작
+            if (state == GameManager.GameState.Playing ||
+                state == GameManager.GameState.BossFight)
+            {
+                UpdatePositionSync();
+            }
+
+            // 스폰 로직: Playing에서만 동작
+            if (state != GameManager.GameState.Playing) return;
 
             // Playing 진입 후 딜레이
             if (!isReady)
@@ -297,6 +313,66 @@ namespace SwDreams.Adapter.Manager
 
             if (count > 0)
                 Debug.Log($"[SpawnManager] 투사체/이펙트 {count}개 정리");
+        }
+
+        // ===== 적 위치 동기화 (호스트 → 클라이언트) =====
+
+        /// <summary>
+        /// 호스트가 주기적으로 활성 적 위치를 배치 전송.
+        /// 클라이언트에서 EnemyMovement가 독립 실행하므로 위치가 벌어지는 것을 보정.
+        /// </summary>
+        private void UpdatePositionSync()
+        {
+            if (activeEnemies.Count == 0) return;
+            if (PhotonNetwork.CurrentRoom.PlayerCount <= 1) return; // 솔로면 불필요
+
+            positionSyncTimer += Time.deltaTime;
+            if (positionSyncTimer < positionSyncInterval) return;
+            positionSyncTimer = 0f;
+
+            // 배치 데이터 구성: [id, posX, posY, id, posX, posY, ...]
+            // float 배열 하나로 통합 (RPC 호출 1회로 처리)
+            float[] batch = new float[activeEnemies.Count * 3];
+            int idx = 0;
+
+            foreach (var kvp in activeEnemies)
+            {
+                Enemy enemy = kvp.Value;
+                if (enemy == null || !enemy.IsAlive) continue;
+
+                batch[idx++] = kvp.Key; // enemyId (int → float)
+                batch[idx++] = enemy.transform.position.x;
+                batch[idx++] = enemy.transform.position.y;
+            }
+
+            // 실제 데이터 크기에 맞게 자르기 (비활성 적 제외)
+            if (idx < batch.Length)
+                System.Array.Resize(ref batch, idx);
+
+            if (batch.Length > 0)
+                photonView.RPC(nameof(RPC_SyncEnemyPositions), RpcTarget.Others, batch);
+        }
+
+        [PunRPC]
+        private void RPC_SyncEnemyPositions(float[] batch)
+        {
+            // 3개씩 묶음: [enemyId, posX, posY]
+            for (int i = 0; i + 2 < batch.Length; i += 3)
+            {
+                int enemyId = (int)batch[i];
+                float x = batch[i + 1];
+                float y = batch[i + 2];
+
+                if (activeEnemies.TryGetValue(enemyId, out Enemy enemy))
+                {
+                    if (enemy != null && enemy.IsAlive)
+                    {
+                        var movement = enemy.GetComponent<EnemyMovement>();
+                        if (movement != null)
+                            movement.SetNetworkPosition(new Vector2(x, y));
+                    }
+                }
+            }
         }
 
         // ===== 중도 참가 처리 =====
