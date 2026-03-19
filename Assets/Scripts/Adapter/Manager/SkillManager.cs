@@ -238,8 +238,11 @@ namespace SwDreams.Adapter.Skill
             if (skill.Data.skillType == SkillType.Passive)
                 OnPassiveChanged?.Invoke();
 
-            // 진화 가능 체크
+            // 진화 가능 체크 (양방향)
+            // 방금 maxLevel 도달한 스킬 자체 + 이 스킬을 partner로 갖는 다른 스킬도 확인
             CheckEvolution(skill);
+            if (skill.IsMaxLevel)
+                CheckEvolutionAsPartner(skill);
 
             return true;
         }
@@ -312,6 +315,25 @@ namespace SwDreams.Adapter.Skill
             });
 
             Debug.Log($"[SkillManager] ★ 진화 가능 등록: {skill.Data.skillName} + {partner.Data.skillName} → {skill.Data.evolvedSkill.skillName}");
+        }
+
+        /// <summary>
+        /// 방금 maxLevel에 도달한 스킬을 evolutionPair로 갖는 다른 스킬이 있는지 역방향 체크.
+        /// SO 한쪽에만 evolutionPair가 설정된 경우 누락 방지.
+        /// </summary>
+        private void CheckEvolutionAsPartner(Skill justMaxed)
+        {
+            for (int i = 0; i < equippedSkills.Count; i++)
+            {
+                Skill other = equippedSkills[i];
+                if (other == justMaxed) continue;
+                if (!other.IsMaxLevel) continue;
+                if (other.Data.evolutionPair == null || other.Data.evolvedSkill == null) continue;
+                if (other.Data.evolutionPair.skillId != justMaxed.Data.skillId) continue;
+
+                // other가 justMaxed를 partner로 갖고, 둘 다 maxLevel → CheckEvolution 위임
+                CheckEvolution(other);
+            }
         }
 
         // [Phase 5] 진화로 제거된 스킬 ID 추적 (선택지에서 제외용)
@@ -406,9 +428,9 @@ namespace SwDreams.Adapter.Skill
                 evolutionChance = cfg.evolutionChance;
             }
 
-            // 1) 진화 후보 수집
+            // 1) 진화 후보 수집 — 진화 가능하면 항상 선택지에 포함
             SkillData evolutionChoice = null;
-            if (pendingEvolutions.Count > 0 && UnityEngine.Random.value < evolutionChance)
+            if (pendingEvolutions.Count > 0)
             {
                 int evoIndex = UnityEngine.Random.Range(0, pendingEvolutions.Count);
                 evolutionChoice = pendingEvolutions[evoIndex].evolvedSkillData;

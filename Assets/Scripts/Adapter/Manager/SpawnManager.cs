@@ -226,6 +226,79 @@ namespace SwDreams.Adapter.Manager
             Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
         }
 
+        /// <summary>
+        /// 호스트 마이그레이션 시 호출. 현재 활성 적 정리 + 스폰 재개.
+        /// 1초 딜레이 후 현재 GameTime 웨이브부터 재개.
+        /// HostMigrationHandler에서 호출.
+        /// </summary>
+        public void ResetForMigration()
+        {
+            // 활성 적 전부 정리 (이전 호스트의 네트워크 오브젝트는 이미 파괴됨)
+            var remainingEnemies = GameObject.FindGameObjectsWithTag("Enemy");
+            int cleanedCount = 0;
+            foreach (var enemyObj in remainingEnemies)
+            {
+                if (enemyObj.GetComponent<Boss>() != null) continue;
+                enemyObj.SetActive(false);
+                cleanedCount++;
+            }
+
+            activeEnemies.Clear();
+
+            // 잔존 스킬 투사체/이펙트 정리
+            CleanupProjectiles();
+
+            // 1초 딜레이 후 스폰 재개
+            isReady = false;
+            startDelayTimer = 1f;
+            spawnTimer = 0f;
+            currentPhaseName = "";
+
+            Debug.Log($"[SpawnManager] 마이그레이션 리셋 — 적 {cleanedCount}마리 정리, 1초 후 스폰 재개");
+        }
+
+        /// <summary>
+        /// 씬에 남아있는 투사체/스킬 이펙트 오브젝트 정리.
+        /// 풀에 반환 가능하면 반환, 아니면 비활성화.
+        /// </summary>
+        private void CleanupProjectiles()
+        {
+            int count = 0;
+
+            // Projectile 컴포넌트를 가진 모든 오브젝트
+            var projectiles = FindObjectsByType<SwDreams.Adapter.Skill.Projectile>(
+                FindObjectsSortMode.None);
+            foreach (var proj in projectiles)
+            {
+                if (proj.gameObject.activeInHierarchy)
+                {
+                    if (PoolManager.Instance != null)
+                        PoolManager.Instance.Return(proj.gameObject);
+                    else
+                        proj.gameObject.SetActive(false);
+                    count++;
+                }
+            }
+
+            // SkillEffect 산하 AreaZone 등 독립 이펙트 (Enemy 태그가 아닌 것만)
+            var zones = FindObjectsByType<SwDreams.Adapter.Skill.AreaZone>(
+                FindObjectsSortMode.None);
+            foreach (var zone in zones)
+            {
+                if (zone.gameObject.activeInHierarchy)
+                {
+                    if (PoolManager.Instance != null)
+                        PoolManager.Instance.Return(zone.gameObject);
+                    else
+                        zone.gameObject.SetActive(false);
+                    count++;
+                }
+            }
+
+            if (count > 0)
+                Debug.Log($"[SpawnManager] 투사체/이펙트 {count}개 정리");
+        }
+
         // ===== 중도 참가 처리 =====
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -331,6 +404,9 @@ namespace SwDreams.Adapter.Manager
 
             SpawnExpOrb(deathPosition, expValue);
 
+            // 적 사망 SFX (모든 클라이언트)
+            GameAudioConnector.Instance?.OnEnemyDied();
+
             Debug.Log($"[SpawnManager] 적 사망 ID:{enemyId}, 남은: {activeEnemies.Count}");
         }
 
@@ -366,9 +442,6 @@ namespace SwDreams.Adapter.Manager
 
             // Phase 7: 킬 카운트 추적
             GameStatTracker.Instance?.RecordKill();
-
-            // Phase 7: 적 사망 SFX
-            GameAudioConnector.Instance?.OnEnemyDied();
 
             // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
             NotifyChaosManagers(enemy.transform.position);

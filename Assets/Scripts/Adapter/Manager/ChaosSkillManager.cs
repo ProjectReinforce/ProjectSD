@@ -156,7 +156,12 @@ namespace SwDreams.Adapter.Skill
             ChaosMaxHPMultiplier = 0.5f;
             RecalculateModifiers();
 
-            // 현재 HP도 즉시 절반으로 (PlayerStub이 자체 maxHP를 쓰므로 직접 데미지)
+            // HP 감소는 소유자 클라이언트에서만 실행
+            // RPC_SyncSkillAcquisition으로 모든 클라이언트에서 호출되므로,
+            // 소유자만 TakeDamage → RPC_TakeDamage(All)로 HP 동기화
+            var pv = GetComponentInParent<PhotonView>();
+            if (pv != null && !pv.IsMine) return;
+
             if (playerDamageable != null && playerDamageable.IsAlive)
             {
                 int halfHP = playerDamageable.CurrentHP / 2;

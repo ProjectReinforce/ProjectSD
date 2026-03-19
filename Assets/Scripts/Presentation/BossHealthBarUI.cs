@@ -62,9 +62,19 @@ namespace SwDreams.Presentation
             // 보스 등장 감지
             if (!isTracking)
             {
+                // 호스트: BossSpawner 참조 사용
                 if (BossSpawner.Instance != null && BossSpawner.Instance.CurrentBoss != null)
                 {
                     AttachToBoss(BossSpawner.Instance.CurrentBoss);
+                }
+                // 클라이언트: BossSpawner.CurrentBoss가 null이면 씬에서 직접 검색
+                // (PhotonNetwork.Instantiate로 모든 클라이언트에 생성되므로 존재함)
+                else if (GameManager.Instance != null &&
+                         GameManager.Instance.CurrentState == GameManager.GameState.BossFight)
+                {
+                    var boss = FindAnyObjectByType<Boss>();
+                    if (boss != null && boss.IsAlive)
+                        AttachToBoss(boss);
                 }
             }
         }

@@ -129,6 +129,11 @@ namespace SwDreams.Adapter.Manager
                 // 보스 혼돈 스킬 적용
                 if (BossChaosApplicator.Instance != null)
                     BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
+
+                // 클라이언트에 보스 초기 데이터 동기화
+                int bossViewID = bossObj.GetComponent<PhotonView>().ViewID;
+                photonView.RPC(nameof(RPC_InitBoss), RpcTarget.Others,
+                    bossViewID, currentBoss.MaxHP);
             }
 
             // 상태 전환
@@ -166,11 +171,33 @@ namespace SwDreams.Adapter.Manager
                 // 보스 혼돈 스킬 적용
                 if (BossChaosApplicator.Instance != null)
                     BossChaosApplicator.Instance.ApplyToBoss(currentBoss);
+
+                // 클라이언트에 보스 초기 데이터 동기화
+                int bossViewID = bossObj.GetComponent<PhotonView>().ViewID;
+                photonView.RPC(nameof(RPC_InitBoss), RpcTarget.Others,
+                    bossViewID, currentBoss.MaxHP);
             }
 
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.BossFight);
 
             Debug.Log($"[BossSpawner] 비상 보스 스폰 (HP배율: {hpMultiplier})");
+        }
+
+        // ===== 호스트 마이그레이션 지원 =====
+
+        /// <summary>
+        /// 호스트 마이그레이션 시 상태 리셋.
+        /// 이전 호스트의 보스 오브젝트가 CleanupCacheOnLeave로 파괴되므로,
+        /// 새 호스트가 GameTime 기준으로 보스를 다시 스폰할 수 있도록 플래그 초기화.
+        /// HostMigrationHandler에서 호출.
+        /// </summary>
+        public void ResetForMigration()
+        {
+            currentBoss = null;
+            bossSpawned = false;
+            warningStarted = false;
+            warningTimer = 0f;
+            Debug.Log("[BossSpawner] 마이그레이션 리셋 완료 — GameTime 기준 보스 재트리거 대기");
         }
 
         private Vector2 CalculateSpawnPosition()
@@ -201,6 +228,29 @@ namespace SwDreams.Adapter.Manager
                     ? BossChaosApplicator.Instance.BossChaosType
                     : SwDreams.Data.ChaosEffectType.None);
             Debug.Log($"[BossSpawner] 보스 경고 UI ({duration}초)");
+        }
+
+        /// <summary>
+        /// 클라이언트에서 보스 초기 상태 설정.
+        /// PhotonView.ViewID로 보스 오브젝트를 찾아 HP 초기화 + 참조 캐싱.
+        /// </summary>
+        [PunRPC]
+        private void RPC_InitBoss(int bossViewID, int maxHP)
+        {
+            PhotonView bossView = PhotonView.Find(bossViewID);
+            if (bossView == null)
+            {
+                Debug.LogWarning($"[BossSpawner] 클라이언트: 보스 ViewID {bossViewID} 찾기 실패");
+                return;
+            }
+
+            currentBoss = bossView.GetComponent<Boss>();
+            if (currentBoss != null)
+            {
+                currentBoss.InitializeFromNetwork(maxHP);
+                bossSpawned = true;
+                Debug.Log($"[BossSpawner] 클라이언트: 보스 초기화 완료 (HP:{maxHP})");
+            }
         }
 
         // ===== 디버그 =====
