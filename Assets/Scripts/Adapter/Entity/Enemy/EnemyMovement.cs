@@ -1,4 +1,5 @@
 using UnityEngine;
+using Photon.Pun;
 using SwDreams.Data;
 
 namespace SwDreams.Adapter.Entity
@@ -32,6 +33,12 @@ namespace SwDreams.Adapter.Entity
         // [Phase 5 진화: 뇌전역] 슬로우
         private float slowTimer;
         private float slowMul = 1f;
+
+        // 네트워크 위치 보정 (클라이언트 전용)
+        // 호스트가 주기적으로 전송하는 위치로 부드럽게 보정
+        private Vector2 networkTargetPos;
+        private bool hasNetworkTarget;
+        [SerializeField] private float networkLerpSpeed = 10f;
 
         [Header("Anti Overlap")]
         [SerializeField] private bool resolveEnemyOverlap = true;
@@ -68,6 +75,7 @@ namespace SwDreams.Adapter.Entity
             enemy = enemyRef;
             hasLifetime = false;
             aliveTimer = 0f;
+            hasNetworkTarget = false;
 
             // EnemyType에 따라 전략 자동 선택
             movementStrategy = CreateStrategy(enemyRef.EnemyType);
@@ -99,7 +107,8 @@ namespace SwDreams.Adapter.Entity
             if (enemy == null || !enemy.IsAlive) return;
 
             if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing)
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing &&
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
                 return;
 
             // Swarm 수명 체크
@@ -124,13 +133,22 @@ namespace SwDreams.Adapter.Entity
             float moveSpeed = enemy.MoveSpeed * slowMul;
             Transform target = FindClosestPlayer();
 
-            // Swarm은 타겟 없어도 이동해야 함
+            // 이동 전략 실행 (호스트/클라이언트 모두 — 클라이언트는 예측용)
             if (movementStrategy != null)
             {
                 if (target != null || movementStrategy is SwarmMovement)
                 {
                     movementStrategy.UpdateMovement(transform, target, moveSpeed);
                 }
+            }
+
+            // 클라이언트: 호스트 위치로 부드럽게 보정
+            if (!PhotonNetwork.IsMasterClient && hasNetworkTarget)
+            {
+                transform.position = Vector2.Lerp(
+                    transform.position,
+                    networkTargetPos,
+                    networkLerpSpeed * Time.deltaTime);
             }
         }
 
@@ -140,7 +158,8 @@ namespace SwDreams.Adapter.Entity
             if (enemy == null || !enemy.IsAlive) return;
 
             if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing)
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing &&
+                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
                 return;
 
             ResolveEnemyOverlap();
@@ -168,6 +187,16 @@ namespace SwDreams.Adapter.Entity
         {
             slowMul = multiplier;
             slowTimer = duration;
+        }
+
+        /// <summary>
+        /// 호스트 위치 수신. SpawnManager.RPC_SyncEnemyPositions에서 호출.
+        /// 클라이언트에서만 의미 있음 — Update에서 이 위치로 Lerp 보정.
+        /// </summary>
+        public void SetNetworkPosition(Vector2 pos)
+        {
+            networkTargetPos = pos;
+            hasNetworkTarget = true;
         }
 
         private void ResolveEnemyOverlap()
