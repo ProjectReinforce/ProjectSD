@@ -996,6 +996,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 300579438}
     m_Modifications:
+    - target: {fileID: 1156474975202685404, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: roomItemPrefab
+      value: 
+      objectReference: {fileID: 9202522811150211711, guid: 69f78a6d074ca4cd09b431b72d6041f6, type: 3}
     - target: {fileID: 3248510432268924882, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -1076,30 +1080,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3324697481947927740, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 3369757912768602334, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3369757912768602334, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3369757912768602334, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 1461
-      objectReference: {fileID: 0}
-    - target: {fileID: 3369757912768602334, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 730.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3369757912768602334, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -50
-      objectReference: {fileID: 0}
     - target: {fileID: 4736304211280505892, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -1132,10 +1112,6 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 5257276538820009261, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 5631580802873864541, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -1153,17 +1129,9 @@ PrefabInstance:
       value: -63
       objectReference: {fileID: 0}
     - target: {fileID: 5878832138380731094, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: refreshButton
-      value: 
-      objectReference: {fileID: 5505843345155630014}
-    - target: {fileID: 5878832138380731094, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: menuSceneManager
       value: 
       objectReference: {fileID: 1702182417}
-    - target: {fileID: 5878832138380731094, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-      propertyPath: autoRefreshInterval
-      value: 20
-      objectReference: {fileID: 0}
     - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.x
       value: 1
@@ -1181,17 +1149,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
---- !u!114 &5505843345155630014 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3690425514713347984, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
-  m_PrefabInstance: {fileID: 5505843345155630013}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &5615845570222096087 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3248510432268924882, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}

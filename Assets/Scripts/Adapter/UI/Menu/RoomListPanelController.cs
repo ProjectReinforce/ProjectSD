@@ -32,8 +32,11 @@ namespace Adapter.UI.Menu
         [SerializeField] private TMP_InputField roomNameInputField;
         [SerializeField] private TMP_InputField createRoomPasswordInputField;
 
+        [Header("Search Room Popup")]
+        [SerializeField] private GameObject searchRoomPopup;
+        [SerializeField] private TMP_InputField searchRoomInputField;
+
         [Header("Join Room UI")]
-        [SerializeField] private TMP_InputField roomSearchInputField;
         [SerializeField] private TMP_InputField joinRoomPasswordInputField;
         [SerializeField] private GameObject joinPasswordPopup;
         [SerializeField] private TMP_InputField joinPasswordPopupInputField;
@@ -65,6 +68,7 @@ namespace Adapter.UI.Menu
 
             SetCreateRoomPanel(false);
             SetJoinPasswordPopup(false);
+            SetSearchRoomPopup(false);
             ClearAllInputFields();
 
             refreshCooldownTimer = 0f;
@@ -154,6 +158,7 @@ namespace Adapter.UI.Menu
         public void OnClickCloseCreateRoomPopup()
         {
             SetCreateRoomPanel(false);
+            ClearCreateRoomInputFields();
         }
 
         public void OnClickConfirmCreateRoom()
@@ -178,9 +183,44 @@ namespace Adapter.UI.Menu
                 : $"Creating room: {roomName} (password)");
         }
 
+        /// <summary>
+        /// 방 찾기 버튼 클릭 → 검색 팝업 열기.
+        /// </summary>
+        public void OnClickOpenSearchRoomPopup()
+        {
+            SetSearchRoomPopup(true);
+        }
+
+        /// <summary>
+        /// 검색 팝업의 CloseBtn 클릭.
+        /// </summary>
+        public void OnClickCloseSearchRoomPopup()
+        {
+            SetSearchRoomPopup(false);
+        }
+
+        /// <summary>
+        /// 검색 팝업의 Search 버튼 클릭.
+        /// 입력된 방 이름으로 진입을 시도한다.
+        /// 비밀번호 방이면 비밀번호 팝업으로 넘어간다.
+        /// </summary>
+        public void OnClickSearchRoom()
+        {
+            var roomName = ReadSearchRoomName();
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                SetStatus("Enter a room name to search.");
+                return;
+            }
+
+            // 검색 팝업 닫고 진입 시도
+            SetSearchRoomPopup(false);
+            TryJoinRoom(roomName);
+        }
+
         public void OnClickJoinRoomFromInput()
         {
-            var roomName = ReadJoinRoomName();
+            var roomName = ReadSearchRoomName();
             TryJoinRoom(roomName);
         }
 
@@ -245,9 +285,9 @@ namespace Adapter.UI.Menu
             return string.IsNullOrWhiteSpace(raw) ? defaultRoomName : raw.Trim();
         }
 
-        private string ReadJoinRoomName()
+        private string ReadSearchRoomName()
         {
-            var raw = roomSearchInputField != null ? roomSearchInputField.text : string.Empty;
+            var raw = searchRoomInputField != null ? searchRoomInputField.text : string.Empty;
             return string.IsNullOrWhiteSpace(raw) ? string.Empty : raw.Trim();
         }
 
@@ -344,6 +384,7 @@ namespace Adapter.UI.Menu
             SetStatus("Joined room.");
             SetCreateRoomPanel(false);
             SetJoinPasswordPopup(false);
+            SetSearchRoomPopup(false);
             ClearAllInputFields();
             menuSceneManager?.ShowWaitingRoom();
         }
@@ -375,21 +416,12 @@ namespace Adapter.UI.Menu
             }
 
             var rooms = NetworkManager.Instance.CachedRoomList;
-            var search = roomSearchInputField != null ? roomSearchInputField.text?.Trim() : string.Empty;
 
             roomListView.SyncItems(
                 rooms,
                 handler: this,
                 isPasswordProtected: room => NetworkManager.Instance.IsRoomPasswordProtected(room),
-                filter: room =>
-                {
-                    if (string.IsNullOrWhiteSpace(search))
-                    {
-                        return true;
-                    }
-
-                    return room.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
-                });
+                filter: null);
 
             SetEmptyListText(roomListView.ActiveItemCount == 0 ? "No rooms available." : string.Empty);
         }
@@ -409,6 +441,20 @@ namespace Adapter.UI.Menu
             if (joinPasswordPopup != null)
             {
                 joinPasswordPopup.SetActive(active);
+            }
+        }
+
+        private void SetSearchRoomPopup(bool active)
+        {
+            if (searchRoomPopup != null)
+            {
+                searchRoomPopup.SetActive(active);
+            }
+
+            // 팝업 닫을 때 입력 필드 초기화
+            if (!active && searchRoomInputField != null)
+            {
+                searchRoomInputField.text = string.Empty;
             }
         }
 
@@ -435,19 +481,11 @@ namespace Adapter.UI.Menu
         /// </summary>
         private void ClearAllInputFields()
         {
-            if (roomNameInputField != null)
-            {
-                roomNameInputField.text = string.Empty;
-            }
+            ClearCreateRoomInputFields();
 
-            if (createRoomPasswordInputField != null)
+            if (searchRoomInputField != null)
             {
-                createRoomPasswordInputField.text = string.Empty;
-            }
-
-            if (roomSearchInputField != null)
-            {
-                roomSearchInputField.text = string.Empty;
+                searchRoomInputField.text = string.Empty;
             }
 
             if (joinRoomPasswordInputField != null)
@@ -461,6 +499,23 @@ namespace Adapter.UI.Menu
             }
 
             pendingJoinRoomName = string.Empty;
+        }
+
+        /// <summary>
+        /// 방 생성 팝업의 입력 필드만 초기화.
+        /// 호출 시점: OnClickCloseCreateRoomPopup(닫기 버튼)
+        /// </summary>
+        private void ClearCreateRoomInputFields()
+        {
+            if (roomNameInputField != null)
+            {
+                roomNameInputField.text = string.Empty;
+            }
+
+            if (createRoomPasswordInputField != null)
+            {
+                createRoomPasswordInputField.text = string.Empty;
+            }
         }
     }
 }
