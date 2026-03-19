@@ -480,10 +480,9 @@ namespace SwDreams.Adapter.Manager
 
             SpawnExpOrb(deathPosition, expValue);
 
-            // 적 사망 SFX (모든 클라이언트)
-            GameAudioConnector.Instance?.OnEnemyDied();
-
-            Debug.Log($"[SpawnManager] 적 사망 ID:{enemyId}, 남은: {activeEnemies.Count}");
+            // 적 사망 SFX — 로컬 플레이어 근처에서만 재생
+            if (IsNearLocalPlayer(deathPosition, 15f))
+                GameAudioConnector.Instance?.OnEnemyDied();
         }
 
         [PunRPC]
@@ -617,6 +616,22 @@ namespace SwDreams.Adapter.Manager
         }
 
         // ===== 디버그 =====
+
+        /// <summary>
+        /// 로컬 플레이어와 지정 위치 사이의 거리가 범위 내인지 확인.
+        /// 사운드 재생 등 로컬 판단용.
+        /// </summary>
+        private bool IsNearLocalPlayer(Vector2 position, float maxDistance)
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                var pv = p.GetComponent<PhotonView>();
+                if (pv != null && pv.IsMine)
+                    return Vector2.Distance(position, p.transform.position) <= maxDistance;
+            }
+            return false;
+        }
 
         public int ActiveEnemyCount => activeEnemies.Count;
 

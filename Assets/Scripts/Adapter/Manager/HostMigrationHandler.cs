@@ -3,6 +3,7 @@ using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 using SwDreams.Data;
+using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Manager
@@ -207,12 +208,40 @@ namespace SwDreams.Adapter.Manager
             if (BossSpawner.Instance != null)
                 BossSpawner.Instance.ResetForMigration();
 
-            // 3) Playing 상태로 전환
+            // 3) 남은 플레이어 전원 사망 체크
+            //    2인 플레이 중 살아있던 호스트가 나가고, 죽어있는 클라이언트만 남으면 GameOver
+            if (AreAllRemainingPlayersDead())
+            {
+                Debug.Log("[HostMigration] 남은 플레이어 전원 사망 → GameOver");
+                GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.GameOver);
+                return;
+            }
+
+            // 4) Playing 상태로 전환
             //    → SpawnManager.Update()가 GameTime 기반으로 적 스폰 재개
             //    → BossSpawner.Update()가 GameTime >= bossTime이면 보스 경고 → 스폰
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Playing);
 
             Debug.Log("[HostMigration] 게임 재개 완료 — 새 인원수 기준으로 리스폰");
+        }
+
+        /// <summary>
+        /// 남은 플레이어가 전원 사망 상태인지 확인.
+        /// IDamageable.IsAlive로 직접 체크 (RespawnManager 상태에 의존하지 않음).
+        /// </summary>
+        private bool AreAllRemainingPlayersDead()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            if (players.Length == 0) return true;
+
+            foreach (var p in players)
+            {
+                if (!p.activeInHierarchy) continue;
+                var damageable = p.GetComponent<IDamageable>();
+                if (damageable != null && damageable.IsAlive)
+                    return false; // 한 명이라도 살아있으면 계속
+            }
+            return true;
         }
 
         // ===== 일반 플레이어 퇴장 처리 =====

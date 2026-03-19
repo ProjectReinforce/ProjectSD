@@ -130,7 +130,7 @@ namespace SwDreams.Presentation
             displayText.alignment = TextAlignmentOptions.TopLeft;
             displayText.richText = false;
             displayText.textWrappingMode = TextWrappingModes.Normal;
-            displayText.overflowMode = TextOverflowModes.Truncate;
+            displayText.overflowMode = TextOverflowModes.Overflow;
             displayText.text = "초기화 중...";
         }
 
@@ -257,7 +257,8 @@ namespace SwDreams.Presentation
             if (displayText == null || backgroundImage == null) return;
 
             displayText.ForceMeshUpdate();
-            var textSize = displayText.GetRenderedValues(false);
+            // GetPreferredValues: 잘림(Truncate) 관계없이 전체 콘텐츠 크기 반환
+            var textSize = displayText.GetPreferredValues();
             var bgRect = backgroundImage.rectTransform;
             bgRect.sizeDelta = new Vector2(
                 Mathf.Max(280, textSize.x + 20),

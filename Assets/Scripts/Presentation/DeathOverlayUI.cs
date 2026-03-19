@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
+using Photon.Pun;
 using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Presentation
@@ -30,20 +31,63 @@ namespace SwDreams.Presentation
         [SerializeField] private float fadeOutDuration = 0.3f;
 
         private Tween fadeTween;
+        private SwDreams.Testing.PlayerStub localPlayerStub;
+        private bool isSubscribed;
+
+        private bool isRespawnSubscribed;
 
         private void Start()
         {
-            // 초기 상태: 숨김
+            // 초기 상태: 비주얼만 숨김 (Update는 동작해야 자동 감지 가능)
             if (overlay != null)
             {
                 overlay.alpha = 0f;
                 overlay.blocksRaycasts = false;
             }
-            gameObject.SetActive(false);
 
-            // RespawnManager 카운트다운 구독
+            TrySubscribeRespawnManager();
+        }
+
+        private void Update()
+        {
+            // 로컬 PlayerStub 자동 감지 + 이벤트 구독
+            if (!isSubscribed)
+                TrySubscribeToLocalPlayer();
+
+            // RespawnManager가 Start 시점에 없었으면 재시도
+            if (!isRespawnSubscribed)
+                TrySubscribeRespawnManager();
+        }
+
+        private void TrySubscribeRespawnManager()
+        {
+            if (isRespawnSubscribed) return;
             if (RespawnManager.Instance != null)
+            {
                 RespawnManager.Instance.OnLocalRespawnTimer += UpdateCountdown;
+                isRespawnSubscribed = true;
+            }
+        }
+
+        private void TrySubscribeToLocalPlayer()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                var pv = p.GetComponent<PhotonView>();
+                if (pv != null && pv.IsMine)
+                {
+                    localPlayerStub = p.GetComponent<SwDreams.Testing.PlayerStub>();
+                    if (localPlayerStub != null)
+                    {
+                        localPlayerStub.OnDied += ShowDeath;
+                        localPlayerStub.OnRespawned += HideDeath;
+                        isSubscribed = true;
+                        Debug.Log("[DeathOverlayUI] 로컬 플레이어 이벤트 구독 완료");
+                    }
+                    return;
+                }
+            }
         }
 
         private void OnDestroy()
@@ -51,6 +95,12 @@ namespace SwDreams.Presentation
             fadeTween?.Kill();
             if (RespawnManager.Instance != null)
                 RespawnManager.Instance.OnLocalRespawnTimer -= UpdateCountdown;
+
+            if (localPlayerStub != null)
+            {
+                localPlayerStub.OnDied -= ShowDeath;
+                localPlayerStub.OnRespawned -= HideDeath;
+            }
         }
 
         /// <summary>
