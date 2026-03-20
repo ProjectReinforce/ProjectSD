@@ -27,6 +27,6 @@ MonoBehaviour:
   knockback: 1
   critDamage: 1.5
   expMultiplier: 1
-  defenseMultiplier: 1
+  defenseMultiplier: 1.05
   healMultiplier: 1
   skillDuration: 0

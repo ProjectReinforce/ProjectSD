@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dbf2f8e7b39957479c870585a2d6e50, type: 3}
   m_Name: GameplayConfig
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.GameplayConfig
-  magnetRange: 0.8
-  magnetSpeed: 1.3
+  magnetRange: 1.5
+  magnetSpeed: 2
   maxSkillSlots: 6
   projectileSpreadAngle: 15
   selectionTimeout: 15
@@ -27,5 +27,5 @@ MonoBehaviour:
   respawnHPRatio: 0.5
   reconnectWaitTime: 5
   emergencyBossHPRatio: 0.7
-  projectilePrewarmCount: 20
-  expOrbPrewarmCount: 50
+  projectilePrewarmCount: 30
+  expOrbPrewarmCount: 80

@@ -116,7 +116,7 @@ namespace SwDreams.Data
         public float healthMultiplier;
 
         [Tooltip("한 틱에 스폰하는 수 (Swarm 제외)")]
-        [Range(1, 5)]
+        [Range(1, 10)]
         public int spawnPerTick;
 
         [Header("적 타입 등장 비율 (합계 = 1.0)")]

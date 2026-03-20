@@ -20,15 +20,15 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: c95d0d410a27ca04b924f43164c87f87, type: 3}
   description: "\uB3CC\uC544\uC624\uB294\uAC70\uC57C"
   maxLevel: 7
-  damagePerLevel: 0e0000001100000015000000190000001e000000240000002c000000
+  damagePerLevel: 0a0000000d00000011000000150000001a000000210000002a000000
   cooldownPerLevel:
-  - 2.5
-  - 2.3
-  - 2.15
+  - 2.8
+  - 2.6
+  - 2.4
+  - 2.2
   - 2
-  - 1.85
-  - 1.7
-  - 1.55
+  - 1.82
+  - 1.65
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: c9ed69f6646a5fe4198a0ea1e5781f5b, type: 3}

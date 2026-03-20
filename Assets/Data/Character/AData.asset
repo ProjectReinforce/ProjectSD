@@ -18,7 +18,7 @@ MonoBehaviour:
   startingActiveSkill: {fileID: 11400000, guid: 7739e571ff109f542a287284ac1e47eb, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: e12fa716c93844f41b5c4f111f903436, type: 2}
   maxHP: 100
-  moveSpeed: 0.8
+  moveSpeed: 0.84
   attackMultiplier: 1
   projectileSpeed: 0
   projectileCount: 0

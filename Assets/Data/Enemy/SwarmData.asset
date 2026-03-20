@@ -15,8 +15,8 @@ MonoBehaviour:
   enemyName: Swarm
   enemyType: 3
   sprite: {fileID: 21300000, guid: 6be2252b8cfe64d7aa0f2b0672c61d63, type: 3}
-  baseHP: 10
-  moveSpeed: 0.4
-  contactDamage: 5
+  baseHP: 15
+  moveSpeed: 0.55
+  contactDamage: 10
   expValue: 2
   knockbackResistance: 0

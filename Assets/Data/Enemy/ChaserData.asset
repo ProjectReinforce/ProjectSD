@@ -15,8 +15,8 @@ MonoBehaviour:
   enemyName: Chaser
   enemyType: 0
   sprite: {fileID: 21300000, guid: e420a5f77b3474e94a87be531c38223e, type: 3}
-  baseHP: 30
-  moveSpeed: 0.48
-  contactDamage: 10
+  baseHP: 50
+  moveSpeed: 0.6
+  contactDamage: 20
   expValue: 5
   knockbackResistance: 0

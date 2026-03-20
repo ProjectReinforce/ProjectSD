@@ -311,7 +311,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06a4253d96f732f4dbbd315a510be232, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.ChaosSkillManager
-  explosionRadius: 2
+  explosionRadius: 0.35
   explosionDamage: 20
   maxChainPerFrame: 5
   explosionEffectPrefab: {fileID: 0}

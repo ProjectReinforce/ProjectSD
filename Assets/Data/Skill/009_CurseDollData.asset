@@ -22,13 +22,13 @@ MonoBehaviour:
   maxLevel: 7
   damagePerLevel: 03000000040000000500000006000000080000000a0000000c000000
   cooldownPerLevel:
-  - 5
-  - 4.6
-  - 4.2
-  - 3.8
-  - 3.5
+  - 5.5
+  - 5.1
+  - 4.7
+  - 4.3
+  - 3.9
+  - 3.55
   - 3.2
-  - 2.8
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 7611705742342394119, guid: 594a0d8e6afed9c4b940ebdb66c88430, type: 3}
