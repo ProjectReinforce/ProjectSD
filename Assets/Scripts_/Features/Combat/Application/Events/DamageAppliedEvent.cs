@@ -5,14 +5,14 @@ namespace Features.Combat.Application.Events
 {
     public readonly struct DamageAppliedEvent
     {
-        public DamageAppliedEvent(EntityId targetId, float damage, DamageType damageType)
+        public DamageAppliedEvent(DomainEntityId targetId, float damage, DamageType damageType)
         {
             TargetId = targetId;
             Damage = damage;
             DamageType = damageType;
         }
 
-        public EntityId TargetId { get; }
+        public DomainEntityId TargetId { get; }
         public float Damage { get; }
         public DamageType DamageType { get; }
     }

@@ -6,6 +6,6 @@ namespace Shared.Time
     public interface IClockPort
     {
         DateTime UtcNow { get; }
-        EntityId NewId();
+        DomainEntityId NewId();
     }
 }

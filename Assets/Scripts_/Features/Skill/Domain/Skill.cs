@@ -5,7 +5,7 @@ namespace Features.Skill.Domain
 {
     public sealed class Skill : Entity
     {
-        public Skill(EntityId id, SkillSpec spec, IDeliveryStrategy delivery) : base(id)
+        public Skill(DomainEntityId id, SkillSpec spec, IDeliveryStrategy delivery) : base(id)
         {
             Spec = spec;
             Delivery = delivery;

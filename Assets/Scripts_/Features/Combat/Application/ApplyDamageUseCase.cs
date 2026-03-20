@@ -17,7 +17,7 @@ namespace Features.Combat.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(EntityId targetId, float baseDamage, DamageType damageType)
+        public Result Execute(DomainEntityId targetId, float baseDamage, DamageType damageType)
         {
             var defense = _target.GetDefense(targetId);
             var finalDamage = DamageRule.Calculate(baseDamage, defense, damageType);

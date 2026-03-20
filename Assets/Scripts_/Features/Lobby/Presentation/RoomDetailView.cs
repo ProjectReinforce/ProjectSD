@@ -6,7 +6,6 @@ using Shared.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Presentation
 {
@@ -47,8 +46,8 @@ namespace Features.Lobby.Presentation
 
         private LobbyUseCases _useCases;
 
-        private EntityId _currentRoomId;
-        private EntityId _localMemberId;
+        private DomainEntityId _currentRoomId;
+        private DomainEntityId _localMemberId;
         private bool _localIsReady;
         private readonly List<MemberItemView> _spawnedItems = new List<MemberItemView>();
 
@@ -68,21 +67,21 @@ namespace Features.Lobby.Presentation
                 _startGameButton.onClick.AddListener(HandleStartGame);
         }
 
-        public void SetLocalMemberId(EntityId memberId)
+        public void SetLocalMemberId(DomainEntityId memberId)
         {
             _localMemberId = memberId;
         }
 
-        public Result LeaveRoom(EntityId roomId, EntityId memberId) =>
+        public Result LeaveRoom(DomainEntityId roomId, DomainEntityId memberId) =>
             _useCases.LeaveRoom(roomId, memberId);
 
-        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team) =>
+        public Result ChangeTeam(DomainEntityId roomId, DomainEntityId memberId, TeamType team) =>
             _useCases.ChangeTeam(roomId, memberId, team);
 
-        public Result SetReady(EntityId roomId, EntityId memberId, bool isReady) =>
+        public Result SetReady(DomainEntityId roomId, DomainEntityId memberId, bool isReady) =>
             _useCases.SetReady(roomId, memberId, isReady);
 
-        public Result StartGame(EntityId roomId) => _useCases.StartGame(roomId);
+        public Result StartGame(DomainEntityId roomId) => _useCases.StartGame(roomId);
 
         public void Render(RoomSnapshot room)
         {

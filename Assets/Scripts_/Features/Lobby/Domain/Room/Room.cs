@@ -8,7 +8,7 @@ namespace Features.Lobby.Domain
     {
         private readonly List<RoomMember> _members = new List<RoomMember>();
 
-        private Room(EntityId id, string name, int capacity, RoomMember owner)
+        private Room(DomainEntityId id, string name, int capacity, RoomMember owner)
             : base(id)
         {
             Name = name;
@@ -19,14 +19,14 @@ namespace Features.Lobby.Domain
 
         public string Name { get; }
         public int Capacity { get; }
-        public EntityId OwnerId { get; private set; }
+        public DomainEntityId OwnerId { get; private set; }
 
         public IReadOnlyList<RoomMember> Members
         {
             get { return _members; }
         }
 
-        public static Result<Room> Create(EntityId id, string name, int capacity, RoomMember owner)
+        public static Result<Room> Create(DomainEntityId id, string name, int capacity, RoomMember owner)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -67,7 +67,7 @@ namespace Features.Lobby.Domain
             return Result.Success();
         }
 
-        public Result RemoveMember(EntityId memberId)
+        public Result RemoveMember(DomainEntityId memberId)
         {
             var member = FindMember(memberId);
             if (member == null)
@@ -84,7 +84,7 @@ namespace Features.Lobby.Domain
             return Result.Success();
         }
 
-        public Result ChangeTeam(EntityId memberId, TeamType team)
+        public Result ChangeTeam(DomainEntityId memberId, TeamType team)
         {
             var member = FindMember(memberId);
             if (member == null)
@@ -96,7 +96,7 @@ namespace Features.Lobby.Domain
             return Result.Success();
         }
 
-        public Result SetReady(EntityId memberId, bool isReady)
+        public Result SetReady(DomainEntityId memberId, bool isReady)
         {
             var member = FindMember(memberId);
             if (member == null)
@@ -126,7 +126,7 @@ namespace Features.Lobby.Domain
             return true;
         }
 
-        public RoomMember FindMember(EntityId memberId)
+        public RoomMember FindMember(DomainEntityId memberId)
         {
             return _members.Find(member => member.Id.Equals(memberId));
         }

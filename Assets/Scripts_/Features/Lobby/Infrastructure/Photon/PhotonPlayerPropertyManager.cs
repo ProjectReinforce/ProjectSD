@@ -1,7 +1,7 @@
 using ExitGames.Client.Photon;
 using Features.Lobby.Domain;
 using Photon.Pun;
-using EntityId = Shared.Kernel.EntityId;
+using Shared.Kernel;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
@@ -29,7 +29,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return true;
         }
 
-        public bool TryGetLocalMemberId(out EntityId memberId)
+        public bool TryGetLocalMemberId(out DomainEntityId memberId)
         {
             memberId = default;
 
@@ -42,7 +42,7 @@ namespace Features.Lobby.Infrastructure.Photon
             if (string.IsNullOrWhiteSpace(raw))
                 return false;
 
-            memberId = new EntityId(raw);
+            memberId = new DomainEntityId(raw);
             return true;
         }
     }

@@ -7,6 +7,6 @@ namespace Shared.Time
     {
         public DateTime UtcNow => DateTime.UtcNow;
 
-        public EntityId NewId() => EntityId.New();
+        public DomainEntityId NewId() => DomainEntityId.New();
     }
 }

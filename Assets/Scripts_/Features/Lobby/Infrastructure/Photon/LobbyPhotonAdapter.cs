@@ -7,9 +7,10 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using DomainRoom = Features.Lobby.Domain.Room;
-using EntityId = Shared.Kernel.EntityId;
+using PhotonPlayer = Photon.Realtime.Player;
 using PhotonRoom = Photon.Realtime.Room;
 using Result = Shared.Kernel.Result;
+using Shared.Kernel;
 
 namespace Features.Lobby.Infrastructure.Photon
 {
@@ -27,18 +28,18 @@ namespace Features.Lobby.Infrastructure.Photon
         // Pending state
         private DomainRoom _pendingCreateRoom;
         private bool _pendingJoin;
-        private EntityId _pendingLeaveRoomId;
-        private EntityId _pendingLeaveMemberId;
+        private DomainEntityId _pendingLeaveRoomId;
+        private DomainEntityId _pendingLeaveMemberId;
 
         // ILobbyNetworkCallbackPort callbacks
         public Action<DomainRoom> OnCreateRoomSucceeded { get; set; }
         public Action<string> OnErrorOccurred { get; set; }
         public Action<JoinRoomData> OnJoinRoomSucceeded { get; set; }
-        public Action<EntityId, EntityId> OnLeaveRoomSucceeded { get; set; }
-        public Action<EntityId, RoomMember> OnRemotePlayerEntered { get; set; }
-        public Action<EntityId, EntityId> OnRemotePlayerLeft { get; set; }
+        public Action<DomainEntityId, DomainEntityId> OnLeaveRoomSucceeded { get; set; }
+        public Action<DomainEntityId, RoomMember> OnRemotePlayerEntered { get; set; }
+        public Action<DomainEntityId, DomainEntityId> OnRemotePlayerLeft { get; set; }
         public Action<PlayerPropertiesData> OnPlayerPropertiesChanged { get; set; }
-        public Action<EntityId> OnGameStarted { get; set; }
+        public Action<DomainEntityId> OnGameStarted { get; set; }
         public Action<List<RoomListItem>> OnRoomListUpdated { get; set; }
 
         // ===== ILobbyNetworkCommandPort =====
@@ -92,7 +93,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result JoinRoom(EntityId roomId, RoomMember localMember)
+        public Result JoinRoom(DomainEntityId roomId, RoomMember localMember)
         {
             if (localMember == null)
                 return Result.Failure("Member is required.");
@@ -124,7 +125,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result LeaveRoom(EntityId roomId, EntityId memberId)
+        public Result LeaveRoom(DomainEntityId roomId, DomainEntityId memberId)
         {
             var inRoom = ValidateInRoom();
             if (!inRoom.IsSuccess)
@@ -152,7 +153,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result ChangeTeam(EntityId memberId, TeamType team)
+        public Result ChangeTeam(DomainEntityId memberId, TeamType team)
         {
             var inRoom = ValidateInRoom();
             if (!inRoom.IsSuccess)
@@ -168,7 +169,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result SetReady(EntityId memberId, bool isReady)
+        public Result SetReady(DomainEntityId memberId, bool isReady)
         {
             var inRoom = ValidateInRoom();
             if (!inRoom.IsSuccess)
@@ -184,7 +185,7 @@ namespace Features.Lobby.Infrastructure.Photon
             return Result.Success();
         }
 
-        public Result StartGame(EntityId roomId)
+        public Result StartGame(DomainEntityId roomId)
         {
             var inRoom = ValidateInRoom();
             if (!inRoom.IsSuccess)
@@ -238,7 +239,7 @@ namespace Features.Lobby.Infrastructure.Photon
             _pendingJoin = false;
 
             var photonRoom = PhotonNetwork.CurrentRoom;
-            var roomId = new EntityId(photonRoom.Name);
+            var roomId = new DomainEntityId(photonRoom.Name);
             var roomName =
                 photonRoom.CustomProperties.TryGetValue(
                     LobbyPhotonConstants.RoomDisplayNameKey,
@@ -256,7 +257,7 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            EntityId masterMemberId = default;
+            DomainEntityId masterMemberId = default;
             if (photonRoom.Players.TryGetValue(photonRoom.MasterClientId, out var masterPlayer))
             {
                 var m = BuildMemberFromPlayer(masterPlayer);
@@ -303,7 +304,7 @@ namespace Features.Lobby.Infrastructure.Photon
             OnLeaveRoomSucceeded?.Invoke(roomId, memberId);
         }
 
-        public override void OnPlayerEnteredRoom(Player newPlayer)
+        public override void OnPlayerEnteredRoom(PhotonPlayer newPlayer)
         {
             if (!PhotonNetwork.InRoom)
                 return;
@@ -319,11 +320,11 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
+            var roomId = new DomainEntityId(PhotonNetwork.CurrentRoom.Name);
             OnRemotePlayerEntered?.Invoke(roomId, member);
         }
 
-        public override void OnPlayerLeftRoom(Player otherPlayer)
+        public override void OnPlayerLeftRoom(PhotonPlayer otherPlayer)
         {
             if (!PhotonNetwork.InRoom)
                 return;
@@ -343,13 +344,13 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
-            var memberId = new EntityId(memberIdStr);
+            var roomId = new DomainEntityId(PhotonNetwork.CurrentRoom.Name);
+            var memberId = new DomainEntityId(memberIdStr);
 
             OnRemotePlayerLeft?.Invoke(roomId, memberId);
         }
 
-        public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
+        public override void OnPlayerPropertiesUpdate(PhotonPlayer targetPlayer, Hashtable changedProps)
         {
             if (!PhotonNetwork.InRoom)
                 return;
@@ -376,8 +377,8 @@ namespace Features.Lobby.Infrastructure.Photon
             if (!team.HasValue && !isReady.HasValue)
                 return;
 
-            var roomId = new EntityId(PhotonNetwork.CurrentRoom.Name);
-            var memberId = new EntityId(midStr);
+            var roomId = new DomainEntityId(PhotonNetwork.CurrentRoom.Name);
+            var memberId = new DomainEntityId(midStr);
 
             OnPlayerPropertiesChanged?.Invoke(
                 new PlayerPropertiesData(roomId, memberId, team, isReady)
@@ -400,7 +401,7 @@ namespace Features.Lobby.Infrastructure.Photon
                 return;
             }
 
-            var roomId = new EntityId(roomIdValue);
+            var roomId = new DomainEntityId(roomIdValue);
             OnGameStarted?.Invoke(roomId);
         }
 
@@ -412,7 +413,7 @@ namespace Features.Lobby.Infrastructure.Photon
                 if (info.RemovedFromList || !info.IsVisible)
                     continue;
 
-                var roomId = new EntityId(info.Name);
+                var roomId = new DomainEntityId(info.Name);
                 string displayName = info.Name;
                 if (info.CustomProperties.TryGetValue(
                         LobbyPhotonConstants.RoomDisplayNameKey, out var nameRaw)
@@ -437,7 +438,7 @@ namespace Features.Lobby.Infrastructure.Photon
             _pendingLeaveMemberId = default;
         }
 
-        private static RoomMember BuildMemberFromPlayer(Player player)
+        private static RoomMember BuildMemberFromPlayer(PhotonPlayer player)
         {
             if (
                 !player.CustomProperties.TryGetValue(
@@ -447,7 +448,7 @@ namespace Features.Lobby.Infrastructure.Photon
             )
                 return null;
 
-            var memberId = new EntityId(midStr);
+            var memberId = new DomainEntityId(midStr);
             var displayName =
                 player.CustomProperties.TryGetValue(
                     LobbyPhotonConstants.DisplayNameKey,
@@ -491,7 +492,7 @@ namespace Features.Lobby.Infrastructure.Photon
         private static Result ValidateInRoom() =>
             PhotonNetwork.InRoom ? Result.Success() : Result.Failure("Not in a room.");
 
-        private Result ValidateLocalMember(EntityId memberId)
+        private Result ValidateLocalMember(DomainEntityId memberId)
         {
             if (!_propertyManager.TryGetLocalMemberId(out var localMemberId))
                 return Result.Failure("Local member id is missing.");

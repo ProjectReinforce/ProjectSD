@@ -46,7 +46,7 @@ namespace Features.Lobby.Application
             return _network.CreateRoom(roomResult.Value);
         }
 
-        public Result JoinRoom(EntityId roomId, string memberDisplayName)
+        public Result JoinRoom(DomainEntityId roomId, string memberDisplayName)
         {
             var name = string.IsNullOrWhiteSpace(memberDisplayName)
                 ? "Player"
@@ -55,7 +55,7 @@ namespace Features.Lobby.Application
             return _network.JoinRoom(roomId, member);
         }
 
-        public Result LeaveRoom(EntityId roomId, EntityId memberId)
+        public Result LeaveRoom(DomainEntityId roomId, DomainEntityId memberId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -68,7 +68,7 @@ namespace Features.Lobby.Application
             return _network.LeaveRoom(roomId, memberId);
         }
 
-        public Result ChangeTeam(EntityId roomId, EntityId memberId, TeamType team)
+        public Result ChangeTeam(DomainEntityId roomId, DomainEntityId memberId, TeamType team)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -81,7 +81,7 @@ namespace Features.Lobby.Application
             return _network.ChangeTeam(memberId, team);
         }
 
-        public Result SetReady(EntityId roomId, EntityId memberId, bool isReady)
+        public Result SetReady(DomainEntityId roomId, DomainEntityId memberId, bool isReady)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -94,7 +94,7 @@ namespace Features.Lobby.Application
             return _network.SetReady(memberId, isReady);
         }
 
-        public Result StartGame(EntityId roomId)
+        public Result StartGame(DomainEntityId roomId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);

@@ -6,7 +6,7 @@ namespace Features.Lobby.Application.Events
 {
     public readonly struct RoomMemberSnapshot
     {
-        public EntityId Id { get; }
+        public DomainEntityId Id { get; }
         public string DisplayName { get; }
         public TeamType Team { get; }
         public bool IsReady { get; }
@@ -22,10 +22,10 @@ namespace Features.Lobby.Application.Events
 
     public readonly struct RoomSnapshot
     {
-        public EntityId Id { get; }
+        public DomainEntityId Id { get; }
         public string Name { get; }
         public int Capacity { get; }
-        public EntityId OwnerId { get; }
+        public DomainEntityId OwnerId { get; }
         public IReadOnlyList<RoomMemberSnapshot> Members { get; }
 
         public RoomSnapshot(Room room)

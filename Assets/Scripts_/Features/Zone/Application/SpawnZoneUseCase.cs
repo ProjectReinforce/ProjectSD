@@ -20,7 +20,7 @@ namespace Features.Zone.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(EntityId casterId, ZoneSpec spec)
+        public Result Execute(DomainEntityId casterId, ZoneSpec spec)
         {
             var zone = new Domain.Zone(_clock.NewId(), casterId, spec);
 

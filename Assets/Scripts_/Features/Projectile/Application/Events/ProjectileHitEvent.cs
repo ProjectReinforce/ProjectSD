@@ -4,13 +4,13 @@ namespace Features.Projectile.Application.Events
 {
     public readonly struct ProjectileHitEvent
     {
-        public ProjectileHitEvent(EntityId projectileId, EntityId targetId)
+        public ProjectileHitEvent(DomainEntityId projectileId, DomainEntityId targetId)
         {
             ProjectileId = projectileId;
             TargetId = targetId;
         }
 
-        public EntityId ProjectileId { get; }
-        public EntityId TargetId { get; }
+        public DomainEntityId ProjectileId { get; }
+        public DomainEntityId TargetId { get; }
     }
 }

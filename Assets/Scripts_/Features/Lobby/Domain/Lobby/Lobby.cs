@@ -34,7 +34,7 @@ namespace Features.Lobby.Domain
             return Result.Success();
         }
 
-        public Result RemoveRoom(EntityId roomId)
+        public Result RemoveRoom(DomainEntityId roomId)
         {
             var room = FindRoom(roomId);
             if (room == null)
@@ -46,7 +46,7 @@ namespace Features.Lobby.Domain
             return Result.Success();
         }
 
-        public Room FindRoom(EntityId roomId)
+        public Room FindRoom(DomainEntityId roomId)
         {
             return _rooms.Find(room => room.Id.Equals(roomId));
         }

@@ -22,7 +22,7 @@ namespace Features.Projectile.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(EntityId ownerId, ProjectileSpec spec)
+        public Result Execute(DomainEntityId ownerId, ProjectileSpec spec)
         {
             var projectile = new Domain.Projectile(_clock.NewId(), ownerId, spec);
             var trajectory = TrajectoryFactory.Create(spec.TrajectoryType);

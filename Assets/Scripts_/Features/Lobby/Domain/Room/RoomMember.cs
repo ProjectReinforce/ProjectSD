@@ -4,7 +4,7 @@ namespace Features.Lobby.Domain
 {
     public sealed class RoomMember : Entity
     {
-        public RoomMember(EntityId id, string displayName, TeamType team, bool isReady)
+        public RoomMember(DomainEntityId id, string displayName, TeamType team, bool isReady)
             : base(id)
         {
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Player" : displayName.Trim();

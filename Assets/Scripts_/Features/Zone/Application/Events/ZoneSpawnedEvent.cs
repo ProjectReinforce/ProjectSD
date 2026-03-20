@@ -4,13 +4,13 @@ namespace Features.Zone.Application.Events
 {
     public readonly struct ZoneSpawnedEvent
     {
-        public ZoneSpawnedEvent(EntityId zoneId, EntityId casterId)
+        public ZoneSpawnedEvent(DomainEntityId zoneId, DomainEntityId casterId)
         {
             ZoneId = zoneId;
             CasterId = casterId;
         }
 
-        public EntityId ZoneId { get; }
-        public EntityId CasterId { get; }
+        public DomainEntityId ZoneId { get; }
+        public DomainEntityId CasterId { get; }
     }
 }

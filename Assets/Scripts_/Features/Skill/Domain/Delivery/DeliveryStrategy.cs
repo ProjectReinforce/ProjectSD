@@ -4,6 +4,6 @@ namespace Features.Skill.Domain.Delivery
 {
     public interface IDeliveryStrategy
     {
-        DeliveryResult Deliver(EntityId skillId, EntityId casterId, SkillSpec spec);
+        DeliveryResult Deliver(DomainEntityId skillId, DomainEntityId casterId, SkillSpec spec);
     }
 }

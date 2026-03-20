@@ -6,7 +6,6 @@ using Shared.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Presentation
 {
@@ -46,7 +45,7 @@ namespace Features.Lobby.Presentation
         public Result CreateRoom(string roomName, int capacity, string ownerDisplayName) =>
             _useCases.CreateRoom(roomName, capacity, ownerDisplayName);
 
-        public Result JoinRoom(EntityId roomId, string memberDisplayName) =>
+        public Result JoinRoom(DomainEntityId roomId, string memberDisplayName) =>
             _useCases.JoinRoom(roomId, memberDisplayName);
 
         public void Render(IReadOnlyList<RoomSnapshot> rooms)
@@ -93,7 +92,7 @@ namespace Features.Lobby.Presentation
                 Debug.LogWarning($"[Lobby] Create room failed: {result.Error}");
         }
 
-        private void OnJoinRoomClicked(EntityId roomId)
+        private void OnJoinRoomClicked(DomainEntityId roomId)
         {
             var displayName = _displayNameInput != null ? _displayNameInput.text : "Player";
             var result = _useCases.JoinRoom(roomId, displayName);

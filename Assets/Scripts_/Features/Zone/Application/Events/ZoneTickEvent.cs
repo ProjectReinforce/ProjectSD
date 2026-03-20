@@ -4,13 +4,13 @@ namespace Features.Zone.Application.Events
 {
     public readonly struct ZoneTickEvent
     {
-        public ZoneTickEvent(EntityId zoneId, EntityId targetId)
+        public ZoneTickEvent(DomainEntityId zoneId, DomainEntityId targetId)
         {
             ZoneId = zoneId;
             TargetId = targetId;
         }
 
-        public EntityId ZoneId { get; }
-        public EntityId TargetId { get; }
+        public DomainEntityId ZoneId { get; }
+        public DomainEntityId TargetId { get; }
     }
 }

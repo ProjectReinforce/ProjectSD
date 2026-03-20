@@ -5,15 +5,15 @@ namespace Features.Skill.Application.Events
 {
     public readonly struct SkillCastedEvent
     {
-        public SkillCastedEvent(EntityId skillId, EntityId casterId, SkillSpec spec)
+        public SkillCastedEvent(DomainEntityId skillId, DomainEntityId casterId, SkillSpec spec)
         {
             SkillId = skillId;
             CasterId = casterId;
             Spec = spec;
         }
 
-        public EntityId SkillId { get; }
-        public EntityId CasterId { get; }
+        public DomainEntityId SkillId { get; }
+        public DomainEntityId CasterId { get; }
         public SkillSpec Spec { get; }
     }
 }

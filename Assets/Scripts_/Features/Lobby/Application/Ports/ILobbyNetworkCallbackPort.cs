@@ -10,15 +10,15 @@ namespace Features.Lobby.Application.Ports
     /// </summary>
     public sealed class JoinRoomData
     {
-        public EntityId RoomId { get; }
+        public DomainEntityId RoomId { get; }
         public string RoomName { get; }
         public int Capacity { get; }
         public List<RoomMember> Members { get; }
-        public EntityId MasterMemberId { get; }
-        public EntityId LocalMemberId { get; }
+        public DomainEntityId MasterMemberId { get; }
+        public DomainEntityId LocalMemberId { get; }
 
-        public JoinRoomData(EntityId roomId, string roomName, int capacity,
-            List<RoomMember> members, EntityId masterMemberId, EntityId localMemberId)
+        public JoinRoomData(DomainEntityId roomId, string roomName, int capacity,
+            List<RoomMember> members, DomainEntityId masterMemberId, DomainEntityId localMemberId)
         {
             RoomId = roomId;
             RoomName = roomName;
@@ -34,12 +34,12 @@ namespace Features.Lobby.Application.Ports
     /// </summary>
     public sealed class PlayerPropertiesData
     {
-        public EntityId RoomId { get; }
-        public EntityId MemberId { get; }
+        public DomainEntityId RoomId { get; }
+        public DomainEntityId MemberId { get; }
         public TeamType? Team { get; }
         public bool? IsReady { get; }
 
-        public PlayerPropertiesData(EntityId roomId, EntityId memberId, TeamType? team, bool? isReady)
+        public PlayerPropertiesData(DomainEntityId roomId, DomainEntityId memberId, TeamType? team, bool? isReady)
         {
             RoomId = roomId;
             MemberId = memberId;
@@ -53,13 +53,13 @@ namespace Features.Lobby.Application.Ports
     /// </summary>
     public sealed class RoomListItem
     {
-        public EntityId RoomId { get; }
+        public DomainEntityId RoomId { get; }
         public string RoomName { get; }
         public int PlayerCount { get; }
         public int MaxPlayers { get; }
         public bool IsOpen { get; }
 
-        public RoomListItem(EntityId roomId, string roomName, int playerCount, int maxPlayers, bool isOpen)
+        public RoomListItem(DomainEntityId roomId, string roomName, int playerCount, int maxPlayers, bool isOpen)
         {
             RoomId = roomId;
             RoomName = roomName;
@@ -74,11 +74,11 @@ namespace Features.Lobby.Application.Ports
         Action<Room> OnCreateRoomSucceeded { set; }
         Action<string> OnErrorOccurred { set; }
         Action<JoinRoomData> OnJoinRoomSucceeded { set; }
-        Action<EntityId, EntityId> OnLeaveRoomSucceeded { set; }
-        Action<EntityId, RoomMember> OnRemotePlayerEntered { set; }
-        Action<EntityId, EntityId> OnRemotePlayerLeft { set; }
+        Action<DomainEntityId, DomainEntityId> OnLeaveRoomSucceeded { set; }
+        Action<DomainEntityId, RoomMember> OnRemotePlayerEntered { set; }
+        Action<DomainEntityId, DomainEntityId> OnRemotePlayerLeft { set; }
         Action<PlayerPropertiesData> OnPlayerPropertiesChanged { set; }
-        Action<EntityId> OnGameStarted { set; }
+        Action<DomainEntityId> OnGameStarted { set; }
         Action<List<RoomListItem>> OnRoomListUpdated { set; }
     }
 }

@@ -4,7 +4,7 @@ namespace Features.Skill.Domain.Delivery
 {
     public sealed class ZoneDelivery : IDeliveryStrategy
     {
-        public DeliveryResult Deliver(EntityId skillId, EntityId casterId, SkillSpec spec)
+        public DeliveryResult Deliver(DomainEntityId skillId, DomainEntityId casterId, SkillSpec spec)
         {
             return new ZoneDeliveryResult();
         }

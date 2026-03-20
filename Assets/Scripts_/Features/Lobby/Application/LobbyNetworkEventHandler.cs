@@ -5,7 +5,6 @@ using Features.Lobby.Domain;
 using Shared.EventBus;
 using Shared.Kernel;
 using DomainLobby = Features.Lobby.Domain.Lobby;
-using EntityId = Shared.Kernel.EntityId;
 
 namespace Features.Lobby.Application
 {
@@ -13,7 +12,7 @@ namespace Features.Lobby.Application
     {
         private readonly ILobbyRepository _repository;
         private readonly IEventPublisher _publisher;
-        private EntityId _localMemberId;
+        private DomainEntityId _localMemberId;
 
         public LobbyNetworkEventHandler(
             ILobbyRepository repository,
@@ -80,7 +79,7 @@ namespace Features.Lobby.Application
                 PublishError(result.Error);
         }
 
-        private void HandleLeaveRoomSucceeded(EntityId roomId, EntityId memberId)
+        private void HandleLeaveRoomSucceeded(DomainEntityId roomId, DomainEntityId memberId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -119,7 +118,7 @@ namespace Features.Lobby.Application
                 _publisher.Publish(new RoomUpdatedEvent(room, _localMemberId));
         }
 
-        private void HandleRemotePlayerEntered(EntityId roomId, RoomMember member)
+        private void HandleRemotePlayerEntered(DomainEntityId roomId, RoomMember member)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -141,7 +140,7 @@ namespace Features.Lobby.Application
                 PublishError(result.Error);
         }
 
-        private void HandleRemotePlayerLeft(EntityId roomId, EntityId memberId)
+        private void HandleRemotePlayerLeft(DomainEntityId roomId, DomainEntityId memberId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);
@@ -198,7 +197,7 @@ namespace Features.Lobby.Application
                 PublishError(result.Error);
         }
 
-        private void HandleGameStarted(EntityId roomId)
+        private void HandleGameStarted(DomainEntityId roomId)
         {
             var lobby = _repository.LoadLobby();
             var room = lobby.FindRoom(roomId);

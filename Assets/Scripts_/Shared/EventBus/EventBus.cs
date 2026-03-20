@@ -5,11 +5,12 @@ namespace Shared.EventBus
 {
     public sealed class EventBus : IEventPublisher, IEventSubscriber
     {
-        private readonly Dictionary<Type, List<Delegate>> _handlers = new Dictionary<Type, List<Delegate>>();
+        private readonly Dictionary<Type, List<Delegate>> _handlers =
+            new Dictionary<Type, List<Delegate>>();
         private readonly Dictionary<object, List<(Type type, Delegate handler)>> _ownerMap =
             new Dictionary<object, List<(Type, Delegate)>>();
 
-        public void Subscribe<T>(Action<T> handler)
+        public void Subscribe<T>(object owner, Action<T> handler)
         {
             var type = typeof(T);
             if (!_handlers.TryGetValue(type, out var list))
@@ -18,24 +19,13 @@ namespace Shared.EventBus
                 _handlers[type] = list;
             }
             list.Add(handler);
-        }
 
-        public void Subscribe<T>(object owner, Action<T> handler)
-        {
-            Subscribe(handler);
-
-            if (!_ownerMap.TryGetValue(owner, out var list))
+            if (!_ownerMap.TryGetValue(owner, out var ownerList))
             {
-                list = new List<(Type, Delegate)>();
-                _ownerMap[owner] = list;
+                ownerList = new List<(Type, Delegate)>();
+                _ownerMap[owner] = ownerList;
             }
-            list.Add((typeof(T), handler));
-        }
-
-        public void Unsubscribe<T>(Action<T> handler)
-        {
-            if (_handlers.TryGetValue(typeof(T), out var list))
-                list.Remove(handler);
+            ownerList.Add((type, handler));
         }
 
         public void UnsubscribeAll(object owner)
@@ -54,9 +44,11 @@ namespace Shared.EventBus
 
         public void Publish<T>(T e)
         {
-            if (!_handlers.TryGetValue(typeof(T), out var list)) return;
+            if (!_handlers.TryGetValue(typeof(T), out var list))
+                return;
             var count = list.Count;
-            if (count == 0) return;
+            if (count == 0)
+                return;
             var snapshot = new Delegate[count];
             list.CopyTo(snapshot);
             for (var i = 0; i < count; i++)
@@ -70,12 +62,6 @@ namespace Shared.EventBus
                     UnityEngine.Debug.LogException(ex);
                 }
             }
-        }
-
-        public void Clear()
-        {
-            _handlers.Clear();
-            _ownerMap.Clear();
         }
     }
 }

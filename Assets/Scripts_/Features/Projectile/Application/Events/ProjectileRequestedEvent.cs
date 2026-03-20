@@ -5,13 +5,13 @@ namespace Features.Projectile.Application.Events
 {
     public readonly struct ProjectileRequestedEvent
     {
-        public ProjectileRequestedEvent(EntityId ownerId, ProjectileSpec spec)
+        public ProjectileRequestedEvent(DomainEntityId ownerId, ProjectileSpec spec)
         {
             OwnerId = ownerId;
             Spec = spec;
         }
 
-        public EntityId OwnerId { get; }
+        public DomainEntityId OwnerId { get; }
         public ProjectileSpec Spec { get; }
     }
 }

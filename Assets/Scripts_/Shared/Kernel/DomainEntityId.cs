@@ -2,13 +2,13 @@ using System;
 
 namespace Shared.Kernel
 {
-    public readonly struct EntityId : IEquatable<EntityId>
+    public readonly struct DomainEntityId : IEquatable<DomainEntityId>
     {
-        public EntityId(string value)
+        public DomainEntityId(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new ArgumentException("EntityId cannot be empty.", nameof(value));
+                throw new ArgumentException("DomainEntityId cannot be empty.", nameof(value));
             }
 
             Value = value.Trim();
@@ -16,19 +16,19 @@ namespace Shared.Kernel
 
         public string Value { get; }
 
-        public static EntityId New()
+        public static DomainEntityId New()
         {
-            return new EntityId(Guid.NewGuid().ToString("N"));
+            return new DomainEntityId(Guid.NewGuid().ToString("N"));
         }
 
-        public bool Equals(EntityId other)
+        public bool Equals(DomainEntityId other)
         {
             return string.Equals(Value, other.Value, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
         {
-            return obj is EntityId other && Equals(other);
+            return obj is DomainEntityId other && Equals(other);
         }
 
         public override int GetHashCode()

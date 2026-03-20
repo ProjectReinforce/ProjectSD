@@ -12,7 +12,7 @@ namespace Features.Skill.Domain.Delivery
             ProjectileSpec = projectileSpec;
         }
 
-        public DeliveryResult Deliver(EntityId skillId, EntityId casterId, SkillSpec spec)
+        public DeliveryResult Deliver(DomainEntityId skillId, DomainEntityId casterId, SkillSpec spec)
         {
             return new ProjectileDeliveryResult(ProjectileSpec);
         }

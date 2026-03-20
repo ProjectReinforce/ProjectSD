@@ -6,9 +6,9 @@ namespace Features.Lobby.Application.Events
     public readonly struct RoomUpdatedEvent
     {
         public RoomSnapshot Room { get; }
-        public EntityId LocalMemberId { get; }
+        public DomainEntityId LocalMemberId { get; }
 
-        public RoomUpdatedEvent(Room room, EntityId localMemberId)
+        public RoomUpdatedEvent(Room room, DomainEntityId localMemberId)
         {
             Room = new RoomSnapshot(room);
             LocalMemberId = localMemberId;

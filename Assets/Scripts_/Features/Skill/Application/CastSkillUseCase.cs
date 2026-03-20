@@ -18,7 +18,7 @@ namespace Features.Skill.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(DomainSkill skill, EntityId casterId, float currentTime, float lastCastTime)
+        public Result Execute(DomainSkill skill, DomainEntityId casterId, float currentTime, float lastCastTime)
         {
             var cooldownCheck = CooldownRule.CanCast(skill, currentTime, lastCastTime);
             if (cooldownCheck.IsFailure)

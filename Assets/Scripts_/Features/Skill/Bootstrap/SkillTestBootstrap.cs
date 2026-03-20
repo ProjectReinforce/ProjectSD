@@ -1,73 +1,114 @@
-using Features.Projectile.Application.Events;
+using System.Collections;
+using System.Collections.Generic;
 using Features.Skill.Application;
-using Features.Skill.Application.Events;
-using Shared.Context;
-using Shared.Kernel;
+using Shared.EventBus;
+using Shared.Time;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using DomainSkill = Features.Skill.Domain.Skill;
 
 namespace Features.Skill.Bootstrap
 {
+    [DefaultExecutionOrder(-1000)]
     public sealed class SkillTestBootstrap : MonoBehaviour
     {
-        [SerializeField] private SceneContext _sceneContext;
+        private const float AutoCastIntervalSeconds = 1.5f;
+
+        private readonly EventBus _eventBus = new EventBus();
+        private readonly ClockAdapter _clock = new ClockAdapter();
+        private readonly Dictionary<string, float> _lastCastTimesBySkillId =
+            new Dictionary<string, float>();
+
+        private CastSkillUseCase _castSkillUseCase;
+        private DomainSkill[] _skills;
+        private Shared.Kernel.DomainEntityId _casterId;
+        private int _nextSkillIndex;
+        private Coroutine _autoCastRoutine;
 
         private void Awake()
         {
-            if (_sceneContext == null)
-            {
-                Debug.LogError("[SkillTest] SceneContext reference is missing.");
-                return;
-            }
+            _castSkillUseCase = new CastSkillUseCase(_eventBus);
+            _skills = new[] { SkillCatalog.Fireball(), SkillCatalog.IceLance() };
+            _casterId = Shared.Kernel.DomainEntityId.New();
 
-            var publisher = _sceneContext.Publisher;
-            var subscriber = _sceneContext.Subscriber;
-
-            subscriber.Subscribe<SkillCastedEvent>(OnSkillCasted);
-            subscriber.Subscribe<ProjectileRequestedEvent>(OnProjectileRequested);
-
-            var useCase = new CastSkillUseCase(publisher);
-            var casterId = Shared.Kernel.EntityId.New();
-            var currentTime = 100f;
-            var lastCastTime = -999f;
-
-            var skills = new[]
-            {
-                SkillCatalog.Fireball(),
-                SkillCatalog.IceLance(),
-                SkillCatalog.Blizzard(),
-                SkillCatalog.Earthquake(),
-                SkillCatalog.Smite(),
-                SkillCatalog.ShadowBolt(),
-                SkillCatalog.HealingSurge(),
-                SkillCatalog.IronSkin(),
-            };
-
-            foreach (var skill in skills)
-            {
-                var result = useCase.Execute(skill, casterId, currentTime, lastCastTime);
-
-                if (result.IsFailure)
-                    Debug.LogWarning($"[SkillTest] FAILED: {result.Error}");
-            }
+            var rigView = gameObject.AddComponent<SkillTestRigView>();
+            rigView.Initialize(_eventBus, _clock);
         }
 
-        private void OnSkillCasted(SkillCastedEvent e)
+        private void Start()
         {
-            Debug.Log($"[SkillTest] Cast OK — skill={e.SkillId} caster={e.CasterId} dmg={e.Spec.Damage}");
-        }
-
-        private void OnProjectileRequested(ProjectileRequestedEvent e)
-        {
-            Debug.Log($"[SkillTest] Projectile requested — owner={e.OwnerId} speed={e.Spec.Speed} trajectory={e.Spec.TrajectoryType}");
+            Debug.Log(
+                "[SkillTest] SampleScene test rig ready. Fireball and IceLance will auto-cast toward the dummy target."
+            );
+            CastNextSkill();
+            _autoCastRoutine = StartCoroutine(AutoCastLoop());
         }
 
         private void OnDestroy()
         {
-            if (_sceneContext != null)
+            if (_autoCastRoutine != null)
             {
-                _sceneContext.Subscriber.Unsubscribe<SkillCastedEvent>(OnSkillCasted);
-                _sceneContext.Subscriber.Unsubscribe<ProjectileRequestedEvent>(OnProjectileRequested);
+                StopCoroutine(_autoCastRoutine);
+                _autoCastRoutine = null;
             }
+        }
+
+        private IEnumerator AutoCastLoop()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(AutoCastIntervalSeconds);
+                CastNextSkill();
+            }
+        }
+
+        private void CastNextSkill()
+        {
+            if (_skills == null || _skills.Length == 0)
+            {
+                Debug.LogWarning("[SkillTest] No skills configured for the test rig.");
+                return;
+            }
+
+            var skill = _skills[_nextSkillIndex];
+            _nextSkillIndex = (_nextSkillIndex + 1) % _skills.Length;
+
+            var lastCastTime = -999f;
+            if (_lastCastTimesBySkillId.TryGetValue(skill.Id.Value, out var cachedLastCastTime))
+            {
+                lastCastTime = cachedLastCastTime;
+            }
+
+            var result = _castSkillUseCase.Execute(skill, _casterId, Time.time, lastCastTime);
+            if (result.IsFailure)
+            {
+                Debug.LogWarning($"[SkillTest] FAILED: {result.Error}");
+                return;
+            }
+
+            _lastCastTimesBySkillId[skill.Id.Value] = Time.time;
+        }
+    }
+
+    internal static class SkillTestRuntimeInstaller
+    {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void InstallForSampleScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || (scene.name != "SampleScene" && scene.name != "JG_GameScene"))
+            {
+                return;
+            }
+
+            if (Object.FindFirstObjectByType<SkillTestBootstrap>() != null)
+            {
+                return;
+            }
+
+            var go = new GameObject("SkillTestBootstrap_Auto");
+            go.AddComponent<SkillTestBootstrap>();
+            Debug.Log($"[SkillTest] Auto-installed test rig in {scene.name}.");
         }
     }
 }

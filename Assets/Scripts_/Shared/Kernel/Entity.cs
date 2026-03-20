@@ -4,12 +4,12 @@ namespace Shared.Kernel
 {
     public abstract class Entity : IEquatable<Entity>
     {
-        protected Entity(EntityId id)
+        protected Entity(DomainEntityId id)
         {
             Id = id;
         }
 
-        public EntityId Id { get; }
+        public DomainEntityId Id { get; }
 
         public bool Equals(Entity other)
         {
