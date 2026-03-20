@@ -13,50 +13,72 @@ MonoBehaviour:
   m_Name: DifficultyData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.DifficultyData
   spawnPhases:
-  - phaseName: "\uCD08\uBC18"
+  - phaseName: "\uC6CC\uBC0D\uC5C5"
     startTime: 0
-    endTime: 18
+    endTime: 60
+    spawnInterval: 3
+    maxEnemyCount: 8
+    healthMultiplier: 0.8
+    spawnPerTick: 1
+    chaserRatio: 1
+    runnerRatio: 0
+    tankRatio: 0
+    swarmRatio: 0
+  - phaseName: "\uCD08\uBC18"
+    startTime: 60
+    endTime: 180
     spawnInterval: 2.5
-    maxEnemyCount: 30
+    maxEnemyCount: 20
     healthMultiplier: 1
     spawnPerTick: 1
-    chaserRatio: 0.9
-    runnerRatio: 0.1
+    chaserRatio: 0.85
+    runnerRatio: 0.15
     tankRatio: 0
     swarmRatio: 0
   - phaseName: "\uC911\uBC18 1"
-    startTime: 18
-    endTime: 30
+    startTime: 180
+    endTime: 360
     spawnInterval: 2
-    maxEnemyCount: 50
-    healthMultiplier: 1.3
+    maxEnemyCount: 40
+    healthMultiplier: 1.2
     spawnPerTick: 2
     chaserRatio: 0.6
     runnerRatio: 0.2
     tankRatio: 0.1
     swarmRatio: 0.1
   - phaseName: "\uC911\uBC18 2"
-    startTime: 30
-    endTime: 42
+    startTime: 360
+    endTime: 540
     spawnInterval: 1.5
-    maxEnemyCount: 70
-    healthMultiplier: 1.6
-    spawnPerTick: 2
+    maxEnemyCount: 65
+    healthMultiplier: 1.5
+    spawnPerTick: 3
     chaserRatio: 0.5
     runnerRatio: 0.2
     tankRatio: 0.15
     swarmRatio: 0.15
   - phaseName: "\uD6C4\uBC18"
-    startTime: 42
-    endTime: 600
+    startTime: 540
+    endTime: 780
     spawnInterval: 1.2
-    maxEnemyCount: 90
-    healthMultiplier: 2
+    maxEnemyCount: 85
+    healthMultiplier: 1.8
     spawnPerTick: 3
     chaserRatio: 0.4
     runnerRatio: 0.25
     tankRatio: 0.15
     swarmRatio: 0.2
+  - phaseName: "\uC804\uCD08\uC804"
+    startTime: 780
+    endTime: 900
+    spawnInterval: 1
+    maxEnemyCount: 100
+    healthMultiplier: 2.2
+    spawnPerTick: 4
+    chaserRatio: 0.36
+    runnerRatio: 0.25
+    tankRatio: 0.15
+    swarmRatio: 0.25
   playerScalings:
   - playerCount: 1
     healthMultiplier: 0.6
@@ -76,6 +98,6 @@ MonoBehaviour:
     expMultiplier: 0.9
   swarmGroupMin: 5
   swarmGroupMax: 10
-  spawnMinDistance: 8
-  spawnMaxDistance: 12
-  playerSafeZone: 15
+  spawnOffsetMin: 0.5
+  spawnOffsetMax: 1.5
+  playerSafeZone: 2

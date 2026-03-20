@@ -31,7 +31,7 @@ namespace SwDreams.Data
 
         [Header("Base 스탯")]
         public int maxHP = 100;
-        public float moveSpeed = 5f;
+        public float moveSpeed = 0.8f;
         public float attackMultiplier = 1f;
         public float projectileSpeed = 0f;
         public int projectileCount = 0;

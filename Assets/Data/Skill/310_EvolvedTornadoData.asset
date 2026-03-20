@@ -20,34 +20,28 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: "\uBE59\uAE00\uBE59\uAE00\uBE59\uAE00\uBE59\uAE00"
   maxLevel: 2
-  damagePerLevel: 1900000006000000080000000a0000000c0000000f000000120000002d0000002d0000002d0000002d0000002d0000002d0000002d0000002d000000
+  damagePerLevel: 23000000
   cooldownPerLevel:
-  - 3
-  - 2.8
-  - 2.6
-  - 2.4
-  - 2.2
   - 2
-  - 1.8
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 8408a6d7693a3f74fb3dc9894e6a9422, type: 3}
-  projectileSpeed: 4
+  projectileSpeed: 1.5
   projectileCount: 3
-  projectileLifetime: 4
+  projectileLifetime: 3
   isHoming: 0
   homingRotateSpeed: 300
   isBoomerang: 0
   isTornado: 1
-  pullRadius: 2.5
-  pullForce: 4
+  pullRadius: 0.5
+  pullForce: 0.5
   isExploding: 0
   explosionRadius: 1.5
   chainCount: 0
   chainRadius: 4
   hasPullOnReturn: 0
   isSpiral: 1
-  spiralExpandSpeed: 1.5
+  spiralExpandSpeed: 0.16
   appliesSlow: 0
   slowMultiplier: 0.5
   executeThreshold: 0

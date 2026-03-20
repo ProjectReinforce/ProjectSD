@@ -112,8 +112,8 @@ namespace SwDreams.Application
 
         // ===== 스폰 거리 =====
 
-        public float SpawnMinDistance => data.spawnMinDistance;
-        public float SpawnMaxDistance => data.spawnMaxDistance;
+        public float SpawnOffsetMin => data.spawnOffsetMin;
+        public float SpawnOffsetMax => data.spawnOffsetMax;
         public float PlayerSafeZone => data.playerSafeZone;
 
         // ===== 현재 Phase 정보 =====

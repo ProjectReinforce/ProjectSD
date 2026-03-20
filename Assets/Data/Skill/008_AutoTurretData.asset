@@ -20,7 +20,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: b3429482628dbf14395913c3aca8fdcb, type: 3}
   description: "\uBFC5\uBFC5"
   maxLevel: 7
-  damagePerLevel: 0a0000000c0000000f00000012000000160000001a000000200000001b0000001b0000002d0000002d0000002d0000002d0000002d0000002d000000
+  damagePerLevel: 080000000a0000000c0000000f00000012000000160000001b000000
   cooldownPerLevel:
   - 8
   - 7.5
@@ -52,8 +52,8 @@ MonoBehaviour:
   slowMultiplier: 0.5
   executeThreshold: 0
   isDualZone: 0
-  areaRadius: 2.5
-  areaDuration: 4
+  areaRadius: 5
+  areaDuration: 5
   tickRate: 0.8
   isHealingEffect: 0
   spawnAtRandomPosition: 0
@@ -62,8 +62,8 @@ MonoBehaviour:
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 2.5
-  attackRange: 5
-  attackCooldown: 0.5
+  attackRange: 0.8
+  attackCooldown: 0.4
   alwaysCritical: 0
   debuffDuration: 5
   damageAmplify: 1.3

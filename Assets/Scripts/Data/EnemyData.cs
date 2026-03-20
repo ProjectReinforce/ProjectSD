@@ -20,7 +20,7 @@ namespace SwDreams.Data
 
         [Header("스탯")]
         public int baseHP = 30;
-        public float moveSpeed = 3f;
+        public float moveSpeed = 0.48f;
         public int contactDamage = 10;
 
         [Header("보상")]

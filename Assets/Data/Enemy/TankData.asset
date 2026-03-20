@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6e66298a84be5c42816f008d89b7729, type: 3}
   m_Name: TankData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.EnemyData
-  enemyName: ChaserData
+  enemyName: Tank
   enemyType: 2
-  sprite: {fileID: 0}
-  baseHP: 300
-  moveSpeed: 1.5
+  sprite: {fileID: 21300000, guid: 0c53e53ec1c4343979c6ccb742f76dd2, type: 3}
+  baseHP: 80
+  moveSpeed: 0.24
   contactDamage: 15
-  expValue: 5
+  expValue: 12
   knockbackResistance: 0.5

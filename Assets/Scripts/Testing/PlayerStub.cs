@@ -33,7 +33,7 @@ namespace SwDreams.Testing
     {
         [Header("스탯")]
         [SerializeField] private int maxHP = 100;
-        [SerializeField] private float moveSpeed = 5f;
+        [SerializeField] private float moveSpeed = 0.8f;
 
         [Header("스킬 (테스트용)")]
         [SerializeField] private SkillData startingSkillData;

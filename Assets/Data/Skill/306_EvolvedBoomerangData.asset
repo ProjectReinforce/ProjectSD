@@ -19,27 +19,21 @@ MonoBehaviour:
   chaosEffectType: 0
   icon: {fileID: 0}
   description: "\uB354\uAC15\uD55C \uBD80\uBA54\uB791"
-  maxLevel: 2
-  damagePerLevel: 3c0000004600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  maxLevel: 1
+  damagePerLevel: 32000000
   cooldownPerLevel:
-  - 1.5
-  - 1.4
-  - 1.3
-  - 1.2
-  - 1.1
-  - 1
-  - 0.9
+  - 1.55
   bonusType: 1
   bonusPerLevel: 1.5
   projectilePrefab: {fileID: 2361586414690528474, guid: c9ed69f6646a5fe4198a0ea1e5781f5b, type: 3}
-  projectileSpeed: 25
+  projectileSpeed: 4
   projectileCount: 1
-  projectileLifetime: 8
+  projectileLifetime: 3
   isHoming: 0
   homingRotateSpeed: 300
   isBoomerang: 1
   isTornado: 0
-  pullRadius: 2
+  pullRadius: 0.35
   pullForce: 3
   isExploding: 0
   explosionRadius: 1.5

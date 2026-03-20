@@ -22,7 +22,7 @@ namespace SwDreams.Adapter.Skill
         // ===== Base 스탯 (인스펙터 설정) =====
         [Header("Base Stats")]
         [SerializeField] private float baseAttackMultiplier = 1f;
-        [SerializeField] private float baseMoveSpeed = 5f;
+        [SerializeField] private float baseMoveSpeed = 0.8f;
         [SerializeField] private int baseMaxHP = 100;
         [SerializeField] private float baseProjectileSpeed = 0f;   // 0이면 SkillData 기본값 사용
         [SerializeField] private int baseProjectileCount = 0;       // 0이면 SkillData 기본값 사용

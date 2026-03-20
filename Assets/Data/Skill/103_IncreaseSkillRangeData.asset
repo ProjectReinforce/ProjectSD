@@ -30,7 +30,7 @@ MonoBehaviour:
   - 1
   - 0.9
   bonusType: 3
-  bonusPerLevel: 0.3
+  bonusPerLevel: 0.06
   projectilePrefab: {fileID: 2361586414690528474, guid: 73c00138b15de5f4a99a5e025ed59a40, type: 3}
   projectileSpeed: 10
   projectileCount: 1

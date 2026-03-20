@@ -246,6 +246,12 @@ namespace SwDreams.Adapter.Manager
             {
                 OnLocalRespawnTimer?.Invoke(remaining, totalTime);
                 yield return null;
+
+                // Paused 상태(레벨업 등)에서는 카운트다운 중단
+                if (GameManager.Instance != null &&
+                    GameManager.Instance.CurrentState == GameManager.GameState.Paused)
+                    continue;
+
                 remaining -= Time.deltaTime;
             }
             OnLocalRespawnTimer?.Invoke(0f, totalTime);

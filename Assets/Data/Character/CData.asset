@@ -18,7 +18,7 @@ MonoBehaviour:
   startingActiveSkill: {fileID: 11400000, guid: 95033975ff04f024ebb1694cd41dfb7c, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: 64f7979473a8b0847b2c8a17ec726170, type: 2}
   maxHP: 100
-  moveSpeed: 5
+  moveSpeed: 0.8
   attackMultiplier: 1
   projectileSpeed: 0
   projectileCount: 0
@@ -27,6 +27,6 @@ MonoBehaviour:
   knockback: 1
   critDamage: 1.5
   expMultiplier: 1
-  defenseMultiplier: 1.05
+  defenseMultiplier: 1
   healMultiplier: 1
   skillDuration: 0

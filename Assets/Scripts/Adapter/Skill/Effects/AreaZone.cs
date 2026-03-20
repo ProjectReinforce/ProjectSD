@@ -71,9 +71,20 @@ namespace SwDreams.Adapter.Skill
             tickTimer = 0f;
             isActive = true;
 
-            // 비주얼 크기 조정 (기본 스프라이트가 1x1 단위 기준)
-            float visualScale = radius * 2f;
-            transform.localScale = new Vector3(visualScale, visualScale, 1f);
+            // 비주얼 크기 조정 — 스프라이트 실제 크기 기준으로 스케일 계산
+            if (spriteRenderer != null && spriteRenderer.sprite != null)
+            {
+                float spriteWorldSize = spriteRenderer.sprite.bounds.size.x; // 스프라이트 1x 스케일 시 크기
+                float desiredDiameter = radius * 2f;
+                float scale = desiredDiameter / spriteWorldSize;
+                transform.localScale = new Vector3(scale, scale, 1f);
+            }
+            else
+            {
+                // fallback: 스프라이트 없으면 1x1 기준
+                float visualScale = radius * 2f;
+                transform.localScale = new Vector3(visualScale, visualScale, 1f);
+            }
 
             Debug.Log($"[AreaZone] 생성 — pos:{position}, radius:{radius}, " +
                       $"duration:{duration}, tick:{tickRate}, healing:{isHealing}, dmg:{damage}");

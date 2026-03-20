@@ -19,13 +19,15 @@ namespace SwDreams.Adapter.Entity
     [RequireComponent(typeof(Collider2D))]
     public class ExperienceOrb : MonoBehaviour, IPoolable
     {
-        [SerializeField] private float magnetRange = 5f;
-        [SerializeField] private float magnetSpeed = 8f;
-
         private int expValue;
         private Transform attractTarget;
         private bool isAttracted;
         private bool isCollected;
+
+        private float MagnetRange =>
+            GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetRange : 0.8f;
+        private float MagnetSpeed =>
+            GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetSpeed : 1.3f;
 
         public void Initialize(Vector2 position, int exp)
         {
@@ -51,7 +53,7 @@ namespace SwDreams.Adapter.Entity
                 transform.position = Vector2.MoveTowards(
                     transform.position,
                     attractTarget.position,
-                    magnetSpeed * Time.deltaTime);
+                    MagnetSpeed * Time.deltaTime);
                 return;
             }
 
@@ -59,7 +61,7 @@ namespace SwDreams.Adapter.Entity
             if (closest != null)
             {
                 float dist = Vector2.Distance(transform.position, closest.position);
-                if (dist <= magnetRange)
+                if (dist <= MagnetRange)
                 {
                     isAttracted = true;
                     attractTarget = closest;

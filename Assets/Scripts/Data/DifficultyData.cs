@@ -20,35 +20,51 @@ namespace SwDreams.Data
         {
             new SpawnPhase
             {
+                phaseName = "워밍업",
+                startTime = 0f, endTime = 60f,
+                spawnInterval = 2.0f, maxEnemyCount = 15, healthMultiplier = 0.8f,
+                spawnPerTick = 2,
+                chaserRatio = 1.0f, runnerRatio = 0f, tankRatio = 0f, swarmRatio = 0f
+            },
+            new SpawnPhase
+            {
                 phaseName = "초반",
-                startTime = 0f, endTime = 180f,
-                spawnInterval = 2.5f, maxEnemyCount = 30, healthMultiplier = 1.0f,
-                spawnPerTick = 1,
-                chaserRatio = 0.9f, runnerRatio = 0.1f, tankRatio = 0f, swarmRatio = 0f
+                startTime = 60f, endTime = 180f,
+                spawnInterval = 1.5f, maxEnemyCount = 30, healthMultiplier = 1.0f,
+                spawnPerTick = 2,
+                chaserRatio = 0.80f, runnerRatio = 0.20f, tankRatio = 0f, swarmRatio = 0f
             },
             new SpawnPhase
             {
                 phaseName = "중반 1",
-                startTime = 180f, endTime = 300f,
-                spawnInterval = 2.0f, maxEnemyCount = 50, healthMultiplier = 1.3f,
-                spawnPerTick = 2,
-                chaserRatio = 0.6f, runnerRatio = 0.2f, tankRatio = 0.1f, swarmRatio = 0.1f
+                startTime = 180f, endTime = 360f,
+                spawnInterval = 1.2f, maxEnemyCount = 50, healthMultiplier = 1.2f,
+                spawnPerTick = 3,
+                chaserRatio = 0.55f, runnerRatio = 0.20f, tankRatio = 0.10f, swarmRatio = 0.15f
             },
             new SpawnPhase
             {
                 phaseName = "중반 2",
-                startTime = 300f, endTime = 420f,
-                spawnInterval = 1.5f, maxEnemyCount = 70, healthMultiplier = 1.6f,
-                spawnPerTick = 2,
-                chaserRatio = 0.5f, runnerRatio = 0.2f, tankRatio = 0.15f, swarmRatio = 0.15f
+                startTime = 360f, endTime = 540f,
+                spawnInterval = 1.0f, maxEnemyCount = 70, healthMultiplier = 1.5f,
+                spawnPerTick = 3,
+                chaserRatio = 0.45f, runnerRatio = 0.20f, tankRatio = 0.15f, swarmRatio = 0.20f
             },
             new SpawnPhase
             {
                 phaseName = "후반",
-                startTime = 420f, endTime = 600f,
-                spawnInterval = 1.2f, maxEnemyCount = 90, healthMultiplier = 2.0f,
-                spawnPerTick = 3,
-                chaserRatio = 0.4f, runnerRatio = 0.25f, tankRatio = 0.15f, swarmRatio = 0.2f
+                startTime = 540f, endTime = 780f,
+                spawnInterval = 0.8f, maxEnemyCount = 90, healthMultiplier = 1.8f,
+                spawnPerTick = 4,
+                chaserRatio = 0.35f, runnerRatio = 0.25f, tankRatio = 0.15f, swarmRatio = 0.25f
+            },
+            new SpawnPhase
+            {
+                phaseName = "전초전",
+                startTime = 780f, endTime = 900f,
+                spawnInterval = 0.6f, maxEnemyCount = 120, healthMultiplier = 2.2f,
+                spawnPerTick = 5,
+                chaserRatio = 0.30f, runnerRatio = 0.25f, tankRatio = 0.15f, swarmRatio = 0.30f
             }
         };
 
@@ -67,12 +83,14 @@ namespace SwDreams.Data
         public int swarmGroupMin = 5;
         public int swarmGroupMax = 10;
 
-        [Header("스폰 거리")]
-        public float spawnMinDistance = 8f;
-        public float spawnMaxDistance = 12f;
+        [Header("스폰 거리 (카메라 시야 기준)")]
+        [Tooltip("카메라 시야 밖 최소 오프셋 (이 값만큼 화면 밖에서 스폰)")]
+        public float spawnOffsetMin = 0.5f;
+        [Tooltip("카메라 시야 밖 최대 오프셋")]
+        public float spawnOffsetMax = 1.5f;
 
-        [Tooltip("플레이어로부터 최소 이 거리 이상에서 스폰")]
-        public float playerSafeZone = 15f;
+        [Tooltip("플레이어로부터 최소 이 거리 이상에서 스폰 (카메라 기반 fallback)")]
+        public float playerSafeZone = 2.0f;
     }
 
     /// <summary>

@@ -20,15 +20,15 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: "\uC138\uC0C1\uC774 \uB3C8\uB2E4"
   maxLevel: 7
-  damagePerLevel: 0c0000000f00000012000000160000001a0000001f000000260000001b0000001b0000002d0000002d0000002d0000002d0000002d0000002d000000
+  damagePerLevel: 12000000160000001b0000002100000028000000300000003a000000
   cooldownPerLevel:
-  - 3.5
-  - 3.3
-  - 3
-  - 2.8
-  - 2.6
-  - 2.4
   - 2.2
+  - 2.05
+  - 1.9
+  - 1.75
+  - 1.6
+  - 1.45
+  - 1.3
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 7830792750639668327, guid: d285ed01e873e3e418dd184fe11dd0cc, type: 3}
@@ -58,10 +58,10 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 5
-  orbitRadius: 1.5
-  rotationSpeed: 180
-  objectCount: 1
-  knockbackForce: 2.5
+  orbitRadius: 0.25
+  rotationSpeed: 360
+  objectCount: 3
+  knockbackForce: 0.35
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0

@@ -20,10 +20,10 @@ namespace SwDreams.Data
         // ===== 경험치 오브 =====
         [Header("경험치 오브")]
         [Tooltip("자석 흡수 시작 범위 (단위: Unity unit)")]
-        public float magnetRange = 5f;
+        public float magnetRange = 0.8f;
 
         [Tooltip("자석 흡수 이동 속도")]
-        public float magnetSpeed = 8f;
+        public float magnetSpeed = 1.3f;
 
         // ===== 스킬 시스템 =====
         [Header("스킬 시스템")]
@@ -46,17 +46,17 @@ namespace SwDreams.Data
         public float evolutionChance = 0.7f;
 
         [Tooltip("혼돈 스킬이 등장하는 레벨 목록")]
-        public int[] chaosLevels = { 5, 10, 15 };
+        public int[] chaosLevels = { 10, 20, 30 };
 
         // ===== 게임 진행 =====
         [Header("게임 진행")]
-        [Tooltip("총 게임 시간 (초). 10분 = 600초")]
-        public float totalGameTime = 600f;
+        [Tooltip("총 게임 시간 (초). 15분 = 900초")]
+        public float totalGameTime = 900f;
         
         // ===== 보스 =====
         [Header("보스")]
-        [Tooltip("보스 등장 시간 (초). 10분 = 600초")]
-        public float bossSpawnTime = 600f;
+        [Tooltip("보스 등장 시간 (초). 15분 = 900초")]
+        public float bossSpawnTime = 900f;
 
         [Tooltip("보스 등장 경고 연출 시간 (초)")]
         public float bossWarningDuration = 3f;

@@ -73,7 +73,7 @@ namespace SwDreams.Data
 
         [Header("투사체 전용")]
         public GameObject projectilePrefab;
-        public float projectileSpeed = 10f;
+        public float projectileSpeed = 5f;
         public int projectileCount = 1;
         public float projectileLifetime = 5f;
         [Tooltip("유도 투사체 (매직 미사일)")]
@@ -126,7 +126,7 @@ namespace SwDreams.Data
         [Tooltip("true = 플레이어 위치가 아닌 랜덤 위치에 생성 (번개)")]
         public bool spawnAtRandomPosition = false;
         [Tooltip("랜덤 생성 반경 (플레이어 기준)")]
-        public float randomSpawnRadius = 5f;
+        public float randomSpawnRadius = 3f;
 
         [Header("회전형 전용 (Orbital)")]
         [Tooltip("궤도 반경 (플레이어 중심 거리)")]

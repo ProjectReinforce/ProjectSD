@@ -559,31 +559,61 @@ namespace SwDreams.Adapter.Manager
 
         /// <summary>
         /// 스폰 위치 결정.
-        /// 플레이어 centroid 기준 spawnMin~Max 거리 + 전체 플레이어 safeZone 회피.
+        /// 카메라 시야 밖 테두리에서 스폰. offset 범위 내 랜덤.
         /// </summary>
         private Vector2 GetSpawnPosition()
         {
             Vector2 center = GetPlayerCentroid();
-            float minDist = difficulty.SpawnMinDistance;
-            float maxDist = difficulty.SpawnMaxDistance;
+            Camera cam = Camera.main;
+
+            // 카메라 반크기 계산
+            float camHalfH = cam != null ? cam.orthographicSize : 5f;
+            float camHalfW = cam != null ? camHalfH * cam.aspect : camHalfH * 1.78f;
+
+            float offsetMin = difficulty.SpawnOffsetMin;
+            float offsetMax = difficulty.SpawnOffsetMax;
 
             for (int attempt = 0; attempt < 10; attempt++)
             {
-                float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-                float distance = Random.Range(minDist, maxDist);
-                Vector2 candidate = center + new Vector2(
-                    Mathf.Cos(angle) * distance,
-                    Mathf.Sin(angle) * distance);
+                float offset = Random.Range(offsetMin, offsetMax);
+                Vector2 candidate;
+
+                // 4방향 중 랜덤 (상/하/좌/우)
+                int side = Random.Range(0, 4);
+                switch (side)
+                {
+                    case 0: // 위
+                        candidate = center + new Vector2(
+                            Random.Range(-camHalfW, camHalfW),
+                            camHalfH + offset);
+                        break;
+                    case 1: // 아래
+                        candidate = center + new Vector2(
+                            Random.Range(-camHalfW, camHalfW),
+                            -(camHalfH + offset));
+                        break;
+                    case 2: // 오른쪽
+                        candidate = center + new Vector2(
+                            camHalfW + offset,
+                            Random.Range(-camHalfH, camHalfH));
+                        break;
+                    default: // 왼쪽
+                        candidate = center + new Vector2(
+                            -(camHalfW + offset),
+                            Random.Range(-camHalfH, camHalfH));
+                        break;
+                }
 
                 if (IsPositionSafe(candidate))
                     return candidate;
             }
 
-            // 10번 실패 시 그냥 최대 거리에 스폰
+            // fallback: 랜덤 각도, 카메라 대각선 + maxOffset 거리
+            float diagonal = Mathf.Sqrt(camHalfW * camHalfW + camHalfH * camHalfH) + offsetMax;
             float fallbackAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
             return center + new Vector2(
-                Mathf.Cos(fallbackAngle) * maxDist,
-                Mathf.Sin(fallbackAngle) * maxDist);
+                Mathf.Cos(fallbackAngle) * diagonal,
+                Mathf.Sin(fallbackAngle) * diagonal);
         }
 
         /// <summary>
@@ -639,15 +669,32 @@ namespace SwDreams.Adapter.Manager
         {
             if (difficultyData == null) return;
 
-            Vector3 center = Camera.main != null
-                ? Camera.main.transform.position
-                : transform.position;
+            Camera cam = Camera.main;
+            if (cam == null) return;
+
+            Vector3 center = cam.transform.position;
             center.z = 0;
 
+            // 카메라 시야 영역
+            float halfH = cam.orthographicSize;
+            float halfW = halfH * cam.aspect;
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireCube(center, new Vector3(halfW * 2, halfH * 2, 0));
+
+            // 스폰 최소 오프셋 (화면 밖)
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(center, difficultyData.spawnMinDistance);
+            Gizmos.DrawWireCube(center, new Vector3(
+                (halfW + difficultyData.spawnOffsetMin) * 2,
+                (halfH + difficultyData.spawnOffsetMin) * 2, 0));
+
+            // 스폰 최대 오프셋
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(center, difficultyData.spawnMaxDistance);
+            Gizmos.DrawWireCube(center, new Vector3(
+                (halfW + difficultyData.spawnOffsetMax) * 2,
+                (halfH + difficultyData.spawnOffsetMax) * 2, 0));
+
+            // 세이프존
             Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
             Gizmos.DrawWireSphere(center, difficultyData.playerSafeZone);
         }

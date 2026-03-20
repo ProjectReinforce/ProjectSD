@@ -18,9 +18,9 @@ namespace SwDreams.Data
 
         [Header("기본 스펙 (2인 기준)")]
         public int baseHP = 8000;
-        public float moveSpeed = 2.5f;
+        public float moveSpeed = 0.40f;
         public int contactDamage = 30;
-        public float knockbackForce = 5f;
+        public float knockbackForce = 0.80f;
 
         [Header("페이즈 전환 (체력 비율)")]
         [Range(0f, 1f)] public float phase2Threshold = 0.6f;
@@ -36,7 +36,7 @@ namespace SwDreams.Data
 
         // ===== Phase 2 (60%~30%) =====
         [Header("Phase 2 — 속도 증가 + 원형 지대")]
-        public float p2MoveSpeed = 3.0f;
+        public float p2MoveSpeed = 0.48f;
         public float p2ShockwaveCooldown = 3f;
         public float p2CircleZoneCooldown = 10f;
         public int p2CircleZoneDamage = 60;
@@ -46,7 +46,7 @@ namespace SwDreams.Data
 
         // ===== Phase 3 (30%~0%) =====
         [Header("Phase 3 — 광폭화")]
-        public float p3MoveSpeed = 3.5f;
+        public float p3MoveSpeed = 0.56f;
         public int p3ContactDamage = 50;
         public float p3ShockwaveCooldown = 2f;
         [Tooltip("원형 지대 동시 생성 수")]

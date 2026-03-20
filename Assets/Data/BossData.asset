@@ -14,23 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.BossData
   bossName: "\uB4DC\uB9BC \uC774\uD130"
   sprite: {fileID: 0}
-  baseHP: 8000
-  moveSpeed: 2.5
+  baseHP: 20000
+  moveSpeed: 0.4
   contactDamage: 30
-  knockbackForce: 5
+  knockbackForce: 0.8
   phase2Threshold: 0.6
   phase3Threshold: 0.3
   p1ShockwaveCooldown: 5
   p1ShockwaveDamage: 40
   p1ShockwaveHalfAngle: 60
-  p1ShockwaveRange: 4
-  p2MoveSpeed: 3
+  p1ShockwaveRange: 0.65
+  p2MoveSpeed: 0.48
   p2ShockwaveCooldown: 3
   p2CircleZoneCooldown: 10
   p2CircleZoneDamage: 60
   p2CircleZoneDelay: 3
-  p2CircleZoneRadius: 2.5
-  p3MoveSpeed: 3.5
+  p2CircleZoneRadius: 0.4
+  p3MoveSpeed: 0.56
   p3ContactDamage: 50
   p3ShockwaveCooldown: 2
   p3CircleZoneCount: 2

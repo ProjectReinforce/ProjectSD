@@ -156,7 +156,8 @@ namespace SwDreams.Adapter.Manager
             Debug.Log($"[LevelUpManager] 팀 레벨업! Lv.{newLevel}");
 
             currentProcessingLevel = newLevel;
-            bool isChaosLevel = (newLevel == 5 || newLevel == 10 || newLevel == 15);
+            bool isChaosLevel = GameManager.Instance?.Config != null
+                && GameManager.Instance.Config.IsChaosLevel(newLevel);
             StartLevelUpSequence(isChaosLevel);
         }
 
@@ -447,8 +448,11 @@ namespace SwDreams.Adapter.Manager
         {
             isLevelUpActive = false;
 
-            // Phase 6: Lv15 선택 완료 → 보스 혼돈 스킬 결정
-            if (PhotonNetwork.IsMasterClient && currentProcessingLevel == 15)
+            // Phase 6: 마지막 혼돈 레벨 선택 완료 → 보스 혼돈 스킬 결정
+            var cfg = GameManager.Instance?.Config;
+            if (PhotonNetwork.IsMasterClient && cfg != null
+                && cfg.chaosLevels.Length > 0
+                && currentProcessingLevel == cfg.chaosLevels[cfg.chaosLevels.Length - 1])
             {
                 if (BossChaosApplicator.Instance != null)
                     BossChaosApplicator.Instance.DetermineBossChaosSkill();
@@ -464,7 +468,8 @@ namespace SwDreams.Adapter.Manager
                 currentProcessingLevel = nextLevel;
                 Debug.Log($"[LevelUpManager] 대기열 레벨업 처리: Lv.{nextLevel} (남은 대기: {pendingLevelUps.Count}개)");
 
-                bool isChaosLevel = (nextLevel == 5 || nextLevel == 10 || nextLevel == 15);
+                bool isChaosLevel = GameManager.Instance?.Config != null
+                    && GameManager.Instance.Config.IsChaosLevel(nextLevel);
                 StartLevelUpSequence(isChaosLevel);
 
                 // UI 닫기 → 새 선택지 UI 열기 (클라이언트에서 자연스럽게 전환)

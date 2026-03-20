@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4df3cd0e509bc743b4cb1acdaf02b26, type: 3}
+  m_Name: NewDifficultyData
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.DifficultyData
+  spawnPhases:
+  - phaseName: "\uC6CC\uBC0D\uC5C5"
+    startTime: 0
+    endTime: 60
+    spawnInterval: 2
+    maxEnemyCount: 15
+    healthMultiplier: 0.8
+    spawnPerTick: 2
+    chaserRatio: 1
+    runnerRatio: 0
+    tankRatio: 0
+    swarmRatio: 0
+  - phaseName: "\uCD08\uBC18"
+    startTime: 60
+    endTime: 180
+    spawnInterval: 1.5
+    maxEnemyCount: 30
+    healthMultiplier: 1
+    spawnPerTick: 2
+    chaserRatio: 0.8
+    runnerRatio: 0.2
+    tankRatio: 0
+    swarmRatio: 0
+  - phaseName: "\uC911\uBC18 1"
+    startTime: 180
+    endTime: 360
+    spawnInterval: 1.2
+    maxEnemyCount: 50
+    healthMultiplier: 1.2
+    spawnPerTick: 3
+    chaserRatio: 0.55
+    runnerRatio: 0.2
+    tankRatio: 0.1
+    swarmRatio: 0.15
+  - phaseName: "\uC911\uBC18 2"
+    startTime: 360
+    endTime: 540
+    spawnInterval: 1
+    maxEnemyCount: 70
+    healthMultiplier: 1.5
+    spawnPerTick: 3
+    chaserRatio: 0.45
+    runnerRatio: 0.2
+    tankRatio: 0.15
+    swarmRatio: 0.2
+  - phaseName: "\uD6C4\uBC18"
+    startTime: 540
+    endTime: 780
+    spawnInterval: 0.8
+    maxEnemyCount: 90
+    healthMultiplier: 1.8
+    spawnPerTick: 4
+    chaserRatio: 0.35
+    runnerRatio: 0.25
+    tankRatio: 0.15
+    swarmRatio: 0.25
+  - phaseName: "\uC804\uCD08\uC804"
+    startTime: 780
+    endTime: 900
+    spawnInterval: 0.6
+    maxEnemyCount: 120
+    healthMultiplier: 2.2
+    spawnPerTick: 5
+    chaserRatio: 0.3
+    runnerRatio: 0.25
+    tankRatio: 0.15
+    swarmRatio: 0.3
+  playerScalings:
+  - playerCount: 1
+    healthMultiplier: 0.6
+    maxEnemyMultiplier: 0.6
+    expMultiplier: 1
+  - playerCount: 2
+    healthMultiplier: 1
+    maxEnemyMultiplier: 1
+    expMultiplier: 1
+  - playerCount: 3
+    healthMultiplier: 1.4
+    maxEnemyMultiplier: 1.3
+    expMultiplier: 0.95
+  - playerCount: 4
+    healthMultiplier: 1.8
+    maxEnemyMultiplier: 1.6
+    expMultiplier: 0.9
+  swarmGroupMin: 5
+  swarmGroupMax: 10
+  spawnOffsetMin: 0.5
+  spawnOffsetMax: 1.5
+  playerSafeZone: 2
