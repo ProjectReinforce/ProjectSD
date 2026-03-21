@@ -27,16 +27,16 @@ namespace SwDreams.Adapter.Skill
                 var hits = Physics2D.OverlapCircleAll(transform.position, explosionRadius);
                 foreach (var hit in hits)
                 {
-                    if (!hit.CompareTag("Enemy")) continue;
-                    if (hit == other) continue; // 직접 맞은 적은 base에서 이미 처리
-
-                    var enemy = hit.GetComponent<Enemy>();
-                    if (enemy != null && enemy.IsAlive)
+                    var damageable = hit.GetComponent<IDamageable>();
+                    if (damageable != null && damageable.IsAlive)
                     {
-                        enemy.TakeDamage(damage / 2); // 폭발 데미지 = 직격의 50%
-
+                        damageable.TakeDamage(damage / 2);
                         if (knockbackForce > 0f)
-                            enemy.ApplyKnockback(transform.position, knockbackForce * 0.7f); // 폭발 넉백은 70%
+                        {
+                            var enemy = hit.GetComponent<Enemy>();
+                            if (enemy != null)
+                                enemy.ApplyKnockback(transform.position, knockbackForce * 0.7f);
+                        }
                     }
                 }
             }

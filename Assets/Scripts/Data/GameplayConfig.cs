@@ -34,7 +34,15 @@ namespace SwDreams.Data
         public float projectileSpreadAngle = 15f;
 
         [Tooltip("투사체 기본 넉백 힘 (PlayerStats.KnockbackMultiplier와 곱셈)")]
-        public float baseKnockbackForce = 2f;
+        public float baseKnockbackForce = 0.9f;
+
+        // ===== 비주얼 피드백 =====
+        [Header("비주얼 피드백")]
+        [Tooltip("데미지 숫자 팝업 프리팹 (TextMeshPro + DamagePopup)")]
+        public GameObject damagePopupPrefab;
+
+        [Tooltip("피격 파티클 프리팹 (ParticleSystem)")]
+        public GameObject hitEffectPrefab;
 
         // ===== 레벨업 =====
         [Header("레벨업")]

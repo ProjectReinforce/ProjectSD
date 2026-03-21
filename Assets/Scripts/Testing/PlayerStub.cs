@@ -54,6 +54,8 @@ namespace SwDreams.Testing
         // Phase 7: 슬로우 상태
         private float slowMultiplier = 1f;
 
+        private Coroutine hitFlashCoroutine;
+
         // Phase 7: 캐릭터 데이터 연동
         private bool isInitialized = false;
         private CharacterData characterData;
@@ -317,6 +319,17 @@ namespace SwDreams.Testing
             Debug.Log("[PlayerStub] 슬로우 해제");
         }
 
+        private System.Collections.IEnumerator PlayerHitFlash()
+        {
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr == null) yield break;
+            Color original = sr.color;
+            sr.color = new Color(1f, 0.4f, 0.4f, sr.color.a);
+            yield return new WaitForSeconds(0.2f);
+            sr.color = original;
+            hitFlashCoroutine = null;
+        }
+
         // ===== 패시브 스탯 동기화 =====
 
         private void OnDestroy()
@@ -376,6 +389,22 @@ namespace SwDreams.Testing
             CurrentHP = Mathf.Clamp(CurrentHP - damage, 0, MaxHP);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
             Debug.Log($"[PlayerStub] HP: {CurrentHP}/{MaxHP} (dmg:{damage})");
+
+            // 비주얼 피드백 (데미지 > 0일 때만, 회복은 제외)
+            if (damage > 0)
+            {
+                DamagePopup.Spawn(transform.position, damage);
+                HitEffect.Spawn(transform.position);
+
+                // 피격 플래시
+                if (hitFlashCoroutine != null) StopCoroutine(hitFlashCoroutine);
+                hitFlashCoroutine = StartCoroutine(PlayerHitFlash());
+            }
+            else if (damage < 0)
+            {
+                // 회복 표시
+                DamagePopup.Spawn(transform.position, -damage, isHeal: true);
+            }
 
             if (!IsAlive && !isDead)
             {

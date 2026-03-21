@@ -5,6 +5,7 @@ using SwDreams.Domain;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Entity
 {
@@ -145,6 +146,9 @@ namespace SwDreams.Adapter.Entity
 
             CurrentHP = Mathf.Max(0, CurrentHP - damage);
 
+            DamagePopup.Spawn(transform.position, damage);
+            HitEffect.Spawn(transform.position);
+
             // 페이즈 전환 체크
             var phaseService = new Application.BossPhaseService();
             BossPhase newPhase = phaseService.DeterminePhase(
@@ -187,6 +191,17 @@ namespace SwDreams.Adapter.Entity
         [PunRPC]
         private void RPC_SyncHP(int hp, int maxHp, int phaseInt, bool phaseChanged)
         {
+            // 클라이언트: HP 차이로 팝업 (호스트는 TakeDamage에서 이미 처리)
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                int delta = CurrentHP - hp;
+                if (delta > 0)
+                {
+                    DamagePopup.Spawn(transform.position, delta);
+                    HitEffect.Spawn(transform.position);
+                }
+            }
+            
             CurrentHP = hp;
             MaxHP = maxHp;
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);

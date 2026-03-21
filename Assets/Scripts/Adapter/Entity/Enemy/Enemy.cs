@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Application;
 using SwDreams.Data;
 using SwDreams.Adapter.Skill;
+using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Entity
 {
@@ -57,9 +59,17 @@ namespace SwDreams.Adapter.Entity
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
 
+        // 피격 플래시
+        private static readonly Color HitFlashColor = new Color(1f, 0.4f, 0.4f, 1f); // 붉은 틴트
+        private const float HitFlashDuration = 0.1f;
+        private Coroutine hitFlashCoroutine;
+        private MaterialPropertyBlock mpb;
+        private Color originalColor = Color.white;
+
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            mpb = new MaterialPropertyBlock();
         }
 
         /// <summary>
@@ -80,6 +90,10 @@ namespace SwDreams.Adapter.Entity
             if (spriteRenderer != null && data.sprite != null)
                 spriteRenderer.sprite = data.sprite;
 
+            // 원래 색상 저장 (피격 플래시 복귀용)
+            if (spriteRenderer != null)
+                originalColor = spriteRenderer.color;
+
             GetComponent<EnemyMovement>().Initialize(this);
             GetComponent<EnemyContact>().Initialize(this);
         }
@@ -97,8 +111,36 @@ namespace SwDreams.Adapter.Entity
             CurrentHP = Mathf.Max(0, CurrentHP - result.FinalDamage);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
 
+            // 피격 플래시 (모든 클라이언트)
+            TriggerHitFlash();
+
+            // 데미지 숫자 팝업 (모든 클라이언트)
+            DamagePopup.Spawn(transform.position, result.FinalDamage);
+
+            // 피격 파티클 이펙트 (모든 클라이언트)
+            HitEffect.Spawn(transform.position);
+
             if (!IsAlive)
                 Die();
+        }
+
+        // ===== 피격 플래시 =====
+
+        private void TriggerHitFlash()
+        {
+            if (spriteRenderer == null) return;
+
+            if (hitFlashCoroutine != null)
+                StopCoroutine(hitFlashCoroutine);
+            hitFlashCoroutine = StartCoroutine(HitFlashRoutine());
+        }
+
+        private IEnumerator HitFlashRoutine()
+        {
+            spriteRenderer.color = HitFlashColor;
+            yield return new WaitForSeconds(HitFlashDuration);
+            spriteRenderer.color = originalColor;
+            hitFlashCoroutine = null;
         }
 
         /// <summary>
@@ -148,6 +190,15 @@ namespace SwDreams.Adapter.Entity
 
         public void OnReturnToPool()
         {
+            // 피격 플래시 리셋
+            if (hitFlashCoroutine != null)
+            {
+                StopCoroutine(hitFlashCoroutine);
+                hitFlashCoroutine = null;
+            }
+            if (spriteRenderer != null)
+                spriteRenderer.color = originalColor;
+
             OnDied = null;
             OnDiedWithRef = null;
             OnHealthChanged = null;

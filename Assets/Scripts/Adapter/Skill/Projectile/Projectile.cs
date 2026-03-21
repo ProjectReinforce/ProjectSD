@@ -71,17 +71,20 @@ namespace SwDreams.Adapter.Skill
         protected virtual void OnTriggerEnter2D(Collider2D other)
         {
             if (!other.CompareTag("Enemy")) return;
-
-            // 호스트에서만 데미지 + 넉백 적용
+            
             if (PhotonNetwork.IsMasterClient)
             {
-                var enemy = other.GetComponent<Enemy>();
-                if (enemy != null && enemy.IsAlive)
+                var damageable = other.GetComponent<IDamageable>();
+                if (damageable != null && damageable.IsAlive)
                 {
-                    enemy.TakeDamage(damage);
+                    damageable.TakeDamage(damage);
 
                     if (knockbackForce > 0f)
-                        enemy.ApplyKnockback(transform.position, knockbackForce);
+                    {
+                        var enemy = other.GetComponent<Enemy>();
+                        if (enemy != null)
+                            enemy.ApplyKnockback(transform.position, knockbackForce);
+                    }
                 }
             }
 
