@@ -8,10 +8,13 @@ using UnityEngine;
 namespace Features.Skill.Bootstrap
 {
     [DefaultExecutionOrder(-1000)]
-    public sealed class SkillTestBootstrap : MonoBehaviour
+    public sealed class SkillBootstrap : MonoBehaviour
     {
-        [SerializeField] private SkillBarView skillBarView;
-        [SerializeField] private SkillInputHandler skillInputHandler;
+        [SerializeField]
+        private SkillBarView skillBarView;
+
+        [SerializeField]
+        private SkillInputHandler skillInputHandler;
 
         private void Awake()
         {

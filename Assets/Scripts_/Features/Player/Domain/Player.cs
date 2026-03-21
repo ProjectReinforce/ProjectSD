@@ -40,14 +40,11 @@ namespace Features.Player.Domain
             IsSprinting = value;
         }
 
-        public void SetGrounded(bool value)
+        public void ApplyMovement(Float3 position, bool isGrounded)
         {
-            IsGrounded = value;
-        }
-
-        public void UpdatePosition(Float3 newPosition)
-        {
-            Position = newPosition;
+            Position = position;
+            IsGrounded = isGrounded;
+            if (isGrounded) VerticalVelocity = 0f;
         }
     }
 }

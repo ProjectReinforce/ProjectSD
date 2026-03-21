@@ -6,9 +6,10 @@ using UnityEngine.InputSystem;
 
 namespace Features.Skill.Presentation
 {
-    [RequireComponent(typeof(PlayerInput))]
     public sealed class SkillInputHandler : MonoBehaviour
     {
+        [SerializeField] private InputActionAsset _inputActions;
+
         private CastSkillUseCase _castSkillUseCase;
         private SkillBar _skillBar;
         private DomainEntityId _casterId;
@@ -24,19 +25,19 @@ namespace Features.Skill.Presentation
             _skillBar = skillBar;
             _casterId = casterId;
 
-            var playerInput = GetComponent<PlayerInput>();
             _slotActions = new[]
             {
-                playerInput.actions["SkillSlot0"],
-                playerInput.actions["SkillSlot1"],
-                playerInput.actions["SkillSlot2"],
-                playerInput.actions["SkillSlot3"]
+                _inputActions.FindAction("SkillSlot0"),
+                _inputActions.FindAction("SkillSlot1"),
+                _inputActions.FindAction("SkillSlot2"),
+                _inputActions.FindAction("SkillSlot3")
             };
 
             for (var i = 0; i < SkillBar.SlotCount; i++)
             {
                 var index = i;
                 _callbacks[i] = _ => CastSlot(index);
+                _slotActions[i].Enable();
                 _slotActions[i].performed += _callbacks[i];
             }
         }
@@ -46,8 +47,9 @@ namespace Features.Skill.Presentation
             if (_slotActions == null) return;
             for (var i = 0; i < SkillBar.SlotCount; i++)
             {
-                if (_slotActions[i] != null)
-                    _slotActions[i].performed -= _callbacks[i];
+                if (_slotActions[i] == null) continue;
+                _slotActions[i].performed -= _callbacks[i];
+                _slotActions[i].Disable();
             }
         }
 

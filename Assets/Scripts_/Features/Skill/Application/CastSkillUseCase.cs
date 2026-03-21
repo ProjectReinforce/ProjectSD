@@ -1,5 +1,6 @@
 using Features.Projectile.Application.Events;
 using Features.Skill.Application.Events;
+using Features.Skill.Application.Ports;
 using Features.Skill.Domain;
 using Features.Skill.Domain.Delivery;
 using Shared.EventBus;
@@ -13,11 +14,13 @@ namespace Features.Skill.Application
     {
         private readonly IEventPublisher _eventBus;
         private readonly CooldownTracker _cooldownTracker;
+        private readonly ISkillNetworkCommandPort _network;
 
-        public CastSkillUseCase(IEventPublisher eventBus, CooldownTracker cooldownTracker)
+        public CastSkillUseCase(IEventPublisher eventBus, CooldownTracker cooldownTracker, ISkillNetworkCommandPort network = null)
         {
             _eventBus = eventBus;
             _cooldownTracker = cooldownTracker;
+            _network = network;
         }
 
         public Result Execute(DomainSkill skill, DomainEntityId casterId, float currentTime)
@@ -46,6 +49,7 @@ namespace Features.Skill.Application
 
             _cooldownTracker.RecordCast(skill.Id, currentTime);
             _eventBus.Publish(new SkillCastedEvent(skill.Id, casterId, skill.Spec));
+            _network?.SendSkillCasted(skill.Id, casterId, skill.Spec.Damage, skill.Spec.Cooldown, skill.Spec.Range);
             return Result.Success();
         }
     }

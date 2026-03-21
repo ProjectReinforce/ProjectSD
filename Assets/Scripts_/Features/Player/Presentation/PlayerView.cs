@@ -1,6 +1,7 @@
 using Features.Player.Application.Events;
 using Shared.EventBus;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Features.Player.Presentation
 {
@@ -8,11 +9,29 @@ namespace Features.Player.Presentation
     {
         private IEventSubscriber _eventBus;
 
-        public void Initialize(IEventSubscriber eventBus)
+        public void Initialize(bool isLocal, IEventSubscriber eventBus)
         {
             _eventBus = eventBus;
+
+            if (!isLocal)
+            {
+                DisableLocalComponents();
+                return;
+            }
+
             _eventBus.Subscribe(this, new System.Action<PlayerMovedEvent>(OnPlayerMoved));
             _eventBus.Subscribe(this, new System.Action<PlayerJumpedEvent>(OnPlayerJumped));
+        }
+
+        private void DisableLocalComponents()
+        {
+            var inputHandler = GetComponent<PlayerInputHandler>();
+            if (inputHandler != null)
+                inputHandler.enabled = false;
+
+            var playerInput = GetComponent<PlayerInput>();
+            if (playerInput != null)
+                playerInput.enabled = false;
         }
 
         private void OnDestroy()

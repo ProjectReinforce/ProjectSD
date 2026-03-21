@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameScene.unity
     guid: 8690351d09f0e1747b6b1e3808f8ce81
+  - enabled: 1
+    path: Assets/Scenes/JG_GameScene.unity
+    guid: ebb8a385164396d42b2be1c051326d6d
+  - enabled: 1
+    path: Assets/Scenes/JG_LobbyScene.unity
+    guid: f4213cf59b6183d49bd42f707749a85a
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 87011026c77287e4abfbe942ce1b2482, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
