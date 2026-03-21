@@ -87,8 +87,11 @@ namespace SwDreams.Adapter.Manager
 
         private void Start()
         {
-            // DifficultyManager 초기화
-            difficulty = new DifficultyManager(difficultyData);
+            // DifficultyManager 초기화 — bossSpawnTime을 GameplayConfig에서 가져옴
+            float bossTime = GameManager.Instance?.Config != null
+                ? GameManager.Instance.Config.bossSpawnTime
+                : 900f;
+            difficulty = new DifficultyManager(difficultyData, bossTime);
 
             // EnemyData 매핑
             enemyDataMap = new Dictionary<EnemyType, EnemyData>
@@ -102,10 +105,7 @@ namespace SwDreams.Adapter.Manager
             // 풀 Prewarm
             if (enemyPrefab != null)
             {
-                int prewarmCount = 30;
-                if (difficultyData.spawnPhases.Length > 0)
-                    prewarmCount = difficultyData.spawnPhases[difficultyData.spawnPhases.Length - 1].maxEnemyCount;
-
+                int prewarmCount = difficultyData.maxEnemyEnd;
                 PoolManager.Instance?.Prewarm(enemyPrefab, prewarmCount);
             }
             if (orbPrefab != null)
@@ -499,7 +499,8 @@ namespace SwDreams.Adapter.Manager
             if (orbPrefab == null) return;
 
             int playerCount = PhotonNetwork.CurrentRoom?.PlayerCount ?? 1;
-            float expMul = difficulty.GetExpMultiplier(playerCount);
+            float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
+            float expMul = difficulty.GetExpMultiplier(gameTime, playerCount);
             int adjustedExp = Mathf.RoundToInt(expValue * expMul);
             if (adjustedExp < 1) adjustedExp = 1;
 

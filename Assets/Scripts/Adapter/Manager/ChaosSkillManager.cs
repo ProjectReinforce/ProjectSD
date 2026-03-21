@@ -346,6 +346,10 @@ namespace SwDreams.Adapter.Skill
             ChaosCooldownMultiplier = cdMul;
             ChaosMoveSpeedBonus = moveBonus;
             ChaosMaxHPMultiplier = hpMul;
+
+            // 혼돈 스킬에 의한 스탯 변경을 PlayerStats → PlayerStub에 전파
+            if (playerStats != null)
+                playerStats.RecalculateAll();
         }
 
         // ===== 연쇄 폭발 =====

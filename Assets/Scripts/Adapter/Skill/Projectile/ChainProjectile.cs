@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -63,12 +64,17 @@ namespace SwDreams.Adapter.Skill
             if (!other.CompareTag("Enemy")) return;
             if (hitEnemyIds.Contains(other.gameObject.GetInstanceID())) return;
 
-            // 호스트에서만 데미지
+            // 호스트에서만 데미지 + 넉백
             if (PhotonNetwork.IsMasterClient)
             {
-                var damageable = other.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
-                    damageable.TakeDamage(damage);
+                var enemy = other.GetComponent<Enemy>();
+                if (enemy != null && enemy.IsAlive)
+                {
+                    enemy.TakeDamage(damage);
+
+                    if (knockbackForce > 0f)
+                        enemy.ApplyKnockback(transform.position, knockbackForce);
+                }
             }
 
             OnHitEnemy(other);

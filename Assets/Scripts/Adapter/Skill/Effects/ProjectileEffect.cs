@@ -119,6 +119,14 @@ namespace SwDreams.Adapter.Skill
             if (playerStats != null)
                 damage = Mathf.RoundToInt(damage * playerStats.AttackMultiplier);
 
+            // 넉백 힘: Config 기본값 * PlayerStats 배율
+            float knockback = 0f;
+            var cfg = GameManager.Instance?.Config;
+            if (cfg != null)
+                knockback = cfg.baseKnockbackForce;
+            if (playerStats != null)
+                knockback *= playerStats.KnockbackMultiplier;
+
             SkillData data = skill.Data;
 
             projectile.Initialize(
@@ -126,7 +134,8 @@ namespace SwDreams.Adapter.Skill
                 direction: direction,
                 damage: damage,
                 speed: speed,
-                lifetime: data.projectileLifetime
+                lifetime: data.projectileLifetime,
+                knockbackForce: knockback
             );
 
             // [Phase 5] 변형 투사체 추가 설정

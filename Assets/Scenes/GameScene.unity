@@ -26213,7 +26213,7 @@ MonoBehaviour:
   runnerData: {fileID: 11400000, guid: 57184a50fa52c5e46bbe5a696fadc2e0, type: 2}
   tankData: {fileID: 11400000, guid: 4ae042e8639145c49ae4d28fe3285f60, type: 2}
   swarmData: {fileID: 11400000, guid: e6fbd977bfb5e35479f4ce172faee56d, type: 2}
-  difficultyData: {fileID: 11400000, guid: 106dbcf6e2cfd0c41b1bc26ce87ba68d, type: 2}
+  difficultyData: {fileID: 11400000, guid: 89492b6127c89f04296ae9a667e3bb3f, type: 2}
   swarmLifetime: 8
   startDelay: 2
   positionSyncInterval: 0.2

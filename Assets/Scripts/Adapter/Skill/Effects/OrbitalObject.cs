@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -87,32 +88,19 @@ namespace SwDreams.Adapter.Skill
                 {
                     damageable.TakeDamage(damage);
 
-                    // 넉백 적용
+                    // 넉백 적용 (Enemy.ApplyKnockback 사용)
                     if (knockbackForce > 0f)
-                        ApplyKnockback(hit);
+                    {
+                        var enemy = hit.GetComponent<Enemy>();
+                        if (enemy != null)
+                            enemy.ApplyKnockback(transform.position, knockbackForce);
+                    }
 
                     // 히트 쿨다운 시작 (1회 판정 후 잠시 대기)
                     hitTimer = hitCooldown;
                     return; // 프레임당 1타겟만
                 }
             }
-        }
-
-        private void ApplyKnockback(Collider2D enemyCollider)
-        {
-            var rb = enemyCollider.GetComponent<Rigidbody2D>();
-            if (rb == null) return;
-
-            Vector2 direction = (enemyCollider.transform.position - transform.position).normalized;
-
-            // 넉백 저항 적용
-            float resistance = 0f;
-            var enemy = enemyCollider.GetComponent<Entity.Enemy>();
-            if (enemy != null)
-                resistance = enemy.KnockbackResistance;
-
-            float finalForce = knockbackForce * (1f - resistance);
-            rb.AddForce(direction * finalForce, ForceMode2D.Impulse);
         }
 
         private void ReturnToPool()

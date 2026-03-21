@@ -34,6 +34,10 @@ namespace SwDreams.Adapter.Entity
         private float slowTimer;
         private float slowMul = 1f;
 
+        // 넉백 상태
+        private Vector2 knockbackVelocity;
+        private const float KnockbackDecay = 8f; // 초당 감쇠 속도
+
         // 네트워크 위치 보정 (클라이언트 전용)
         // 호스트가 주기적으로 전송하는 위치로 부드럽게 보정
         private Vector2 networkTargetPos;
@@ -77,6 +81,7 @@ namespace SwDreams.Adapter.Entity
             aliveTimer = 0f;
             hasNetworkTarget = false;
             isFirstNetworkPos = true;
+            knockbackVelocity = Vector2.zero;
 
             // EnemyType에 따라 전략 자동 선택
             movementStrategy = CreateStrategy(enemyRef.EnemyType);
@@ -158,6 +163,17 @@ namespace SwDreams.Adapter.Entity
                     movementStrategy.UpdateMovement(transform, target, moveSpeed);
                 }
             }
+
+            // 넉백 적용 (감쇠)
+            if (knockbackVelocity.sqrMagnitude > 0.01f)
+            {
+                transform.position += (Vector3)(knockbackVelocity * Time.deltaTime);
+                knockbackVelocity = Vector2.Lerp(knockbackVelocity, Vector2.zero, KnockbackDecay * Time.deltaTime);
+            }
+            else
+            {
+                knockbackVelocity = Vector2.zero;
+            }
         }
 
         private void LateUpdate()
@@ -196,6 +212,15 @@ namespace SwDreams.Adapter.Entity
         {
             slowMul = multiplier;
             slowTimer = duration;
+        }
+
+        /// <summary>
+        /// 넉백 충격량 적용. Enemy.ApplyKnockback()에서 호출.
+        /// 방향 * 힘이 합산되어 감쇠됨.
+        /// </summary>
+        public void ApplyKnockback(Vector2 impulse)
+        {
+            knockbackVelocity += impulse;
         }
 
         /// <summary>

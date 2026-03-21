@@ -16,6 +16,7 @@ MonoBehaviour:
   magnetSpeed: 2
   maxSkillSlots: 6
   projectileSpreadAngle: 15
+  baseKnockbackForce: 0.9
   selectionTimeout: 15
   choiceCount: 3
   evolutionChance: 0.7

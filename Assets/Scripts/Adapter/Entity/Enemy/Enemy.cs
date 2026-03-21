@@ -97,11 +97,30 @@ namespace SwDreams.Adapter.Entity
             CurrentHP = Mathf.Max(0, CurrentHP - result.FinalDamage);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
 
-            // TODO: 넉백 처리 시 KnockbackResistance 적용
-            // 넉백 거리 = basePushback * (1 - KnockbackResistance)
-
             if (!IsAlive)
                 Die();
+        }
+
+        /// <summary>
+        /// 외부 데미지 소스에서 넉백 적용.
+        /// 호스트에서만 호출. KnockbackResistance 반영.
+        /// </summary>
+        /// <param name="sourcePos">데미지 소스 위치 (넉백 방향 계산용)</param>
+        /// <param name="force">기본 넉백 힘</param>
+        public void ApplyKnockback(Vector2 sourcePos, float force)
+        {
+            if (!IsAlive || force <= 0f) return;
+
+            float finalForce = force * (1f - KnockbackResistance);
+            if (finalForce <= 0f) return;
+
+            Vector2 dir = ((Vector2)transform.position - sourcePos).normalized;
+            if (dir.sqrMagnitude < 0.001f)
+                dir = UnityEngine.Random.insideUnitCircle.normalized;
+
+            var movement = GetComponent<EnemyMovement>();
+            if (movement != null)
+                movement.ApplyKnockback(dir * finalForce);
         }
 
         private void Die()

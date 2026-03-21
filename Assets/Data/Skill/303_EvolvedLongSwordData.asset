@@ -54,7 +54,7 @@ MonoBehaviour:
   randomSpawnRadius: 5
   orbitRadius: 0.35
   rotationSpeed: 360
-  objectCount: 5
+  objectCount: 3
   knockbackForce: 0.35
   attackRange: 5
   attackCooldown: 0.5

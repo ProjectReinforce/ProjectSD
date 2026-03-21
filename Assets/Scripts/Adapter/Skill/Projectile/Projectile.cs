@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -25,9 +26,10 @@ namespace SwDreams.Adapter.Skill
         protected int damage;
         protected float lifetime;
         protected float aliveTime;
+        protected float knockbackForce;
 
         public virtual void Initialize(Vector2 position, Vector2 direction,
-            int damage, float speed, float lifetime)
+            int damage, float speed, float lifetime, float knockbackForce = 0f)
         {
             transform.position = position;
             this.direction = direction.normalized;
@@ -37,6 +39,7 @@ namespace SwDreams.Adapter.Skill
             this.damage = damage;
             this.speed = speed;
             this.lifetime = lifetime;
+            this.knockbackForce = knockbackForce;
             aliveTime = 0f;
 
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
@@ -69,13 +72,16 @@ namespace SwDreams.Adapter.Skill
         {
             if (!other.CompareTag("Enemy")) return;
 
-            // 호스트에서만 데미지 적용
+            // 호스트에서만 데미지 + 넉백 적용
             if (PhotonNetwork.IsMasterClient)
             {
-                var damageable = other.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
+                var enemy = other.GetComponent<Enemy>();
+                if (enemy != null && enemy.IsAlive)
                 {
-                    damageable.TakeDamage(damage);
+                    enemy.TakeDamage(damage);
+
+                    if (knockbackForce > 0f)
+                        enemy.ApplyKnockback(transform.position, knockbackForce);
                 }
             }
 

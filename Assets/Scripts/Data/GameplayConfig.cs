@@ -33,6 +33,9 @@ namespace SwDreams.Data
         [Tooltip("다중 투사체 발사 시 탄 사이 각도 (도)")]
         public float projectileSpreadAngle = 15f;
 
+        [Tooltip("투사체 기본 넉백 힘 (PlayerStats.KnockbackMultiplier와 곱셈)")]
+        public float baseKnockbackForce = 2f;
+
         // ===== 레벨업 =====
         [Header("레벨업")]
         [Tooltip("선택 제한시간 (초). 초과 시 랜덤 자동 선택")]

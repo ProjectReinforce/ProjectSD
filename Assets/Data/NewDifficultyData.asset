@@ -12,73 +12,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4df3cd0e509bc743b4cb1acdaf02b26, type: 3}
   m_Name: NewDifficultyData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.DifficultyData
-  spawnPhases:
-  - phaseName: "\uC6CC\uBC0D\uC5C5"
-    startTime: 0
-    endTime: 45
-    spawnInterval: 1.2
-    maxEnemyCount: 300
-    healthMultiplier: 0.8
-    spawnPerTick: 3
-    chaserRatio: 1
-    runnerRatio: 0
-    tankRatio: 0
-    swarmRatio: 0
-  - phaseName: "\uCD08\uBC18"
-    startTime: 45
-    endTime: 180
-    spawnInterval: 0.8
-    maxEnemyCount: 600
-    healthMultiplier: 1
-    spawnPerTick: 4
-    chaserRatio: 0.75
-    runnerRatio: 0.25
-    tankRatio: 0
-    swarmRatio: 0
-  - phaseName: "\uC911\uBC18 1"
-    startTime: 180
-    endTime: 360
-    spawnInterval: 0.6
-    maxEnemyCount: 1200
-    healthMultiplier: 1.5
-    spawnPerTick: 5
-    chaserRatio: 0.5
-    runnerRatio: 0.2
-    tankRatio: 0.1
-    swarmRatio: 0.2
-  - phaseName: "\uC911\uBC18 2"
-    startTime: 360
-    endTime: 540
-    spawnInterval: 0.5
-    maxEnemyCount: 1800
-    healthMultiplier: 2
-    spawnPerTick: 6
-    chaserRatio: 0.4
-    runnerRatio: 0.2
-    tankRatio: 0.15
-    swarmRatio: 0.25
-  - phaseName: "\uD6C4\uBC18"
-    startTime: 540
-    endTime: 780
-    spawnInterval: 0.4
-    maxEnemyCount: 2500
-    healthMultiplier: 2.8
-    spawnPerTick: 7
-    chaserRatio: 0.35
-    runnerRatio: 0.25
-    tankRatio: 0.15
-    swarmRatio: 0.25
-  - phaseName: "\uC804\uCD08\uC804"
-    startTime: 780
-    endTime: 900
-    spawnInterval: 0.3
-    maxEnemyCount: 3500
-    healthMultiplier: 3.5
-    spawnPerTick: 8
-    chaserRatio: 0.3
-    runnerRatio: 0.25
-    tankRatio: 0.15
-    swarmRatio: 0.3
+  hpStart: 0.8
+  hpEnd: 15
+  hpExponent: 2.5
+  intervalStart: 1.5
+  intervalEnd: 0.3
+  intervalExponent: 1.2
+  maxEnemyStart: 20
+  maxEnemyEnd: 400
+  maxEnemyExponent: 1.5
+  spawnPerTickStart: 2
+  spawnPerTickEnd: 10
+  expTimeStart: 1.2
+  expTimeEnd: 0.4
+  expTimeExponent: 1.5
+  chaserRatioStart: 1
+  runnerRatioStart: 0
+  tankRatioStart: 0
+  swarmRatioStart: 0
+  chaserRatioEnd: 0.3
+  runnerRatioEnd: 0.25
+  tankRatioEnd: 0.15
+  swarmRatioEnd: 0.3
   playerScalings:
   - playerCount: 1
     healthMultiplier: 0.6

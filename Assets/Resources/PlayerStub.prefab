@@ -312,7 +312,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.ChaosSkillManager
   explosionRadius: 0.35
-  explosionDamage: 20
+  explosionDamage: 8
   maxChainPerFrame: 5
   explosionEffectPrefab: {fileID: 0}
   unityCheckRadius: 5

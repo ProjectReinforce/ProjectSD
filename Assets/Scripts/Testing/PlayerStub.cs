@@ -192,6 +192,11 @@ namespace SwDreams.Testing
             //     Debug.Log($"[Test] MoveSpeed: {testStats.MoveSpeed}, ATK: {testStats.AttackMultiplier}");
             // }
 
+            // PlayerStats 변경 구독 (최대 체력 등 패시브 반영)
+            var stats = GetComponent<PlayerStats>();
+            if (stats != null)
+                stats.OnStatsChanged += OnPlayerStatsChanged;
+
             // 로컬 플레이어만 LevelUpManager에 등록
             if (photonView.IsMine && LevelUpManager.Instance != null)
             {
@@ -310,6 +315,46 @@ namespace SwDreams.Testing
         {
             slowMultiplier = 1f;
             Debug.Log("[PlayerStub] 슬로우 해제");
+        }
+
+        // ===== 패시브 스탯 동기화 =====
+
+        private void OnDestroy()
+        {
+            var stats = GetComponent<PlayerStats>();
+            if (stats != null)
+                stats.OnStatsChanged -= OnPlayerStatsChanged;
+        }
+
+        /// <summary>
+        /// PlayerStats.OnStatsChanged 구독 콜백.
+        /// 패시브에 의한 MaxHP 변경을 반영.
+        /// 증가분만큼 현재 HP도 같이 올려서 "최대 체력 증가 = 즉시 체력 회복" 느낌.
+        /// </summary>
+        private void OnPlayerStatsChanged()
+        {
+            var stats = GetComponent<PlayerStats>();
+            if (stats == null) return;
+
+            // MaxHP 동기화
+            int newMaxHP = stats.MaxHP;
+            if (newMaxHP != maxHP)
+            {
+                int oldMaxHP = maxHP;
+                maxHP = newMaxHP;
+
+                // MaxHP 증가 시 증가분만큼 현재 HP도 증가 (감소 시에는 초과분만 클램프)
+                if (newMaxHP > oldMaxHP)
+                    CurrentHP = Mathf.Min(CurrentHP + (newMaxHP - oldMaxHP), maxHP);
+                else
+                    CurrentHP = Mathf.Min(CurrentHP, maxHP);
+
+                OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+                Debug.Log($"[PlayerStub] MaxHP 변경: {oldMaxHP} → {newMaxHP}, HP: {CurrentHP}/{MaxHP}");
+            }
+
+            // MoveSpeed 동기화
+            moveSpeed = stats.MoveSpeed;
         }
 
         /// <summary>
