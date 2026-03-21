@@ -1,114 +1,43 @@
-using System.Collections;
-using System.Collections.Generic;
 using Features.Skill.Application;
+using Features.Skill.Domain;
+using Features.Skill.Presentation;
 using Shared.EventBus;
 using Shared.Time;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using DomainSkill = Features.Skill.Domain.Skill;
 
 namespace Features.Skill.Bootstrap
 {
     [DefaultExecutionOrder(-1000)]
     public sealed class SkillTestBootstrap : MonoBehaviour
     {
-        private const float AutoCastIntervalSeconds = 1.5f;
-
-        private readonly EventBus _eventBus = new EventBus();
-        private readonly ClockAdapter _clock = new ClockAdapter();
-        private readonly Dictionary<string, float> _lastCastTimesBySkillId =
-            new Dictionary<string, float>();
-
-        private CastSkillUseCase _castSkillUseCase;
-        private DomainSkill[] _skills;
-        private Shared.Kernel.DomainEntityId _casterId;
-        private int _nextSkillIndex;
-        private Coroutine _autoCastRoutine;
+        [SerializeField] private SkillBarView skillBarView;
+        [SerializeField] private SkillInputHandler skillInputHandler;
 
         private void Awake()
         {
-            _castSkillUseCase = new CastSkillUseCase(_eventBus);
-            _skills = new[] { SkillCatalog.Fireball(), SkillCatalog.IceLance() };
-            _casterId = Shared.Kernel.DomainEntityId.New();
+            var eventBus = new EventBus();
+            var clock = new ClockAdapter();
+            var cooldownTracker = new CooldownTracker();
+            var castSkillUseCase = new CastSkillUseCase(eventBus, cooldownTracker);
+            var equipSkillUseCase = new EquipSkillUseCase(eventBus);
+            var casterId = Shared.Kernel.DomainEntityId.New();
+
+            var skillBar = new SkillBar();
+            equipSkillUseCase.Execute(skillBar, 0, SkillCatalog.Fireball());
+            equipSkillUseCase.Execute(skillBar, 1, SkillCatalog.IceLance());
+            equipSkillUseCase.Execute(skillBar, 2, SkillCatalog.Blizzard());
+            equipSkillUseCase.Execute(skillBar, 3, SkillCatalog.Smite());
 
             var rigView = gameObject.AddComponent<SkillTestRigView>();
-            rigView.Initialize(_eventBus, _clock);
-        }
+            rigView.Initialize(eventBus, clock);
 
-        private void Start()
-        {
-            Debug.Log(
-                "[SkillTest] SampleScene test rig ready. Fireball and IceLance will auto-cast toward the dummy target."
-            );
-            CastNextSkill();
-            _autoCastRoutine = StartCoroutine(AutoCastLoop());
-        }
+            if (skillBarView != null)
+                skillBarView.Initialize(eventBus, skillBar);
 
-        private void OnDestroy()
-        {
-            if (_autoCastRoutine != null)
-            {
-                StopCoroutine(_autoCastRoutine);
-                _autoCastRoutine = null;
-            }
-        }
+            if (skillInputHandler != null)
+                skillInputHandler.Initialize(castSkillUseCase, skillBar, casterId);
 
-        private IEnumerator AutoCastLoop()
-        {
-            while (true)
-            {
-                yield return new WaitForSeconds(AutoCastIntervalSeconds);
-                CastNextSkill();
-            }
-        }
-
-        private void CastNextSkill()
-        {
-            if (_skills == null || _skills.Length == 0)
-            {
-                Debug.LogWarning("[SkillTest] No skills configured for the test rig.");
-                return;
-            }
-
-            var skill = _skills[_nextSkillIndex];
-            _nextSkillIndex = (_nextSkillIndex + 1) % _skills.Length;
-
-            var lastCastTime = -999f;
-            if (_lastCastTimesBySkillId.TryGetValue(skill.Id.Value, out var cachedLastCastTime))
-            {
-                lastCastTime = cachedLastCastTime;
-            }
-
-            var result = _castSkillUseCase.Execute(skill, _casterId, Time.time, lastCastTime);
-            if (result.IsFailure)
-            {
-                Debug.LogWarning($"[SkillTest] FAILED: {result.Error}");
-                return;
-            }
-
-            _lastCastTimesBySkillId[skill.Id.Value] = Time.time;
-        }
-    }
-
-    internal static class SkillTestRuntimeInstaller
-    {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void InstallForSampleScene()
-        {
-            var scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || (scene.name != "SampleScene" && scene.name != "JG_GameScene"))
-            {
-                return;
-            }
-
-            if (Object.FindFirstObjectByType<SkillTestBootstrap>() != null)
-            {
-                return;
-            }
-
-            var go = new GameObject("SkillTestBootstrap_Auto");
-            go.AddComponent<SkillTestBootstrap>();
-            Debug.Log($"[SkillTest] Auto-installed test rig in {scene.name}.");
+            Debug.Log("[SkillTest] Test rig ready. Press RMB/Q/E/R to cast skills.");
         }
     }
 }

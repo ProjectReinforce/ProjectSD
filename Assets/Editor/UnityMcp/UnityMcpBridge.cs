@@ -23,6 +23,9 @@ namespace ProjectSD.EditorTools.UnityMcp
     {
         private const int DefaultPort = 51234;
         private const int HealthCheckTimeoutMs = 1000;
+        private const double InitialStartDelaySeconds = 0.5d;
+        private const double RetryStartDelaySeconds = 1.0d;
+        private const int MaxStartRetryCount = 10;
         private const string PortConfigRelativePath = "ProjectSettings/UnityMcpPort.txt";
         private const int MaxStoredLogs = 200;
         private const int MaxLogMessageLength = 2000;
@@ -35,21 +38,25 @@ namespace ProjectSD.EditorTools.UnityMcp
         private static HttpListener _listener;
         private static CancellationTokenSource _listenerCts;
         private static int _mainThreadId;
+        private static bool _startScheduled;
+        private static double _scheduledStartTime;
+        private static int _remainingStartRetries;
 
         static UnityMcpBridge()
         {
             _mainThreadId = Thread.CurrentThread.ManagedThreadId;
             EditorApplication.update += DrainMainThreadActions;
+            EditorApplication.update += TryStartBridgeFromSchedule;
             Application.logMessageReceivedThreaded += OnLogMessageReceived;
             AssemblyReloadEvents.beforeAssemblyReload += StopBridge;
             EditorApplication.quitting += StopBridge;
-            StartBridge();
+            ScheduleStartBridge(InitialStartDelaySeconds, resetRetryCount: true);
         }
 
         [MenuItem("Tools/Unity MCP/Start Bridge")]
         private static void StartBridgeMenu()
         {
-            StartBridge();
+            StartBridge(resetRetryCount: true);
         }
 
         [MenuItem("Tools/Unity MCP/Stop Bridge")]
@@ -92,8 +99,14 @@ namespace ProjectSD.EditorTools.UnityMcp
             get { return Path.Combine(ProjectRootPath, PortConfigRelativePath); }
         }
 
-        private static void StartBridge()
+        private static void StartBridge(bool resetRetryCount = false)
         {
+            if (resetRetryCount)
+            {
+                _remainingStartRetries = MaxStartRetryCount;
+            }
+
+            _startScheduled = false;
             var port = ResolvePort();
             var listenerPrefix = BuildListenerPrefix(port);
 
@@ -121,10 +134,24 @@ namespace ProjectSD.EditorTools.UnityMcp
                 _listener.Prefixes.Add(listenerPrefix);
                 _listener.Start();
                 _ = Task.Run(() => ListenLoopAsync(_listenerCts.Token));
+                _remainingStartRetries = MaxStartRetryCount;
                 Debug.Log("[Unity MCP] Bridge started at " + listenerPrefix + " (config: " + PortConfigRelativePath + ")");
             }
             catch (HttpListenerException ex)
             {
+                if (IsPortInUse(port) && _remainingStartRetries > 0)
+                {
+                    var attempt = MaxStartRetryCount - _remainingStartRetries + 1;
+                    _remainingStartRetries--;
+                    Debug.LogWarning(
+                        "[Unity MCP] Bridge port is still blocked at " + listenerPrefix +
+                        ". Scheduling retry " + attempt + "/" + MaxStartRetryCount +
+                        " in " + RetryStartDelaySeconds.ToString("0.0") + "s. Detail: " + ex.Message);
+                    StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
+                    ScheduleStartBridge(RetryStartDelaySeconds);
+                    return;
+                }
+
                 Debug.LogError(
                     "[Unity MCP] Cannot start bridge at " + listenerPrefix +
                     " — port is blocked by another process. " +
@@ -243,6 +270,39 @@ namespace ProjectSD.EditorTools.UnityMcp
             {
                 Debug.Log("[Unity MCP] Bridge stopped.");
             }
+        }
+
+        private static void ScheduleStartBridge(double delaySeconds, bool resetRetryCount = false)
+        {
+            if (resetRetryCount)
+            {
+                _remainingStartRetries = MaxStartRetryCount;
+            }
+
+            var nextAttemptTime = EditorApplication.timeSinceStartup + Math.Max(0d, delaySeconds);
+            if (_startScheduled && _scheduledStartTime <= nextAttemptTime)
+            {
+                return;
+            }
+
+            _scheduledStartTime = nextAttemptTime;
+            _startScheduled = true;
+        }
+
+        private static void TryStartBridgeFromSchedule()
+        {
+            if (!_startScheduled)
+            {
+                return;
+            }
+
+            if (EditorApplication.timeSinceStartup < _scheduledStartTime)
+            {
+                return;
+            }
+
+            _startScheduled = false;
+            StartBridge();
         }
 
         private static int ResolvePort()

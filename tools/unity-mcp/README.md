@@ -47,4 +47,5 @@ This folder provides a minimal bridge between Unity Editor and Codex MCP tools.
 
 - The bridge is editor-only and auto-starts on script reload.
 - Change `ProjectSettings/UnityMcpPort.txt` if port `51234` is already in use.
-- `register-codex-mcp.ps1` and `server.js` read the same port file automatically when no explicit URL is provided.
+- `register-codex-mcp.ps1` now registers without pinning `UNITY_MCP_BASE_URL` by default, so `server.js` follows `ProjectSettings/UnityMcpPort.txt` automatically at runtime.
+- If you pass `-UnityBridgeUrl`, that explicit URL override is used instead of the port file.
