@@ -437,6 +437,12 @@ namespace ProjectSD.EditorTools.UnityMcp
                     return;
                 }
 
+                if (method == "POST" && path == "/gameobject/create-primitive")
+                {
+                    await HandleGameObjectCreatePrimitiveAsync(request, response);
+                    return;
+                }
+
                 if (method == "POST" && path == "/gameobject/destroy")
                 {
                     await HandleGameObjectDestroyAsync(request, response);
@@ -470,6 +476,12 @@ namespace ProjectSD.EditorTools.UnityMcp
                 if (method == "POST" && path == "/scene/save")
                 {
                     await HandleSceneSaveAsync(response);
+                    return;
+                }
+
+                if (method == "POST" && path == "/prefab/save")
+                {
+                    await HandlePrefabSaveAsync(request, response);
                     return;
                 }
 
@@ -649,57 +661,80 @@ namespace ProjectSD.EditorTools.UnityMcp
 
             var pathFilter = request.QueryString["path"];
 
-            var result = await RunOnMainThreadAsync(() =>
+            var json = await RunOnMainThreadAsync(() =>
             {
                 var scene = SceneManager.GetActiveScene();
                 var roots = scene.GetRootGameObjects();
+                var sb = new StringBuilder();
+                sb.Append("{\"sceneName\":\"").Append(EscapeJsonString(scene.name)).Append("\",\"nodes\":[");
 
                 if (!string.IsNullOrEmpty(pathFilter))
                 {
                     var target = GameObject.Find(pathFilter);
-                    if (target == null)
-                        return new HierarchyResponse { sceneName = scene.name, nodes = new HierarchyNode[0] };
-
-                    return new HierarchyResponse
+                    if (target != null)
+                        AppendHierarchyNodeJson(sb, target.transform, maxDepth, 0);
+                }
+                else
+                {
+                    for (var i = 0; i < roots.Length; i++)
                     {
-                        sceneName = scene.name,
-                        nodes = new[] { BuildHierarchyNode(target.transform, maxDepth, 0) }
-                    };
+                        if (i > 0) sb.Append(',');
+                        AppendHierarchyNodeJson(sb, roots[i].transform, maxDepth, 0);
+                    }
                 }
 
-                var nodes = new List<HierarchyNode>();
-                foreach (var root in roots)
-                    nodes.Add(BuildHierarchyNode(root.transform, maxDepth, 0));
-
-                return new HierarchyResponse { sceneName = scene.name, nodes = nodes.ToArray() };
+                sb.Append("]}");
+                return sb.ToString();
             });
 
-            await WriteJsonAsync(response, 200, result);
+            await WriteRawJsonAsync(response, 200, json);
         }
 
-        private static HierarchyNode BuildHierarchyNode(Transform t, int maxDepth, int currentDepth)
+        private static void AppendHierarchyNodeJson(StringBuilder sb, Transform t, int maxDepth, int currentDepth)
         {
-            var node = new HierarchyNode
+            sb.Append("{\"name\":\"").Append(EscapeJsonString(t.name))
+              .Append("\",\"path\":\"").Append(EscapeJsonString(GetTransformPath(t)))
+              .Append("\",\"activeSelf\":").Append(t.gameObject.activeSelf ? "true" : "false")
+              .Append(",\"components\":[");
+
+            var comps = t.GetComponents<Component>();
+            var first = true;
+            foreach (var c in comps)
             {
-                name = t.name,
-                path = GetTransformPath(t),
-                activeSelf = t.gameObject.activeSelf,
-                components = t.GetComponents<Component>()
-                    .Where(c => c != null)
-                    .Select(c => c.GetType().Name)
-                    .ToArray(),
-                childCount = t.childCount
-            };
+                if (c == null) continue;
+                if (!first) sb.Append(',');
+                sb.Append('"').Append(EscapeJsonString(c.GetType().Name)).Append('"');
+                first = false;
+            }
+
+            sb.Append("],\"childCount\":").Append(t.childCount).Append(",\"children\":[");
 
             if (currentDepth < maxDepth)
             {
-                var children = new List<HierarchyNode>();
-                for (int i = 0; i < t.childCount; i++)
-                    children.Add(BuildHierarchyNode(t.GetChild(i), maxDepth, currentDepth + 1));
-                node.children = children.ToArray();
+                for (var i = 0; i < t.childCount; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    AppendHierarchyNodeJson(sb, t.GetChild(i), maxDepth, currentDepth + 1);
+                }
             }
 
-            return node;
+            sb.Append("]}");
+        }
+
+        private static string EscapeJsonString(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                    .Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
+        }
+
+        private static async Task WriteRawJsonAsync(HttpListenerResponse response, int statusCode, string json)
+        {
+            response.StatusCode = statusCode;
+            response.ContentType = "application/json; charset=utf-8";
+            var buffer = Encoding.UTF8.GetBytes(json);
+            response.ContentLength64 = buffer.Length;
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
         }
 
         private static string GetTransformPath(Transform t)
@@ -843,6 +878,53 @@ namespace ProjectSD.EditorTools.UnityMcp
                 Undo.RegisterCreatedObjectUndo(go, "MCP Create " + go.name);
 
                 // Add components
+                if (req.components != null)
+                {
+                    foreach (var compName in req.components)
+                    {
+                        AddComponentByName(go, compName);
+                    }
+                }
+
+                EditorSceneManager.MarkSceneDirty(go.scene);
+
+                return new CreateResponse
+                {
+                    name = go.name,
+                    path = GetTransformPath(go.transform),
+                    instanceId = go.GetInstanceID()
+                };
+            });
+
+            await WriteJsonAsync(response, 200, result);
+        }
+
+        private static async Task HandleGameObjectCreatePrimitiveAsync(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            var body = await ReadRequestBodyAsync(request);
+            var req = JsonUtility.FromJson<CreatePrimitiveRequest>(body);
+
+            var result = await RunOnMainThreadAsync(() =>
+            {
+                PrimitiveType primitiveType;
+                switch ((req.primitiveType ?? "").ToLowerInvariant())
+                {
+                    case "sphere": primitiveType = PrimitiveType.Sphere; break;
+                    case "capsule": primitiveType = PrimitiveType.Capsule; break;
+                    case "cylinder": primitiveType = PrimitiveType.Cylinder; break;
+                    case "cube": primitiveType = PrimitiveType.Cube; break;
+                    case "plane": primitiveType = PrimitiveType.Plane; break;
+                    case "quad": primitiveType = PrimitiveType.Quad; break;
+                    default: throw new Exception("Unknown primitive type: " + req.primitiveType);
+                }
+
+                var go = GameObject.CreatePrimitive(primitiveType);
+                if (!string.IsNullOrEmpty(req.name))
+                    go.name = req.name;
+
+                Undo.RegisterCreatedObjectUndo(go, "MCP CreatePrimitive " + go.name);
+
+                // Add extra components
                 if (req.components != null)
                 {
                     foreach (var compName in req.components)
@@ -1347,6 +1429,47 @@ namespace ProjectSD.EditorTools.UnityMcp
             await WriteJsonAsync(response, 200, result);
         }
 
+        private static async Task HandlePrefabSaveAsync(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            var body = await ReadRequestBodyAsync(request);
+            var req = JsonUtility.FromJson<PrefabSaveRequest>(body);
+
+            var result = await RunOnMainThreadAsync(() =>
+            {
+                if (string.IsNullOrEmpty(req.gameObjectPath))
+                    throw new Exception("gameObjectPath is required");
+                if (string.IsNullOrEmpty(req.savePath))
+                    throw new Exception("savePath is required");
+
+                var go = GameObject.Find(req.gameObjectPath);
+                if (go == null)
+                    throw new Exception("GameObject not found: " + req.gameObjectPath);
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(req.savePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+
+                var prefab = PrefabUtility.SaveAsPrefabAsset(go, req.savePath, out var success);
+                if (!success || prefab == null)
+                    throw new Exception("Failed to save prefab at: " + req.savePath);
+
+                // Optionally destroy the scene instance after saving
+                if (req.destroySceneObject)
+                {
+                    Undo.DestroyObjectImmediate(go);
+                }
+
+                return new GenericResponse
+                {
+                    success = true,
+                    message = "Prefab saved: " + req.savePath
+                };
+            });
+
+            await WriteJsonAsync(response, 200, result);
+        }
+
         private static async Task HandleSceneSaveAsync(HttpListenerResponse response)
         {
             var result = await RunOnMainThreadAsync(() =>
@@ -1533,14 +1656,12 @@ namespace ProjectSD.EditorTools.UnityMcp
 
         // --- Scene manipulation DTOs ---
 
-        [Serializable]
         private sealed class HierarchyResponse
         {
             public string sceneName;
             public HierarchyNode[] nodes;
         }
 
-        [Serializable]
         private sealed class HierarchyNode
         {
             public string name;
@@ -1603,6 +1724,14 @@ namespace ProjectSD.EditorTools.UnityMcp
         }
 
         [Serializable]
+        private sealed class CreatePrimitiveRequest
+        {
+            public string name;
+            public string primitiveType;
+            public string[] components;
+        }
+
+        [Serializable]
         private sealed class ComponentAddRequest
         {
             public string gameObjectPath;
@@ -1639,6 +1768,14 @@ namespace ProjectSD.EditorTools.UnityMcp
             public string gameObjectPath;
             public string componentType;
             public PropertyInfo[] properties;
+        }
+
+        [Serializable]
+        private sealed class PrefabSaveRequest
+        {
+            public string gameObjectPath;
+            public string savePath;
+            public bool destroySceneObject;
         }
 
         [Serializable]

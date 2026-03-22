@@ -18,7 +18,8 @@ Shared/
 ```
 
 - Each feature is self-contained and grows independently.
-- When investigating files for a feature, first read `Assets/Scripts_/Features/<FeatureName>/README.md` if it exists.
+- **MANDATORY**: Before modifying ANY file under `Features/<Name>/`, you MUST read `Assets/Scripts_/Features/<Name>/README.md` first. Do NOT skip this step.
+- **MANDATORY**: When making design decisions — (1) colocate code that changes for the same reason, (2) minimize ripple effect by exposing interface, not implementation. Do not jump to conclusions — check current code first, then answer based on evidence. If unsure whether a change violates project rules, ask before proceeding.
 - `Shared` contains only reusable cross-feature utilities — never feature-specific code.
 - Cross-feature dependency is encouraged — layer direction만 지키면 피처 간 적극적으로 의존한다.
 - Only split a feature into two when a concept gains an independent lifecycle.
@@ -113,23 +114,6 @@ Shared -> (no feature dependency)
 - **EventBus**: `IEventBus`, `EventBus` (in `Shared/EventBus/`)
 - **Adapter**: `LobbyPhotonAdapter`, `ClockAdapter`
 - **View**: `LobbyView`, `RoomListView`, `RoomDetailView`
-
----
-
-## Design Principles
-
-- Colocate code that changes for the same reason — if a single requirement change forces edits across multiple classes or files, those pieces belong together. Conversely, if one class changes for multiple unrelated reasons, split it.
-- Minimize the ripple effect of changes — a class exposes only what it does (interface), never how it does it (implementation). If changing an implementation forces callers to change too, the boundary is wrong.
-
-
-
----
-
-## Agent Reasoning
-
-- Do not jump to yes/no — first check project rules and current code, then answer based on evidence.
-- Do not start with the conclusion and retrofit the reasoning.
-- If a user request conflicts with or shows signs of violating Design Principles, flag it before proceeding.
 
 ---
 

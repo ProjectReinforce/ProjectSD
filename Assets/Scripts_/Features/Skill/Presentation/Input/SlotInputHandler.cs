@@ -1,18 +1,20 @@
 using Features.Skill.Application;
 using Features.Skill.Domain;
 using Shared.Kernel;
+using Shared.Math;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Features.Skill.Presentation
 {
-    public sealed class SkillInputHandler : MonoBehaviour
+    public sealed class SlotInputHandler : MonoBehaviour
     {
         [SerializeField] private InputActionAsset _inputActions;
 
         private CastSkillUseCase _castSkillUseCase;
         private SkillBar _skillBar;
         private DomainEntityId _casterId;
+        private Transform _playerTransform;
 
         private readonly System.Action<InputAction.CallbackContext>[] _callbacks =
             new System.Action<InputAction.CallbackContext>[SkillBar.SlotCount];
@@ -42,6 +44,11 @@ namespace Features.Skill.Presentation
             }
         }
 
+        public void SetPlayerTransform(Transform playerTransform)
+        {
+            _playerTransform = playerTransform;
+        }
+
         private void OnDestroy()
         {
             if (_slotActions == null) return;
@@ -62,7 +69,11 @@ namespace Features.Skill.Presentation
                 return;
             }
 
-            var result = _castSkillUseCase.Execute(skill, _casterId, Time.time);
+            var origin = _playerTransform != null ? _playerTransform : transform;
+            var position = origin.position.ToFloat3();
+            var direction = origin.forward.ToFloat3();
+
+            var result = _castSkillUseCase.Execute(skill, _casterId, Time.time, position, direction);
             if (result.IsFailure)
             {
                 Debug.LogWarning($"[SkillInput] Slot {slotIndex} FAILED: {result.Error}");

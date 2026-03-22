@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Features.Skill.Presentation
 {
-    public sealed class SkillSlotView : MonoBehaviour
+    public sealed class SlotView : MonoBehaviour
     {
         [SerializeField] private Image icon;
         [SerializeField] private Image cooldownOverlay;

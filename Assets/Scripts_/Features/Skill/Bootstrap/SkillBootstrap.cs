@@ -1,9 +1,11 @@
+using Features.Projectile.Bootstrap;
 using Features.Skill.Application;
+using Features.Skill.Application.Ports;
 using Features.Skill.Domain;
 using Features.Skill.Presentation;
 using Shared.EventBus;
-using Shared.Time;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Features.Skill.Bootstrap
 {
@@ -11,18 +13,38 @@ namespace Features.Skill.Bootstrap
     public sealed class SkillBootstrap : MonoBehaviour
     {
         [SerializeField]
-        private SkillBarView skillBarView;
+        private BarView skillBarView;
 
         [SerializeField]
-        private SkillInputHandler skillInputHandler;
+        private SlotInputHandler skillInputHandler;
+
+        [FormerlySerializedAs("skillEffectSpawner")]
+        [SerializeField]
+        private SkillCastEffectSpawner skillCastEffectSpawner;
+
+        [SerializeField]
+        private ProjectileSpawner projectileSpawner;
+
+        private EventBus _eventBus;
+        private CastSkillUseCase _castSkillUseCase;
 
         private void Awake()
         {
-            var eventBus = new EventBus();
-            var clock = new ClockAdapter();
+            if (
+                skillBarView == null
+                || skillInputHandler == null
+                || skillCastEffectSpawner == null
+                || projectileSpawner == null
+            )
+            {
+                Debug.LogError("[SkillBootstrap] Missing required components on SkillBarCanvas.");
+                return;
+            }
+
+            _eventBus = new EventBus();
             var cooldownTracker = new CooldownTracker();
-            var castSkillUseCase = new CastSkillUseCase(eventBus, cooldownTracker);
-            var equipSkillUseCase = new EquipSkillUseCase(eventBus);
+            _castSkillUseCase = new CastSkillUseCase(_eventBus, cooldownTracker);
+            var equipSkillUseCase = new EquipSkillUseCase(_eventBus);
             var casterId = Shared.Kernel.DomainEntityId.New();
 
             var skillBar = new SkillBar();
@@ -31,16 +53,25 @@ namespace Features.Skill.Bootstrap
             equipSkillUseCase.Execute(skillBar, 2, SkillCatalog.Blizzard());
             equipSkillUseCase.Execute(skillBar, 3, SkillCatalog.Smite());
 
-            var rigView = gameObject.AddComponent<SkillTestRigView>();
-            rigView.Initialize(eventBus, clock);
+            skillBarView.Initialize(_eventBus, skillBar);
+            skillInputHandler.Initialize(_castSkillUseCase, skillBar, casterId);
+            projectileSpawner.Initialize(_eventBus, _eventBus);
+            skillCastEffectSpawner.Initialize(_eventBus);
 
-            if (skillBarView != null)
-                skillBarView.Initialize(eventBus, skillBar);
+            Debug.Log("[SkillBootstrap] Skill system ready. Waiting for player connection.");
+        }
 
-            if (skillInputHandler != null)
-                skillInputHandler.Initialize(castSkillUseCase, skillBar, casterId);
+        public void ConnectLocalPlayer(ISkillNetworkCommandPort networkPort, Transform playerTransform)
+        {
+            _castSkillUseCase.SetNetwork(networkPort);
+            skillInputHandler.SetPlayerTransform(playerTransform);
+            Debug.Log("[SkillBootstrap] Local player connected.");
+        }
 
-            Debug.Log("[SkillTest] Test rig ready. Press RMB/Q/E/R to cast skills.");
+        public void RegisterRemotePlayer(ISkillNetworkCallbackPort callbackPort)
+        {
+            var _ = new SkillNetworkEventHandler(_eventBus, callbackPort);
+            Debug.Log("[SkillBootstrap] Remote player registered.");
         }
     }
 }

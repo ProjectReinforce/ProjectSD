@@ -211,10 +211,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: SkillBarCanvas
       objectReference: {fileID: 0}
-    - target: {fileID: 9139654667506876455, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

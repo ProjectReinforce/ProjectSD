@@ -135,6 +135,31 @@ const tools = [
     }
   },
   {
+    name: "unity_gameobject_create_primitive",
+    description: "Create a primitive GameObject (Sphere, Capsule, Cylinder, Cube, Plane, Quad) with mesh, collider, and renderer already attached.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Name for the new GameObject."
+        },
+        primitiveType: {
+          type: "string",
+          enum: ["Sphere", "Capsule", "Cylinder", "Cube", "Plane", "Quad"],
+          description: "Type of primitive to create."
+        },
+        components: {
+          type: "array",
+          items: { type: "string" },
+          description: "Additional component types to add (e.g. ['Rigidbody', 'TrailRenderer'])."
+        }
+      },
+      required: ["name", "primitiveType"],
+      additionalProperties: false
+    }
+  },
+  {
     name: "unity_gameobject_destroy",
     description: "Destroy a GameObject by path. Supports undo.",
     inputSchema: {
@@ -224,6 +249,29 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {},
+      additionalProperties: false
+    }
+  },
+  {
+    name: "unity_prefab_save",
+    description: "Save a scene GameObject as a prefab asset. Creates the target directory if needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gameObjectPath: {
+          type: "string",
+          description: "Hierarchy path of the GameObject to save as prefab (e.g. '/Fireball')."
+        },
+        savePath: {
+          type: "string",
+          description: "Asset path to save the prefab (e.g. 'Assets/Resources/Prefabs/Fireball.prefab')."
+        },
+        destroySceneObject: {
+          type: "boolean",
+          description: "If true, destroy the scene GameObject after saving the prefab. Default false."
+        }
+      },
+      required: ["gameObjectPath", "savePath"],
       additionalProperties: false
     }
   }
@@ -397,6 +445,8 @@ async function callTool(name, args) {
       return requestUnityJsonWithBody("POST", "/gameobject/find", args);
     case "unity_gameobject_create":
       return requestUnityJsonWithBody("POST", "/gameobject/create", args);
+    case "unity_gameobject_create_primitive":
+      return requestUnityJsonWithBody("POST", "/gameobject/create-primitive", args);
     case "unity_gameobject_destroy":
       return requestUnityJsonWithBody("POST", "/gameobject/destroy", { path: args.path });
     case "unity_component_add":
@@ -407,6 +457,8 @@ async function callTool(name, args) {
       return requestUnityJsonWithBody("POST", "/component/get", args);
     case "unity_scene_save":
       return requestUnityJsonWithBody("POST", "/scene/save", {});
+    case "unity_prefab_save":
+      return requestUnityJsonWithBody("POST", "/prefab/save", args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

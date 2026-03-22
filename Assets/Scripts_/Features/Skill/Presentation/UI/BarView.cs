@@ -6,9 +6,9 @@ using UnityEngine;
 
 namespace Features.Skill.Presentation
 {
-    public sealed class SkillBarView : MonoBehaviour
+    public sealed class BarView : MonoBehaviour
     {
-        [SerializeField] private SkillSlotView[] slotViews;
+        [SerializeField] private SlotView[] slotViews;
         private static readonly string[] SlotLabels = { "RMB", "Q", "E", "R" };
 
         private IEventSubscriber _eventBus;
@@ -40,7 +40,7 @@ namespace Features.Skill.Presentation
             if (e.SlotIndex < 0 || e.SlotIndex >= slotViews.Length) return;
             // 아이콘은 프리팹에서 세팅; 여기서는 슬롯 활성화만 표시
             slotViews[e.SlotIndex].SetSkill(null);
-            Debug.Log($"[SkillBarView] Slot {e.SlotIndex} equipped: {e.SkillId}");
+            Debug.Log($"[BarView] Slot {e.SlotIndex} equipped: {e.SkillId}");
         }
 
         private void OnSkillCasted(SkillCastedEvent e)

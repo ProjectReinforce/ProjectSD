@@ -2,270 +2,68 @@
 
 멀티플레이 로비 기능. 방 생성/입장/퇴장, 팀 변경, 레디, 게임 시작을 담당한다.
 
----
+## 책임
 
-## 디렉토리 구조
+- 방 목록 조회 및 표시
+- 방 생성/입장/퇴장
+- 방 내 팀 변경, 레디 상태 토글
+- 게임 시작 조건 검증 및 시작 트리거
 
-```
-Lobby/
-├── Domain/
-│   ├── Lobby/
-│   │   ├── Lobby.cs           - 방 목록 관리 (AddRoom, RemoveRoom, FindRoom)
-│   │   └── LobbyRule.cs       - 비즈니스 규칙 (방 이름 검증, 게임 시작 조건)
-│   └── Room/
-│       ├── Room.cs            - 방 엔티티 (멤버 관리, 팀/레디 변경)
-│       ├── RoomMember.cs      - 멤버 엔티티 (이름, 팀, 레디 상태)
-│       └── TeamType.cs        - 팀 열거형
-│
-├── Application/
-│   ├── UseCases/
-│   │   ├── CreateRoomUseCase.cs
-│   │   ├── JoinRoomUseCase.cs
-│   │   ├── LeaveRoomUseCase.cs
-│   │   ├── ChangeTeamUseCase.cs
-│   │   ├── SetReadyUseCase.cs
-│   │   └── StartGameUseCase.cs
-│   ├── Handlers/
-│   │   └── LobbyStateSyncHandler.cs - Photon 콜백 후 로비 상태 동기화/이벤트 발행
-│   ├── Ports/
-│   │   ├── ILobbyRepository.cs   - 로컬 상태 저장소 포트
-│   │   └── ILobbyNetworkPort.cs  - 네트워크 통신 포트
-│   ├── Events/
-│   │   ├── LobbyUpdatedEvent.cs  - 로비 전체 상태 변경
-│   │   ├── RoomUpdatedEvent.cs   - 특정 방 상태 변경
-│   │   ├── GameStartedEvent.cs   - 게임 시작
-│   │   ├── LobbyErrorEvent.cs    - 비동기 에러 알림
-│   │   ├── LobbySnapshot.cs      - 이벤트용 로비 스냅샷 (불변)
-│   │   └── RoomSnapshot.cs       - 이벤트용 방/멤버 스냅샷 (불변)
-├── Infrastructure/
-│   ├── Persistence/
-│   │   └── LobbyRepository.cs         - 인메모리 로컬 상태 저장소
-│   └── Photon/
-│       ├── LobbyPhotonAdapter.cs       - ILobbyNetworkPort 구현, 커맨드 발사
-│       ├── PhotonNetworkEventHandler.cs - Photon 콜백 수신 → Application Handler 호출
-│       ├── PhotonPlayerPropertyManager.cs - Photon CustomProperties 읽기/쓰기
-│       └── LobbyPhotonConstants.cs     - Photon key 상수
-│
-├── Presentation/
-│   ├── LobbyView.cs      - 이벤트 구독, 하위 View에 위임
-│   ├── RoomListView.cs   - 방 목록 렌더링
-│   └── RoomDetailView.cs - 방 상세 (멤버 목록, 팀, 레디, 게임 시작)
-│
-└── Bootstrap/
-    └── LobbyBootstrap.cs - 의존성 주입 및 초기화
-```
+## 이벤트 흐름
 
----
-
-## 레이어 의존 방향
+### 명령 경로 (로컬 → 네트워크)
 
 ```
-Presentation
-    │  이벤트 구독 (LobbyUpdatedEvent, RoomUpdatedEvent, ...)
-    │  UseCase 직접 호출 (동기 결과는 Result로 받음)
-    ▼
-Application  ──────────────────────────────────────────────────────────
-    │  포트 호출 (ILobbyRepository, ILobbyNetworkPort)               │
-    │  비즈니스 규칙은 Domain에 위임                                   │
-    │  Photon 콜백 후처리는 Handler가 담당                              │
-    ▼                                                               │
-Domain                                                              │
-    Lobby, Room, RoomMember, LobbyRule                              │
-                                                                    │
-Infrastructure ──────────────────────────────────────────────────────
-    ILobbyRepository  ← LobbyRepository (인메모리)
-    ILobbyNetworkPort ← LobbyPhotonAdapter (Photon PUN2)
+LobbyView (UI 입력)
+  → LobbyUseCases.CreateRoom / JoinRoom / LeaveRoom / ChangeTeam / SetReady / StartGame
+    → ILobbyRepository로 현재 상태 검증
+    → ILobbyNetworkCommandPort (LobbyPhotonAdapter)
+      → Photon API 호출 (CreateRoom, CustomProperties 등)
 ```
 
----
+### 콜백 경로 (네트워크 → UI)
 
-## 핵심 설계: Photon 이벤트 드리븐
+```
+Photon 콜백 (OnCreatedRoom, OnJoinedRoom, OnPlayerEnteredRoom 등)
+  → LobbyPhotonAdapter → ILobbyNetworkCallbackPort Action 호출
+    → LobbyNetworkEventHandler
+      → ILobbyRepository 업데이트 (도메인 상태 반영)
+      → EventBus 이벤트 발행:
+          LobbyUpdatedEvent, RoomUpdatedEvent, GameStartedEvent 등
+        → LobbyView가 구독하여 UI 갱신
+```
 
-> UseCase는 커맨드만 발사하고 끝낸다.
-> Photon 콜백 해석은 `PhotonNetworkEventHandler`가 맡고,
-> 도메인 상태 업데이트와 이벤트 발행은 `LobbyStateSyncHandler`가 처리한다.
+### 핵심 설계: 이벤트 드리븐
+
+UseCase는 커맨드만 발사하고 끝낸다.
+Photon 콜백 해석과 도메인 상태 업데이트는 `LobbyNetworkEventHandler`가 처리한다.
 
 ### 에러 처리 분리
 
 | 에러 종류 | 처리 방식 |
 |---|---|
 | 동기 유효성 에러 (방 이름 중복 등) | UseCase가 `Result.Failure` 반환 → View에서 즉시 처리 |
-| 비동기 네트워크 에러 (방 입장 실패 등) | `PhotonNetworkEventHandler` → `LobbyStateSyncHandler`가 `LobbyErrorEvent` 발행 → View가 구독하여 처리 |
+| 비동기 네트워크 에러 (방 입장 실패 등) | `LobbyNetworkEventHandler`가 `LobbyErrorEvent` 발행 → View가 구독 |
 
----
+## 네트워크 동기화
 
-## 주요 흐름
-
-### 1. 방 생성 (CreateRoom)
-
-```
-[Host 클라이언트]
-
-LobbyView.OnCreateClick()
-  └─ CreateRoomUseCase.Execute(name, capacity, ownerName)
-       ├─ LobbyRule.ValidateRoomName()        ← 실패 시 즉시 Result.Failure 반환
-       ├─ LobbyRule.EnsureUniqueRoomName()
-       ├─ Room.Create(id, name, capacity, owner)
-       └─ ILobbyNetworkPort.CreateRoom(room)
-            └─ LobbyPhotonAdapter
-                 ├─ 유효성 검사 (연결 상태, 이미 방에 있는지)
-                 ├─ SetLocalMemberProperties(owner)  → Photon CustomProperties 설정
-                 ├─ EventHandler.SetPendingCreate(room)
-                 └─ PhotonNetwork.CreateRoom(...)
-
-                               ↓ Photon 서버 응답
-
-PhotonNetworkEventHandler.OnCreatedRoom()
-  └─ LobbyStateSyncHandler.HandleCreateRoomSucceeded(room)
-       ├─ lobby.AddRoom(room)
-       ├─ repository.SaveLobby(lobby)
-       ├─ Publish(LobbyUpdatedEvent)
-       └─ Publish(RoomUpdatedEvent)
-
-PhotonNetworkEventHandler.OnJoinedRoom()   ← 방 만든 사람도 수신
-  └─ _pendingJoin == false → return (무시, 위에서 이미 처리)
-```
-
----
-
-### 2. 방 입장 (JoinRoom)
-
-```
-[Guest 클라이언트]                       [기존 방 멤버들]
-
-LobbyView.OnJoinClick(roomId)
-  └─ JoinRoomUseCase.Execute(roomId, name)
-       ├─ RoomMember 생성 (새 EntityId)
-       └─ ILobbyNetworkPort.JoinRoom(roomId, member)
-            └─ LobbyPhotonAdapter
-                 ├─ SetLocalMemberProperties(member)
-                 ├─ EventHandler.SetPendingJoin()
-                 └─ PhotonNetwork.JoinRoom(roomId)
-
-                ↓ Photon 서버 응답            ↓ Photon 푸시
-
-OnJoinedRoom()                          OnPlayerEnteredRoom(newPlayer)
-  └─ PhotonNetwork.CurrentRoom에서         └─ BuildMemberFromPlayer(player)
-      전체 멤버 포함 Room 재구성               └─ room.AddMember(member)
-  └─ LobbyStateSyncHandler                   └─ LobbyStateSyncHandler
-       ├─ lobby.AddRoom(room)                    ├─ repository.SaveLobby(lobby)
-       ├─ repository.SaveLobby(lobby)            └─ Publish(RoomUpdatedEvent)
-       ├─ Publish(LobbyUpdatedEvent)
-       └─ Publish(RoomUpdatedEvent)
-```
-
-> 핵심: Guest의 `OnJoinedRoom`에서 `PhotonNetwork.CurrentRoom`으로 방 전체 상태를 복원한다.
-> 기존 멤버들은 `OnPlayerEnteredRoom`으로 신규 멤버를 받아 도메인에 추가한다.
-
----
-
-### 3. 방 퇴장 (LeaveRoom)
-
-```
-LeaveRoomUseCase.Execute(roomId, memberId)
-  ├─ 로컬 room/member 존재 확인 (동기 검증)
-  └─ ILobbyNetworkPort.LeaveRoom(roomId, memberId)
-       └─ LobbyPhotonAdapter
-            ├─ EventHandler.SetPendingLeave(roomId, memberId)  ← 나간 후엔 CurrentRoom이 null
-            └─ PhotonNetwork.LeaveRoom()
-
-                               ↓ Photon 서버 응답
-
-PhotonNetworkEventHandler.OnLeftRoom()
-  └─ pendingLeaveRoomId/memberId 사용
-  └─ LobbyStateSyncHandler.HandleLeaveRoomSucceeded(roomId, memberId)
-       ├─ room.RemoveMember(memberId)
-       ├─ 빈 방이면 lobby.RemoveRoom(roomId)
-       ├─ repository.SaveLobby(lobby)
-       ├─ Publish(LobbyUpdatedEvent)
-       └─ Publish(RoomUpdatedEvent)   ← 멤버가 남아있을 때만
-```
-
-> `SetPendingLeave`가 필요한 이유: `OnLeftRoom` 시점에는 이미 방을 나간 상태라
-> `PhotonNetwork.CurrentRoom == null`이기 때문.
-
----
-
-### 4. 팀 변경 / 레디 (ChangeTeam / SetReady)
-
-```
-ChangeTeamUseCase / SetReadyUseCase
-  ├─ 로컬 room/member 존재 확인
-  └─ ILobbyNetworkPort.ChangeTeam(memberId, team) / SetReady(memberId, isReady)
-       └─ LobbyPhotonAdapter
-            ├─ 로컬 플레이어 검증 (자기 자신만 변경 가능)
-            └─ PhotonNetwork.LocalPlayer.SetCustomProperties(...)
-
-                               ↓ Photon 서버 응답 (전체 클라이언트)
-
-PhotonNetworkEventHandler.OnPlayerPropertiesUpdate(player, changedProps)
-  └─ LobbyStateSyncHandler.HandleTeamChanged(...) / HandleReadyChanged(...)
-       ├─ room.ChangeTeam(memberId, team) / room.SetReady(memberId, isReady)
-       ├─ repository.SaveLobby(lobby)
-       └─ Publish(RoomUpdatedEvent)
-```
-
-> 로컬/원격 플레이어 모두 동일한 콜백으로 처리한다.
-> 자기 자신도 서버를 통해 확인받은 뒤 도메인에 반영된다.
-
----
-
-### 5. 게임 시작 (StartGame)
-
-```
-[방장만 호출 가능]
-
-StartGameUseCase.Execute(roomId)
-  ├─ LobbyRule.CanStartGame() → 인원 2명 이상 + 전원 레디
-  └─ ILobbyNetworkPort.StartGame(roomId)
-       └─ LobbyPhotonAdapter
-            ├─ MasterClient 여부 확인
-            ├─ PhotonNetwork.RaiseEvent(GameStartedEventCode, roomId, ReceiverGroup.All)
-            └─ PhotonNetwork.LoadLevel("GameScene")
-
-                               ↓ 전체 클라이언트 수신
-
-PhotonNetworkEventHandler.OnEvent(photonEvent)
-  └─ GameStartedEventCode 확인
-  └─ LobbyStateSyncHandler.HandleGameStarted(roomId)
-       └─ Publish(GameStartedEvent(room))
-          → LobbyView.RenderStartGame()
-```
-
----
-
-## 이벤트 목록
-
-| 이벤트 | 발행 시점 | 구독자 |
+| 데이터 | 방식 | 용도 |
 |---|---|---|
-| `LobbyUpdatedEvent` | 방 추가/삭제 | `LobbyView` → `RoomListView` |
-| `RoomUpdatedEvent` | 멤버 변경, 팀/레디 변경 | `LobbyView` → `RoomDetailView` |
-| `GameStartedEvent` | 게임 시작 RaiseEvent 수신 | `LobbyView` |
-| `LobbyErrorEvent` | 비동기 네트워크 실패 | `LobbyView` |
+| 팀, 레디, 닉네임 | `CustomProperties` (상태 동기화) | 늦게 입장한 유저에게 자동 동기화 |
+| 게임 시작 | `RaiseEvent` (이산 이벤트) | 전체 방 알림 |
+| 방 입퇴장 | Photon 자체 콜백 | 멤버 변동 감지 |
 
----
+`LobbyPhotonAdapter`가 `ILobbyNetworkCommandPort`(송신)와 `ILobbyNetworkCallbackPort`(수신)을 모두 구현한다.
 
 ## 도메인 모델
 
-```
-Lobby
- └─ rooms: List<Room>
+- **Lobby**: 방 컬렉션 관리 (aggregate root)
+- **Room**: 멤버 관리, 팀/레디 상태
+- **RoomMember**: Id, DisplayName, Team, IsReady
+- **LobbyRule**: 방 생성/게임 시작 조건 검증
 
-Room (Entity)
- ├─ Id: EntityId          (= Photon Room Name)
- ├─ Name: string
- ├─ Capacity: int
- ├─ OwnerId: EntityId     (MasterClient의 도메인 멤버 ID)
- └─ members: List<RoomMember>
-
-RoomMember (Entity)
- ├─ Id: EntityId          (= Photon CustomProperties["memberId"])
- ├─ DisplayName: string
- ├─ Team: TeamType
- └─ IsReady: bool
-```
-
----
+주의: `Lobby` 클래스명이 `Features.Lobby` 네임스페이스와 충돌하므로
+다른 레이어에서 사용 시 `using DomainLobby = Features.Lobby.Domain.Lobby;` alias 필요.
 
 ## Photon ↔ 도메인 매핑
 
@@ -280,20 +78,11 @@ RoomMember (Entity)
 | `Player.CustomProperties["team"]` | `RoomMember.Team` |
 | `Player.CustomProperties["isReady"]` | `RoomMember.IsReady` |
 
----
+## Bootstrap
 
-## 스냅샷 (Snapshot)
+- **LobbyBootstrap** (씬 오브젝트): LobbyPhotonAdapter → LobbyNetworkEventHandler → LobbyUseCases → LobbyView 순서로 조립
 
-이벤트에는 도메인 객체 참조를 직접 넘기지 않고 **불변 스냅샷**을 사용한다.
+## 피처 간 의존
 
-```
-Room (mutable entity)
-  → RoomSnapshot (readonly struct, 이벤트에 담김)
-       └─ RoomMemberSnapshot[]
-
-Lobby
-  → LobbySnapshot (readonly struct)
-       └─ RoomSnapshot[]
-```
-
-View는 항상 스냅샷을 통해 데이터를 읽는다. 도메인 객체를 직접 보유하지 않는다.
+- **독립적**: 다른 피처에 의존하지 않음
+- **Shared**: EventBus, DomainEntityId, Result, IClockPort
