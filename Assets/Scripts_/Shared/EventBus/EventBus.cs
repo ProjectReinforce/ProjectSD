@@ -42,6 +42,12 @@ namespace Shared.EventBus
             _ownerMap.Remove(owner);
         }
 
+        public void Clear()
+        {
+            _handlers.Clear();
+            _ownerMap.Clear();
+        }
+
         public void Publish<T>(T e)
         {
             if (!_handlers.TryGetValue(typeof(T), out var list))

@@ -37,13 +37,13 @@ namespace Features.Skill.Application
                     _publisher.Publish(new ProjectileRequestedEvent(data.CasterId, projectileSpec, data.Position, data.Direction));
                     break;
                 case DeliveryType.Zone:
-                    _publisher.Publish(new ZoneRequestedEvent(data.CasterId, spec, data.Position, data.Direction));
+                    _publisher.Publish(new ZoneRequestedEvent(data.SkillId, data.CasterId, spec, data.Position, data.Direction));
                     break;
                 case DeliveryType.Targeted:
-                    _publisher.Publish(new TargetedRequestedEvent(data.CasterId, spec, data.Position, data.Direction));
+                    _publisher.Publish(new TargetedRequestedEvent(data.SkillId, data.CasterId, spec, data.Position, data.Direction));
                     break;
                 case DeliveryType.Self:
-                    _publisher.Publish(new SelfRequestedEvent(data.CasterId, spec, data.Position));
+                    _publisher.Publish(new SelfRequestedEvent(data.SkillId, data.CasterId, spec, data.Position));
                     break;
             }
 

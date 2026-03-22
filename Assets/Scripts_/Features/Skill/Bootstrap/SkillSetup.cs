@@ -20,22 +20,48 @@ namespace Features.Skill.Bootstrap
 
         [SerializeField]
         private SkillNetworkAdapter _networkAdapter;
+
+        [SerializeField]
+        private SkillCatalogData _catalogData;
+
+        [SerializeField]
+        private SkillLoadoutData _loadoutData;
+
         private EventBus _eventBus;
+        private SkillNetworkEventHandler _networkEventHandler;
+        private SkillCatalog _catalog;
+
+        public SkillCatalog Catalog => _catalog;
 
         public void Initialize(EventBus eventBus, Transform playerTransform)
         {
             _eventBus = eventBus;
+
+            if (_catalogData == null)
+            {
+                Debug.LogError("[SkillSetup] _catalogData is not assigned in Inspector.", this);
+                return;
+            }
+
+            if (_loadoutData == null)
+            {
+                Debug.LogError("[SkillSetup] _loadoutData is not assigned in Inspector.", this);
+                return;
+            }
+
+            _catalog = new SkillCatalog(_catalogData);
+
             _barView.Initialize(eventBus);
-            _skillCastEffectSpawner.Initialize(eventBus);
+            _skillCastEffectSpawner.Initialize(eventBus, new SkillEffectAdapter(_catalog));
 
-            var _ = new SkillNetworkEventHandler(_eventBus, _networkAdapter);
+            _networkEventHandler = new SkillNetworkEventHandler(_eventBus, _networkAdapter);
 
-            var skillBar = new SkillBar();
+            var loadoutRepo = new SkillLoadoutRepository(_loadoutData);
             var equipSkillUseCase = new EquipSkillUseCase(_eventBus);
-            equipSkillUseCase.Execute(skillBar, 0, SkillCatalog.Fireball());
-            equipSkillUseCase.Execute(skillBar, 1, SkillCatalog.IceLance());
-            equipSkillUseCase.Execute(skillBar, 2, SkillCatalog.Blizzard());
-            equipSkillUseCase.Execute(skillBar, 3, SkillCatalog.Smite());
+            var skillBar = equipSkillUseCase.BuildFromLoadout(
+                loadoutRepo.Load(),
+                skillId => _catalog.Get(skillId)
+            );
 
             var cooldownTracker = new CooldownTracker();
             var castSkillUseCase = new CastSkillUseCase(cooldownTracker, _networkAdapter);
@@ -44,7 +70,7 @@ namespace Features.Skill.Bootstrap
             if (_slotInputHandler == null)
             {
                 Debug.LogError(
-                    $"[SkillSetup] _slotInputHandler is not assigned in Inspector.",
+                    "[SkillSetup] _slotInputHandler is not assigned in Inspector.",
                     this
                 );
                 return;

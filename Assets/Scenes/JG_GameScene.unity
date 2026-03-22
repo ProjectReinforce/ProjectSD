@@ -211,6 +211,14 @@ PrefabInstance:
       propertyPath: sceneViewId
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 9088864777652907189, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
+      propertyPath: _catalogData
+      value: 
+      objectReference: {fileID: 11400000, guid: ca71a1221b5f19f48a83ad6229c10207, type: 2}
+    - target: {fileID: 9088864777652907189, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
+      propertyPath: _loadoutData
+      value: 
+      objectReference: {fileID: 11400000, guid: 3cbc22dac18f5684389ace72370f18a7, type: 2}
     - target: {fileID: 9139654667506876455, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
       propertyPath: m_Name
       value: SkillBarCanvas

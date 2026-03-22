@@ -1,58 +1,43 @@
-using Features.Projectile.Domain;
-using Features.Projectile.Domain.Hit;
-using Features.Projectile.Domain.Trajectory;
-using Features.Skill.Domain;
-using Features.Skill.Domain.Delivery;
-using Shared.Kernel;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Features.Skill.Bootstrap
 {
-    public static class SkillCatalog
+    public sealed class SkillCatalog
     {
-        // Projectile
-        public static Domain.Skill Fireball() => new Domain.Skill(
-            new DomainEntityId("skill-fireball"),
-            new SkillSpec(damage: 50f, cooldown: 2.0f, range: 15f),
-            new ProjectileDelivery(new ProjectileSpec(
-                TrajectoryType.Linear, HitType.Single, speed: 20f, radius: 0.5f)));
+        private readonly Dictionary<string, SkillData> _dataById = new Dictionary<string, SkillData>();
+        private readonly SkillData[] _allSkills;
 
-        public static Domain.Skill IceLance() => new Domain.Skill(
-            new DomainEntityId("skill-ice-lance"),
-            new SkillSpec(damage: 30f, cooldown: 1.0f, range: 20f),
-            new ProjectileDelivery(new ProjectileSpec(
-                TrajectoryType.Linear, HitType.Piercing, speed: 30f, radius: 0.3f)));
+        public SkillCatalog(SkillCatalogData catalogData)
+        {
+            _allSkills = catalogData.Skills;
+            foreach (var data in _allSkills)
+            {
+                if (data == null) continue;
+                if (_dataById.ContainsKey(data.SkillId))
+                {
+                    Debug.LogWarning($"[SkillCatalog] Duplicate skill ID: {data.SkillId}");
+                    continue;
+                }
+                _dataById[data.SkillId] = data;
+            }
+        }
 
-        // Zone
-        public static Domain.Skill Blizzard() => new Domain.Skill(
-            new DomainEntityId("skill-blizzard"),
-            new SkillSpec(damage: 20f, cooldown: 5.0f, range: 8f),
-            new ZoneDelivery());
+        public Domain.Skill Get(string skillId)
+        {
+            if (_dataById.TryGetValue(skillId, out var data))
+                return data.ToDomain();
 
-        public static Domain.Skill Earthquake() => new Domain.Skill(
-            new DomainEntityId("skill-earthquake"),
-            new SkillSpec(damage: 40f, cooldown: 8.0f, range: 10f),
-            new ZoneDelivery());
+            Debug.LogError($"[SkillCatalog] Skill not found: {skillId}");
+            return null;
+        }
 
-        // Targeted
-        public static Domain.Skill Smite() => new Domain.Skill(
-            new DomainEntityId("skill-smite"),
-            new SkillSpec(damage: 60f, cooldown: 3.0f, range: 12f),
-            new TargetedDelivery());
+        public SkillData GetData(string skillId)
+        {
+            _dataById.TryGetValue(skillId, out var data);
+            return data;
+        }
 
-        public static Domain.Skill ShadowBolt() => new Domain.Skill(
-            new DomainEntityId("skill-shadow-bolt"),
-            new SkillSpec(damage: 45f, cooldown: 2.5f, range: 18f),
-            new TargetedDelivery());
-
-        // Self
-        public static Domain.Skill HealingSurge() => new Domain.Skill(
-            new DomainEntityId("skill-healing-surge"),
-            new SkillSpec(damage: -30f, cooldown: 4.0f, range: 0f),
-            new SelfDelivery());
-
-        public static Domain.Skill IronSkin() => new Domain.Skill(
-            new DomainEntityId("skill-iron-skin"),
-            new SkillSpec(damage: 0f, cooldown: 10.0f, range: 0f),
-            new SelfDelivery());
+        public SkillData[] AllSkills => _allSkills;
     }
 }

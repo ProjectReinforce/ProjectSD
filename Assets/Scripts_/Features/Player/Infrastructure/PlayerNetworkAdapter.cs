@@ -9,9 +9,11 @@ namespace Features.Player.Infrastructure
     public sealed class PlayerNetworkAdapter : MonoBehaviourPun, IPunObservable,
         IPlayerNetworkCommandPort, IPlayerNetworkCallbackPort
     {
+        [SerializeField]
+        private float _lerpSpeed = 15f;
+
         private Vector3 _networkPosition;
         private Quaternion _networkRotation;
-        private float _lerpSpeed = 15f;
 
         public bool IsMine => photonView.IsMine;
 

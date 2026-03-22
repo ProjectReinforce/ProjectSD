@@ -265,3 +265,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00b3b65c14be5eb4b9962a19e1b84b06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Features.Player.Infrastructure.PlayerNetworkAdapter
+  _lerpSpeed: 15

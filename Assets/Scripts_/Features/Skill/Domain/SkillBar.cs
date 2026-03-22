@@ -6,9 +6,11 @@ namespace Features.Skill.Domain
 
         private readonly Skill[] _slots = new Skill[SlotCount];
 
-        public void Equip(int slotIndex, Skill skill)
+        public bool Equip(int slotIndex, Skill skill)
         {
+            if (slotIndex < 0 || slotIndex >= SlotCount) return false;
             _slots[slotIndex] = skill;
+            return true;
         }
 
         public Skill GetSkill(int slotIndex)

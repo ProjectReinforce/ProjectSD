@@ -8,6 +8,7 @@ namespace Features.Skill.Presentation
 {
     public sealed class SkillCastEffectSpawner : MonoBehaviour
     {
+        [Header("Fallback Prefabs (used when SkillData has no override)")]
         [SerializeField]
         private GameObject zoneEffectPrefab;
 
@@ -18,12 +19,12 @@ namespace Features.Skill.Presentation
         private GameObject selfEffectPrefab;
 
         private IEventSubscriber _eventBus;
+        private ISkillEffectPort _effectPort;
 
-        public void Initialize(IEventSubscriber eventBus)
+        public void Initialize(IEventSubscriber eventBus, ISkillEffectPort effectPort = null)
         {
-            ResolvePrefabs();
             _eventBus = eventBus;
-
+            _effectPort = effectPort;
             _eventBus.Subscribe(this, new System.Action<ZoneRequestedEvent>(OnZoneRequested));
             _eventBus.Subscribe(
                 this,
@@ -39,13 +40,14 @@ namespace Features.Skill.Presentation
 
         private void OnZoneRequested(ZoneRequestedEvent e)
         {
-            if (zoneEffectPrefab == null)
+            var prefab = ResolveEffectPrefab(e.SkillId.Value, zoneEffectPrefab);
+            if (prefab == null)
                 return;
 
             var pos = e.Position.ToVector3();
             var dir = e.Direction.ToVector3();
             var spawnPos = pos + dir * (e.Spec.Range * 0.5f);
-            var go = Instantiate(zoneEffectPrefab, spawnPos, Quaternion.identity);
+            var go = Instantiate(prefab, spawnPos, Quaternion.identity);
 
             var view = go.GetComponent<ZoneView>();
             if (view != null)
@@ -54,46 +56,62 @@ namespace Features.Skill.Presentation
                 view.SetColor(new Color(0.5f, 0.8f, 1f, 0.6f));
             }
 
-            Debug.Log($"[SkillCastEffectSpawner] Spawned zone: {go.name}");
+            PlayCastSound(e.SkillId.Value, spawnPos);
         }
 
         private void OnTargetedRequested(TargetedRequestedEvent e)
         {
-            if (targetedEffectPrefab == null)
+            var prefab = ResolveEffectPrefab(e.SkillId.Value, targetedEffectPrefab);
+            if (prefab == null)
                 return;
 
             var pos = e.Position.ToVector3();
             var dir = e.Direction.ToVector3();
             var spawnPos = pos + dir * 5f;
-            var go = Instantiate(targetedEffectPrefab, spawnPos, Quaternion.identity);
+            var go = Instantiate(prefab, spawnPos, Quaternion.identity);
 
             var effect = go.GetComponent<TargetedCastEffect>();
             if (effect != null)
                 effect.Play();
 
-            Debug.Log($"[SkillCastEffectSpawner] Spawned targeted effect: {go.name}");
+            PlayCastSound(e.SkillId.Value, spawnPos);
         }
 
         private void OnSelfRequested(SelfRequestedEvent e)
         {
-            if (selfEffectPrefab == null)
+            var prefab = ResolveEffectPrefab(e.SkillId.Value, selfEffectPrefab);
+            if (prefab == null)
                 return;
 
             var pos = e.Position.ToVector3();
-            var go = Instantiate(selfEffectPrefab, pos, Quaternion.identity);
+            var go = Instantiate(prefab, pos, Quaternion.identity);
 
             var effect = go.GetComponent<SelfCastEffect>();
             if (effect != null)
                 effect.Play();
 
-            Debug.Log($"[SkillCastEffectSpawner] Spawned self effect: {go.name}");
+            PlayCastSound(e.SkillId.Value, pos);
         }
 
-        private void ResolvePrefabs()
+        private GameObject ResolveEffectPrefab(string skillId, GameObject fallback)
         {
-            zoneEffectPrefab ??= Resources.Load<GameObject>("ZoneEffect");
-            targetedEffectPrefab ??= Resources.Load<GameObject>("TargetedEffect");
-            selfEffectPrefab ??= Resources.Load<GameObject>("SelfEffect");
+            if (_effectPort == null)
+                return fallback;
+
+            var prefab = _effectPort.GetEffectPrefab(skillId);
+            return prefab != null ? prefab : fallback;
+        }
+
+        private void PlayCastSound(string skillId, Vector3 position)
+        {
+            if (_effectPort == null)
+                return;
+
+            var clip = _effectPort.GetCastSound(skillId);
+            if (clip == null)
+                return;
+
+            AudioSource.PlayClipAtPoint(clip, position);
         }
     }
 }
