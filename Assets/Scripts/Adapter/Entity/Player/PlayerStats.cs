@@ -1,98 +1,100 @@
 using System;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Adapter.Skill
 {
     /// <summary>
-    /// 플레이어 스탯 관리. Base + Bonus = Final 구조.
+    /// 플레이어 스탯 관리. StatModifierCollection 기반.
     ///
-    /// Base: 캐릭터 기본 수치 (인스펙터 설정).
-    /// Bonus: 패시브 스킬에 의한 보정값.
-    /// Final: 실제 게임에서 사용되는 최종 수치.
+    /// 구조: Base (인스펙터/CharacterData) + Modifier (패시브/혼돈/진화/무기 등) = Final
+    /// 계산: (Base + 모든 Add) × 모든 Multiply, 이후 Clamp 적용
     ///
-    /// 패시브 변경 시 RecalculateAll()로 Bonus를 전체 재계산.
-    /// "덮어쓰기" 방식이라 레벨업 시 중복 적용 버그 없음.
+    /// 외부에서 modifier 등록/해제 → Recalculate() 호출 → OnStatsChanged 이벤트.
     ///
-    /// PlayerStub(또는 Player)에 부착.
-    /// SkillManager.OnPassiveChanged 이벤트에 RecalculateAll 연결.
+    /// [Phase 7 리팩토링] Step 1-2: 내부 저장소를 StatModifierCollection으로 전환.
+    /// - 기존 bonusXxx 필드 제거
+    /// - RecalculateAll()은 하위 호환을 위해 유지 (패시브 순회 → modifier 재등록)
+    /// - ChaosSkillManager 헬퍼는 Step 1-4에서 modifier로 통합 예정
     /// </summary>
     public class PlayerStats : MonoBehaviour
     {
-        // ===== Base 스탯 (인스펙터 설정) =====
+        // ===== Base 스탯 (인스펙터 설정 / CharacterData로 덮어쓰기) =====
         [Header("Base Stats")]
         [SerializeField] private float baseAttackMultiplier = 1f;
         [SerializeField] private float baseMoveSpeed = 0.8f;
         [SerializeField] private int baseMaxHP = 100;
-        [SerializeField] private float baseProjectileSpeed = 0f;   // 0이면 SkillData 기본값 사용
-        [SerializeField] private int baseProjectileCount = 0;       // 0이면 SkillData 기본값 사용
-        [SerializeField] private float baseSkillRange = 0f;         // 0이면 SkillData 기본값 사용
-        [SerializeField] private float baseCooldownReduction = 0f;  // 0~1 비율
+        [SerializeField] private float baseProjectileSpeed = 0f;
+        [SerializeField] private int baseProjectileCount = 0;
+        [SerializeField] private float baseSkillRange = 0f;
+        [SerializeField] private float baseCooldownReduction = 0f;
         [SerializeField] private float baseKnockback = 1f;
-        [SerializeField] private float baseCritDamage = 1.5f;       // 치명타 데미지 배율
+        [SerializeField] private float baseCritDamage = 1.5f;
         [SerializeField] private float baseExpMultiplier = 1f;
         [SerializeField] private float baseDefenseMultiplier = 1f;
         [SerializeField] private float baseHealMultiplier = 1f;
-        [SerializeField] private float baseSkillDuration = 0f;      // 추가 지속시간
+        [SerializeField] private float baseSkillDuration = 0f;
 
-        // ===== Bonus (패시브에 의한 보정) =====
-        // RecalculateAll()에서만 수정됨
-        private float bonusAttackMultiplier;
-        private float bonusMoveSpeed;
-        private int bonusMaxHP;
-        private float bonusProjectileSpeed;
-        private int bonusProjectileCount;
-        private float bonusSkillRange;
-        private float bonusCooldownReduction;
-        private float bonusKnockback;
-        private float bonusCritDamage;
-        private float bonusExpMultiplier;
-        private float bonusDefenseMultiplier;
-        private float bonusHealMultiplier;
-        private float bonusSkillDuration;
+        // ===== Modifier 컬렉션 (패시브/혼돈/진화/무기/정수 등 모든 보정값) =====
+        private readonly StatModifierCollection modifiers = new StatModifierCollection();
 
-        // ===== Final (외부에서 읽기 전용) =====
-        // [Phase 5] Chaos modifier 통합: (base + passive bonus) * chaos
-        public float AttackMultiplier => (baseAttackMultiplier + bonusAttackMultiplier) * GetChaosAttackMul();
-        public float MoveSpeed => baseMoveSpeed + bonusMoveSpeed + GetChaosMoveBonus();
-        public int MaxHP => Mathf.RoundToInt((baseMaxHP + bonusMaxHP) * GetChaosHPMul());
-        public float ProjectileSpeedBonus => baseProjectileSpeed + bonusProjectileSpeed;
-        public int ProjectileCountBonus => baseProjectileCount + bonusProjectileCount;
-        public float SkillRangeBonus => baseSkillRange + bonusSkillRange;
-        public float CooldownReduction => Mathf.Clamp01(baseCooldownReduction + bonusCooldownReduction);
-        public float KnockbackMultiplier => baseKnockback + bonusKnockback;
-        public float CritDamageMultiplier => baseCritDamage + bonusCritDamage;
-        public float ExpMultiplier => baseExpMultiplier + bonusExpMultiplier;
-        public float DefenseMultiplier => baseDefenseMultiplier + bonusDefenseMultiplier;
-        public float HealMultiplier => baseHealMultiplier + bonusHealMultiplier;
-        public float SkillDurationBonus => baseSkillDuration + bonusSkillDuration;
+        // 재진입 방지
+        private bool isRecalculating = false;
 
-        // ===== Chaos modifier 헬퍼 =====
-        private ChaosSkillManager chaosManager;
+        // ===== Final 스탯 (외부 읽기 전용) =====
 
-        private float GetChaosAttackMul()
-        {
-            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
-            return chaosManager != null ? chaosManager.ChaosAttackMultiplier : 1f;
-        }
+        public float AttackMultiplier =>
+            ClampStat(StatType.AttackMultiplier,
+                modifiers.Calculate(StatType.AttackMultiplier, baseAttackMultiplier));
 
-        private float GetChaosMoveBonus()
-        {
-            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
-            return chaosManager != null ? chaosManager.ChaosMoveSpeedBonus : 0f;
-        }
+        public float MoveSpeed =>
+            ClampStat(StatType.MoveSpeed,
+                modifiers.Calculate(StatType.MoveSpeed, baseMoveSpeed));
 
-        private float GetChaosHPMul()
-        {
-            if (chaosManager == null) chaosManager = GetComponentInChildren<ChaosSkillManager>();
-            return chaosManager != null ? chaosManager.ChaosMaxHPMultiplier : 1f;
-        }
+        public int MaxHP =>
+            Mathf.RoundToInt(ClampStat(StatType.MaxHP,
+                modifiers.Calculate(StatType.MaxHP, baseMaxHP)));
+
+        public float ProjectileSpeedBonus =>
+            modifiers.Calculate(StatType.ProjectileSpeed, baseProjectileSpeed);
+
+        public int ProjectileCountBonus =>
+            Mathf.FloorToInt(modifiers.Calculate(StatType.ProjectileCount, baseProjectileCount));
+
+        public float SkillRangeBonus =>
+            modifiers.Calculate(StatType.SkillRange, baseSkillRange);
+
+        /// <summary>
+        /// 쿨타임 감소 비율 (Add만 합산). Multiply는 GetEffectiveCooldown에서 별도 적용.
+        /// </summary>
+        public float CooldownReduction =>
+            ClampStat(StatType.CooldownReduction,
+                baseCooldownReduction + modifiers.GetAddTotal(StatType.CooldownReduction));
+
+        public float KnockbackMultiplier =>
+            modifiers.Calculate(StatType.Knockback, baseKnockback);
+
+        public float CritDamageMultiplier =>
+            modifiers.Calculate(StatType.CritDamage, baseCritDamage);
+
+        public float ExpMultiplier =>
+            modifiers.Calculate(StatType.ExpMultiplier, baseExpMultiplier);
+
+        public float DefenseMultiplier =>
+            modifiers.Calculate(StatType.Defense, baseDefenseMultiplier);
+
+        public float HealMultiplier =>
+            modifiers.Calculate(StatType.HealMultiplier, baseHealMultiplier);
+
+        public float SkillDurationBonus =>
+            modifiers.Calculate(StatType.SkillDuration, baseSkillDuration);
 
         // ===== 이벤트 =====
         /// <summary>스탯 재계산 완료 시 발생. UI 갱신, 이동속도 적용 등.</summary>
         public event Action OnStatsChanged;
 
-        // ===== SkillManager 참조 =====
+        // ===== 참조 캐시 =====
         private SkillManager skillManager;
 
         private void Awake()
@@ -100,141 +102,256 @@ namespace SwDreams.Adapter.Skill
             skillManager = GetComponentInChildren<SkillManager>();
         }
 
-        private void OnEnable()
-        {
-            if (skillManager != null)
-                skillManager.OnPassiveChanged += RecalculateAll;
-        }
+        // [Step 1-3] OnPassiveChanged 구독 제거.
+        // SkillManager가 패시브 변경 시 RegisterPassive/UnregisterPassive를 직접 호출합니다.
+        // OnEnable/OnDisable에서 하던 이벤트 구독은 더 이상 불필요.
 
-        private void OnDisable()
+        // ===== Modifier 공개 API =====
+
+        /// <summary>
+        /// modifier 등록 (동일 source+statType이면 교체).
+        /// 등록 후 Recalculate()를 별도 호출해야 이벤트가 발생합니다.
+        /// 여러 modifier를 한 번에 등록할 때 Recalculate를 마지막에 한 번만 호출하세요.
+        /// </summary>
+        public void AddModifier(StatModifier modifier)
         {
-            if (skillManager != null)
-                skillManager.OnPassiveChanged -= RecalculateAll;
+            modifiers.AddOrReplace(modifier);
         }
 
         /// <summary>
-        /// 보유 패시브 전체 순회 → Bonus 재계산.
-        /// SkillManager.OnPassiveChanged 이벤트에서 호출.
+        /// source가 일치하는 모든 modifier 제거.
+        /// 제거 후 Recalculate()를 별도 호출해야 이벤트가 발생합니다.
         /// </summary>
-        public void RecalculateAll()
+        public int RemoveModifiersBySource(string source)
         {
-            // Bonus 초기화
-            bonusAttackMultiplier = 0f;
-            bonusMoveSpeed = 0f;
-            bonusMaxHP = 0;
-            bonusProjectileSpeed = 0f;
-            bonusProjectileCount = 0;
-            bonusSkillRange = 0f;
-            bonusSkillDuration = 0f;
-            bonusKnockback = 0f;
-            bonusHealMultiplier = 0f;
-            bonusCritDamage = 0f;
-            bonusCooldownReduction = 0f;
-            bonusDefenseMultiplier = 0f;
-            bonusExpMultiplier = 0f;
+            return modifiers.RemoveBySource(source);
+        }
 
-            // SkillManager에서 패시브 스킬 목록 가져오기
-            var skillManager = GetComponentInChildren<SkillManager>();
-            if (skillManager == null) return;
+        /// <summary>
+        /// source 접두사가 일치하는 모든 modifier 제거.
+        /// 예: RemoveModifiersByPrefix("passive_") → 모든 패시브 보너스 제거.
+        /// </summary>
+        public int RemoveModifiersByPrefix(string prefix)
+        {
+            return modifiers.RemoveBySourcePrefix(prefix);
+        }
 
-            var passives = skillManager.GetSkillsByType(SkillType.Passive);
-            foreach (var skill in passives)
+        /// <summary>
+        /// modifier의 source를 변경. 진화 시 패시브 → 진화 승계 용도.
+        /// </summary>
+        public int ReplaceModifierSource(string oldSource, string newSource)
+        {
+            return modifiers.ReplaceSource(oldSource, newSource);
+        }
+
+        /// <summary>
+        /// 특정 source의 modifier가 존재하는지 확인.
+        /// </summary>
+        public bool HasModifierSource(string source)
+        {
+            return modifiers.HasSource(source);
+        }
+
+        /// <summary>
+        /// 스탯 변경 이벤트 발행. modifier 등록/해제 후 호출.
+        /// 재진입 방지 포함 — 계산 도중 다시 호출되면 무시됨.
+        /// </summary>
+        public void Recalculate()
+        {
+            if (isRecalculating)
             {
-                if (skill == null || skill.Data == null) continue;
-                ApplyPassiveBonus(skill.Data, skill.Level);
+                Debug.LogWarning("[PlayerStats] Recalculate 재진입 차단");
+                return;
+            }
+
+            isRecalculating = true;
+            try
+            {
+                // modifier 컬렉션은 이미 최신 상태 — 계산은 프로퍼티 접근 시 수행.
+                // 여기서는 이벤트 발행만 담당.
+            }
+            finally
+            {
+                isRecalculating = false;
             }
 
             OnStatsChanged?.Invoke();
-            Debug.Log($"[PlayerStats] 재계산 완료 — ATK:{AttackMultiplier:F2}, " +
-                    $"SPD:{MoveSpeed:F1}, ProjSpd:{ProjectileSpeedBonus:F1}");
+            Debug.Log($"[PlayerStats] Recalculate — ATK:{AttackMultiplier:F2}, " +
+                      $"SPD:{MoveSpeed:F1}, Modifiers:{modifiers.Count}개");
+        }
+
+        // ===== 하위 호환: RecalculateAll =====
+
+        /// <summary>
+        /// 보유 패시브 전체를 순회하여 modifier를 재등록.
+        /// SkillManager.OnPassiveChanged 이벤트에서 호출.
+        ///
+        /// Step 1-3 이후에는 패시브가 직접 modifier를 등록하므로,
+        /// 이 메서드는 ChaosSkillManager의 RecalculateModifiers()에서
+        /// 이벤트 발행 용도로만 사용될 예정.
+        /// </summary>
+        public void RecalculateAll()
+        {
+            if (isRecalculating)
+            {
+                Debug.LogWarning("[PlayerStats] RecalculateAll 재진입 차단");
+                return;
+            }
+
+            isRecalculating = true;
+            try
+            {
+                // 패시브 modifier 전부 제거 후 재등록
+                modifiers.RemoveBySourcePrefix("passive_");
+
+                if (skillManager == null)
+                    skillManager = GetComponentInChildren<SkillManager>();
+                if (skillManager == null) return;
+
+                var passives = skillManager.GetSkillsByType(SkillType.Passive);
+                foreach (var skill in passives)
+                {
+                    if (skill == null || skill.Data == null) continue;
+                    RegisterPassive(skill.Data, skill.Level);
+                }
+            }
+            finally
+            {
+                isRecalculating = false;
+            }
+
+            OnStatsChanged?.Invoke();
+            Debug.Log($"[PlayerStats] RecalculateAll — ATK:{AttackMultiplier:F2}, " +
+                      $"SPD:{MoveSpeed:F1}, ProjSpd:{ProjectileSpeedBonus:F1}, " +
+                      $"Modifiers:{modifiers.Count}개");
+        }
+
+        // ===== 패시브 스킬 공개 API (SkillManager에서 호출) =====
+
+        /// <summary>
+        /// 패시브 스킬의 modifier를 등록 또는 갱신.
+        /// 동일 skillId의 modifier가 이미 있으면 새 값으로 교체 (레벨업).
+        /// 호출 후 Recalculate()를 별도로 호출해야 이벤트가 발생합니다.
+        /// </summary>
+        public void RegisterPassive(SkillData data, int level)
+        {
+            StatType? statType = MapPassiveToStatType(data.bonusType);
+            if (statType == null) return;
+
+            float value = data.bonusPerLevel * level;
+            string source = $"passive_{data.skillId}";
+
+            modifiers.AddOrReplace(new StatModifier(
+                source,
+                statType.Value,
+                ModifierOp.Add,
+                value
+            ));
         }
 
         /// <summary>
-        /// 개별 패시브 보너스 적용. SkillData의 bonusType + bonusPerLevel 사용.
+        /// 패시브 스킬의 modifier를 제거.
+        /// 호출 후 Recalculate()를 별도로 호출해야 이벤트가 발생합니다.
         /// </summary>
-        private void ApplyPassiveBonus(SkillData data, int level)
+        public void UnregisterPassive(int skillId)
         {
-            float bonus = data.bonusPerLevel * level;
+            modifiers.RemoveBySource($"passive_{skillId}");
+        }
 
-            switch (data.bonusType)
+        /// <summary>
+        /// 진화 시 패시브 modifier를 진화 스킬로 승계.
+        /// source를 "passive_{passiveId}" → "evolution_{evolvedSkillId}"로 변경.
+        /// 이후 UnregisterPassive는 이미 rename된 modifier를 찾지 못하므로 안전.
+        /// </summary>
+        /// <returns>승계된 modifier 수</returns>
+        public int PreservePassiveForEvolution(int passiveSkillId, int evolvedSkillId)
+        {
+            string oldSource = $"passive_{passiveSkillId}";
+            string newSource = $"evolution_{evolvedSkillId}";
+            int count = modifiers.ReplaceSource(oldSource, newSource);
+            if (count > 0)
+                Debug.Log($"[PlayerStats] 패시브 승계: passive_{passiveSkillId} → evolution_{evolvedSkillId} ({count}개)");
+            return count;
+        }
+
+        /// <summary>
+        /// PassiveBonusType → StatType 매핑.
+        /// None이면 null 반환.
+        /// Step 3 (SkillData 상속 분리) 이후에는 이 매핑이 불필요해질 수 있음.
+        /// </summary>
+        private static StatType? MapPassiveToStatType(PassiveBonusType bonusType)
+        {
+            switch (bonusType)
             {
-                case PassiveBonusType.ProjectileSpeed:
-                    bonusProjectileSpeed += bonus;
-                    break;
-                case PassiveBonusType.ProjectileCount:
-                    // 정수로 변환 (소수점은 버림)
-                    bonusProjectileCount += Mathf.FloorToInt(bonus);
-                    break;
-                case PassiveBonusType.SkillRange:
-                    bonusSkillRange += bonus;
-                    break;
-                case PassiveBonusType.SkillDuration:
-                    bonusSkillDuration += bonus;
-                    break;
-                case PassiveBonusType.AttackMultiplier:
-                    bonusAttackMultiplier += bonus;
-                    break;
-                case PassiveBonusType.Knockback:
-                    bonusKnockback += bonus;
-                    break;
-                case PassiveBonusType.HealingMultiplier:
-                    bonusHealMultiplier += bonus;
-                    break;
-                case PassiveBonusType.CritDamage:
-                    bonusCritDamage += bonus;
-                    break;
-                case PassiveBonusType.CooldownReduction:
-                    bonusCooldownReduction += bonus;
-                    break;
-                case PassiveBonusType.MaxHP:
-                    bonusMaxHP += Mathf.FloorToInt(bonus);
-                    break;
-                case PassiveBonusType.MoveSpeed:
-                    bonusMoveSpeed += bonus;
-                    break;
-                case PassiveBonusType.Defense:
-                    bonusDefenseMultiplier += bonus;
-                    break;
-                case PassiveBonusType.ExpMultiplier:
-                    bonusExpMultiplier += bonus;
-                    break;
+                case PassiveBonusType.ProjectileSpeed:    return StatType.ProjectileSpeed;
+                case PassiveBonusType.ProjectileCount:    return StatType.ProjectileCount;
+                case PassiveBonusType.SkillRange:         return StatType.SkillRange;
+                case PassiveBonusType.SkillDuration:      return StatType.SkillDuration;
+                case PassiveBonusType.AttackMultiplier:    return StatType.AttackMultiplier;
+                case PassiveBonusType.Knockback:          return StatType.Knockback;
+                case PassiveBonusType.HealingMultiplier:  return StatType.HealMultiplier;
+                case PassiveBonusType.CritDamage:         return StatType.CritDamage;
+                case PassiveBonusType.CooldownReduction:  return StatType.CooldownReduction;
+                case PassiveBonusType.MaxHP:              return StatType.MaxHP;
+                case PassiveBonusType.MoveSpeed:          return StatType.MoveSpeed;
+                case PassiveBonusType.Defense:            return StatType.Defense;
+                case PassiveBonusType.ExpMultiplier:      return StatType.ExpMultiplier;
+                default:                                  return null;
             }
         }
 
-        // ===== 외부 유틸리티 =====
+        // ===== Clamp 정책 =====
 
         /// <summary>
-        /// 실제 쿨다운 계산. Skill.CurrentCooldown에 CDR 적용.
-        /// Skill.Fire() 시 이 값을 사용해야 함.
+        /// StatType별 상한/하한 적용.
+        /// TODO: [밸런싱] GameplayConfig SO에서 Clamp 수치를 읽도록 변경 검토.
+        /// </summary>
+        private float ClampStat(StatType type, float value)
+        {
+            switch (type)
+            {
+                case StatType.CooldownReduction:
+                    return Mathf.Clamp(value, 0f, 0.8f); // TODO: [밸런싱] 상한 확정
+                case StatType.MoveSpeed:
+                    return Mathf.Max(value, 0.1f); // TODO: [밸런싱] 하한 확정
+                case StatType.MaxHP:
+                    return Mathf.Max(value, 1f);
+                case StatType.AttackMultiplier:
+                    return Mathf.Max(value, 0f);
+                default:
+                    return value;
+            }
+        }
+
+        // ===== 외부 유틸리티 (기존 인터페이스 유지) =====
+
+        /// <summary>
+        /// 실제 쿨다운 계산.
+        /// CDR(Add modifiers) + 쿨다운 배율(Multiply modifiers, 혼돈 스킬 등) 모두 반영.
+        /// 공식: baseCooldown × (1 - CDR비율) × 쿨다운배율
         /// </summary>
         public float GetEffectiveCooldown(float baseCooldown)
         {
-            return baseCooldown * (1f - CooldownReduction);
+            float cdr = CooldownReduction;
+            float cooldownMul = modifiers.GetMultiplyTotal(StatType.CooldownReduction);
+            return baseCooldown * (1f - cdr) * cooldownMul;
         }
 
-        /// <summary>
-        /// 실제 투사체 개수. SkillData.projectileCount + 보너스.
-        /// ProjectileEffect.Execute() 시 이 값 사용.
-        /// </summary>
         public int GetEffectiveProjectileCount(int baseCount)
         {
             return baseCount + ProjectileCountBonus;
         }
 
-        /// <summary>
-        /// 실제 투사체 속도. SkillData.projectileSpeed + 보너스.
-        /// </summary>
         public float GetEffectiveProjectileSpeed(float baseSpeed)
         {
             return baseSpeed + ProjectileSpeedBonus;
         }
 
-        // ===== Phase 7: 캐릭터 데이터 연동 =====
+        // ===== 캐릭터 데이터 연동 =====
 
         /// <summary>
         /// CharacterData의 base 스탯으로 전체 base 값 덮어쓰기.
         /// PlayerStub.Initialize()에서 호출.
-        /// 테스트 모드에서는 호출되지 않음 → 인스펙터 base 값 그대로 유지.
         /// </summary>
         public void ApplyCharacterBase(CharacterData data)
         {
@@ -257,5 +374,16 @@ namespace SwDreams.Adapter.Skill
             OnStatsChanged?.Invoke();
             Debug.Log($"[PlayerStats] 캐릭터 base 스탯 적용: {data.displayName}");
         }
+
+        // ===== 디버그 =====
+
+        /// <summary>현재 등록된 모든 modifier 목록. 디버그 오버레이용.</summary>
+        public string GetModifierDebugString()
+        {
+            return modifiers.ToDebugString();
+        }
+
+        /// <summary>현재 modifier 수.</summary>
+        public int ModifierCount => modifiers.Count;
     }
 }

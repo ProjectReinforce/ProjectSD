@@ -58,6 +58,9 @@ namespace SwDreams.Adapter.Skill
         // [CHANGED] 팩토리 인스턴스. Awake()에서 초기화.
         private SkillEffectFactory effectFactory;
 
+        // [Step 1-3] PlayerStats 캐시. 패시브 modifier 직접 등록용.
+        private PlayerStats cachedStats;
+
         // 외부 읽기용
         public IReadOnlyList<Skill> EquippedSkills => equippedSkills;
         public int SlotCount => equippedSkills.Count;
@@ -87,6 +90,7 @@ namespace SwDreams.Adapter.Skill
         {
             effectFactory = new SkillEffectFactory();
             effectFactory.RegisterDefaults();
+            cachedStats = GetComponentInParent<PlayerStats>();
         }
 
         // ===== Config 접근 헬퍼 =====
@@ -99,6 +103,18 @@ namespace SwDreams.Adapter.Skill
         private GameplayConfig GetConfig()
         {
             return GameManager.Instance?.Config;
+        }
+
+        // ===== PlayerStats 접근 헬퍼 =====
+
+        /// <summary>
+        /// PlayerStats 단축 접근. Awake에서 캐시되나 안전을 위해 lazy init 포함.
+        /// </summary>
+        private PlayerStats GetStats()
+        {
+            if (cachedStats == null)
+                cachedStats = GetComponentInParent<PlayerStats>();
+            return cachedStats;
         }
 
         // ===== 스킬 조회 =====
@@ -202,9 +218,16 @@ namespace SwDreams.Adapter.Skill
             equippedSkills.Add(newSkill);
             OnSkillAdded?.Invoke(newSkill);
 
-            // 패시브면 스탯 재계산 트리거
+            // [Step 1-3] 패시브면 PlayerStats에 modifier 직접 등록
             if (skillData.skillType == SkillType.Passive)
-                OnPassiveChanged?.Invoke();
+            {
+                var stats = GetStats();
+                if (stats != null)
+                {
+                    stats.RegisterPassive(skillData, 1);
+                    stats.Recalculate();
+                }
+            }
 
             Debug.Log($"[SkillManager] 스킬 획득: {skillData.skillName} (슬롯 {SlotCount}/{MaxSlots})");
             return true;
@@ -234,9 +257,16 @@ namespace SwDreams.Adapter.Skill
             skill.LevelUp();
             OnSkillLeveledUp?.Invoke(skill);
 
-            // 패시브면 스탯 재계산
+            // [Step 1-3] 패시브면 PlayerStats modifier 갱신
             if (skill.Data.skillType == SkillType.Passive)
-                OnPassiveChanged?.Invoke();
+            {
+                var stats = GetStats();
+                if (stats != null)
+                {
+                    stats.RegisterPassive(skill.Data, skill.Level);
+                    stats.Recalculate();
+                }
+            }
 
             // 진화 가능 체크 (양방향)
             // 방금 maxLevel 도달한 스킬 자체 + 이 스킬을 partner로 갖는 다른 스킬도 확인
@@ -260,6 +290,14 @@ namespace SwDreams.Adapter.Skill
                 if (equippedSkills[i].Data.skillId == skillId)
                 {
                     Skill skill = equippedSkills[i];
+
+                    // [Step 1-3] 패시브면 modifier 제거 (진화 승계 시에는 이미 rename되어 no-op)
+                    if (skill.Data.skillType == SkillType.Passive)
+                    {
+                        var stats = GetStats();
+                        stats?.UnregisterPassive(skillId);
+                    }
+
                     equippedSkills.RemoveAt(i);
                     skill.Deactivate();
                     Destroy(skill.gameObject);
@@ -370,6 +408,11 @@ namespace SwDreams.Adapter.Skill
             removedByEvolutionIds.Add(evo.activeSkillId);
             removedByEvolutionIds.Add(evo.passiveSkillId);
 
+            // [Step 1-3] 패시브 modifier를 진화 스킬로 승계
+            // RemoveSkill보다 먼저 호출 — source를 rename하여 UnregisterPassive가 no-op이 되게 함
+            var stats = GetStats();
+            stats?.PreservePassiveForEvolution(evo.passiveSkillId, evolvedSkillId);
+
             // 기존 2개 스킬 제거
             RemoveSkill(evo.activeSkillId);
             RemoveSkill(evo.passiveSkillId);
@@ -381,6 +424,9 @@ namespace SwDreams.Adapter.Skill
 
             // 대기열에서 제거
             pendingEvolutions.RemoveAt(targetIndex);
+
+            // [Step 1-3] 스탯 재계산 (패시브 승계 반영)
+            stats?.Recalculate();
 
             Debug.Log($"[SkillManager] ★ 진화 완료: {evo.evolvedSkillData.skillName} (슬롯 {SlotCount}/{MaxSlots})");
 

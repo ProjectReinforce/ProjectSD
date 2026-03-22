@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 6717311327015422765}
   - component: {fileID: 2593780315556395528}
   - component: {fileID: 5078694872400143061}
-  - component: {fileID: -1304284280090245875}
   m_Layer: 0
   m_Name: Chaser
   m_TagString: Enemy
@@ -173,15 +172,3 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
---- !u!114 &-1304284280090245875
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 661582006748820927}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor

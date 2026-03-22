@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 4538435095228320533}
   - component: {fileID: 447497192405984777}
   - component: {fileID: 8690201991069440543}
-  - component: {fileID: 8856965961110111497}
   - component: {fileID: 3861719594023492394}
   m_Layer: 0
   m_Name: Projectile_Homing_Evolved
@@ -158,18 +157,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &8856965961110111497
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2361586414690528474}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor
 --- !u!114 &3861719594023492394
 MonoBehaviour:
   m_ObjectHideFlags: 0

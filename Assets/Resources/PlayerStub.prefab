@@ -15,8 +15,11 @@ GameObject:
   - component: {fileID: 3250739469524949910}
   - component: {fileID: 4941265938462163578}
   - component: {fileID: 2342640481499277430}
-  - component: {fileID: -1036550334346602213}
   - component: {fileID: 1937433557903283363}
+  - component: {fileID: 7219839512002637370}
+  - component: {fileID: 4807599115664780703}
+  - component: {fileID: 3056507572805276594}
+  - component: {fileID: 6682751105019308557}
   m_Layer: 10
   m_Name: PlayerStub
   m_TagString: Player
@@ -213,21 +216,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 481d57e4489531c4dbd99c51655fa8be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlayerStub
-  maxHP: 100
-  moveSpeed: 5
   startingSkillData: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
---- !u!114 &-1036550334346602213
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5107877303657427623}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor
 --- !u!114 &1937433557903283363
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -253,6 +242,56 @@ MonoBehaviour:
   baseDefenseMultiplier: 1
   baseHealMultiplier: 1
   baseSkillDuration: 0
+--- !u!114 &7219839512002637370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d36ffd69517f93488657754215a4f48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.Player.PlayerHealth
+  maxHP: 100
+--- !u!114 &4807599115664780703
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d672342b0b5d94288f830c21bef0b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.Player.PlayerMovement
+  moveSpeed: 0.8
+--- !u!114 &3056507572805276594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4d3287e49d2139439642fb622c212a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.Player.PlayerVisual
+--- !u!114 &6682751105019308557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef9bb72e7fe5b534bbe35e623b3773b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.Player.DebugInputHandler
 --- !u!1 &5449631014595424917
 GameObject:
   m_ObjectHideFlags: 0
@@ -314,5 +353,5 @@ MonoBehaviour:
   explosionRadius: 0.35
   explosionDamage: 8
   maxChainPerFrame: 5
-  explosionEffectPrefab: {fileID: 0}
+  explosionEffectPrefab: {fileID: 4955258683705561151, guid: e05875e1c2e842843a233da3102d88b0, type: 3}
   unityCheckRadius: 5

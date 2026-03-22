@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 5072053972555072888}
   - component: {fileID: 5146688688658793705}
   - component: {fileID: 5462693487650427916}
-  - component: {fileID: 2446017742323138104}
   m_Layer: 0
   m_Name: AreaZone
   m_TagString: Untagged
@@ -142,15 +141,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52b53aea9f495b442976b338cf2a6d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.AreaZone
---- !u!114 &2446017742323138104
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7830792750639668327}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor

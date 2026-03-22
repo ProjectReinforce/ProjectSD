@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4470024722233609154}
   - component: {fileID: 4726721984374867716}
   - component: {fileID: 431485474125612646}
-  - component: {fileID: 5734268724314705726}
   m_Layer: 0
   m_Name: PlacedTurret
   m_TagString: Untagged
@@ -105,15 +104,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d73e3c4288c5d20498b6c876f6cc762f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.PlacedTurret
---- !u!114 &5734268724314705726
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7611705742342394119}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor

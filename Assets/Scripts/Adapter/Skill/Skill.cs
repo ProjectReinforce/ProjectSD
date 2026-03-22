@@ -36,7 +36,6 @@ namespace SwDreams.Adapter.Skill
 
         // PlayerStats 캐시 (CDR 적용용)
         private PlayerStats cachedStats;
-        private ChaosSkillManager cachedChaos;
 
         // 로컬 플레이어 전용 플래그
         private bool isActive = false;
@@ -45,9 +44,6 @@ namespace SwDreams.Adapter.Skill
         {
             skillEffect = GetComponent<SkillEffect>();
             cachedStats = GetComponentInParent<PlayerStats>();
-            cachedChaos = GetComponentInParent<ChaosSkillManager>();
-            if (cachedChaos == null)
-                cachedChaos = GetComponentInChildren<ChaosSkillManager>();
         }
 
         /// <summary>
@@ -65,12 +61,6 @@ namespace SwDreams.Adapter.Skill
 
             if (cachedStats == null)
                 cachedStats = GetComponentInParent<PlayerStats>();
-            if (cachedChaos == null)
-            {
-                cachedChaos = GetComponentInParent<ChaosSkillManager>();
-                if (cachedChaos == null)
-                    cachedChaos = GetComponentInChildren<ChaosSkillManager>();
-            }
         }
 
         public void Deactivate()
@@ -107,12 +97,10 @@ namespace SwDreams.Adapter.Skill
 
         private void Fire()
         {
-            // [Phase 5] PlayerStats CDR + Chaos CDR 적용
+            // [Step 1-4] CDR + 혼돈 쿨다운 배율 모두 GetEffectiveCooldown에서 처리
             float cooldown = CurrentCooldown;
             if (cachedStats != null)
                 cooldown = cachedStats.GetEffectiveCooldown(cooldown);
-            if (cachedChaos != null)
-                cooldown *= cachedChaos.ChaosCooldownMultiplier;
 
             CooldownRemaining = cooldown;
             skillEffect.Execute(this);

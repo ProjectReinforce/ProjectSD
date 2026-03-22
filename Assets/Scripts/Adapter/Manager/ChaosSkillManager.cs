@@ -3,6 +3,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Domain.ValueObjects;
 using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Skill
@@ -11,10 +12,14 @@ namespace SwDreams.Adapter.Skill
     /// 혼돈 스킬 효과 관리. 각 플레이어에 부착.
     /// SkillManager.ApplyChoice()에서 Chaos 타입이면 여기로 위임.
     ///
-    /// 혼돈 스킬은 슬롯을 차지하지 않으며, 글로벌 규칙을 변경.
-    /// 다른 시스템이 읽어가는 modifier 프로퍼티를 제공.
+    /// [Step 1-4] 수치 효과는 PlayerStats의 StatModifier로 통합.
+    /// 비수치 효과(연쇄 폭발, 도박꾼)만 이 클래스에서 관리.
     ///
-    /// 셋업: PlayerStub(또는 Player) 자식에 SkillManager와 함께 부착.
+    /// modifier source 규칙:
+    ///   "chaos_attack"    — 공격력 배율 (유리대포 + 가속엔진 + 단결)
+    ///   "chaos_maxhp"     — 최대 HP 배율 (유리대포)
+    ///   "chaos_cdr"       — 쿨다운 배율 (폭주모드). Multiply on CooldownReduction.
+    ///   "chaos_movespeed" — 이동속도 가산 (폭주모드 + 가속엔진)
     /// </summary>
     public class ChaosSkillManager : MonoBehaviour
     {
@@ -41,40 +46,18 @@ namespace SwDreams.Adapter.Skill
         private const float UNITY_CHECK_INTERVAL = 0.5f;
         private int nearbyPlayerCount;
 
-        // ===== Modifier 프로퍼티 (외부 시스템에서 읽기) =====
+        // ===== 변경 감지용 캐시 (매 프레임 비교) =====
+        private float cachedAttackMul = 1f;
+        private float cachedCdMul = 1f;
+        private float cachedMoveBonus = 0f;
+        private float cachedHpMul = 1f;
 
-        /// <summary>
-        /// 공격력 배율. PlayerStats에서 최종 데미지에 곱함.
-        /// 유리대포(2배) + 가속엔진 + 단결 합산.
-        /// </summary>
-        public float ChaosAttackMultiplier { get; private set; } = 1f;
+        // ===== 비수치 효과 프로퍼티 =====
 
-        /// <summary>
-        /// 쿨다운 배율. Skill.Fire()에서 CDR 이후 추가 적용.
-        /// 폭주모드(0.5배) 등.
-        /// </summary>
-        public float ChaosCooldownMultiplier { get; private set; } = 1f;
-
-        /// <summary>
-        /// 이동속도 추가. PlayerStats.MoveSpeed에 가산.
-        /// 폭주모드(baseMoveSpeed * 0.5) 등.
-        /// </summary>
-        public float ChaosMoveSpeedBonus { get; private set; } = 0f;
-
-        /// <summary>
-        /// 최대 HP 배율. 1.0 = 변동 없음, 0.5 = 절반.
-        /// PlayerStats에서 MaxHP에 곱함.
-        /// </summary>
-        public float ChaosMaxHPMultiplier { get; private set; } = 1f;
-
-        /// <summary>
-        /// 도박꾼 활성 여부. SkillManager.GenerateChoices()에서 참조.
-        /// </summary>
+        /// <summary>도박꾼 활성 여부. SkillManager.GenerateChoices()에서 참조.</summary>
         public bool IsGambler => hasGambler;
 
-        /// <summary>
-        /// 보유 중인 혼돈 스킬 목록 (디버그 오버레이, 보스 시스템용).
-        /// </summary>
+        /// <summary>보유 중인 혼돈 스킬 목록 (디버그 오버레이, 보스 시스템용).</summary>
         private List<ChaosEffectType> activeChaosEffects = new List<ChaosEffectType>();
         public IReadOnlyList<ChaosEffectType> ActiveEffects => activeChaosEffects;
 
@@ -86,6 +69,12 @@ namespace SwDreams.Adapter.Skill
         private void Start()
         {
             playerDamageable = GetComponentInParent<IDamageable>();
+            CachePlayerStats();
+        }
+
+        private void CachePlayerStats()
+        {
+            if (playerStats != null) return;
             playerStats = GetComponentInParent<PlayerStats>();
             if (playerStats != null)
                 baseMoveSpeed = playerStats.MoveSpeed;
@@ -101,12 +90,7 @@ namespace SwDreams.Adapter.Skill
             // 참조 캐싱 (Start보다 먼저 호출될 수 있으므로)
             if (playerDamageable == null)
                 playerDamageable = GetComponentInParent<IDamageable>();
-            if (playerStats == null)
-            {
-                playerStats = GetComponentInParent<PlayerStats>();
-                if (playerStats != null)
-                    baseMoveSpeed = playerStats.MoveSpeed;
-            }
+            CachePlayerStats();
 
             if (data.chaosEffectType == ChaosEffectType.None)
             {
@@ -153,12 +137,9 @@ namespace SwDreams.Adapter.Skill
         private void ApplyGlassCannon()
         {
             hasGlassCannon = true;
-            ChaosMaxHPMultiplier = 0.5f;
-            RecalculateModifiers();
+            RecalculateChaosModifiers();
 
             // HP 감소는 소유자 클라이언트에서만 실행
-            // RPC_SyncSkillAcquisition으로 모든 클라이언트에서 호출되므로,
-            // 소유자만 TakeDamage → RPC_TakeDamage(All)로 HP 동기화
             var pv = GetComponentInParent<PhotonView>();
             if (pv != null && !pv.IsMine) return;
 
@@ -176,19 +157,16 @@ namespace SwDreams.Adapter.Skill
         private void ApplyChainExplosion()
         {
             hasChainExplosion = true;
-            // 연쇄 폭발은 Update/LateUpdate에서 프레임별 카운트 리셋
         }
 
         private void ApplyBerserkMode()
         {
             hasBerserkMode = true;
-            // 조건부 — Update에서 HP 체크
         }
 
         private void ApplyAccelEngine()
         {
             hasAccelEngine = true;
-            // 시간 기반 — Update에서 GameTime 체크
         }
 
         private void ApplyUnity()
@@ -213,27 +191,23 @@ namespace SwDreams.Adapter.Skill
 
             bool needRecalc = false;
 
-            // 폭주 모드: HP 30% 이하 체크
             if (hasBerserkMode)
-                needRecalc |= UpdateBerserkMode();
+                needRecalc |= CheckBerserkChanged();
 
-            // 가속 엔진: 시간 기반 스탯 증가
             if (hasAccelEngine)
-                needRecalc |= UpdateAccelEngine();
+                needRecalc |= CheckAccelChanged();
 
-            // 단결: 팀원 밀집 체크
             if (hasUnity)
-                needRecalc |= UpdateUnity();
+                needRecalc |= CheckUnityChanged();
 
-            // 연쇄 폭발: 프레임 카운터 리셋
             if (hasChainExplosion)
                 chainCountThisFrame = 0;
 
             if (needRecalc)
-                RecalculateModifiers();
+                RecalculateChaosModifiers();
         }
 
-        private bool UpdateBerserkMode()
+        private bool CheckBerserkChanged()
         {
             if (playerDamageable == null) return false;
 
@@ -241,46 +215,38 @@ namespace SwDreams.Adapter.Skill
             float newCDR = isBerserk ? 0.5f : 1f;
             float newSpd = isBerserk ? baseMoveSpeed * 0.5f : 0f;
 
-            if (Mathf.Abs(ChaosCooldownMultiplier - newCDR) > 0.01f ||
-                Mathf.Abs(ChaosMoveSpeedBonus - newSpd) > 0.01f)
-            {
-                ChaosCooldownMultiplier = newCDR;
-                ChaosMoveSpeedBonus = newSpd;
+            if (Mathf.Abs(cachedCdMul - newCDR) > 0.01f ||
+                Mathf.Abs(cachedMoveBonus - newSpd) > 0.01f)
                 return true;
-            }
+
             return false;
         }
 
-        private bool UpdateAccelEngine()
+        private bool CheckAccelChanged()
         {
-            // 0분 +0%, 5분 +25%, 10분 +50% (선형 보간)
             float gameTime = GameManager.Instance.GameTime;
             float bonus = Mathf.Lerp(0f, 0.5f, gameTime / 600f);
-
             float newMul = 1f + bonus;
             if (hasGlassCannon)
-                newMul += 1f; // 유리대포 2배와 합산
+                newMul += 1f;
 
-            if (Mathf.Abs(ChaosAttackMultiplier - newMul) > 0.01f)
-            {
-                ChaosAttackMultiplier = newMul;
+            if (Mathf.Abs(cachedAttackMul - newMul) > 0.01f)
                 return true;
-            }
+
             return false;
         }
 
-        private bool UpdateUnity()
+        private bool CheckUnityChanged()
         {
             unityCheckTimer += Time.deltaTime;
             if (unityCheckTimer < UNITY_CHECK_INTERVAL) return false;
             unityCheckTimer = 0f;
 
-            // 주변 플레이어 수 카운트
             int count = 0;
             var players = GameObject.FindGameObjectsWithTag("Player");
             foreach (var p in players)
             {
-                if (p == transform.root.gameObject) continue; // 자기 자신 제외
+                if (p == transform.root.gameObject) continue;
                 if (!p.activeInHierarchy) continue;
 
                 float dist = Vector2.Distance(transform.root.position, p.transform.position);
@@ -296,11 +262,20 @@ namespace SwDreams.Adapter.Skill
             return false;
         }
 
+        // ===== Modifier 등록 =====
+
         /// <summary>
-        /// 모든 chaos modifier를 현재 상태에 맞게 재계산.
+        /// 모든 chaos 수치 효과를 계산하여 PlayerStats에 modifier로 등록.
+        /// 값이 변경된 경우에만 호출됨 (Update의 변경 감지 후).
         /// </summary>
-        private void RecalculateModifiers()
+        private void RecalculateChaosModifiers()
         {
+            if (playerStats == null)
+            {
+                CachePlayerStats();
+                if (playerStats == null) return;
+            }
+
             float attackMul = 1f;
             float cdMul = 1f;
             float moveBonus = 0f;
@@ -319,7 +294,6 @@ namespace SwDreams.Adapter.Skill
                 float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
                 float bonus = Mathf.Lerp(0f, 0.5f, gameTime / 600f);
                 attackMul += bonus;
-                // 가속 엔진은 "모든 스탯" 증가 — 이속도 포함
                 moveBonus += baseMoveSpeed * bonus;
             }
 
@@ -337,19 +311,30 @@ namespace SwDreams.Adapter.Skill
             // 단결
             if (hasUnity && nearbyPlayerCount > 0)
             {
-                // 2명 +20%, 3명 +30%, 4명 +40%
                 float unityBonus = nearbyPlayerCount * 0.1f + 0.1f;
                 attackMul += unityBonus;
             }
 
-            ChaosAttackMultiplier = attackMul;
-            ChaosCooldownMultiplier = cdMul;
-            ChaosMoveSpeedBonus = moveBonus;
-            ChaosMaxHPMultiplier = hpMul;
+            // 캐시 갱신
+            cachedAttackMul = attackMul;
+            cachedCdMul = cdMul;
+            cachedMoveBonus = moveBonus;
+            cachedHpMul = hpMul;
 
-            // 혼돈 스킬에 의한 스탯 변경을 PlayerStats → PlayerStub에 전파
-            if (playerStats != null)
-                playerStats.RecalculateAll();
+            // PlayerStats에 modifier 등록
+            playerStats.AddModifier(new StatModifier(
+                "chaos_attack", StatType.AttackMultiplier, ModifierOp.Multiply, attackMul));
+
+            playerStats.AddModifier(new StatModifier(
+                "chaos_cdr", StatType.CooldownReduction, ModifierOp.Multiply, cdMul));
+
+            playerStats.AddModifier(new StatModifier(
+                "chaos_movespeed", StatType.MoveSpeed, ModifierOp.Add, moveBonus));
+
+            playerStats.AddModifier(new StatModifier(
+                "chaos_maxhp", StatType.MaxHP, ModifierOp.Multiply, hpMul));
+
+            playerStats.Recalculate();
         }
 
         // ===== 연쇄 폭발 =====
@@ -369,7 +354,6 @@ namespace SwDreams.Adapter.Skill
 
         private void TriggerExplosion(Vector2 position)
         {
-            // 비주얼 (있으면)
             if (explosionEffectPrefab != null)
             {
                 var fx = PoolManager.Instance?.Get(explosionEffectPrefab);
@@ -377,7 +361,6 @@ namespace SwDreams.Adapter.Skill
                     fx.transform.position = position;
             }
 
-            // 범위 데미지
             var hits = Physics2D.OverlapCircleAll(position, explosionRadius);
             foreach (var hit in hits)
             {
@@ -385,10 +368,7 @@ namespace SwDreams.Adapter.Skill
 
                 var damageable = hit.GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
-                {
                     damageable.TakeDamage(explosionDamage);
-                    // 이 적이 죽으면 또 OnEnemyKilled가 호출되어 연쇄
-                }
             }
         }
 
