@@ -28,12 +28,8 @@ namespace Features.Projectile.Bootstrap
         private IEventSubscriber _eventBus;
         private IEventPublisher _publisher;
 
-        public void Initialize(
-            IEventSubscriber eventBus,
-            IEventPublisher publisher
-        )
+        public void Initialize(IEventSubscriber eventBus, IEventPublisher publisher)
         {
-            ResolvePrefabs();
             _eventBus = eventBus;
             _publisher = publisher;
 
@@ -59,7 +55,8 @@ namespace Features.Projectile.Bootstrap
 
             var pos = e.Position.ToVector3();
             var dir = e.Direction.ToVector3();
-            var rotation = dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir) : Quaternion.identity;
+            var rotation =
+                dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir) : Quaternion.identity;
             var go = Instantiate(prefab, pos + dir, rotation);
 
             var adapter = go.GetComponent<ProjectilePhysicsAdapter>();
@@ -103,14 +100,6 @@ namespace Features.Projectile.Bootstrap
                 default:
                     return new Color(1f, 0.5f, 0.1f);
             }
-        }
-
-        private void ResolvePrefabs()
-        {
-            fireballPrefab ??= Resources.Load<GameObject>("Fireball");
-            iceLancePrefab ??= Resources.Load<GameObject>("IceLance");
-            arcBoltPrefab ??= Resources.Load<GameObject>("ArcBolt");
-            homingOrbPrefab ??= Resources.Load<GameObject>("HomingOrb");
         }
     }
 }

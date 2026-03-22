@@ -1,10 +1,15 @@
+using Features.Projectile.Bootstrap;
+using Features.Skill.Bootstrap;
+using Features.Skill.Infrastructure;
 using Photon.Pun;
+using Shared.EventBus;
 using UnityEngine;
 
 namespace Features.Player.Bootstrap
 {
-    public sealed class GameSceneBootstrap : MonoBehaviour
+    public sealed class GameSceneBootstrap : MonoBehaviourPunCallbacks
     {
+        [Header("Player")]
         [SerializeField]
         private string _playerPrefabName = "PlayerCharacter";
 
@@ -12,15 +17,25 @@ namespace Features.Player.Bootstrap
         private float _spawnRadius = 3f;
 
         [SerializeField]
-        private Transform cam;
+        private Transform _cam;
+
+        [SerializeField]
+        private SkillSetup _skillSetup;
+
+        [SerializeField]
+        private ProjectileSpawner _projectileSpawner;
+
+        private EventBus _eventBus;
 
         private void Start()
         {
             if (!PhotonNetwork.InRoom)
             {
-                Debug.LogWarning("[Player] Not in a Photon room.");
+                Debug.LogWarning("[GameScene] Not in a Photon room.");
                 return;
             }
+
+            _eventBus = new EventBus();
 
             var offset = Random.insideUnitCircle * _spawnRadius;
             var spawnPosition = new Vector3(offset.x, 0f, offset.y);
@@ -29,7 +44,40 @@ namespace Features.Player.Bootstrap
                 spawnPosition,
                 Quaternion.identity
             );
-            cam.SetParent(player.transform, false);
+            _cam.SetParent(player.transform, false);
+
+            ConnectPlayer(player);
+            _skillSetup.Initialize(_eventBus, player.transform);
+            _projectileSpawner.Initialize(_eventBus, _eventBus);
+            foreach (var other in PhotonNetwork.PlayerListOthers)
+                StartCoroutine(ConnectRemotePlayerDelayed(other));
+        }
+
+        private void ConnectPlayer(GameObject player)
+        {
+            var playerSetup = player.GetComponent<PlayerSetup>();
+            if (playerSetup != null)
+                playerSetup.Initialize(_eventBus);
+        }
+
+        public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
+        {
+            StartCoroutine(ConnectRemotePlayerDelayed(newPlayer));
+        }
+
+        private System.Collections.IEnumerator ConnectRemotePlayerDelayed(
+            Photon.Realtime.Player target
+        )
+        {
+            yield return null;
+            foreach (var pv in FindObjectsByType<PhotonView>(FindObjectsSortMode.None))
+            {
+                if (pv.Owner == target && pv.GetComponent<PlayerSetup>() != null)
+                {
+                    ConnectPlayer(pv.gameObject);
+                    break;
+                }
+            }
         }
     }
 }

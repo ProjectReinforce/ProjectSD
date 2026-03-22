@@ -1289,11 +1289,12 @@ GameObject:
   - component: {fileID: 7265047512690780861}
   - component: {fileID: 563927348476056402}
   - component: {fileID: 8374903832521588625}
-  - component: {fileID: 4722500083567147566}
   - component: {fileID: 2688789669763424761}
   - component: {fileID: 8754681328858505603}
   - component: {fileID: 8526771113204879140}
-  - component: {fileID: 1457921450335684901}
+  - component: {fileID: 3171051613886210476}
+  - component: {fileID: 6118966530797763480}
+  - component: {fileID: 9088864777652907189}
   m_Layer: 5
   m_Name: SkillBarCanvas
   m_TagString: Untagged
@@ -1387,22 +1388,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &4722500083567147566
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9139654667506876455}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61282cdecc7a0bd48a5cf76342fd48f3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Features.Skill.Bootstrap.SkillBootstrap
-  skillBarView: {fileID: 2688789669763424761}
-  skillInputHandler: {fileID: 8754681328858505603}
-  skillCastEffectSpawner: {fileID: 8526771113204879140}
-  projectileSpawner: {fileID: 1457921450335684901}
 --- !u!114 &2688789669763424761
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1448,8 +1433,7 @@ MonoBehaviour:
   zoneEffectPrefab: {fileID: 62931960490395139, guid: d62e72cdafaac1d438664e5be28434f1, type: 3}
   targetedEffectPrefab: {fileID: 8569127925091132732, guid: 88b11ec3a813f474ca5fe21525a63d65, type: 3}
   selfEffectPrefab: {fileID: 7900248259663239735, guid: 51f4fa6bf94429a4599be0087817ec40, type: 3}
-  spawnOrigin: {fileID: 0}
---- !u!114 &1457921450335684901
+--- !u!114 &3171051613886210476
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1458,14 +1442,47 @@ MonoBehaviour:
   m_GameObject: {fileID: 9139654667506876455}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f2c0e030fbe3c9c4b999816eb60211a3, type: 3}
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Features.Projectile.Bootstrap.ProjectileSpawner
-  fireballPrefab: {fileID: 5072537207624841608, guid: 72d38c5856c17b841bbe7e2ec44a9625, type: 3}
-  iceLancePrefab: {fileID: 4886784138027569864, guid: 2a8bd0f00bb11094abc5739312e70f26, type: 3}
-  arcBoltPrefab: {fileID: 5304621591843912115, guid: 22586967ee5e32f4db4d410f6b531e48, type: 3}
-  homingOrbPrefab: {fileID: 7340690573705528948, guid: d5d44a09572b2ce40be17615a3a6b098, type: 3}
-  spawnOrigin: {fileID: 0}
+  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &6118966530797763480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9139654667506876455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25fef0a7e43a7594aa60570f68523512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Features.Skill.Infrastructure.SkillNetworkAdapter
+--- !u!114 &9088864777652907189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9139654667506876455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bd7b140e917844e836bb548c5ce6a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Features.Skill.Bootstrap.SkillSetup
+  _slotInputHandler: {fileID: 8754681328858505603}
+  _skillCastEffectSpawner: {fileID: 8526771113204879140}
+  _barView: {fileID: 2688789669763424761}
+  _networkAdapter: {fileID: 6118966530797763480}
 --- !u!1 &9140255041017084225
 GameObject:
   m_ObjectHideFlags: 0

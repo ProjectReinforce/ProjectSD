@@ -2,6 +2,6 @@ namespace Features.Skill.Application.Ports
 {
     public interface ISkillNetworkCallbackPort
     {
-        System.Action<SkillCastNetworkData> OnRemoteSkillCasted { set; }
+        System.Action<SkillCastNetworkData> OnSkillCasted { set; }
     }
 }

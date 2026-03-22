@@ -1,36 +1,57 @@
+using Features.Skill.Application;
+using Features.Skill.Domain;
 using Features.Skill.Infrastructure;
+using Features.Skill.Presentation;
+using Shared.EventBus;
 using UnityEngine;
 
 namespace Features.Skill.Bootstrap
 {
-    /// <summary>
-    /// PlayerCharacter 프리팹에 부착.
-    /// 로컬 플레이어 → SkillBootstrap에 네트워크 어댑터 + 트랜스폼 연결.
-    /// 원격 플레이어 → SkillBootstrap에 콜백 포트 등록 (원격 이펙트 재생용).
-    /// </summary>
     public sealed class SkillSetup : MonoBehaviour
     {
-        [SerializeField] private SkillNetworkAdapter _networkAdapter;
+        [SerializeField]
+        private SlotInputHandler _slotInputHandler;
 
-        private void Start()
+        [SerializeField]
+        private SkillCastEffectSpawner _skillCastEffectSpawner;
+
+        [SerializeField]
+        private BarView _barView;
+
+        [SerializeField]
+        private SkillNetworkAdapter _networkAdapter;
+        private EventBus _eventBus;
+
+        public void Initialize(EventBus eventBus, Transform playerTransform)
         {
-            if (_networkAdapter == null)
+            _eventBus = eventBus;
+            _barView.Initialize(eventBus);
+            _skillCastEffectSpawner.Initialize(eventBus);
+
+            var _ = new SkillNetworkEventHandler(_eventBus, _networkAdapter);
+
+            var skillBar = new SkillBar();
+            var equipSkillUseCase = new EquipSkillUseCase(_eventBus);
+            equipSkillUseCase.Execute(skillBar, 0, SkillCatalog.Fireball());
+            equipSkillUseCase.Execute(skillBar, 1, SkillCatalog.IceLance());
+            equipSkillUseCase.Execute(skillBar, 2, SkillCatalog.Blizzard());
+            equipSkillUseCase.Execute(skillBar, 3, SkillCatalog.Smite());
+
+            var cooldownTracker = new CooldownTracker();
+            var castSkillUseCase = new CastSkillUseCase(cooldownTracker, _networkAdapter);
+            var casterId = Shared.Kernel.DomainEntityId.New();
+
+            if (_slotInputHandler == null)
             {
-                Debug.LogError("[SkillSetup] SkillNetworkAdapter is missing.");
+                Debug.LogError(
+                    $"[SkillSetup] _slotInputHandler is not assigned in Inspector.",
+                    this
+                );
                 return;
             }
 
-            var bootstrap = FindObjectOfType<SkillBootstrap>();
-            if (bootstrap == null)
-            {
-                Debug.LogError("[SkillSetup] SkillBootstrap not found in scene.");
-                return;
-            }
-
-            if (_networkAdapter.photonView.IsMine)
-                bootstrap.ConnectLocalPlayer(_networkAdapter, transform);
-            else
-                bootstrap.RegisterRemotePlayer(_networkAdapter);
+            _slotInputHandler.Initialize(castSkillUseCase, skillBar, casterId);
+            _slotInputHandler.SetPlayerTransform(playerTransform);
         }
     }
 }

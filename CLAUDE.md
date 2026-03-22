@@ -20,6 +20,7 @@ Shared/
 - Each feature is self-contained and grows independently.
 - **MANDATORY**: Before modifying ANY file under `Features/<Name>/`, you MUST read `Assets/Scripts_/Features/<Name>/README.md` first. Do NOT skip this step.
 - **MANDATORY**: When making design decisions — (1) colocate code that changes for the same reason, (2) minimize ripple effect by exposing interface, not implementation. Do not jump to conclusions — check current code first, then answer based on evidence. If unsure whether a change violates project rules, ask before proceeding.
+- **MANDATORY**: When writing or modifying code, you MUST follow `/agent/anti_patterns.md`. Do NOT skip this step.
 - `Shared` contains only reusable cross-feature utilities — never feature-specific code.
 - Cross-feature dependency is encouraged — layer direction만 지키면 피처 간 적극적으로 의존한다.
 - Only split a feature into two when a concept gains an independent lifecycle.

@@ -1,4 +1,6 @@
+using Features.Skill.Domain.Delivery;
 using Shared.Kernel;
+using Shared.Math;
 
 namespace Features.Skill.Application.Ports
 {
@@ -7,31 +9,28 @@ namespace Features.Skill.Application.Ports
     {
         public DomainEntityId SkillId { get; }
         public DomainEntityId CasterId { get; }
+        public int SlotIndex { get; }
         public float Damage { get; }
         public float Cooldown { get; }
         public float Range { get; }
-        public int DeliveryType { get; }
+        public DeliveryType DeliveryType { get; }
         public int TrajectoryType { get; }
         public int HitType { get; }
         public float Speed { get; }
         public float Radius { get; }
-        public float PosX { get; }
-        public float PosY { get; }
-        public float PosZ { get; }
-        public float DirX { get; }
-        public float DirY { get; }
-        public float DirZ { get; }
+        public Float3 Position { get; }
+        public Float3 Direction { get; }
 
         public SkillCastNetworkData(
-            DomainEntityId skillId, DomainEntityId casterId,
+            DomainEntityId skillId, DomainEntityId casterId, int slotIndex,
             float damage, float cooldown, float range,
-            int deliveryType,
+            DeliveryType deliveryType,
             int trajectoryType, int hitType, float speed, float radius,
-            float posX, float posY, float posZ,
-            float dirX, float dirY, float dirZ)
+            Float3 position, Float3 direction)
         {
             SkillId = skillId;
             CasterId = casterId;
+            SlotIndex = slotIndex;
             Damage = damage;
             Cooldown = cooldown;
             Range = range;
@@ -40,12 +39,8 @@ namespace Features.Skill.Application.Ports
             HitType = hitType;
             Speed = speed;
             Radius = radius;
-            PosX = posX;
-            PosY = posY;
-            PosZ = posZ;
-            DirX = dirX;
-            DirY = dirY;
-            DirZ = dirZ;
+            Position = position;
+            Direction = direction;
         }
     }
 

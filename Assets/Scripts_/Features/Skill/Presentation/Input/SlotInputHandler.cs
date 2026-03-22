@@ -73,7 +73,7 @@ namespace Features.Skill.Presentation
             var position = origin.position.ToFloat3();
             var direction = origin.forward.ToFloat3();
 
-            var result = _castSkillUseCase.Execute(skill, _casterId, Time.time, position, direction);
+            var result = _castSkillUseCase.Execute(skill, slotIndex, _casterId, Time.time, position, direction);
             if (result.IsFailure)
             {
                 Debug.LogWarning($"[SkillInput] Slot {slotIndex} FAILED: {result.Error}");

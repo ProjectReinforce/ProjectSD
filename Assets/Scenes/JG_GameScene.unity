@@ -207,6 +207,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3171051613886210476, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
+      propertyPath: sceneViewId
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9139654667506876455, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
       propertyPath: m_Name
       value: SkillBarCanvas
@@ -216,6 +220,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
+--- !u!114 &81223052 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9088864777652907189, guid: 5ccf94da5451b66409a9ffe0e3347108, type: 3}
+  m_PrefabInstance: {fileID: 81223051}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bd7b140e917844e836bb548c5ce6a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Features.Skill.Bootstrap.SkillSetup
 --- !u!1 &258126762
 GameObject:
   m_ObjectHideFlags: 0
@@ -226,8 +241,9 @@ GameObject:
   m_Component:
   - component: {fileID: 258126764}
   - component: {fileID: 258126763}
+  - component: {fileID: 258126765}
   m_Layer: 0
-  m_Name: PlayerBootstrap
+  m_Name: GameSceneBootstrap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -247,7 +263,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Features.Player.Bootstrap.PlayerBootstrap
   _playerPrefabName: PlayerCharacter
   _spawnRadius: 3
-  cam: {fileID: 260248363}
+  _cam: {fileID: 260248363}
+  _skillSetup: {fileID: 81223052}
+  _projectileSpawner: {fileID: 258126765}
 --- !u!4 &258126764
 Transform:
   m_ObjectHideFlags: 0
@@ -263,6 +281,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &258126765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 258126762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2c0e030fbe3c9c4b999816eb60211a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Features.Projectile.Bootstrap.ProjectileSpawner
+  fireballPrefab: {fileID: 5072537207624841608, guid: 72d38c5856c17b841bbe7e2ec44a9625, type: 3}
+  iceLancePrefab: {fileID: 4886784138027569864, guid: 2a8bd0f00bb11094abc5739312e70f26, type: 3}
+  arcBoltPrefab: {fileID: 5304621591843912115, guid: 22586967ee5e32f4db4d410f6b531e48, type: 3}
+  homingOrbPrefab: {fileID: 7340690573705528948, guid: d5d44a09572b2ce40be17615a3a6b098, type: 3}
 --- !u!1 &260248360
 GameObject:
   m_ObjectHideFlags: 0

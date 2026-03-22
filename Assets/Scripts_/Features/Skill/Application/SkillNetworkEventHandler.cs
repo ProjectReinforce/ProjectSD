@@ -5,8 +5,8 @@ using Features.Projectile.Domain.Trajectory;
 using Features.Skill.Application.Events;
 using Features.Skill.Application.Ports;
 using Features.Skill.Domain;
+using Features.Skill.Domain.Delivery;
 using Shared.EventBus;
-using Shared.Math;
 
 namespace Features.Skill.Application
 {
@@ -20,36 +20,34 @@ namespace Features.Skill.Application
         )
         {
             _publisher = publisher;
-            networkCallbacks.OnRemoteSkillCasted = HandleRemoteSkillCasted;
+            networkCallbacks.OnSkillCasted = HandleSkillCasted;
         }
 
-        private void HandleRemoteSkillCasted(SkillCastNetworkData data)
+        private void HandleSkillCasted(SkillCastNetworkData data)
         {
             var spec = new SkillSpec(data.Damage, data.Cooldown, data.Range);
-            var position = new Float3(data.PosX, data.PosY, data.PosZ);
-            var direction = new Float3(data.DirX, data.DirY, data.DirZ);
 
             switch (data.DeliveryType)
             {
-                case 0:
+                case DeliveryType.Projectile:
                     var projectileSpec = new ProjectileSpec(
                         (TrajectoryType)data.TrajectoryType,
                         (HitType)data.HitType,
                         data.Speed, data.Radius);
-                    _publisher.Publish(new ProjectileRequestedEvent(data.CasterId, projectileSpec, position, direction));
+                    _publisher.Publish(new ProjectileRequestedEvent(data.CasterId, projectileSpec, data.Position, data.Direction));
                     break;
-                case 1:
-                    _publisher.Publish(new ZoneRequestedEvent(data.CasterId, spec, position, direction));
+                case DeliveryType.Zone:
+                    _publisher.Publish(new ZoneRequestedEvent(data.CasterId, spec, data.Position, data.Direction));
                     break;
-                case 2:
-                    _publisher.Publish(new TargetedRequestedEvent(data.CasterId, spec, position, direction));
+                case DeliveryType.Targeted:
+                    _publisher.Publish(new TargetedRequestedEvent(data.CasterId, spec, data.Position, data.Direction));
                     break;
-                case 3:
-                    _publisher.Publish(new SelfRequestedEvent(data.CasterId, spec, position));
+                case DeliveryType.Self:
+                    _publisher.Publish(new SelfRequestedEvent(data.CasterId, spec, data.Position));
                     break;
             }
 
-            _publisher.Publish(new SkillCastedEvent(data.SkillId, data.CasterId, spec));
+            _publisher.Publish(new SkillCastedEvent(data.SkillId, data.CasterId, data.SlotIndex, spec));
         }
     }
 }

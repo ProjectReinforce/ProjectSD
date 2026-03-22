@@ -17,7 +17,7 @@ namespace Features.Player.Bootstrap
         [SerializeField] private PlayerInput _playerInput;
         [SerializeField] private PlayerView _view;
 
-        private void Start()
+        public void Initialize(EventBus eventBus)
         {
             if (_networkAdapter == null)
             {
@@ -25,13 +25,12 @@ namespace Features.Player.Bootstrap
                 return;
             }
 
-            var eventBus = new EventBus();
             var _ = new PlayerNetworkEventHandler(eventBus, _networkAdapter);
 
             if (_networkAdapter.IsMine)
                 InitializeLocal(eventBus);
             else
-                InitializeRemote();
+                InitializeRemote(eventBus);
         }
 
         private void InitializeLocal(EventBus eventBus)
@@ -57,26 +56,47 @@ namespace Features.Player.Bootstrap
 
             var player = spawnResult.Value;
 
-            if (_inputHandler != null)
-                _inputHandler.Initialize(player, useCases);
+            if (_inputHandler == null)
+            {
+                Debug.LogError("[PlayerSetup] PlayerInputHandler is not assigned in Inspector.", this);
+                return;
+            }
 
-            if (_view != null)
-                _view.Initialize(true, eventBus);
+            _inputHandler.Initialize(player, useCases);
+
+            if (_view == null)
+            {
+                Debug.LogError("[PlayerSetup] PlayerView is not assigned in Inspector.", this);
+                return;
+            }
+
+            _view.Initialize(true, eventBus);
         }
 
-        private void InitializeRemote()
+        private void InitializeRemote(EventBus eventBus)
         {
-            if (_inputHandler != null)
+            if (_inputHandler == null)
+                Debug.LogError("[PlayerSetup] PlayerInputHandler is not assigned in Inspector.", this);
+            else
                 _inputHandler.enabled = false;
 
-            if (_playerInput != null)
+            if (_playerInput == null)
+                Debug.LogError("[PlayerSetup] PlayerInput is not assigned in Inspector.", this);
+            else
                 _playerInput.enabled = false;
 
-            if (_motorAdapter != null)
+            if (_motorAdapter == null)
+                Debug.LogError("[PlayerSetup] PlayerMotorAdapter is not assigned in Inspector.", this);
+            else
                 _motorAdapter.enabled = false;
 
-            if (_view != null)
-                _view.Initialize(false, new EventBus());
+            if (_view == null)
+            {
+                Debug.LogError("[PlayerSetup] PlayerView is not assigned in Inspector.", this);
+                return;
+            }
+
+            _view.Initialize(false, eventBus);
         }
     }
 }
