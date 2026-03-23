@@ -1,3 +1,4 @@
+using Features.Combat.Domain;
 using Features.Projectile.Application.Events;
 using Features.Projectile.Domain;
 using Features.Projectile.Domain.Hit;
@@ -34,7 +35,16 @@ namespace Features.Skill.Application
                         (TrajectoryType)data.TrajectoryType,
                         (HitType)data.HitType,
                         data.Speed, data.Radius);
-                    _publisher.Publish(new ProjectileRequestedEvent(data.CasterId, projectileSpec, data.Position, data.Direction));
+                    _publisher.Publish(
+                        new ProjectileRequestedEvent(
+                            data.CasterId,
+                            projectileSpec,
+                            data.Damage,
+                            DamageType.Magical,
+                            data.Position,
+                            data.Direction
+                        )
+                    );
                     break;
                 case DeliveryType.Zone:
                     _publisher.Publish(new ZoneRequestedEvent(data.SkillId, data.CasterId, spec, data.Position, data.Direction));

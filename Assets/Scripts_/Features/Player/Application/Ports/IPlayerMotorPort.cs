@@ -7,6 +7,7 @@ namespace Features.Player.Application.Ports
         MotorResult Move(Float3 delta);
     }
 
+    /// <summary>캐릭터 이동 후 위치와 접지 상태를 반환하는 결과 데이터.</summary>
     public readonly struct MotorResult
     {
         public Float3 Position { get; }

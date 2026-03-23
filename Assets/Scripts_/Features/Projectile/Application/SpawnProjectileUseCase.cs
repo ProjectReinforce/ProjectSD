@@ -1,3 +1,4 @@
+using Features.Combat.Domain;
 using Features.Projectile.Application.Events;
 using Features.Projectile.Application.Ports;
 using Features.Projectile.Domain;
@@ -24,7 +25,23 @@ namespace Features.Projectile.Application
 
         public Result Execute(DomainEntityId ownerId, ProjectileSpec spec)
         {
-            var projectile = new Domain.Projectile(_clock.NewId(), ownerId, spec);
+            return Execute(ownerId, spec, 0f, DamageType.Magical);
+        }
+
+        public Result Execute(
+            DomainEntityId ownerId,
+            ProjectileSpec spec,
+            float baseDamage,
+            DamageType damageType
+        )
+        {
+            var projectile = new Domain.Projectile(
+                _clock.NewId(),
+                ownerId,
+                spec,
+                baseDamage,
+                damageType
+            );
             var trajectory = TrajectoryFactory.Create(spec.TrajectoryType);
             var hitResolver = HitResolverFactory.Create(spec.HitType);
 

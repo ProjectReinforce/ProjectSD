@@ -1,3 +1,4 @@
+using Features.Combat.Bootstrap;
 using Features.Projectile.Bootstrap;
 using Features.Skill.Bootstrap;
 using Features.Skill.Infrastructure;
@@ -27,6 +28,9 @@ namespace Features.Player.Bootstrap
         private ProjectileSpawner _projectileSpawner;
 
         [SerializeField]
+        private CombatBootstrap _combatBootstrap;
+
+        [SerializeField]
         private ZoneSetup _zoneSetup;
 
         private EventBus _eventBus;
@@ -40,6 +44,14 @@ namespace Features.Player.Bootstrap
             }
 
             _eventBus = new EventBus();
+
+            if (_combatBootstrap == null)
+            {
+                Debug.LogError("[GameScene] CombatBootstrap reference is missing.");
+                return;
+            }
+
+            _combatBootstrap.Initialize(_eventBus);
 
             var offset = Random.insideUnitCircle * _spawnRadius;
             var spawnPosition = new Vector3(offset.x, 0f, offset.y);

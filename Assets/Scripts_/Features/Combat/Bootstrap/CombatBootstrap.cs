@@ -2,6 +2,7 @@ using Features.Combat.Application;
 using Features.Combat.Domain;
 using Features.Combat.Infrastructure;
 using Features.Combat.Presentation;
+using Features.Projectile.Application.Events;
 using Shared.EventBus;
 using Shared.Kernel;
 using UnityEngine;
@@ -16,11 +17,10 @@ namespace Features.Combat.Bootstrap
         [SerializeField]
         private CombatTargetView[] _targetViews = new CombatTargetView[0];
 
-        private readonly EventBus _eventBus = new EventBus();
-
         private ApplyDamageUseCase _applyDamage;
+        private EventBus _eventBus;
 
-        private void Awake()
+        public void Initialize(EventBus eventBus)
         {
             if (_targetAdapter == null)
             {
@@ -28,8 +28,17 @@ namespace Features.Combat.Bootstrap
                 return;
             }
 
+            if (eventBus == null)
+            {
+                Debug.LogError("[CombatBootstrap] EventBus is not provided.", this);
+                return;
+            }
+
+            _eventBus = eventBus;
+
             _targetAdapter.Initialize();
             _applyDamage = new ApplyDamageUseCase(_targetAdapter, _eventBus);
+            _eventBus.Subscribe(this, new System.Action<ProjectileHitEvent>(OnProjectileHit));
 
             for (var i = 0; i < _targetViews.Length; i++)
             {
@@ -42,6 +51,24 @@ namespace Features.Combat.Bootstrap
 
                 view.Initialize(_eventBus);
             }
+        }
+
+        private void OnDestroy()
+        {
+            _eventBus?.UnsubscribeAll(this);
+        }
+
+        private void OnProjectileHit(ProjectileHitEvent e)
+        {
+            if (_applyDamage == null)
+            {
+                Debug.LogError("[CombatBootstrap] Received ProjectileHitEvent before combat initialization.", this);
+                return;
+            }
+
+            var result = _applyDamage.Execute(e.TargetId, e.BaseDamage, e.DamageType);
+            if (result.IsFailure)
+                Debug.LogWarning($"[CombatBootstrap] Failed to apply projectile damage: {result.Error}", this);
         }
 
         public Result ApplyDamage(DomainEntityId targetId, float baseDamage, DamageType damageType)

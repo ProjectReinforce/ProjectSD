@@ -4,6 +4,7 @@ using Features.Skill.Infrastructure;
 using Features.Skill.Presentation;
 using Shared.EventBus;
 using Shared.Kernel;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Features.Skill.Bootstrap
@@ -32,6 +33,7 @@ namespace Features.Skill.Bootstrap
         private SkillCatalog _catalog;
         private EquipSkillUseCase _equipSkillUseCase;
         private SkillBar _skillBar;
+        private SkillRotator _skillRotator;
 
         public SkillCatalog Catalog => _catalog;
 
@@ -52,6 +54,7 @@ namespace Features.Skill.Bootstrap
             }
 
             _catalog = new SkillCatalog(_catalogData);
+            _skillRotator = new SkillRotator(CollectCatalogSkillIds());
 
             _barView.Initialize(eventBus, new SkillIconAdapter(_catalog));
             _skillCastEffectSpawner.Initialize(eventBus, new SkillEffectAdapter(_catalog));
@@ -66,6 +69,7 @@ namespace Features.Skill.Bootstrap
                 loadoutRepo.Load(),
                 skillId => _catalog.Get(skillId)
             );
+            _barView.SetSlotClickHandler(HandleSlotClicked);
 
             var castSkillUseCase = new CastSkillUseCase(cooldownTracker, _networkAdapter);
             var casterId = DomainEntityId.New();
@@ -90,6 +94,41 @@ namespace Features.Skill.Bootstrap
                 return Result.Failure($"Skill not found: {skillId}");
 
             return _equipSkillUseCase.Execute(_skillBar, slotIndex, skill);
+        }
+
+        private List<string> CollectCatalogSkillIds()
+        {
+            var ids = new List<string>();
+            if (_catalog?.AllSkills == null)
+                return ids;
+
+            foreach (var skillData in _catalog.AllSkills)
+            {
+                if (skillData == null || string.IsNullOrWhiteSpace(skillData.SkillId))
+                    continue;
+                if (ids.Contains(skillData.SkillId))
+                    continue;
+                ids.Add(skillData.SkillId);
+            }
+
+            return ids;
+        }
+
+        private void HandleSlotClicked(int slotIndex)
+        {
+            if (_skillRotator.Count == 0)
+            {
+                Debug.LogWarning("[SkillSetup] No skills available for runtime swap.", this);
+                return;
+            }
+
+            var nextSkillId = _skillRotator.GetNext(_skillBar, slotIndex);
+            if (string.IsNullOrEmpty(nextSkillId))
+                return;
+
+            var result = SwapSkill(slotIndex, nextSkillId);
+            if (result.IsFailure)
+                Debug.LogWarning($"[SkillSetup] Runtime swap failed: {result.Error}", this);
         }
     }
 }

@@ -63,7 +63,13 @@ namespace Features.Projectile.Bootstrap
             if (adapter != null)
             {
                 adapter.Initialize(_publisher);
-                var projectile = new Domain.Projectile(DomainEntityId.New(), e.OwnerId, e.Spec);
+                var projectile = new Domain.Projectile(
+                    DomainEntityId.New(),
+                    e.OwnerId,
+                    e.Spec,
+                    e.BaseDamage,
+                    e.DamageType
+                );
                 var trajectory = TrajectoryFactory.Create(e.Spec.TrajectoryType);
                 var hitResolver = HitResolverFactory.Create(e.Spec.HitType);
                 adapter.Spawn(projectile, trajectory, hitResolver);

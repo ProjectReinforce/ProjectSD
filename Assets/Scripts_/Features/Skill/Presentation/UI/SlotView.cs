@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Features.Skill.Presentation
 {
-    public sealed class SlotView : MonoBehaviour
+    public sealed class SlotView : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private Image icon;
         [SerializeField] private Image cooldownOverlay;
@@ -12,6 +13,7 @@ namespace Features.Skill.Presentation
         private float _cooldownDuration;
         private float _cooldownEndTime;
         private bool _isCoolingDown;
+        private System.Action _onClick;
 
         public void SetKeyLabel(string label)
         {
@@ -66,6 +68,19 @@ namespace Features.Skill.Presentation
 
             if (cooldownOverlay != null)
                 cooldownOverlay.fillAmount = remaining / _cooldownDuration;
+        }
+
+        public void SetClickHandler(System.Action onClick)
+        {
+            _onClick = onClick;
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData != null && eventData.button != PointerEventData.InputButton.Left)
+                return;
+
+            _onClick?.Invoke();
         }
 
         private void ClearCooldown()

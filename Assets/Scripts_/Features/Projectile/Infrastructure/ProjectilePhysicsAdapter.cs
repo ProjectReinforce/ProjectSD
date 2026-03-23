@@ -61,11 +61,20 @@ namespace Features.Projectile.Infrastructure
 
             var holder = other.GetComponentInParent<EntityIdHolder>();
             if (holder == null || !holder.IsInitialized) return;
+            if (holder.Id.Equals(_projectile.OwnerId)) return;
 
             var result = _hitResolver.Resolve(_projectile);
             result.Apply(_projectile);
 
-            _eventBus.Publish(new ProjectileHitEvent(_projectile.Id, holder.Id));
+            _eventBus.Publish(
+                new ProjectileHitEvent(
+                    _projectile.Id,
+                    _projectile.OwnerId,
+                    holder.Id,
+                    _projectile.BaseDamage,
+                    _projectile.DamageType
+                )
+            );
 
             if (!_projectile.IsAlive)
                 Destroy(gameObject);

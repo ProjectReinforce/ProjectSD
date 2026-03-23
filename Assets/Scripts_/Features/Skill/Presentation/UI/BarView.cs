@@ -1,5 +1,6 @@
 using Features.Skill.Application.Events;
 using Shared.EventBus;
+using System;
 using UnityEngine;
 
 namespace Features.Skill.Presentation
@@ -12,6 +13,7 @@ namespace Features.Skill.Presentation
 
         private IEventSubscriber _eventBus;
         private ISkillIconPort _iconPort;
+        private Action<int> _onSlotClicked;
 
         public void Initialize(IEventSubscriber eventBus, ISkillIconPort iconPort)
         {
@@ -28,6 +30,21 @@ namespace Features.Skill.Presentation
 
             _eventBus.Subscribe(this, new System.Action<SkillEquippedEvent>(OnSkillEquipped));
             _eventBus.Subscribe(this, new System.Action<SkillCastedEvent>(OnSkillCasted));
+        }
+
+        public void SetSlotClickHandler(Action<int> onSlotClicked)
+        {
+            _onSlotClicked = onSlotClicked;
+
+            for (var i = 0; i < slotViews.Length; i++)
+            {
+                var slotIndex = i;
+                var slotView = slotViews[i];
+                if (slotView == null)
+                    continue;
+
+                slotView.SetClickHandler(() => _onSlotClicked?.Invoke(slotIndex));
+            }
         }
 
         private void OnDestroy()
