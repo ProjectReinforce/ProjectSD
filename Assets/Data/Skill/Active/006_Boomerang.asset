@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62f15d80dc749f446a1cd6169a726990, type: 3}
+  m_Name: 006_Boomerang
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.ProjectileSkillData
+  skillId: 6
+  skillName: "\uBD80\uBA54\uB791"
+  skillType: 0
+  effectType: 1
+  chaosEffectType: 0
+  icon: {fileID: 21300000, guid: c95d0d410a27ca04b924f43164c87f87, type: 3}
+  description: "\uC654\uB2E4 \uAC14\uB2E4"
+  maxLevel: 7
+  damagePerLevel: 0e0000001100000015000000190000001e000000240000002c000000
+  cooldownPerLevel:
+  - 2.7
+  - 2.55
+  - 2.33
+  - 2.13
+  - 1.95
+  - 1.8
+  - 1.65
+  bonusType: 0
+  bonusPerLevel: 0
+  projectilePrefab: {fileID: 2361586414690528474, guid: 275e103cfdd0f00468aa79206ac99773, type: 3}
+  projectileSpeed: 3.5
+  projectileCount: 1
+  projectileLifetime: 2
+  penetrates: 0
+  aimType: 1
+  spreadPattern: 2
+  spreadAngle: 15
+  trajectoryType: 2
+  waveAmplitude: 0.8
+  waveFrequency: 5
+  homingRotateSpeed: 100
+  pullRadius: 2
+  pullForce: 3
+  hasPullOnReturn: 0
+  spiralExpandSpeed: 1
+  areaRadius: 0.5
+  areaDuration: 3
+  tickRate: 0.5
+  isHealingEffect: 0
+  spawnAtRandomPosition: 0
+  randomSpawnRadius: 0.8
+  isDualZone: 0
+  orbitRadius: 0.25
+  rotationSpeed: 360
+  objectCount: 1
+  knockbackForce: 0.35
+  attackRange: 5
+  attackCooldown: 0.5
+  alwaysCritical: 0
+  debuffDuration: 5
+  damageAmplify: 1.3
+  targetCount: 3
+  spreadOnDeathCount: 0
+  maxInstances: 2
+  effectPrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
+  applicableStats: 
+  triggerEffects: []
+  evolutionPair: {fileID: 11400000, guid: d6619f056d2b46349ad38c514beee0ef, type: 2}
+  evolvedSkill: {fileID: 11400000, guid: ebfb7718f453d2d4a93ee5d650b7a12d, type: 2}

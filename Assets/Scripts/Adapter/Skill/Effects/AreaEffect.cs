@@ -127,9 +127,6 @@ namespace SwDreams.Adapter.Skill
                 duration: duration,
                 tickRate: data.tickRate,
                 isHealing: data.isHealingEffect,
-                appliesSlow: data.appliesSlow,
-                slowMultiplier: data.slowMultiplier,
-                executeThreshold: data.executeThreshold,
                 isDualZone: data.isDualZone
             );
 

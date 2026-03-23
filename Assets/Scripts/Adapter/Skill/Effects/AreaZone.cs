@@ -30,11 +30,6 @@ namespace SwDreams.Adapter.Skill
         private float tickRate;
         private float radius;
         private bool isHealing;
-
-        // [Phase 5 진화] 추가 효과
-        private bool appliesSlow;
-        private float slowMultiplier;
-        private float executeThreshold; // 0이면 비활성
         private bool isDualZone;        // 적 데미지 + 플레이어 회복 동시
 
         // 타이머
@@ -66,8 +61,7 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         public void Initialize(Vector2 position, int damage, float radius,
             float duration, float tickRate, bool isHealing,
-            bool appliesSlow = false, float slowMultiplier = 0.5f,
-            float executeThreshold = 0f, bool isDualZone = false)
+            bool isDualZone = false)
         {
             transform.position = position;
             this.damage = damage;
@@ -75,9 +69,6 @@ namespace SwDreams.Adapter.Skill
             this.duration = duration;
             this.tickRate = Mathf.Max(0.1f, tickRate);
             this.isHealing = isHealing;
-            this.appliesSlow = appliesSlow;
-            this.slowMultiplier = slowMultiplier;
-            this.executeThreshold = executeThreshold;
             this.isDualZone = isDualZone;
 
             aliveTime = 0f;
@@ -159,22 +150,10 @@ namespace SwDreams.Adapter.Skill
                 var damageable = hit.GetComponent<IDamageable>();
                 if (damageable == null || !damageable.IsAlive) continue;
 
-                // [진화: 나락] HP 비율 이하 적 즉사 (보스 제외)
-                if (executeThreshold > 0f)
-                {
-                    float hpRatio = (float)damageable.CurrentHP / Mathf.Max(1, damageable.MaxHP);
-                    if (hpRatio <= executeThreshold)
-                    {
-                        // 즉사 = 현재 HP만큼 데미지
-                        damageable.TakeDamage(damageable.CurrentHP);
-                        continue;
-                    }
-                }
-
                 // 일반 데미지
                 damageable.TakeDamage(damage);
 
-                // [Step 3-5] OnHit 트리거 발동
+                // OnHit 트리거 발동 (슬로우, 즉사 등은 SO triggerEffects에서 정의)
                 if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnHit))
                 {
                     triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
@@ -184,14 +163,6 @@ namespace SwDreams.Adapter.Skill
                         damage = damage,
                         owner = ownerTransform
                     });
-                }
-
-                // [진화: 뇌전역] 슬로우 — 이동속도 감소
-                if (appliesSlow)
-                {
-                    var movement = hit.GetComponent<EnemyMovement>();
-                    if (movement != null)
-                        movement.ApplySlowTemporary(slowMultiplier, tickRate * 1.5f);
                 }
             }
         }

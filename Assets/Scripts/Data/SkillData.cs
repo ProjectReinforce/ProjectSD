@@ -81,8 +81,12 @@ namespace SwDreams.Data
         public float projectileSpeed = 5f;
         public int projectileCount = 1;
         public float projectileLifetime = 5f;
+        [Tooltip("적 적중 시 관통 여부. true면 소멸하지 않음.")]
+        public bool penetrates = false;
 
         [Header("투사체 배치/궤적")]
+        [Tooltip("발사 기준 방향")]
+        public AimType aimType = AimType.ClosestEnemy;
         [Tooltip("다중 투사체 배치 패턴")]
         public SpreadPatternType spreadPattern = SpreadPatternType.Fan;
         [Tooltip("부채꼴 배치 시 개별 각도 (도)")]
@@ -101,33 +105,10 @@ namespace SwDreams.Data
         public float pullRadius = 2f;
         [Tooltip("회오리 끌어당김 힘")]
         public float pullForce = 3f;
-
-        [Header("진화 전용 — 투사체")]
-        [Tooltip("적중 시 폭발 (폭렬 표창)")]
-        public bool isExploding = false;
-        [Tooltip("폭발 반경")]
-        public float explosionRadius = 1.5f;
-        [Tooltip("적중 후 체인 (체인 미사일). 최대 체인 횟수")]
-        public int chainCount = 0;
-        [Tooltip("체인 탐색 반경")]
-        public float chainRadius = 4f;
         [Tooltip("복귀 경로 끌어당김 (그래비톤 부메랑)")]
         public bool hasPullOnReturn = false;
-        [Tooltip("나선형 이동 (대선풍)")]
-        public bool isSpiral = false;
-        [Tooltip("나선 확장 속도")]
+        [Tooltip("나선 확장 속도 (대선풍)")]
         public float spiralExpandSpeed = 1f;
-
-        [Header("진화 전용 — 장판")]
-        [Tooltip("범위 내 적 슬로우 (뇌전역)")]
-        public bool appliesSlow = false;
-        [Tooltip("슬로우 배율 (0.5 = 50% 감속)")]
-        public float slowMultiplier = 0.5f;
-        [Tooltip("HP 비율 이하 적 즉사 (나락). 0이면 비활성")]
-        [Range(0f, 1f)]
-        public float executeThreshold = 0f;
-        [Tooltip("회복+데미지 동시 (심판의 성역)")]
-        public bool isDualZone = false;
 
         [Header("범위/장판 전용 (Area)")]
         public float areaRadius = 2f;
@@ -140,6 +121,8 @@ namespace SwDreams.Data
         public bool spawnAtRandomPosition = false;
         [Tooltip("랜덤 생성 반경 (플레이어 기준)")]
         public float randomSpawnRadius = 3f;
+        [Tooltip("회복+데미지 동시 (심판의 성역)")]
+        public bool isDualZone = false;
 
         [Header("회전형 전용 (Orbital)")]
         [Tooltip("궤도 반경 (플레이어 중심 거리)")]

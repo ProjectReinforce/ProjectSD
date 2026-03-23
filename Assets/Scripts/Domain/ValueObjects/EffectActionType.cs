@@ -37,6 +37,9 @@ namespace SwDreams.Domain.ValueObjects
         ApplyVulnerability,
 
         /// <summary>자신 회복. primary=회복량(고정), secondary=회복량(스킬 데미지 비율).</summary>
-        HealSelf
+        HealSelf,
+
+        /// <summary>HP 비율 이하 즉사 (보스 제외). primary=임계값(0.15=15%), secondary=범위(0=단일).</summary>
+        Execute
     }
 }

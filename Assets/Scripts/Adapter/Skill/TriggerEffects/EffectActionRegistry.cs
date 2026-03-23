@@ -80,8 +80,9 @@ namespace SwDreams.Adapter.Skill.TriggerEffects
             Register(EffectActionType.Explode, new ExplodeHandler());
             Register(EffectActionType.DealDamage, new DealDamageHandler());
             Register(EffectActionType.ApplySlow, new ApplySlowHandler());
+            Register(EffectActionType.Chain, new ChainHandler());
+            Register(EffectActionType.Execute, new ExecuteHandler());
             // TODO: 추후 구현 시 등록
-            // Register(EffectActionType.Chain, new ChainHandler());
             // Register(EffectActionType.ApplyDoT, new ApplyDoTHandler());
             // Register(EffectActionType.Pull, new PullHandler());
             // Register(EffectActionType.Refire, new RefireHandler());

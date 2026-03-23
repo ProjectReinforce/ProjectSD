@@ -15,8 +15,8 @@ MonoBehaviour:
   id: 1
   displayName: B
   portrait: {fileID: 0}
-  startingActiveSkill: {fileID: 11400000, guid: 8647c1a6e761ff749bbd496e469fcd76, type: 2}
-  startingPassiveSkill: {fileID: 11400000, guid: 0def2e5c58dcbcb4bad63bd4123b52fe, type: 2}
+  startingActiveSkill: {fileID: 11400000, guid: 8312309ff3ce52e408b5876bf1e4414c, type: 2}
+  startingPassiveSkill: {fileID: 11400000, guid: f314ed8711d24fc47bbe78a32cc21ac6, type: 2}
   maxHP: 110
   moveSpeed: 0.8
   attackMultiplier: 1

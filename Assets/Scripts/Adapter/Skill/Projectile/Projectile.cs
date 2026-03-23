@@ -40,11 +40,20 @@ namespace SwDreams.Adapter.Skill
         // ===== Trajectory Behavior (Step 3-7c) =====
         private ITrajectoryBehavior trajectoryBehavior;
 
+        // SO에서 관통 설정 (Trajectory 기본값을 오버라이드)
+        private bool? penetratesOverride;
+
         /// <summary>궤적 행동 부착. ProjectileEffect에서 스폰 후 호출.</summary>
         public void SetTrajectory(ITrajectoryBehavior behavior)
         {
             trajectoryBehavior = behavior;
             behavior?.Initialize(this);
+        }
+
+        /// <summary>SO의 penetrates 설정. Trajectory 기본값을 오버라이드.</summary>
+        public void SetPenetrates(bool value)
+        {
+            penetratesOverride = value;
         }
 
         /// <summary>Behavior에서 호출. 투사체 강제 풀 반환.</summary>
@@ -151,13 +160,23 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>
         /// 적 히트 시 후처리.
-        /// Behavior의 Penetrates가 true면 관통. 아니면 풀 반환.
-        /// 기존 서브클래스는 오버라이드로 계속 동작.
+        /// 우선순위: SO penetrates 오버라이드 → Trajectory 기본값.
+        /// 관통이면 소멸하지 않음.
         /// </summary>
         protected virtual void OnHitEnemy(Collider2D other)
         {
+            // SO 오버라이드가 있으면 우선
+            if (penetratesOverride.HasValue)
+            {
+                if (penetratesOverride.Value) return;
+                ReturnToPool();
+                return;
+            }
+
+            // Trajectory 기본값
             if (trajectoryBehavior != null && trajectoryBehavior.Penetrates)
                 return;
+
             ReturnToPool();
         }
 
@@ -220,6 +239,7 @@ namespace SwDreams.Adapter.Skill
             ownerTransform = null;
             trajectoryBehavior?.Reset();
             trajectoryBehavior = null;
+            penetratesOverride = null;
         }
     }
 }

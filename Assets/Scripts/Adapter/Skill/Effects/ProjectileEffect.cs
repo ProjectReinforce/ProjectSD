@@ -49,17 +49,7 @@ namespace SwDreams.Adapter.Skill
             if (projectilePrefab == null || playerTransform == null) return;
 
             SkillData data = skill.Data;
-            Vector2 baseDirection = GetAimDirection();
-
-            // 회오리: 이동 반대 방향으로 발사
-            if (data.trajectoryType == TrajectoryType.Tornado)
-            {
-                var rb = playerTransform.GetComponent<Rigidbody2D>();
-                if (rb != null && rb.linearVelocity.sqrMagnitude > 0.1f)
-                    baseDirection = -rb.linearVelocity.normalized;
-                else
-                    baseDirection = -baseDirection;
-            }
+            Vector2 baseDirection = GetBaseDirection(data.aimType);
 
             if (baseDirection.sqrMagnitude < 0.01f)
                 baseDirection = Vector2.right;
@@ -167,14 +157,57 @@ namespace SwDreams.Adapter.Skill
             }
 
             projectile.SetTrajectory(trajectory);
+
+            // SO에서 관통 설정
+            if (data.penetrates)
+                projectile.SetPenetrates(true);
         }
 
-        private Vector2 GetAimDirection()
+        // ===== 발사 방향 =====
+
+        private Vector2 lastMoveDirection = Vector2.right;
+
+        /// <summary>
+        /// AimType에 따라 기준 방향을 결정.
+        /// SpreadPattern 적용 전 base direction.
+        /// </summary>
+        private Vector2 GetBaseDirection(AimType aimType)
         {
-            Transform closest = FindClosestEnemy();
-            if (closest != null)
-                return ((Vector2)(closest.position - playerTransform.position)).normalized;
-            return Vector2.right;
+            Rigidbody2D rb;
+
+            switch (aimType)
+            {
+                case AimType.ClosestEnemy:
+                    Transform closest = FindClosestEnemy();
+                    if (closest != null)
+                        return ((Vector2)(closest.position - playerTransform.position)).normalized;
+                    return lastMoveDirection;
+
+                case AimType.MoveDirection:
+                    rb = playerTransform.GetComponent<Rigidbody2D>();
+                    if (rb != null && rb.linearVelocity.sqrMagnitude > 0.1f)
+                    {
+                        lastMoveDirection = rb.linearVelocity.normalized;
+                        return lastMoveDirection;
+                    }
+                    return lastMoveDirection;
+
+                case AimType.ReverseMoveDirection:
+                    rb = playerTransform.GetComponent<Rigidbody2D>();
+                    if (rb != null && rb.linearVelocity.sqrMagnitude > 0.1f)
+                    {
+                        lastMoveDirection = rb.linearVelocity.normalized;
+                        return -lastMoveDirection;
+                    }
+                    return -lastMoveDirection;
+
+                case AimType.Random:
+                    float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                    return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+
+                default:
+                    return Vector2.right;
+            }
         }
 
         private Transform FindClosestEnemy()

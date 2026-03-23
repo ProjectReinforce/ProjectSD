@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62f15d80dc749f446a1cd6169a726990, type: 3}
+  m_Name: 208_EvolvedAutoTurret
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.ProjectileSkillData
+  skillId: 208
+  skillName: "\uB354\uAC15\uD55C\uD3EC\uD0D1"
+  skillType: 0
+  effectType: 4
+  chaosEffectType: 0
+  icon: {fileID: 0}
+  description: "\uB354\uAC15\uD55C\uD3EC\uD0D1"
+  maxLevel: 1
+  damagePerLevel: 0f000000
+  cooldownPerLevel:
+  - 5
+  bonusType: 0
+  bonusPerLevel: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 5
+  projectileCount: 1
+  projectileLifetime: 5
+  penetrates: 0
+  aimType: 0
+  spreadPattern: 1
+  spreadAngle: 15
+  trajectoryType: 0
+  waveAmplitude: 0.8
+  waveFrequency: 5
+  homingRotateSpeed: 300
+  pullRadius: 2
+  pullForce: 3
+  hasPullOnReturn: 0
+  spiralExpandSpeed: 1
+  areaRadius: 2
+  areaDuration: 3
+  tickRate: 0.5
+  isHealingEffect: 0
+  spawnAtRandomPosition: 0
+  randomSpawnRadius: 3
+  isDualZone: 0
+  orbitRadius: 1.5
+  rotationSpeed: 180
+  objectCount: 3
+  knockbackForce: 2
+  attackRange: 1.5
+  attackCooldown: 0.15
+  alwaysCritical: 1
+  debuffDuration: 5
+  damageAmplify: 1.3
+  targetCount: 3
+  spreadOnDeathCount: 0
+  maxInstances: 3
+  effectPrefab: {fileID: 7611705742342394119, guid: 594a0d8e6afed9c4b940ebdb66c88430, type: 3}
+  applicableStats: 
+  triggerEffects: []
+  evolutionPair: {fileID: 0}
+  evolvedSkill: {fileID: 0}

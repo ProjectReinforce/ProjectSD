@@ -41,11 +41,15 @@ namespace SwDreams.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("description"));
 
             // ===== 레벨 스케일링 (항상) =====
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("레벨 스케일링", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("maxLevel"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("damagePerLevel"), true);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("cooldownPerLevel"), true);
+            // ===== 레벨 스케일링 (혼돈 제외 — Lv1 고정) =====
+            if (skillType != SkillType.Chaos)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("레벨 스케일링", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("maxLevel"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("damagePerLevel"), true);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("cooldownPerLevel"), true);
+            }
 
             // ===== 패시브 전용 =====
             if (skillType == SkillType.Passive)
@@ -68,10 +72,12 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileSpeed"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileCount"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileLifetime"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("penetrates"));
 
                     // 배치 패턴
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("배치/궤적", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("aimType"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadPattern"));
 
                     var spreadType = (SwDreams.Domain.ValueObjects.SpreadPatternType)
@@ -116,19 +122,6 @@ namespace SwDreams.Editor
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("waveAmplitude"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("waveFrequency"));
                     }
-
-                    // 진화 전용 (레거시 — 추후 triggerEffects로 이전 예정)
-                    EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("진화 전용 (레거시)", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isExploding"));
-
-                    if (serializedObject.FindProperty("isExploding").boolValue)
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("explosionRadius"));
-
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("chainCount"));
-
-                    if (serializedObject.FindProperty("chainCount").intValue > 0)
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("chainRadius"));
                 }
 
                 // 장판 전용
@@ -145,15 +138,6 @@ namespace SwDreams.Editor
                     if (serializedObject.FindProperty("spawnAtRandomPosition").boolValue)
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("randomSpawnRadius"));
 
-                    // 진화 전용 — 장판
-                    EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("진화 전용 — 장판", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("appliesSlow"));
-
-                    if (serializedObject.FindProperty("appliesSlow").boolValue)
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("slowMultiplier"));
-
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("executeThreshold"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("isDualZone"));
                 }
 
@@ -189,11 +173,14 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadOnDeathCount"));
                 }
 
-                // 공통 효과 (액티브만)
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("공통 효과", EditorStyles.boldLabel);
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("maxInstances"));
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("effectPrefab"));
+                // 공통 효과 (장판/설치/회전/디버프만 — 투사체는 미사용)
+                if (effectType != SkillEffectType.Projectile)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("공통 효과", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("maxInstances"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("effectPrefab"));
+                }
 
                 // 패시브 적용 필터 (액티브만)
                 EditorGUILayout.Space();
@@ -214,8 +201,8 @@ namespace SwDreams.Editor
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("triggerEffects"), true);
             }
 
-            // ===== 진화 연결 (패시브/액티브 모두) =====
-            if (skillType == SkillType.Active || skillType == SkillType.Passive)
+            // ===== 진화 연결 (액티브만 — 역방향 체크가 자동 처리) =====
+            if (skillType == SkillType.Active)
             {
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("진화 연결", EditorStyles.boldLabel);
