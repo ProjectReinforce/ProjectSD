@@ -1,8 +1,10 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Domain.ValueObjects;
 using SwDreams.Adapter.Manager;
 using SwDreams.Adapter.Entity;
+using SwDreams.Adapter.Skill.TriggerEffects;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -42,6 +44,17 @@ namespace SwDreams.Adapter.Skill
 
         // 캐시
         private SpriteRenderer spriteRenderer;
+
+        // [Step 3-5] Trigger+Effect 시스템 연결
+        private SkillTriggerSystem triggerSystem;
+        private Transform ownerTransform;
+
+        /// <summary>AreaEffect에서 스폰 후 호출. TriggerSystem 연결.</summary>
+        public void SetTriggerSystem(SkillTriggerSystem system, Transform owner)
+        {
+            triggerSystem = system;
+            ownerTransform = owner;
+        }
 
         private void Awake()
         {
@@ -161,6 +174,18 @@ namespace SwDreams.Adapter.Skill
                 // 일반 데미지
                 damageable.TakeDamage(damage);
 
+                // [Step 3-5] OnHit 트리거 발동
+                if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnHit))
+                {
+                    triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
+                    {
+                        position = hit.transform.position,
+                        target = hit.transform,
+                        damage = damage,
+                        owner = ownerTransform
+                    });
+                }
+
                 // [진화: 뇌전역] 슬로우 — 이동속도 감소
                 if (appliesSlow)
                 {
@@ -214,7 +239,21 @@ namespace SwDreams.Adapter.Skill
 
         private void ReturnToPool()
         {
+            // [Step 3-5] OnExpire 트리거 발동
+            if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnExpire)
+                && Photon.Pun.PhotonNetwork.IsMasterClient)
+            {
+                triggerSystem.FireTrigger(TriggerType.OnExpire, new TriggerContext
+                {
+                    position = transform.position,
+                    damage = damage,
+                    owner = ownerTransform
+                });
+            }
+
             isActive = false;
+            triggerSystem = null;
+            ownerTransform = null;
             PoolManager.Instance?.Return(gameObject);
         }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Skill.TriggerEffects;
 using SwDreams.Data;
 
 namespace SwDreams.Adapter.Skill
@@ -28,6 +29,7 @@ namespace SwDreams.Adapter.Skill
         private GameObject zonePrefab;
         private Transform playerTransform;
         private PlayerStats playerStats;
+        private SkillTriggerSystem triggerSystem;  // [Step 3-5]
 
         // 활성 장판 추적 (maxInstances 관리)
         private List<GameObject> activeZones = new List<GameObject>();
@@ -60,6 +62,7 @@ namespace SwDreams.Adapter.Skill
             playerTransform = transform.root;
             if (playerTransform != null)
                 playerStats = playerTransform.GetComponent<PlayerStats>();
+            triggerSystem = GetComponent<SkillTriggerSystem>();
         }
 
         public override void Execute(Skill skill)
@@ -129,6 +132,10 @@ namespace SwDreams.Adapter.Skill
                 executeThreshold: data.executeThreshold,
                 isDualZone: data.isDualZone
             );
+
+            // [Step 3-5] TriggerSystem 연결
+            if (triggerSystem != null)
+                zone.SetTriggerSystem(triggerSystem, playerTransform);
 
             activeZones.Add(zoneObj);
         }

@@ -50,7 +50,10 @@ namespace SwDreams.Data
         ExpMultiplier       // 경험치 배율 (0.1 = +10%)
     }
 
-    [CreateAssetMenu(fileName = "NewSkillData", menuName = "SwDreams/SkillData")]
+    /// <summary>
+    /// 스킬 데이터 base 클래스. 모든 스킬 타입의 공통 필드 포함.
+    /// SO 생성은 서브클래스(ProjectileSkillData 등)의 CreateAssetMenu를 사용.
+    /// </summary>
     public class SkillData : ScriptableObject
     {
         [Header("기본 정보")]
@@ -78,14 +81,22 @@ namespace SwDreams.Data
         public float projectileSpeed = 5f;
         public int projectileCount = 1;
         public float projectileLifetime = 5f;
-        [Tooltip("유도 투사체 (매직 미사일)")]
-        public bool isHoming = false;
+
+        [Header("투사체 배치/궤적")]
+        [Tooltip("다중 투사체 배치 패턴")]
+        public SpreadPatternType spreadPattern = SpreadPatternType.Fan;
+        [Tooltip("부채꼴 배치 시 개별 각도 (도)")]
+        public float spreadAngle = 15f;
+        [Tooltip("투사체 궤적 패턴")]
+        public TrajectoryType trajectoryType = TrajectoryType.Straight;
+        [Tooltip("파형 궤적(Zigzag/SinWave)의 진폭")]
+        public float waveAmplitude = 0.8f;
+        [Tooltip("파형 궤적(Zigzag/SinWave)의 주파수")]
+        public float waveFrequency = 5f;
+
+        [Header("투사체 — 유도/왕복/회오리 파라미터")]
         [Tooltip("유도 회전 속도 (도/초). 높을수록 급선회")]
         public float homingRotateSpeed = 300f;
-        [Tooltip("왕복 투사체 (부메랑)")]
-        public bool isBoomerang = false;
-        [Tooltip("느린 전진 + 범위 끌어당김 (회오리바람)")]
-        public bool isTornado = false;
         [Tooltip("회오리 끌어당김 반경")]
         public float pullRadius = 2f;
         [Tooltip("회오리 끌어당김 힘")]

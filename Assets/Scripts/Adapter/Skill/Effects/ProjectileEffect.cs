@@ -1,14 +1,21 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Skill.TriggerEffects;
+using SwDreams.Adapter.Skill.Spread;
+using SwDreams.Adapter.Skill.Trajectories;
+using SwDreams.Domain.ValueObjects;
 using SwDreams.Data;
 
 namespace SwDreams.Adapter.Skill
 {
     /// <summary>
     /// 투사체 기반 스킬 효과.
-    /// Phase 2: 직선 투사체 (표창).
-    /// Phase 5: 유도(매직미사일), 왕복(부메랑), CC(회오리바람).
-    /// 
+    ///
+    /// [Step 3-7d] SpreadPattern + TrajectoryBehavior 조합 모델로 전환.
+    /// - SpreadPattern: 다중 투사체 배치 (Fan, Radial, Single, Random)
+    /// - TrajectoryBehavior: 궤적 (Straight, Homing, Boomerang, Tornado 등)
+    /// - TriggerEffect: 적중/소멸 효과 (Explode, Chain 등) — SO triggerEffects에서 정의
+    ///
     /// 투사체는 로컬 전용 (네트워크 동기화 없음).
     /// </summary>
     public class ProjectileEffect : SkillEffect
@@ -17,6 +24,7 @@ namespace SwDreams.Adapter.Skill
 
         private Transform playerTransform;
         private PlayerStats playerStats;
+        private SkillTriggerSystem triggerSystem;
 
         private void Start()
         {
@@ -29,10 +37,10 @@ namespace SwDreams.Adapter.Skill
         private void CachePlayerReferences()
         {
             if (playerTransform != null) return;
-            // Skill은 Player의 자식이므로 root가 Player
             playerTransform = transform.root;
             if (playerTransform != null)
                 playerStats = playerTransform.GetComponent<PlayerStats>();
+            triggerSystem = GetComponent<SkillTriggerSystem>();
         }
 
         public override void Execute(Skill skill)
@@ -40,53 +48,48 @@ namespace SwDreams.Adapter.Skill
             CachePlayerReferences();
             if (projectilePrefab == null || playerTransform == null) return;
 
-            Vector2 direction = GetAimDirection();
+            SkillData data = skill.Data;
+            Vector2 baseDirection = GetAimDirection();
 
-            // [Phase 5] 회오리바람: 플레이어 이동 반대 방향으로 발사
-            if (skill.Data.isTornado)
+            // 회오리: 이동 반대 방향으로 발사
+            if (data.trajectoryType == TrajectoryType.Tornado)
             {
                 var rb = playerTransform.GetComponent<Rigidbody2D>();
                 if (rb != null && rb.linearVelocity.sqrMagnitude > 0.1f)
-                    direction = -rb.linearVelocity.normalized;
+                    baseDirection = -rb.linearVelocity.normalized;
                 else
-                    direction = -direction;
+                    baseDirection = -baseDirection;
             }
 
-            // 방향이 zero면 기본값 (적과 완전 겹칠 때 등)
-            if (direction.sqrMagnitude < 0.01f)
-                direction = Vector2.right;
+            if (baseDirection.sqrMagnitude < 0.01f)
+                baseDirection = Vector2.right;
 
             // PlayerStats 보너스 적용
-            int count = skill.Data.projectileCount;
-            float speed = skill.Data.projectileSpeed;
-
+            int count = data.projectileCount;
+            float speed = data.projectileSpeed;
             if (playerStats != null)
             {
                 count = playerStats.GetEffectiveProjectileCount(count);
                 speed = playerStats.GetEffectiveProjectileSpeed(speed);
             }
 
-            if (count <= 1)
-            {
-                SpawnProjectile(skill, direction, speed, 0, 1);
-            }
-            else if (skill.Data.isSpiral)
-            {
-                // 나선형: 360도 균등 분배 (장검처럼)
-                float angleStep = 360f / count;
-                for (int i = 0; i < count; i++)
-                    SpawnProjectile(skill, direction, speed, i, count);
-            }
-            else
-            {
-                float spreadAngle = 15f;
-                float startAngle = -(count - 1) * spreadAngle * 0.5f;
+            // SpreadPattern으로 방향 배열 생성
+            ISpreadPattern spread = SpreadPatternFactory.Create(data.spreadPattern, data.spreadAngle);
+            Vector2[] directions = spread.GetDirections(baseDirection, count);
 
-                for (int i = 0; i < count; i++)
+            // 각 투사체 스폰
+            for (int i = 0; i < directions.Length; i++)
+                SpawnProjectile(skill, directions[i], speed, i, directions.Length);
+
+            // OnFire 트리거
+            if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnFire))
+            {
+                triggerSystem.FireTrigger(TriggerType.OnFire, new TriggerContext
                 {
-                    Vector2 dir = RotateVector(direction, startAngle + i * spreadAngle);
-                    SpawnProjectile(skill, dir, speed, i, count);
-                }
+                    position = playerTransform.position,
+                    direction = baseDirection,
+                    owner = playerTransform
+                });
             }
         }
 
@@ -115,11 +118,14 @@ namespace SwDreams.Adapter.Skill
                 return;
             }
 
+            SkillData data = skill.Data;
+
+            // 데미지 계산
             int damage = skill.CurrentDamage;
             if (playerStats != null)
                 damage = Mathf.RoundToInt(damage * playerStats.AttackMultiplier);
 
-            // 넉백 힘: Config 기본값 * PlayerStats 배율
+            // 넉백
             float knockback = 0f;
             var cfg = GameManager.Instance?.Config;
             if (cfg != null)
@@ -127,8 +133,7 @@ namespace SwDreams.Adapter.Skill
             if (playerStats != null)
                 knockback *= playerStats.KnockbackMultiplier;
 
-            SkillData data = skill.Data;
-
+            // 초기화
             projectile.Initialize(
                 position: (Vector2)playerTransform.position,
                 direction: direction,
@@ -138,57 +143,30 @@ namespace SwDreams.Adapter.Skill
                 knockbackForce: knockback
             );
 
-            // [Phase 5] 변형 투사체 추가 설정
-            if (data.isHoming)
+            // TriggerSystem 연결
+            if (triggerSystem != null)
+                projectile.SetTriggerSystem(triggerSystem, playerTransform);
+
+            // Trajectory 부착
+            ITrajectoryBehavior trajectory = TrajectoryFactory.Create(data.trajectoryType, data);
+
+            // 나선형: 원점 + 시작 각도 설정
+            if (trajectory is SpiralTrajectory spiral)
             {
-                var homing = projectile as HomingProjectile;
-                if (homing != null)
-                    homing.SetHoming(data.homingRotateSpeed);
-            }
-            else if (data.isBoomerang)
-            {
-                var boomerang = projectile as BoomerangProjectile;
-                if (boomerang != null)
+                spiral.SetOrigin(playerTransform.position);
+                // 다중 투사체일 때 시작 각도 분배
+                if (totalCount > 1)
                 {
-                    boomerang.SetBoomerang(playerTransform);
-
-                    // [진화: 그래비톤 부메랑] 복귀 경로 끌어당김
-                    if (data.hasPullOnReturn)
-                        boomerang.SetPullOnReturn(data.pullRadius, data.pullForce);
-                }
-            }
-            else if (data.isTornado)
-            {
-                var tornado = projectile as TornadoProjectile;
-                if (tornado != null)
-                    tornado.SetTornado(data.pullRadius, data.pullForce);
-            }
-
-            // [Phase 5 진화] 폭발/체인/나선
-            if (data.isExploding)
-            {
-                var exploding = projectile as ExplodingProjectile;
-                if (exploding != null)
-                    exploding.SetExplosion(data.explosionRadius);
-            }
-
-            if (data.chainCount > 0)
-            {
-                var chain = projectile as ChainProjectile;
-                if (chain != null)
-                    chain.SetChain(data.chainCount, data.chainRadius, data.homingRotateSpeed);
-            }
-
-            if (data.isSpiral)
-            {
-                var spiral = projectile as SpiralTornadoProjectile;
-                if (spiral != null)
-                {
-                    float startAngle = (totalCount > 1) ? (360f / totalCount) * index : 0f;
-                    spiral.SetSpiral(playerTransform, data.pullRadius, data.pullForce,
+                    float startAngle = (360f / totalCount) * index;
+                    // SpiralTrajectory의 startAngle은 생성자에서 설정되므로 새로 생성
+                    trajectory = new SpiralTrajectory(
+                        data.pullRadius, data.pullForce,
                         data.spiralExpandSpeed, startAngle);
+                    ((SpiralTrajectory)trajectory).SetOrigin(playerTransform.position);
                 }
             }
+
+            projectile.SetTrajectory(trajectory);
         }
 
         private Vector2 GetAimDirection()
@@ -196,7 +174,6 @@ namespace SwDreams.Adapter.Skill
             Transform closest = FindClosestEnemy();
             if (closest != null)
                 return ((Vector2)(closest.position - playerTransform.position)).normalized;
-
             return Vector2.right;
         }
 
@@ -218,16 +195,7 @@ namespace SwDreams.Adapter.Skill
                     closest = e.transform;
                 }
             }
-
             return closest;
-        }
-
-        private Vector2 RotateVector(Vector2 v, float degrees)
-        {
-            float rad = degrees * Mathf.Deg2Rad;
-            float cos = Mathf.Cos(rad);
-            float sin = Mathf.Sin(rad);
-            return new Vector2(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
         }
     }
 }

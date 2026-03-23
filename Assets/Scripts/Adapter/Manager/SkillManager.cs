@@ -81,9 +81,6 @@ namespace SwDreams.Adapter.Skill
         /// <summary>진화 발생 시. 연출용.</summary>
         public event Action<SkillData> OnEvolution; // 진화 결과 스킬
 
-        /// <summary>패시브 변경 시 발생. PlayerStats 재계산용.</summary>
-        public event Action OnPassiveChanged;
-
         // ===== 초기화 =====
 
         // [CHANGED] Awake에서 팩토리 초기화

@@ -1,0 +1,229 @@
+using UnityEngine;
+using UnityEditor;
+using SwDreams.Data;
+
+namespace SwDreams.Editor
+{
+    /// <summary>
+    /// SkillData 및 모든 서브클래스의 인스펙터를 정리.
+    /// skillType과 effectType에 따라 관련 필드만 표시.
+    ///
+    /// [Phase 7 리팩토링] Step 3-6
+    /// </summary>
+    [CustomEditor(typeof(SkillData), true)]
+    public class SkillDataEditor : UnityEditor.Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+
+            var skillType = (SkillType)serializedObject.FindProperty("skillType").enumValueIndex;
+            var effectType = (SkillEffectType)serializedObject.FindProperty("effectType").enumValueIndex;
+
+            // ===== 기본 정보 (항상 표시) =====
+            EditorGUILayout.LabelField("기본 정보", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("skillId"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("skillName"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("skillType"));
+
+            // effectType: 액티브만
+            if (skillType == SkillType.Active)
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("effectType"));
+
+            // chaosEffectType: 혼돈만
+            if (skillType == SkillType.Chaos)
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chaosEffectType"));
+
+            // ===== UI 표시용 (항상) =====
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("UI 표시용", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("icon"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("description"));
+
+            // ===== 레벨 스케일링 (항상) =====
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("레벨 스케일링", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("maxLevel"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("damagePerLevel"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("cooldownPerLevel"), true);
+
+            // ===== 패시브 전용 =====
+            if (skillType == SkillType.Passive)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("패시브 전용", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("bonusType"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("bonusPerLevel"));
+            }
+
+            // ===== 액티브 스킬 타입별 필드 =====
+            if (skillType == SkillType.Active)
+            {
+                // 투사체 전용
+                if (effectType == SkillEffectType.Projectile)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("투사체 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("projectilePrefab"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileSpeed"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileCount"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileLifetime"));
+
+                    // 배치 패턴
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("배치/궤적", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadPattern"));
+
+                    var spreadType = (SwDreams.Domain.ValueObjects.SpreadPatternType)
+                        serializedObject.FindProperty("spreadPattern").enumValueIndex;
+                    if (spreadType == SwDreams.Domain.ValueObjects.SpreadPatternType.Fan)
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadAngle"));
+
+                    // 궤적 패턴
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("trajectoryType"));
+
+                    var trajType = (SwDreams.Domain.ValueObjects.TrajectoryType)
+                        serializedObject.FindProperty("trajectoryType").enumValueIndex;
+
+                    // 궤적별 파라미터
+                    if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Homing)
+                    {
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("homingRotateSpeed"));
+                    }
+                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Boomerang)
+                    {
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("hasPullOnReturn"));
+                        if (serializedObject.FindProperty("hasPullOnReturn").boolValue)
+                        {
+                            EditorGUILayout.PropertyField(serializedObject.FindProperty("pullRadius"));
+                            EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
+                        }
+                    }
+                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Tornado)
+                    {
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("pullRadius"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
+                    }
+                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Spiral)
+                    {
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("pullRadius"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("spiralExpandSpeed"));
+                    }
+                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Zigzag ||
+                             trajType == SwDreams.Domain.ValueObjects.TrajectoryType.SinWave)
+                    {
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("waveAmplitude"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("waveFrequency"));
+                    }
+
+                    // 진화 전용 (레거시 — 추후 triggerEffects로 이전 예정)
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("진화 전용 (레거시)", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isExploding"));
+
+                    if (serializedObject.FindProperty("isExploding").boolValue)
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("explosionRadius"));
+
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("chainCount"));
+
+                    if (serializedObject.FindProperty("chainCount").intValue > 0)
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("chainRadius"));
+                }
+
+                // 장판 전용
+                if (effectType == SkillEffectType.Area)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("범위/장판 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("areaRadius"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("areaDuration"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("tickRate"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isHealingEffect"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("spawnAtRandomPosition"));
+
+                    if (serializedObject.FindProperty("spawnAtRandomPosition").boolValue)
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("randomSpawnRadius"));
+
+                    // 진화 전용 — 장판
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("진화 전용 — 장판", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("appliesSlow"));
+
+                    if (serializedObject.FindProperty("appliesSlow").boolValue)
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("slowMultiplier"));
+
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("executeThreshold"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isDualZone"));
+                }
+
+                // 회전형 전용
+                if (effectType == SkillEffectType.Orbital)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("회전형 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("orbitRadius"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("rotationSpeed"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("objectCount"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("knockbackForce"));
+                }
+
+                // 설치형 전용
+                if (effectType == SkillEffectType.Placed)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("설치형 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRange"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("attackCooldown"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("alwaysCritical"));
+                }
+
+                // 디버프 전용
+                if (effectType == SkillEffectType.Debuff)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("디버프 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("debuffDuration"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("damageAmplify"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("targetCount"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadOnDeathCount"));
+                }
+
+                // 공통 효과 (액티브만)
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("공통 효과", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("maxInstances"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("effectPrefab"));
+
+                // 패시브 적용 필터 (액티브만)
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("패시브 적용 필터", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox(
+                    "비어있으면 모든 패시브가 이 스킬에 적용됩니다.\n" +
+                    "특정 스탯만 선택하면 해당 스탯 보너스만 적용됩니다.",
+                    MessageType.Info);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("applicableStats"), true);
+
+                // Trigger+Effect 조합 (액티브만)
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Trigger+Effect 조합", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox(
+                    "기본 추가 효과를 정의합니다. 진화 스킬에서 주로 사용.\n" +
+                    "런타임 추가 효과(정수/무기/혼돈)는 SkillTriggerSystem에서 관리.",
+                    MessageType.Info);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("triggerEffects"), true);
+            }
+
+            // ===== 진화 연결 (패시브/액티브 모두) =====
+            if (skillType == SkillType.Active || skillType == SkillType.Passive)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("진화 연결", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("evolutionPair"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("evolvedSkill"));
+            }
+
+            serializedObject.ApplyModifiedProperties();
+        }
+    }
+}
