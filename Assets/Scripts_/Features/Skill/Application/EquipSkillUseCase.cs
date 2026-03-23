@@ -11,16 +11,22 @@ namespace Features.Skill.Application
     public sealed class EquipSkillUseCase
     {
         private readonly IEventPublisher _eventBus;
+        private readonly CooldownTracker _cooldownTracker;
 
-        public EquipSkillUseCase(IEventPublisher eventBus)
+        public EquipSkillUseCase(IEventPublisher eventBus, CooldownTracker cooldownTracker = null)
         {
             _eventBus = eventBus;
+            _cooldownTracker = cooldownTracker;
         }
 
         public Result Execute(SkillBar bar, int slotIndex, DomainSkill skill)
         {
             if (slotIndex < 0 || slotIndex >= SkillBar.SlotCount)
                 return Result.Failure("Invalid slot index.");
+
+            var oldSkill = bar.GetSkill(slotIndex);
+            if (oldSkill != null)
+                _cooldownTracker?.ClearCooldown(oldSkill.Id);
 
             bar.Equip(slotIndex, skill);
             _eventBus.Publish(new SkillEquippedEvent(slotIndex, skill.Id, skill.Spec));

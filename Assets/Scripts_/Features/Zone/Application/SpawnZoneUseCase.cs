@@ -3,6 +3,7 @@ using Features.Zone.Application.Ports;
 using Features.Zone.Domain;
 using Shared.EventBus;
 using Shared.Kernel;
+using Shared.Math;
 using Shared.Time;
 
 namespace Features.Zone.Application
@@ -20,12 +21,12 @@ namespace Features.Zone.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(DomainEntityId casterId, ZoneSpec spec)
+        public Result Execute(DomainEntityId casterId, Float3 position, ZoneSpec spec)
         {
-            var zone = new Domain.Zone(_clock.NewId(), casterId, spec);
+            var zone = new Domain.Zone(_clock.NewId(), casterId, position, spec);
 
             _zoneEffect.Spawn(zone);
-            _eventBus.Publish(new ZoneSpawnedEvent(zone.Id, casterId));
+            _eventBus.Publish(new ZoneSpawnedEvent(zone.Id, casterId, position, spec));
             return Result.Success();
         }
     }

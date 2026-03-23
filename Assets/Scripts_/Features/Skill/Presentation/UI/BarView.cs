@@ -11,10 +11,12 @@ namespace Features.Skill.Presentation
         private static readonly string[] SlotLabels = { "RMB", "Q", "E", "R" };
 
         private IEventSubscriber _eventBus;
+        private ISkillIconPort _iconPort;
 
-        public void Initialize(IEventSubscriber eventBus)
+        public void Initialize(IEventSubscriber eventBus, ISkillIconPort iconPort)
         {
             _eventBus = eventBus;
+            _iconPort = iconPort;
 
             for (var i = 0; i < slotViews.Length; i++)
             {
@@ -37,7 +39,8 @@ namespace Features.Skill.Presentation
         {
             if (e.SlotIndex < 0 || e.SlotIndex >= slotViews.Length)
                 return;
-            slotViews[e.SlotIndex].SetSkill(null);
+            var icon = _iconPort?.GetIcon(e.SkillId.Value);
+            slotViews[e.SlotIndex].SetSkill(icon);
             Debug.Log($"[BarView] Slot {e.SlotIndex} equipped: {e.SkillId}");
         }
 

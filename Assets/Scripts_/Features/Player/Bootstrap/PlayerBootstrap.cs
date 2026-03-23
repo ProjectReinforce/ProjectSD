@@ -1,6 +1,7 @@
 using Features.Projectile.Bootstrap;
 using Features.Skill.Bootstrap;
 using Features.Skill.Infrastructure;
+using Features.Zone.Bootstrap;
 using Photon.Pun;
 using Shared.EventBus;
 using UnityEngine;
@@ -24,6 +25,9 @@ namespace Features.Player.Bootstrap
 
         [SerializeField]
         private ProjectileSpawner _projectileSpawner;
+
+        [SerializeField]
+        private ZoneSetup _zoneSetup;
 
         private EventBus _eventBus;
 
@@ -49,6 +53,15 @@ namespace Features.Player.Bootstrap
             ConnectPlayer(player);
             _skillSetup.Initialize(_eventBus, player.transform);
             _projectileSpawner.Initialize(_eventBus, _eventBus);
+
+            if (_zoneSetup == null)
+            {
+                Debug.LogError("[GameScene] ZoneSetup reference is missing.");
+                return;
+            }
+
+            _zoneSetup.Initialize(_eventBus);
+
             foreach (var other in PhotonNetwork.PlayerListOthers)
                 StartCoroutine(ConnectRemotePlayerDelayed(other));
         }

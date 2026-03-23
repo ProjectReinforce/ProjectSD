@@ -23,6 +23,9 @@ namespace ProjectSD.EditorTools.UnityMcp
     {
         private const int DefaultPort = 51234;
         private const int HealthCheckTimeoutMs = 1000;
+        private const int FallbackPortRangeStart = 52000;
+        private const int FallbackPortRangeSize = 1000;
+        private const int MaxFallbackPortCandidates = 8;
         private const double InitialStartDelaySeconds = 0.5d;
         private const double RetryStartDelaySeconds = 1.0d;
         private const int MaxStartRetryCount = 10;
@@ -34,10 +37,12 @@ namespace ProjectSD.EditorTools.UnityMcp
         private static readonly ConcurrentQueue<Action> MainThreadActions = new ConcurrentQueue<Action>();
         private static readonly object LogLock = new object();
         private static readonly List<ErrorLogEntry> ErrorLogs = new List<ErrorLogEntry>();
+        private static readonly int[] BindRetryDelayMs = { 50, 100, 200 };
 
         private static HttpListener _listener;
         private static CancellationTokenSource _listenerCts;
         private static int _mainThreadId;
+        private static int _activePort;
         private static bool _startScheduled;
         private static double _scheduledStartTime;
         private static int _remainingStartRetries;
@@ -68,15 +73,16 @@ namespace ProjectSD.EditorTools.UnityMcp
         [MenuItem("Tools/Unity MCP/Print Status")]
         private static void PrintStatusMenu()
         {
-            var port = ResolvePort();
+            var port = _activePort > 0 ? _activePort : ResolvePort();
             Debug.LogFormat(
-                "[Unity MCP] running={0} playing={1} compiling={2} port={3} prefix={4} config={5} scene={6}",
+                "[Unity MCP] running={0} playing={1} compiling={2} port={3} prefix={4} config={5} projectKey={6} scene={7}",
                 IsRunning,
                 EditorApplication.isPlaying,
                 EditorApplication.isCompiling,
                 port,
                 BuildListenerPrefix(port),
                 PortConfigRelativePath,
+                ProjectKey,
                 SceneManager.GetActiveScene().path);
         }
 
@@ -99,6 +105,11 @@ namespace ProjectSD.EditorTools.UnityMcp
             get { return Path.Combine(ProjectRootPath, PortConfigRelativePath); }
         }
 
+        private static string ProjectKey
+        {
+            get { return ComputeProjectKey(ProjectRootPath); }
+        }
+
         private static void StartBridge(bool resetRetryCount = false)
         {
             if (resetRetryCount)
@@ -107,63 +118,112 @@ namespace ProjectSD.EditorTools.UnityMcp
             }
 
             _startScheduled = false;
-            var port = ResolvePort();
-            var listenerPrefix = BuildListenerPrefix(port);
+            var preferredPort = ResolvePort();
 
             if (IsRunning)
             {
-                Debug.Log("[Unity MCP] Bridge already running at " + listenerPrefix);
+                Debug.Log("[Unity MCP] Bridge already running at " + BuildListenerPrefix(_activePort));
                 return;
             }
 
             StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
 
-            // 포트가 점유된 경우, 기존 브릿지가 살아있으면 재사용
-            if (IsPortInUse(port) && IsBridgeAlive(listenerPrefix, out var probeDetail))
+            foreach (var candidatePort in EnumerateCandidatePorts(preferredPort))
             {
-                Debug.Log("[Unity MCP] Bridge already alive at " + listenerPrefix + " (" + probeDetail + "). Reusing existing listener.");
-                return;
-            }
+                var listenerPrefix = BuildListenerPrefix(candidatePort);
 
-            // 포트가 stale 리스너에 의해 점유됐더라도 HttpListener.Start()를 직접 시도.
-            // HttpListener는 동일 프로세스 내 같은 prefix를 재바인딩할 수 있다.
-            try
-            {
-                _listenerCts = new CancellationTokenSource();
-                _listener = new HttpListener();
-                _listener.Prefixes.Add(listenerPrefix);
-                _listener.Start();
-                _ = Task.Run(() => ListenLoopAsync(_listenerCts.Token));
-                _remainingStartRetries = MaxStartRetryCount;
-                Debug.Log("[Unity MCP] Bridge started at " + listenerPrefix + " (config: " + PortConfigRelativePath + ")");
-            }
-            catch (HttpListenerException ex)
-            {
-                if (IsPortInUse(port) && _remainingStartRetries > 0)
+                if (IsPortInUse(candidatePort))
                 {
-                    var attempt = MaxStartRetryCount - _remainingStartRetries + 1;
-                    _remainingStartRetries--;
-                    Debug.LogWarning(
-                        "[Unity MCP] Bridge port is still blocked at " + listenerPrefix +
-                        ". Scheduling retry " + attempt + "/" + MaxStartRetryCount +
-                        " in " + RetryStartDelaySeconds.ToString("0.0") + "s. Detail: " + ex.Message);
-                    StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
-                    ScheduleStartBridge(RetryStartDelaySeconds);
+                    if (TryProbeBridge(listenerPrefix, out var health, out var probeDetail))
+                    {
+                        if (IsCurrentProjectBridge(health))
+                        {
+                            _activePort = candidatePort;
+                            PersistPort(candidatePort);
+                            Debug.Log(
+                                "[Unity MCP] Bridge already alive for this project at "
+                                + listenerPrefix
+                                + " ("
+                                + probeDetail
+                                + "). Reusing existing listener."
+                            );
+                            return;
+                        }
+
+                        Debug.LogWarning(
+                            "[Unity MCP] Port "
+                            + candidatePort
+                            + " is already used by a different Unity MCP project ("
+                            + probeDetail
+                            + "). Trying next candidate."
+                        );
+                        continue;
+                    }
+                }
+
+                if (TryStartListener(candidatePort, out var bindDetail))
+                {
+                    PersistPort(candidatePort);
+                    _remainingStartRetries = MaxStartRetryCount;
+
+                    if (candidatePort == preferredPort)
+                    {
+                        Debug.Log(
+                            "[Unity MCP] Bridge started at "
+                            + listenerPrefix
+                            + " (config: "
+                            + PortConfigRelativePath
+                            + ")"
+                        );
+                    }
+                    else
+                    {
+                        Debug.LogWarning(
+                            "[Unity MCP] Preferred port "
+                            + preferredPort
+                            + " was unavailable. Using sticky fallback port "
+                            + candidatePort
+                            + " at "
+                            + listenerPrefix
+                            + "."
+                        );
+                    }
+
                     return;
                 }
 
-                Debug.LogError(
-                    "[Unity MCP] Cannot start bridge at " + listenerPrefix +
-                    " — port is blocked by another process. " +
-                    "Close the process using this port or change " + PortConfigRelativePath + ". " +
-                    "Detail: " + ex.Message);
-                StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
+                Debug.LogWarning(
+                    "[Unity MCP] Failed to bind at " + listenerPrefix + ". Detail: " + bindDetail
+                );
             }
-            catch (Exception ex)
+
+            if (_remainingStartRetries > 0)
             {
-                Debug.LogError("[Unity MCP] Failed to start bridge at " + listenerPrefix + ": " + ex.Message);
-                StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
+                var attempt = MaxStartRetryCount - _remainingStartRetries + 1;
+                _remainingStartRetries--;
+                Debug.LogWarning(
+                    "[Unity MCP] Could not bind any candidate port for project "
+                    + ProjectKey
+                    + ". Scheduling retry "
+                    + attempt
+                    + "/"
+                    + MaxStartRetryCount
+                    + " in "
+                    + RetryStartDelaySeconds.ToString("0.0")
+                    + "s."
+                );
+                ScheduleStartBridge(RetryStartDelaySeconds);
+                return;
             }
+
+            Debug.LogError(
+                "[Unity MCP] Failed to start bridge for project "
+                + ProjectKey
+                + ". Tried configured port "
+                + preferredPort
+                + " and sticky fallbacks. See warnings above for the blocked ports."
+            );
+            StopBridge(logWhenAlreadyStopped: false, logWhenStopped: false);
         }
 
         private static bool IsPortInUse(int port)
@@ -181,17 +241,36 @@ namespace ProjectSD.EditorTools.UnityMcp
             }
         }
 
-        private static bool IsBridgeAlive(string listenerPrefix, out string probeDetail)
+        private static bool TryProbeBridge(
+            string listenerPrefix,
+            out HealthResponse health,
+            out string probeDetail
+        )
         {
+            health = null;
+
             try
             {
                 var request = WebRequest.CreateHttp(new Uri(new Uri(listenerPrefix), "health"));
                 request.Method = "GET";
                 request.Timeout = HealthCheckTimeoutMs;
                 using (var response = (HttpWebResponse)request.GetResponse())
+                using (var stream = response.GetResponseStream())
+                using (var reader = stream == null ? null : new StreamReader(stream))
                 {
-                    probeDetail = "health returned " + (int)response.StatusCode;
-                    return response.StatusCode == HttpStatusCode.OK;
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        probeDetail = "health returned " + (int)response.StatusCode;
+                        return false;
+                    }
+
+                    var body = reader != null ? reader.ReadToEnd() : string.Empty;
+                    health = string.IsNullOrWhiteSpace(body)
+                        ? null
+                        : JsonUtility.FromJson<HealthResponse>(body);
+
+                    probeDetail = DescribeHealthProbe(health, (int)response.StatusCode);
+                    return true;
                 }
             }
             catch (WebException ex) when (ex.Response is HttpWebResponse httpResponse)
@@ -203,6 +282,196 @@ namespace ProjectSD.EditorTools.UnityMcp
             {
                 probeDetail = "health probe timed out or failed";
                 return false;
+            }
+        }
+
+        private static bool IsCurrentProjectBridge(HealthResponse health)
+        {
+            if (health == null)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(health.projectKey))
+            {
+                return string.Equals(health.projectKey, ProjectKey, StringComparison.Ordinal);
+            }
+
+            return !string.IsNullOrEmpty(health.projectRootPath)
+                && string.Equals(
+                    NormalizeProjectPath(health.projectRootPath),
+                    NormalizeProjectPath(ProjectRootPath),
+                    StringComparison.Ordinal
+                );
+        }
+
+        private static string DescribeHealthProbe(HealthResponse health, int statusCode)
+        {
+            if (health == null)
+            {
+                return "health returned " + statusCode + " with empty payload";
+            }
+
+            var project = !string.IsNullOrEmpty(health.projectKey)
+                ? health.projectKey
+                : NormalizeProjectPath(health.projectRootPath);
+            return "health returned " + statusCode + " for project " + project + " on port " + health.port;
+        }
+
+        private static bool TryStartListener(int port, out string detail)
+        {
+            var listenerPrefix = BuildListenerPrefix(port);
+
+            for (var attempt = 0; attempt < BindRetryDelayMs.Length; attempt++)
+            {
+                try
+                {
+                    CleanupListenerState();
+
+                    _listenerCts = new CancellationTokenSource();
+                    _listener = new HttpListener();
+                    _listener.Prefixes.Add(listenerPrefix);
+                    _listener.Start();
+                    _ = Task.Run(() => ListenLoopAsync(_listenerCts.Token));
+                    _activePort = port;
+                    detail = "started";
+                    return true;
+                }
+                catch (HttpListenerException ex)
+                {
+                    CleanupListenerState();
+                    var isLastAttempt = attempt >= BindRetryDelayMs.Length - 1;
+                    if (isLastAttempt)
+                    {
+                        detail = ex.Message;
+                        return false;
+                    }
+
+                    Thread.Sleep(BindRetryDelayMs[attempt]);
+                }
+                catch (Exception ex)
+                {
+                    CleanupListenerState();
+                    detail = ex.Message;
+                    return false;
+                }
+            }
+
+            detail = "Unknown bind failure.";
+            return false;
+        }
+
+        private static void CleanupListenerState()
+        {
+            try
+            {
+                _listenerCts?.Cancel();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _listener?.Close();
+            }
+            catch
+            {
+            }
+
+            _listener = null;
+            _listenerCts = null;
+            _activePort = 0;
+        }
+
+        private static IEnumerable<int> EnumerateCandidatePorts(int preferredPort)
+        {
+            yield return preferredPort;
+
+            var baseFallbackPort = ComputeStickyFallbackPort(0);
+            for (var i = 0; i < MaxFallbackPortCandidates; i++)
+            {
+                var candidate = ComputeStickyFallbackPort(i);
+                if (candidate == preferredPort)
+                {
+                    continue;
+                }
+
+                yield return candidate;
+            }
+        }
+
+        private static int ComputeStickyFallbackPort(int offset)
+        {
+            var hash = ComputeStableHash(NormalizeProjectPath(ProjectRootPath));
+            var normalizedOffset = Math.Abs(offset % FallbackPortRangeSize);
+            var bucket = (int)((hash + (uint)normalizedOffset) % FallbackPortRangeSize);
+            return FallbackPortRangeStart + bucket;
+        }
+
+        private static uint ComputeStableHash(string value)
+        {
+            unchecked
+            {
+                const uint fnvOffsetBasis = 2166136261;
+                const uint fnvPrime = 16777619;
+
+                var hash = fnvOffsetBasis;
+                for (var i = 0; i < value.Length; i++)
+                {
+                    hash ^= value[i];
+                    hash *= fnvPrime;
+                }
+
+                return hash;
+            }
+        }
+
+        private static string ComputeProjectKey(string projectRootPath)
+        {
+            return ComputeStableHash(NormalizeProjectPath(projectRootPath)).ToString("x8");
+        }
+
+        private static string NormalizeProjectPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return string.Empty;
+            }
+
+            return Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Replace('\\', '/')
+                .ToLowerInvariant();
+        }
+
+        private static void PersistPort(int port)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(PortConfigPath) ?? ProjectRootPath);
+                var nextValue = port.ToString();
+                if (File.Exists(PortConfigPath))
+                {
+                    var currentValue = File.ReadAllText(PortConfigPath).Trim();
+                    if (string.Equals(currentValue, nextValue, StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+                }
+
+                File.WriteAllText(PortConfigPath, nextValue + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning(
+                    "[Unity MCP] Failed to persist port "
+                    + port
+                    + " to "
+                    + PortConfigRelativePath
+                    + ": "
+                    + ex.Message
+                );
             }
         }
 
@@ -265,6 +534,7 @@ namespace ProjectSD.EditorTools.UnityMcp
             // 3) 참조 해제는 Close 이후에 — IsRunning 체크와의 경합 방지
             _listener = null;
             _listenerCts = null;
+            _activePort = 0;
 
             if (logWhenStopped)
             {
@@ -541,9 +811,12 @@ namespace ProjectSD.EditorTools.UnityMcp
                 {
                     ok = true,
                     bridgeRunning = IsRunning,
+                    port = _activePort > 0 ? _activePort : ResolvePort(),
                     isPlaying = EditorApplication.isPlaying,
                     isPlayingOrWillChange = EditorApplication.isPlayingOrWillChangePlaymode,
                     isCompiling = EditorApplication.isCompiling,
+                    projectKey = ProjectKey,
+                    projectRootPath = ProjectRootPath,
                     activeScene = scene.name,
                     activeScenePath = scene.path
                 };
@@ -1604,9 +1877,12 @@ namespace ProjectSD.EditorTools.UnityMcp
         {
             public bool ok;
             public bool bridgeRunning;
+            public int port;
             public bool isPlaying;
             public bool isPlayingOrWillChange;
             public bool isCompiling;
+            public string projectKey;
+            public string projectRootPath;
             public string activeScene;
             public string activeScenePath;
         }

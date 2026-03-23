@@ -13,6 +13,11 @@ namespace Features.Skill.Domain
             _lastCastTimes[skillId.Value] = time;
         }
 
+        public void ClearCooldown(DomainEntityId skillId)
+        {
+            _lastCastTimes.Remove(skillId.Value);
+        }
+
         public float GetLastCastTime(DomainEntityId skillId)
         {
             return _lastCastTimes.TryGetValue(skillId.Value, out var time) ? time : float.NegativeInfinity;

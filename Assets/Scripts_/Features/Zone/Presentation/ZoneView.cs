@@ -4,8 +4,6 @@ namespace Features.Zone.Presentation
 {
     public sealed class ZoneView : MonoBehaviour
     {
-        [SerializeField] private float _fadeSpeed = 1f;
-
         private float _duration;
         private float _elapsed;
         private Renderer _renderer;

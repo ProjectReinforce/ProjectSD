@@ -3,6 +3,7 @@ using Features.Skill.Domain;
 using Features.Skill.Infrastructure;
 using Features.Skill.Presentation;
 using Shared.EventBus;
+using Shared.Kernel;
 using UnityEngine;
 
 namespace Features.Skill.Bootstrap
@@ -28,8 +29,9 @@ namespace Features.Skill.Bootstrap
         private SkillLoadoutData _loadoutData;
 
         private EventBus _eventBus;
-        private SkillNetworkEventHandler _networkEventHandler;
         private SkillCatalog _catalog;
+        private EquipSkillUseCase _equipSkillUseCase;
+        private SkillBar _skillBar;
 
         public SkillCatalog Catalog => _catalog;
 
@@ -51,21 +53,22 @@ namespace Features.Skill.Bootstrap
 
             _catalog = new SkillCatalog(_catalogData);
 
-            _barView.Initialize(eventBus);
+            _barView.Initialize(eventBus, new SkillIconAdapter(_catalog));
             _skillCastEffectSpawner.Initialize(eventBus, new SkillEffectAdapter(_catalog));
 
-            _networkEventHandler = new SkillNetworkEventHandler(_eventBus, _networkAdapter);
+            new SkillNetworkEventHandler(_eventBus, _networkAdapter);
+
+            var cooldownTracker = new CooldownTracker();
 
             var loadoutRepo = new SkillLoadoutRepository(_loadoutData);
-            var equipSkillUseCase = new EquipSkillUseCase(_eventBus);
-            var skillBar = equipSkillUseCase.BuildFromLoadout(
+            _equipSkillUseCase = new EquipSkillUseCase(_eventBus, cooldownTracker);
+            _skillBar = _equipSkillUseCase.BuildFromLoadout(
                 loadoutRepo.Load(),
                 skillId => _catalog.Get(skillId)
             );
 
-            var cooldownTracker = new CooldownTracker();
             var castSkillUseCase = new CastSkillUseCase(cooldownTracker, _networkAdapter);
-            var casterId = Shared.Kernel.DomainEntityId.New();
+            var casterId = DomainEntityId.New();
 
             if (_slotInputHandler == null)
             {
@@ -76,8 +79,17 @@ namespace Features.Skill.Bootstrap
                 return;
             }
 
-            _slotInputHandler.Initialize(castSkillUseCase, skillBar, casterId);
+            _slotInputHandler.Initialize(castSkillUseCase, _skillBar, casterId);
             _slotInputHandler.SetPlayerTransform(playerTransform);
+        }
+
+        public Result SwapSkill(int slotIndex, string skillId)
+        {
+            var skill = _catalog.Get(skillId);
+            if (skill == null)
+                return Result.Failure($"Skill not found: {skillId}");
+
+            return _equipSkillUseCase.Execute(_skillBar, slotIndex, skill);
         }
     }
 }

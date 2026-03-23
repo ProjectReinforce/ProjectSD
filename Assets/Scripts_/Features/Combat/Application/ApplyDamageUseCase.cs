@@ -19,11 +19,22 @@ namespace Features.Combat.Application
 
         public Result Execute(DomainEntityId targetId, float baseDamage, DamageType damageType)
         {
+            if (!_target.Exists(targetId))
+                return Result.Failure($"Combat target not found: {targetId.Value}");
+
             var defense = _target.GetDefense(targetId);
             var finalDamage = DamageRule.Calculate(baseDamage, defense, damageType);
+            var damageResult = _target.ApplyDamage(targetId, finalDamage);
 
-            _target.ApplyDamage(targetId, finalDamage);
-            _eventBus.Publish(new DamageAppliedEvent(targetId, finalDamage, damageType));
+            _eventBus.Publish(
+                new DamageAppliedEvent(
+                    targetId,
+                    finalDamage,
+                    damageType,
+                    damageResult.RemainingHealth,
+                    damageResult.IsDead
+                )
+            );
             return Result.Success();
         }
     }

@@ -1,5 +1,4 @@
 using Features.Skill.Application.Events;
-using Features.Zone.Presentation;
 using Shared.EventBus;
 using Shared.Math;
 using UnityEngine;
@@ -8,10 +7,6 @@ namespace Features.Skill.Presentation
 {
     public sealed class SkillCastEffectSpawner : MonoBehaviour
     {
-        [Header("Fallback Prefabs (used when SkillData has no override)")]
-        [SerializeField]
-        private GameObject zoneEffectPrefab;
-
         [SerializeField]
         private GameObject targetedEffectPrefab;
 
@@ -40,22 +35,9 @@ namespace Features.Skill.Presentation
 
         private void OnZoneRequested(ZoneRequestedEvent e)
         {
-            var prefab = ResolveEffectPrefab(e.SkillId.Value, zoneEffectPrefab);
-            if (prefab == null)
-                return;
-
             var pos = e.Position.ToVector3();
             var dir = e.Direction.ToVector3();
             var spawnPos = pos + dir * (e.Spec.Range * 0.5f);
-            var go = Instantiate(prefab, spawnPos, Quaternion.identity);
-
-            var view = go.GetComponent<ZoneView>();
-            if (view != null)
-            {
-                view.Initialize(e.Spec.Range, e.Spec.Cooldown);
-                view.SetColor(new Color(0.5f, 0.8f, 1f, 0.6f));
-            }
-
             PlayCastSound(e.SkillId.Value, spawnPos);
         }
 
