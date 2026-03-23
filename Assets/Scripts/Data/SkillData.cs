@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Data
 {
@@ -162,6 +164,14 @@ namespace SwDreams.Data
         [Tooltip("효과 프리팹 (장판/회전체/포탑/마커)")]
         public GameObject effectPrefab;
 
+        [Header("패시브 적용 필터")]
+        [Tooltip("이 스킬에 영향을 주는 스탯 목록. 비어있으면 전부 적용.")]
+        public List<StatType> applicableStats = new List<StatType>();
+
+        [Header("Trigger+Effect 조합")]
+        [Tooltip("기본 추가 효과. 진화 스킬 등에서 설정. 런타임 추가는 SkillTriggerSystem 사용.")]
+        public List<SkillTriggerEffect> triggerEffects = new List<SkillTriggerEffect>();
+
         [Header("진화 연결 (Phase 4)")]
         public SkillData evolutionPair;    // 이 스킬과 조합되는 패시브/액티브
         public SkillData evolvedSkill;     // 진화 결과 스킬
@@ -176,6 +186,17 @@ namespace SwDreams.Data
         {
             int index = Mathf.Clamp(level - 1, 0, cooldownPerLevel.Length - 1);
             return cooldownPerLevel[index];
+        }
+
+        /// <summary>
+        /// 이 스킬에 해당 스탯이 영향을 주는지 확인.
+        /// applicableStats가 비어있으면 모든 스탯 적용 (하위 호환).
+        /// </summary>
+        public bool IsStatApplicable(StatType statType)
+        {
+            if (applicableStats == null || applicableStats.Count == 0)
+                return true;
+            return applicableStats.Contains(statType);
         }
     }
 }

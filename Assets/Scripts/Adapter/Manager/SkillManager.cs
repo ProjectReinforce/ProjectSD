@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Skill.TriggerEffects;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -654,6 +655,16 @@ namespace SwDreams.Adapter.Skill
             }
 
             skill.Activate(skillData, effect);
+
+            // [Step 3-4] SkillTriggerSystem 초기화 (triggerEffects가 있는 경우)
+            if (skillData.triggerEffects != null && skillData.triggerEffects.Count > 0)
+            {
+                var triggerSystem = slotObj.GetComponent<SkillTriggerSystem>();
+                if (triggerSystem == null)
+                    triggerSystem = slotObj.AddComponent<SkillTriggerSystem>();
+                triggerSystem.Initialize(skillData.triggerEffects);
+            }
+
             return skill;
         }
 
