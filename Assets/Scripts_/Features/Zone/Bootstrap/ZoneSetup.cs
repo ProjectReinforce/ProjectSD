@@ -25,7 +25,11 @@ namespace Features.Zone.Bootstrap
             }
 
             _eventBus = eventBus;
-            _spawnZoneUseCase = new SpawnZoneUseCase(_zoneEffectAdapter, new ClockAdapter(), eventBus);
+            _spawnZoneUseCase = new SpawnZoneUseCase(
+                _zoneEffectAdapter,
+                new ClockAdapter(),
+                eventBus
+            );
             _eventBus.Subscribe(this, new System.Action<ZoneRequestedEvent>(OnZoneRequested));
         }
 

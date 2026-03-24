@@ -1,5 +1,6 @@
 using Features.Lobby.Application;
 using Features.Lobby.Application.Events;
+using Features.Lobby.Infrastructure;
 using Features.Lobby.Infrastructure.Persistence;
 using Features.Lobby.Infrastructure.Photon;
 using Features.Lobby.Presentation;
@@ -15,8 +16,11 @@ public sealed class LobbyBootstrap : MonoBehaviour
 
     [SerializeField]
     private LobbyPhotonAdapter _photonAdapter;
-    private LobbyNetworkEventHandler _syncHandler;
 
+    [SerializeField]
+    private SceneLoaderAdapter _sceneLoader;
+
+    private LobbyNetworkEventHandler _syncHandler;
     private readonly EventBus _eventBus = new EventBus();
 
     private void Awake()
@@ -37,6 +41,13 @@ public sealed class LobbyBootstrap : MonoBehaviour
             }
         }
 
+        if (_sceneLoader == null)
+        {
+            _sceneLoader = new SceneLoaderAdapter();
+        }
+
+        _eventBus.Subscribe(this, new System.Action<SceneLoadRequestedEvent>(OnSceneLoadRequested));
+
         var repository = new LobbyRepository();
         var network = _photonAdapter;
         var clock = new ClockAdapter();
@@ -45,7 +56,12 @@ public sealed class LobbyBootstrap : MonoBehaviour
 
         var useCases = new LobbyUseCases(repository, network, clock);
 
-        _view.Initialize(_eventBus, useCases);
+        _view.Initialize(_eventBus, _eventBus, useCases);
         _eventBus.Publish(new LobbyUpdatedEvent(repository.LoadLobby() ?? new DomainLobby()));
+    }
+
+    private void OnSceneLoadRequested(SceneLoadRequestedEvent e)
+    {
+        _sceneLoader.LoadScene(e.SceneName);
     }
 }

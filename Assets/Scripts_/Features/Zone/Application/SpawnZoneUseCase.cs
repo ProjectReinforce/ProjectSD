@@ -1,6 +1,6 @@
 using Features.Zone.Application.Events;
-using Features.Zone.Application.Ports;
 using Features.Zone.Domain;
+using Features.Zone.Application.Ports;
 using Shared.EventBus;
 using Shared.Kernel;
 using Shared.Math;
@@ -25,7 +25,7 @@ namespace Features.Zone.Application
         {
             var zone = new Domain.Zone(_clock.NewId(), casterId, position, spec);
 
-            _zoneEffect.Spawn(zone);
+            _zoneEffect.SpawnZone(position, spec.Radius, spec.Duration);
             _eventBus.Publish(new ZoneSpawnedEvent(zone.Id, casterId, position, spec));
             return Result.Success();
         }

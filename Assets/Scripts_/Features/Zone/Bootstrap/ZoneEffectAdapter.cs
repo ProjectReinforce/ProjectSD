@@ -16,7 +16,7 @@ namespace Features.Zone.Bootstrap
         [SerializeField]
         private Color _zoneColor = new Color(0.5f, 0.8f, 1f, 0.6f);
 
-        public void Spawn(Domain.Zone zone)
+        public void SpawnZone(Float3 position, float radius, float duration)
         {
             if (_zonePrefab == null)
             {
@@ -24,14 +24,14 @@ namespace Features.Zone.Bootstrap
                 return;
             }
 
-            var worldPosition = zone.Position.ToVector3();
+            var worldPosition = position.ToVector3();
             var view = _spawnRoot == null
                 ? Instantiate(_zonePrefab, worldPosition, Quaternion.identity)
                 : Instantiate(_zonePrefab, worldPosition, Quaternion.identity, _spawnRoot);
 
-            view.Initialize(zone.Spec.Radius, zone.Spec.Duration);
+            view.Initialize(radius, duration);
             view.SetColor(_zoneColor);
-            view.name = $"{_zonePrefab.name}_{zone.Id.Value}";
+            view.name = $"{_zonePrefab.name}_{Time.time}";
         }
     }
 }

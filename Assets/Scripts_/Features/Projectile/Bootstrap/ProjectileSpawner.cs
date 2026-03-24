@@ -1,4 +1,6 @@
+using Features.Projectile.Application;
 using Features.Projectile.Application.Events;
+using Features.Projectile.Application.Ports;
 using Features.Projectile.Domain;
 using Features.Projectile.Domain.Hit;
 using Features.Projectile.Domain.Trajectory;
@@ -7,6 +9,7 @@ using Features.Projectile.Presentation;
 using Shared.EventBus;
 using Shared.Kernel;
 using Shared.Math;
+using Shared.Time;
 using UnityEngine;
 
 namespace Features.Projectile.Bootstrap
@@ -25,8 +28,12 @@ namespace Features.Projectile.Bootstrap
         [SerializeField]
         private GameObject homingOrbPrefab;
 
+        [SerializeField]
+        private Transform _spawnRoot;
+
         private IEventSubscriber _eventBus;
         private IEventPublisher _publisher;
+        private SpawnProjectileUseCase _spawnUseCase;
 
         public void Initialize(IEventSubscriber eventBus, IEventPublisher publisher)
         {
@@ -55,24 +62,15 @@ namespace Features.Projectile.Bootstrap
 
             var pos = e.Position.ToVector3();
             var dir = e.Direction.ToVector3();
-            var rotation =
-                dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir) : Quaternion.identity;
-            var go = Instantiate(prefab, pos + dir, rotation);
+            var rotation = dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir) : Quaternion.identity;
+            var go = Instantiate(prefab, pos + dir, rotation, _spawnRoot);
 
-            var adapter = go.GetComponent<ProjectilePhysicsAdapter>();
-            if (adapter != null)
+            var physicsAdapter = go.GetComponent<ProjectilePhysicsAdapter>();
+            if (physicsAdapter != null)
             {
-                adapter.Initialize(_publisher);
-                var projectile = new Domain.Projectile(
-                    DomainEntityId.New(),
-                    e.OwnerId,
-                    e.Spec,
-                    e.BaseDamage,
-                    e.DamageType
-                );
-                var trajectory = TrajectoryFactory.Create(e.Spec.TrajectoryType);
-                var hitResolver = HitResolverFactory.Create(e.Spec.HitType);
-                adapter.Spawn(projectile, trajectory, hitResolver);
+                physicsAdapter.Initialize(_publisher);
+                _spawnUseCase = new SpawnProjectileUseCase(physicsAdapter, new ClockAdapter(), _publisher);
+                _spawnUseCase.Execute(e.OwnerId, e.Spec, e.BaseDamage, e.DamageType);
             }
 
             var view = go.GetComponent<ProjectileView>();
@@ -87,9 +85,9 @@ namespace Features.Projectile.Bootstrap
             switch (spec.TrajectoryType)
             {
                 case TrajectoryType.Parabolic:
-                    return arcBoltPrefab != null ? arcBoltPrefab : fireballPrefab;
+                    return arcBoltPrefab ?? fireballPrefab;
                 case TrajectoryType.Homing:
-                    return homingOrbPrefab != null ? homingOrbPrefab : fireballPrefab;
+                    return homingOrbPrefab ?? fireballPrefab;
                 default:
                     return spec.Speed >= 25f ? iceLancePrefab : fireballPrefab;
             }
@@ -97,15 +95,12 @@ namespace Features.Projectile.Bootstrap
 
         private static Color GetColor(TrajectoryType type)
         {
-            switch (type)
+            return type switch
             {
-                case TrajectoryType.Parabolic:
-                    return new Color(1f, 0.95f, 0.2f);
-                case TrajectoryType.Homing:
-                    return new Color(0.6f, 0.2f, 0.9f);
-                default:
-                    return new Color(1f, 0.5f, 0.1f);
-            }
+                TrajectoryType.Parabolic => new Color(1f, 0.95f, 0.2f),
+                TrajectoryType.Homing => new Color(0.6f, 0.2f, 0.9f),
+                _ => new Color(1f, 0.5f, 0.1f)
+            };
         }
     }
 }

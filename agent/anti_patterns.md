@@ -14,14 +14,73 @@ Never do these:
 
 * Silent failure on null — returning silently without logging when a required reference is null. Use `Debug.LogError` for missing SerializeField/injected dependencies; do not add null checks for internal data parameters (let NullReferenceException surface naturally).
 * Behavioral switch on type enums — use Factory + Strategy pattern instead. Switch is acceptable for command dispatch and simple value mapping.
-* Strategy pattern file structure — enum, interface, factory는 한 파일에 둔다. 구현체(Strategy 클래스)는 각각 별도 파일.
-* GetComponent로 의존성 획득 — `[SerializeField]`로 Inspector에서 명시적으로 연결한다. 어떤 의존성이 필요한지 코드와 Inspector 모두에서 보여야 한다.
+* Strategy pattern file structure — enum, interface, factory go in one file. Each implementation (Strategy class) gets its own file.
+* GetComponent for dependency acquisition — use `[SerializeField]` and wire explicitly in Inspector. Dependencies must be visible in both code and Inspector.
 
-* 이중 상태 — 같은 개념(체력, 위치 등)을 두 도메인 엔티티가 각각 관리하면 안 된다. 하나의 진실 원천(Single Source of Truth)만 존재해야 한다. 예: Player.CurrentHp와 CombatTarget.CurrentHealth가 동시에 존재하면 반드시 어긋난다.
-* 이중 경로 데미지 — 한 이벤트(투사체 히트 등)에 대해 데미지를 두 번 적용하지 않는다. 하나의 UseCase가 데미지를 계산하고, 결과 이벤트를 통해 다른 피처가 반응하는 구조여야 한다.
-* 소비자가 아닌 제공자에 포트 배치 — 피처 A가 피처 B의 기능을 호출할 때, 포트 인터페이스는 호출하는 쪽(A)의 Application에 정의한다. 구현은 호출당하는 쪽(B)의 Infrastructure에 둔다. (Dependency Inversion Principle)
-* Bootstrap에 선택/순환 로직 — Bootstrap은 조립만 한다. 스킬 순환 선택, 다음 대상 결정 등의 로직은 Application 레이어의 별도 클래스로 분리한다.
-* Application 이벤트에 Unity 타입 — Application 레이어의 이벤트에 Sprite, GameObject 등 Unity 타입을 넣지 않는다. Presentation 레이어에서 포트를 통해 resolve한다.
+* Dual state — the same concept (health, position, etc.) must not be managed by two domain entities independently. Only one Source of Truth may exist. Example: Player.CurrentHp and CombatTarget.CurrentHealth existing simultaneously will inevitably diverge.
+* Dual-path damage — do not apply damage twice for a single event (e.g. projectile hit). One UseCase calculates damage; other features react via result events.
+* Port on provider instead of consumer — when feature A calls feature B, define the port interface in A's Application. Implementation goes in B's Infrastructure. (Dependency Inversion Principle)
+* Bootstrap containing selection/cycling logic — Bootstrap only wires. Skill rotation, next-target selection, etc. must be extracted to a dedicated Application-layer class.
+* Unity types in Application — do not put Sprite, GameObject, AudioClip, Color, etc. in Application-layer events, ports, or use cases. If a port needs Unity types, it belongs in Presentation, not Application/Ports.
+
+---
+
+## Established Patterns (Lessons Learned)
+
+These patterns were discovered through refactoring and should be followed:
+
+### 1. Port Placement by Type Dependency
+**Rule:** Port interfaces go in Application/Ports ONLY if they use no Unity types. Ports that reference UnityEngine types (Sprite, GameObject, AudioClip, Color, etc.) belong in Presentation.
+- ✅ `Application/Ports/IZoneEffectPort.cs` — uses only `Float3` (Shared), OK in Application
+- ✅ `Presentation/ISkillEffectPort.cs` — uses `GameObject`, `AudioClip` (Unity), must be in Presentation
+- ✅ `Presentation/ISkillIconPort.cs` — uses `Sprite` (Unity), must be in Presentation
+- ❌ `Application/Ports/ISkillEffectPort.cs` — Unity types in Application layer violates layer rules
+
+**Why:** Application layer must not depend on UnityEngine. Moving a Unity-typed port to Application "infects" every Application class that references it.
+
+### 2. Event Handlers → Application Layer
+**Rule:** Event handling logic should be in Application layer, not Bootstrap.
+- ❌ `CombatBootstrap.OnProjectileHit()` with business logic — WRONG
+- ✅ Dedicated EventHandler class in Application layer — CORRECT
+
+**Why:** Bootstrap should only wire components together. Event handling contains business logic that belongs in Application.
+
+**Pattern:**
+```
+Bootstrap (wiring only)
+  → Creates Application EventHandler
+  → Subscribes to events
+  → EventHandler contains the handling logic
+```
+
+### 3. Bootstrap Responsibilities
+**Bootstrap SHOULD:**
+- Instantiate classes
+- Inject dependencies (constructor injection)
+- Subscribe to external events
+- Call Initialize() on components
+
+**Bootstrap SHOULD NOT:**
+- Execute business logic
+- Create domain entities directly
+- Contain selection/decision logic
+- Handle game events
+
+### 4. Infrastructure with MonoBehaviour
+**Rule:** Infrastructure CAN have MonoBehaviour when needed for Unity integration.
+- ✅ `CombatTargetAdapter : MonoBehaviour` — needs SerializeField for scene integration
+- ✅ `PlayerNetworkAdapter : MonoBehaviourPun` — required for Photon
+
+Pure C# adapters are preferred when possible.
+
+### 5. Domain Entity Creation via UseCase
+**Rule:** Bootstrap must not create domain entities directly.
+```
+❌ Bootstrap creates Domain.Projectile directly
+✅ Bootstrap calls SpawnProjectileUseCase → UseCase creates Domain.Projectile
+```
+
+---
 
 When unsure:
 

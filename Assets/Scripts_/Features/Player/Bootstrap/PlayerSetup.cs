@@ -13,12 +13,23 @@ namespace Features.Player.Bootstrap
 {
     public sealed class PlayerSetup : MonoBehaviour
     {
-        [SerializeField] private PlayerNetworkAdapter _networkAdapter;
-        [SerializeField] private PlayerMotorAdapter _motorAdapter;
-        [SerializeField] private PlayerInputHandler _inputHandler;
-        [SerializeField] private PlayerInput _playerInput;
-        [SerializeField] private PlayerView _view;
-        [SerializeField] private PlayerHealthHudView _healthHud;
+        [SerializeField]
+        private PlayerNetworkAdapter _networkAdapter;
+
+        [SerializeField]
+        private PlayerMotorAdapter _motorAdapter;
+
+        [SerializeField]
+        private PlayerInputHandler _inputHandler;
+
+        [SerializeField]
+        private PlayerInput _playerInput;
+
+        [SerializeField]
+        private PlayerView _view;
+
+        [SerializeField]
+        private PlayerHealthHudView _healthHud;
 
         private PlayerUseCases _useCases;
         private PlayerCombatTargetProvider _combatTargetProvider;
@@ -91,7 +102,10 @@ namespace Features.Player.Bootstrap
 
             if (_inputHandler == null)
             {
-                Debug.LogError("[PlayerSetup] PlayerInputHandler is not assigned in Inspector.", this);
+                Debug.LogError(
+                    "[PlayerSetup] PlayerInputHandler is not assigned in Inspector.",
+                    this
+                );
                 return;
             }
 
@@ -114,7 +128,10 @@ namespace Features.Player.Bootstrap
         private void InitializeRemote(EventBus eventBus)
         {
             if (_inputHandler == null)
-                Debug.LogError("[PlayerSetup] PlayerInputHandler is not assigned in Inspector.", this);
+                Debug.LogError(
+                    "[PlayerSetup] PlayerInputHandler is not assigned in Inspector.",
+                    this
+                );
             else
                 _inputHandler.enabled = false;
 
@@ -124,7 +141,10 @@ namespace Features.Player.Bootstrap
                 _playerInput.enabled = false;
 
             if (_motorAdapter == null)
-                Debug.LogError("[PlayerSetup] PlayerMotorAdapter is not assigned in Inspector.", this);
+                Debug.LogError(
+                    "[PlayerSetup] PlayerMotorAdapter is not assigned in Inspector.",
+                    this
+                );
             else
                 _motorAdapter.enabled = false;
 

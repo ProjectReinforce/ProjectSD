@@ -22,9 +22,15 @@ namespace Features.Combat.Bootstrap
         private CombatTestTargetLoop[] _testTargetLoops = new CombatTestTargetLoop[0];
 
         private ApplyDamageUseCase _applyDamage;
+        private CombatNetworkEventHandler _eventHandler;
         private EventBus _eventBus;
 
         public void Initialize(EventBus eventBus)
+        {
+            Initialize(eventBus, null);
+        }
+
+        public void Initialize(EventBus eventBus, ICombatNetworkCommandPort networkPort)
         {
             if (_targetAdapter == null)
             {
@@ -41,7 +47,8 @@ namespace Features.Combat.Bootstrap
             _eventBus = eventBus;
 
             _targetAdapter.Initialize();
-            _applyDamage = new ApplyDamageUseCase(_targetAdapter, _eventBus);
+            _applyDamage = new ApplyDamageUseCase(_targetAdapter, _eventBus, networkPort ?? NoOpCombatNetworkPort.Instance);
+            _eventHandler = new CombatNetworkEventHandler(_applyDamage, _eventBus);
             _eventBus.Subscribe(this, new System.Action<ProjectileHitEvent>(OnProjectileHit));
 
             for (var i = 0; i < _targetViews.Length; i++)
@@ -76,15 +83,7 @@ namespace Features.Combat.Bootstrap
 
         private void OnProjectileHit(ProjectileHitEvent e)
         {
-            if (_applyDamage == null)
-            {
-                Debug.LogError("[CombatBootstrap] Received ProjectileHitEvent before combat initialization.", this);
-                return;
-            }
-
-            var result = _applyDamage.Execute(e.TargetId, e.BaseDamage, e.DamageType, e.OwnerId);
-            if (result.IsFailure)
-                Debug.LogWarning($"[CombatBootstrap] Failed to apply projectile damage: {result.Error}", this);
+            _eventHandler?.HandleProjectileHit(e);
         }
 
         public void RegisterTarget(DomainEntityId targetId, ICombatTargetProvider provider)
@@ -117,6 +116,17 @@ namespace Features.Combat.Bootstrap
             return _targetAdapter.ResetTarget(targetId)
                 ? Result.Success()
                 : Result.Failure($"Combat target not found: {targetId.Value}");
+        }
+
+        private sealed class NoOpCombatNetworkPort : ICombatNetworkCommandPort
+        {
+            public static NoOpCombatNetworkPort Instance { get; } = new NoOpCombatNetworkPort();
+
+            private NoOpCombatNetworkPort() { }
+
+            public void SendDamage(DomainEntityId targetId, float damage, DamageType damageType, DomainEntityId attackerId) { }
+            public void SendDeath(DomainEntityId targetId, DomainEntityId killerId) { }
+            public void SendRespawn(DomainEntityId targetId) { }
         }
     }
 }

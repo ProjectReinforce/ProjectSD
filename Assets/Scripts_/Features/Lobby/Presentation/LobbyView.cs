@@ -30,10 +30,15 @@ namespace Features.Lobby.Presentation
         [SerializeField]
         private float _errorDisplayDuration = 3f;
 
+        [Header("Game Start")]
+        [SerializeField]
+        private string _gameSceneName = "GameScene";
+
         private IEventSubscriber _eventBus;
+        private IEventPublisher _eventPublisher;
         private Coroutine _errorCoroutine;
 
-        public void Initialize(IEventSubscriber eventBus, LobbyUseCases useCases)
+        public void Initialize(IEventSubscriber eventBus, IEventPublisher eventPublisher, LobbyUseCases useCases)
         {
             if (_roomListView == null)
             {
@@ -47,10 +52,12 @@ namespace Features.Lobby.Presentation
                 return;
             }
 
+            _eventBus = eventBus;
+            _eventPublisher = eventPublisher;
+
             _roomListView.Initialize(useCases);
             _roomDetailView.Initialize(useCases);
 
-            _eventBus = eventBus;
             _eventBus.Subscribe<LobbyUpdatedEvent>(this, e => RenderLobby(e.Lobby));
             _eventBus.Subscribe<RoomUpdatedEvent>(this, e => RenderRoom(e));
             _eventBus.Subscribe<RoomListReceivedEvent>(this, e => RenderRoomList(e));
@@ -92,6 +99,7 @@ namespace Features.Lobby.Presentation
         public void RenderStartGame(RoomSnapshot room)
         {
             Debug.Log($"[Lobby] Start game: {room.Name}");
+            _eventPublisher.Publish(new SceneLoadRequestedEvent(_gameSceneName));
         }
 
         public void RenderError(string message)

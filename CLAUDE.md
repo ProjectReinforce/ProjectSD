@@ -125,4 +125,4 @@ Shared -> (no feature dependency)
 3. `architecture.md`
 4. `feature_rules.md`
 5. `naming_rules.md`
-6. `anti_patterns.md`
+6. `anti_patterns.md` (contains established patterns discovered through refactoring)

@@ -17,11 +17,33 @@ namespace Features.Player.Application
             _publisher = publisher;
 
             networkCallbacks.OnRemoteJumped = HandleRemoteJumped;
+            networkCallbacks.OnRemoteDamaged = HandleRemoteDamaged;
+            networkCallbacks.OnRemoteDied = HandleRemoteDied;
+            networkCallbacks.OnRemoteRespawned = HandleRemoteRespawned;
+            networkCallbacks.OnHealthSynced = HandleHealthSynced;
         }
 
         private void HandleRemoteJumped(DomainEntityId playerId)
         {
             _publisher.Publish(new PlayerJumpedEvent(playerId));
+        }
+
+        private void HandleRemoteDamaged(DomainEntityId targetId, float damage,
+            Features.Combat.Domain.DamageType damageType, DomainEntityId attackerId)
+        {
+        }
+
+        private void HandleRemoteDied(DomainEntityId targetId, DomainEntityId killerId)
+        {
+            _publisher.Publish(new PlayerDiedEvent(targetId, killerId));
+        }
+
+        private void HandleRemoteRespawned(DomainEntityId targetId)
+        {
+        }
+
+        private void HandleHealthSynced(DomainEntityId targetId, float currentHp, float maxHp)
+        {
         }
     }
 }
