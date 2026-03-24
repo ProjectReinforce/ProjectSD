@@ -17,7 +17,8 @@ namespace Features.Combat.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(DomainEntityId targetId, float baseDamage, DamageType damageType)
+        public Result Execute(DomainEntityId targetId, float baseDamage, DamageType damageType,
+            DomainEntityId attackerId = default)
         {
             if (!_target.Exists(targetId))
                 return Result.Failure($"Combat target not found: {targetId.Value}");
@@ -32,7 +33,8 @@ namespace Features.Combat.Application
                     finalDamage,
                     damageType,
                     damageResult.RemainingHealth,
-                    damageResult.IsDead
+                    damageResult.IsDead,
+                    attackerId
                 )
             );
             return Result.Success();

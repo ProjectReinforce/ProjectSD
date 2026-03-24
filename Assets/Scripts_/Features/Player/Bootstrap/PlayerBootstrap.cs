@@ -1,7 +1,6 @@
 using Features.Combat.Bootstrap;
 using Features.Projectile.Bootstrap;
 using Features.Skill.Bootstrap;
-using Features.Skill.Infrastructure;
 using Features.Zone.Bootstrap;
 using Photon.Pun;
 using Shared.EventBus;
@@ -34,6 +33,7 @@ namespace Features.Player.Bootstrap
         private ZoneSetup _zoneSetup;
 
         private EventBus _eventBus;
+        private PlayerSetup _localPlayerSetup;
 
         private void Start()
         {
@@ -66,6 +66,14 @@ namespace Features.Player.Bootstrap
             _skillSetup.Initialize(_eventBus, player.transform);
             _projectileSpawner.Initialize(_eventBus, _eventBus);
 
+            if (_localPlayerSetup != null && _localPlayerSetup.CombatTargetProvider != null)
+            {
+                _combatBootstrap.RegisterTarget(
+                    _localPlayerSetup.PlayerId,
+                    _localPlayerSetup.CombatTargetProvider
+                );
+            }
+
             if (_zoneSetup == null)
             {
                 Debug.LogError("[GameScene] ZoneSetup reference is missing.");
@@ -82,7 +90,13 @@ namespace Features.Player.Bootstrap
         {
             var playerSetup = player.GetComponent<PlayerSetup>();
             if (playerSetup != null)
+            {
                 playerSetup.Initialize(_eventBus);
+                if (playerSetup.UseCases != null)
+                {
+                    _localPlayerSetup = playerSetup;
+                }
+            }
         }
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)

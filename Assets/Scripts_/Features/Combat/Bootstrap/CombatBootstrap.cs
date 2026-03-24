@@ -1,4 +1,5 @@
 using Features.Combat.Application;
+using Features.Combat.Application.Ports;
 using Features.Combat.Domain;
 using Features.Combat.Infrastructure;
 using Features.Combat.Presentation;
@@ -81,17 +82,23 @@ namespace Features.Combat.Bootstrap
                 return;
             }
 
-            var result = _applyDamage.Execute(e.TargetId, e.BaseDamage, e.DamageType);
+            var result = _applyDamage.Execute(e.TargetId, e.BaseDamage, e.DamageType, e.OwnerId);
             if (result.IsFailure)
                 Debug.LogWarning($"[CombatBootstrap] Failed to apply projectile damage: {result.Error}", this);
         }
 
-        public Result ApplyDamage(DomainEntityId targetId, float baseDamage, DamageType damageType)
+        public void RegisterTarget(DomainEntityId targetId, ICombatTargetProvider provider)
+        {
+            _targetAdapter.Register(targetId, provider);
+        }
+
+        public Result ApplyDamage(DomainEntityId targetId, float baseDamage, DamageType damageType,
+            DomainEntityId attackerId = default)
         {
             if (_applyDamage == null)
                 return Result.Failure("Combat system is not initialized.");
 
-            return _applyDamage.Execute(targetId, baseDamage, damageType);
+            return _applyDamage.Execute(targetId, baseDamage, damageType, attackerId);
         }
 
         public Result ApplyDamage(string targetIdValue, float baseDamage, DamageType damageType)

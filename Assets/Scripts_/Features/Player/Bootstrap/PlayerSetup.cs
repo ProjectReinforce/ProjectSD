@@ -1,8 +1,10 @@
+using Features.Combat.Application.Ports;
 using Features.Player.Application;
 using Features.Player.Domain;
 using Features.Player.Infrastructure;
 using Features.Player.Presentation;
 using Shared.EventBus;
+using Shared.Kernel;
 using Shared.Time;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -16,8 +18,21 @@ namespace Features.Player.Bootstrap
         [SerializeField] private PlayerInputHandler _inputHandler;
         [SerializeField] private PlayerInput _playerInput;
         [SerializeField] private PlayerView _view;
+        [SerializeField] private PlayerHealthHudView _healthHud;
+
+        private PlayerUseCases _useCases;
+        private PlayerCombatTargetProvider _combatTargetProvider;
+
+        public ICombatTargetProvider CombatTargetProvider => _combatTargetProvider;
+        public DomainEntityId PlayerId => _useCases?.LocalPlayer?.Id ?? default;
+        public PlayerUseCases UseCases => _useCases;
 
         public void Initialize(EventBus eventBus)
+        {
+            Initialize(eventBus, null);
+        }
+
+        public void Initialize(EventBus eventBus, PlayerUseCases existingUseCases)
         {
             if (_networkAdapter == null)
             {
@@ -28,12 +43,12 @@ namespace Features.Player.Bootstrap
             var _ = new PlayerNetworkEventHandler(eventBus, _networkAdapter);
 
             if (_networkAdapter.IsMine)
-                InitializeLocal(eventBus);
+                InitializeLocal(eventBus, existingUseCases);
             else
                 InitializeRemote(eventBus);
         }
 
-        private void InitializeLocal(EventBus eventBus)
+        private void InitializeLocal(EventBus eventBus, PlayerUseCases existingUseCases)
         {
             if (_motorAdapter == null)
             {
@@ -42,10 +57,25 @@ namespace Features.Player.Bootstrap
             }
 
             var clock = new ClockAdapter();
-            var useCases = new PlayerUseCases(_motorAdapter, _networkAdapter, clock);
 
-            var spawnResult = useCases.Spawn(
-                new PlayerSpec(walkSpeed: 5f, sprintMultiplier: 1.8f, jumpForce: 8f, gravity: 20f)
+            if (existingUseCases != null)
+            {
+                _useCases = existingUseCases;
+            }
+            else
+            {
+                _useCases = new PlayerUseCases(_motorAdapter, _networkAdapter, eventBus, clock);
+            }
+
+            var spawnResult = _useCases.Spawn(
+                new PlayerSpec(
+                    walkSpeed: 5f,
+                    sprintMultiplier: 1.8f,
+                    jumpForce: 8f,
+                    gravity: 20f,
+                    maxHp: 100f,
+                    defense: 5f
+                )
             );
 
             if (spawnResult.IsFailure)
@@ -56,13 +86,16 @@ namespace Features.Player.Bootstrap
 
             var player = spawnResult.Value;
 
+            _combatTargetProvider = new PlayerCombatTargetProvider(player);
+            new PlayerDamageEventHandler(player, eventBus, eventBus);
+
             if (_inputHandler == null)
             {
                 Debug.LogError("[PlayerSetup] PlayerInputHandler is not assigned in Inspector.", this);
                 return;
             }
 
-            _inputHandler.Initialize(player, useCases);
+            _inputHandler.Initialize(player, _useCases);
 
             if (_view == null)
             {
@@ -71,6 +104,11 @@ namespace Features.Player.Bootstrap
             }
 
             _view.Initialize(true, eventBus);
+
+            if (_healthHud != null)
+            {
+                _healthHud.Initialize(eventBus, player.MaxHp);
+            }
         }
 
         private void InitializeRemote(EventBus eventBus)
