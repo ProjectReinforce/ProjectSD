@@ -36,11 +36,19 @@ namespace SwDreams.Adapter.Skill
 
         private void CachePlayerReferences()
         {
-            if (playerTransform != null) return;
-            playerTransform = transform.root;
-            if (playerTransform != null)
-                playerStats = playerTransform.GetComponent<PlayerStats>();
-            triggerSystem = GetComponent<SkillTriggerSystem>();
+            if (playerTransform == null)
+            {
+                playerTransform = transform.root;
+                if (playerTransform != null)
+                    playerStats = playerTransform.GetComponent<PlayerStats>();
+            }
+            // triggerSystem은 SkillTriggerSystem이 나중에 붙을 수 있으므로 매번 체크
+            if (triggerSystem == null)
+            {
+                triggerSystem = GetComponent<SkillTriggerSystem>();
+                if (triggerSystem != null)
+                    Debug.Log($"[ProjectileEffect] TriggerSystem 발견! 효과 수: {triggerSystem.TotalEffectCount}");
+            }
         }
 
         public override void Execute(Skill skill)
@@ -133,7 +141,7 @@ namespace SwDreams.Adapter.Skill
                 knockbackForce: knockback
             );
 
-            // TriggerSystem 연결
+            // TriggerSystem 연결 (triggerEffects가 있는 스킬만 보유)
             if (triggerSystem != null)
                 projectile.SetTriggerSystem(triggerSystem, playerTransform);
 

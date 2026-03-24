@@ -67,7 +67,7 @@ MonoBehaviour:
     action: 2
     parameters:
       primary: 3
-      secondary: 0.65
+      secondary: 3
       tertiary: 0
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

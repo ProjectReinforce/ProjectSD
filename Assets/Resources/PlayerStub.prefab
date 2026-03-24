@@ -216,7 +216,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 481d57e4489531c4dbd99c51655fa8be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlayerStub
-  startingSkillData: {fileID: 11400000, guid: 20c82465ae317fb46aa58a4fc8b585ae, type: 2}
+  startingSkillData: {fileID: 0}
 --- !u!114 &1937433557903283363
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -353,5 +353,5 @@ MonoBehaviour:
   explosionRadius: 0.35
   explosionDamage: 8
   maxChainPerFrame: 5
-  explosionEffectPrefab: {fileID: 4955258683705561151, guid: e05875e1c2e842843a233da3102d88b0, type: 3}
+  explosionEffectPrefab: {fileID: 7576172759247056744, guid: 169f073e8f65fcd4dbe09d021af37c21, type: 3}
   unityCheckRadius: 5

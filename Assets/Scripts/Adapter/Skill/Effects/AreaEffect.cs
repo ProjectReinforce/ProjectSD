@@ -58,11 +58,14 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         private void CachePlayerReferences()
         {
-            if (playerTransform != null) return;
-            playerTransform = transform.root;
-            if (playerTransform != null)
-                playerStats = playerTransform.GetComponent<PlayerStats>();
-            triggerSystem = GetComponent<SkillTriggerSystem>();
+            if (playerTransform == null)
+            {
+                playerTransform = transform.root;
+                if (playerTransform != null)
+                    playerStats = playerTransform.GetComponent<PlayerStats>();
+            }
+            if (triggerSystem == null)
+                triggerSystem = GetComponent<SkillTriggerSystem>();
         }
 
         public override void Execute(Skill skill)
