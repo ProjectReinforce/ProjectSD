@@ -17,6 +17,9 @@ namespace Features.Combat.Bootstrap
         [SerializeField]
         private CombatTargetView[] _targetViews = new CombatTargetView[0];
 
+        [SerializeField]
+        private CombatTestTargetLoop[] _testTargetLoops = new CombatTestTargetLoop[0];
+
         private ApplyDamageUseCase _applyDamage;
         private EventBus _eventBus;
 
@@ -50,6 +53,18 @@ namespace Features.Combat.Bootstrap
                 }
 
                 view.Initialize(_eventBus);
+            }
+
+            for (var i = 0; i < _testTargetLoops.Length; i++)
+            {
+                var loop = _testTargetLoops[i];
+                if (loop == null)
+                {
+                    Debug.LogError($"[CombatBootstrap] CombatTestTargetLoop at index {i} is null.", this);
+                    continue;
+                }
+
+                loop.Initialize(_eventBus, this);
             }
         }
 
@@ -85,6 +100,16 @@ namespace Features.Combat.Bootstrap
                 return Result.Failure("Target id is required.");
 
             return ApplyDamage(new DomainEntityId(targetIdValue), baseDamage, damageType);
+        }
+
+        public Result ResetTarget(DomainEntityId targetId)
+        {
+            if (_targetAdapter == null)
+                return Result.Failure("Combat target adapter is not initialized.");
+
+            return _targetAdapter.ResetTarget(targetId)
+                ? Result.Success()
+                : Result.Failure($"Combat target not found: {targetId.Value}");
         }
     }
 }

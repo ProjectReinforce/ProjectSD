@@ -77,6 +77,18 @@ namespace Features.Combat.Infrastructure
             return new CombatTargetDamageResult(remainingHealth, target.IsDead);
         }
 
+        public bool ResetTarget(DomainEntityId targetId)
+        {
+            if (!_targetsById.TryGetValue(targetId, out var target))
+            {
+                Debug.LogError($"[CombatTargetAdapter] Target not found: {targetId.Value}", this);
+                return false;
+            }
+
+            target.Reset();
+            return true;
+        }
+
         [Serializable]
         private sealed class CombatTargetConfig
         {

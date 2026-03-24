@@ -29,5 +29,11 @@ namespace Features.Combat.Domain
 
             return CurrentHealth;
         }
+
+        public float Reset()
+        {
+            CurrentHealth = MaxHealth;
+            return CurrentHealth;
+        }
     }
 }

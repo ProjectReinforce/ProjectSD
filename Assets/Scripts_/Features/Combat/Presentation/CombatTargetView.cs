@@ -31,7 +31,10 @@ namespace Features.Combat.Presentation
         {
             if (_entityIdHolder == null)
             {
-                Debug.LogError("[CombatTargetView] EntityIdHolder is not assigned in Inspector.", this);
+                Debug.LogError(
+                    "[CombatTargetView] EntityIdHolder is not assigned in Inspector.",
+                    this
+                );
                 return;
             }
 
@@ -43,6 +46,13 @@ namespace Features.Combat.Presentation
                 _baseColor = _renderer.material.color;
                 _hasBaseColor = true;
             }
+        }
+
+        public void ResetVisual()
+        {
+            _flashRemaining = 0f;
+            if (_renderer != null && _hasBaseColor)
+                _renderer.material.color = _baseColor;
         }
 
         private void Update()
