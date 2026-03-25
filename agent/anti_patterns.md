@@ -13,6 +13,7 @@ Never do these:
 * Introduce architectural layers not defined in architecture.md.
 
 * Silent failure on null — returning silently without logging when a required reference is null. Use `Debug.LogError` for missing SerializeField/injected dependencies; do not add null checks for internal data parameters (let NullReferenceException surface naturally).
+* Field null checks outside Initialize — null checks for field members (`[SerializeField]`, injected dependencies) must ONLY appear in `Initialize()` / `Awake()` / `Start()`. Once initialization passes, assume fields are valid. Do not re-check them in event handlers, Update, or other runtime methods. If a field is null at runtime, the bug is in initialization — let NullReferenceException surface it.
 * Behavioral switch on type enums — use Factory + Strategy pattern instead. Switch is acceptable for command dispatch and simple value mapping.
 * Strategy pattern file structure — enum, interface, factory go in one file. Each implementation (Strategy class) gets its own file.
 * GetComponent for dependency acquisition — use `[SerializeField]` and wire explicitly in Inspector. Dependencies must be visible in both code and Inspector.

@@ -53,10 +53,14 @@ SlotInputHandler
 
 - `SkillSetup`
   - 플레이어 프리팹에 부착되는 조립용 컴포넌트
-  - `[SerializeField] SkillCatalogData`를 Inspector에서 연결
-  - `Initialize(EventBus, Transform)`에서 `SkillCatalog` 생성 → `BarView`, `SkillCastEffectSpawner(catalog)`, `SkillNetworkEventHandler` 초기화
-  - `SkillCatalogData.Skills` 배열 순서대로 스킬바 슬롯에 장착
-  - `_slotInputHandler`/`_catalogData`가 null이면 `Debug.LogError`로 알리고 중단
+  - `[SerializeField] SkillCatalogData`, `SkillLoadoutData`를 Inspector에서 연결
+  - `Initialize(EventBus, Transform)`에서 `SkillCatalog` 생성 → `BarView`, `SkillCastEffectSpawner`, `SkillNetworkEventHandler` 초기화
+  - `SkillLoadoutData` 기반 로드아웃으로 스킬바 슬롯에 장착
+  - `SwapSkill(slotIndex, skillId)`: 런타임 스킬 교체 API
+  - `HandleSlotClicked`: `SkillRotator`를 통한 슬롯 클릭 시 순환 교체
+
+- `SkillIconAdapter` — `ISkillIconPort` 구현, `SkillCatalog`에서 아이콘 조회
+- `SkillEffectAdapter` — `ISkillEffectPort` 구현, `SkillCatalog`에서 이펙트/사운드 조회
 
 ### Application
 
@@ -64,7 +68,16 @@ SlotInputHandler
   - `CooldownRule`로 시전 가능 여부 검사
   - `Delivery.Deliver()` 결과에서 `DeliveryType`을 직접 가져온다
   - `SkillCastNetworkData`를 만들어 `ISkillNetworkCommandPort`로 전송
-  - `_network`는 생성자에서 필수 주입한다
+
+- `EquipSkillUseCase`
+  - 스킬바 슬롯에 스킬을 장착한다
+  - 기존 스킬의 쿨다운을 `CooldownTracker`에서 제거한다
+  - `SkillEquippedEvent`를 발행한다
+  - `BuildFromLoadout()`: 로드아웃 기반 초기 스킬바 조립
+
+- `SkillRotator`
+  - 카탈로그 스킬 ID 목록을 순환하며 다음 스킬을 반환한다
+  - 현재 슬롯에 장착된 스킬을 건너뛴다
 
 - `SkillNetworkEventHandler`
   - `SkillCastNetworkData`를 받아 이벤트 버스로 변환한다
@@ -75,29 +88,28 @@ SlotInputHandler
     - `SelfRequestedEvent` (SkillId 포함)
   - 마지막에 `SkillCastedEvent`를 발행한다
 
+- `Ports/ISkillNetworkCommandPort`, `ISkillNetworkCallbackPort` — 네트워크 송수신 포트
+- `Ports/ISkillLoadoutRepository` — 로드아웃 저장/로드 포트
+
 ### Infrastructure
 
-- `SkillNetworkAdapter`
-  - `MonoBehaviourPun`
-  - `SkillCastNetworkData`를 개별 파라미터로 분해해 `RpcTarget.All`로 전송한다
-  - RPC 수신 시 개별 파라미터를 다시 `SkillCastNetworkData`로 복원해 콜백으로 넘긴다
+- `SkillNetworkAdapter` (`MonoBehaviourPun`) — RPC 송수신
+- `SkillLoadoutRepository` — `SkillLoadoutData` SO 기반 로드아웃 로드
+- `SkillLoadoutData` (SO) — Inspector에서 슬롯별 스킬 ID 설정
 
 ### Presentation
+
+- `ISkillIconPort` — 스킬 아이콘(Sprite) 조회 포트 (Unity 타입이므로 Presentation에 배치)
+- `ISkillEffectPort` — 스킬 이펙트(GameObject)/사운드(AudioClip) 조회 포트
 
 - `SlotInputHandler`
   - 입력 액션을 바인딩하고 시전 요청을 보낸다
   - `SetPlayerTransform()`으로 전달받은 플레이어 트랜스폼의 위치/전방을 시전 origin으로 사용한다
-  - 플레이어 트랜스폼이 null이면 자기 자신의 `transform`을 fallback으로 사용한다
 
-- `BarView`
-  - `SkillEquippedEvent`, `SkillCastedEvent`를 구독한다
-  - 현재는 `SkillCastedEvent.SlotIndex`를 기준으로 해당 슬롯 쿨다운만 시작한다
-
-- `SkillCastEffectSpawner`
-  - `ZoneRequestedEvent`, `TargetedRequestedEvent`, `SelfRequestedEvent`를 구독한다
-  - 이벤트의 `SkillId`로 `SkillCatalog.GetData()`를 조회해 스킬별 이펙트 프리팹을 사용한다
-  - `SkillData`에 `CastSound`가 있으면 `AudioSource.PlayClipAtPoint()`로 재생한다
-  - `SkillData`에 이펙트가 없으면 fallback 프리팹을 사용한다 (Inspector 또는 Resources)
+- `BarView` — `SkillEquippedEvent`, `SkillCastedEvent` 구독, 슬롯 쿨다운/아이콘 표시
+- `SlotView` — 개별 슬롯 UI 렌더링
+- `SkillCastEffectSpawner` — 이벤트의 SkillId로 이펙트 프리팹/사운드 재생
+- `SelfCastEffect`, `TargetedCastEffect` — 캐스트 이펙트 연출
 
 ## 네트워크 데이터
 
@@ -147,19 +159,9 @@ RPC 전송 시 Infrastructure에서 개별 float로 분해하고, 수신 시 다
 
 ## 피처 간 의존
 
-- `Projectile`
-  - `ProjectileRequestedEvent`
-  - `ProjectileSpec`
-  - `ProjectileSpawner`
-
-- `Zone`
-  - `ZoneView`
-
-- `Shared`
-  - `EventBus`
-  - `DomainEntityId`
-  - `Result`
-  - `Float3`
+- `Projectile`: `ProjectileRequestedEvent`, `ProjectileSpec`
+- `Zone`: `ZoneRequestedEvent` (Skill이 발행, Zone이 구독)
+- `Shared`: `EventBus`, `DomainEntityId`, `Result`, `Float3`
 
 ## 현재 문서 범위
 

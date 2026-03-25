@@ -168,6 +168,7 @@ MonoBehaviour:
   _inputHandler: {fileID: 1301895531840824734}
   _playerInput: {fileID: 0}
   _view: {fileID: 5394696662982802112}
+  _healthHud: {fileID: 0}
 --- !u!114 &5394696662982802112
 MonoBehaviour:
   m_ObjectHideFlags: 0

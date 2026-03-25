@@ -55,19 +55,23 @@ Update Loop (ProjectilePhysicsAdapter):
 Skill Feature의 RPC로 원격 `ProjectileRequestedEvent`가 발행되면
 각 클라이언트가 독립적으로 로컬 투사체를 스폰한다 (시뮬레이션 동기화 방식).
 
+## 레이어 메모
+
+- **Domain**: `Projectile`, `ProjectileSpec`, `TrajectoryInput`, `TrajectoryType`/`HitType` enum, `ITrajectory`/`IHitResolver`/`IHitResult` 인터페이스, `TrajectoryFactory`, `HitResolverFactory`, 각 전략 구현체
+- **Application**: `SpawnProjectileUseCase`, `IProjectilePhysicsPort` (Application/Ports), `ProjectileRequestedEvent`, `ProjectileHitEvent`, `ProjectileSpawnedEvent`
+- **Infrastructure**: `ProjectilePhysicsAdapter` (MonoBehaviour, 물리 이동/충돌 처리)
+- **Presentation**: `ProjectileView` (색상, 수명 관리)
+- **Bootstrap**: `ProjectileSpawner` (이벤트 구독 → 프리팹 스폰 → UseCase 실행)
+
 ## Bootstrap
 
-- **ProjectileSpawner** (MonoBehaviour): `ProjectileRequestedEvent` 구독 → 프리팹 로드/스폰
-  - 프리팹: `Fireball`, `IceLance`, `ArcBolt`, `HomingOrb` (Resources 폴더)
-  - Initialize(eventBus, publisher) — spawn origin은 이벤트의 Position/Direction 사용
+- **ProjectileSpawner** (MonoBehaviour): `ProjectileRequestedEvent` 구독 → 프리팹 스폰
+  - 프리팹: `Fireball`, `IceLance`, `ArcBolt`, `HomingOrb` (SerializeField)
+  - `Initialize()`에서 `SpawnProjectileUseCase`를 한 번 생성
+  - 이벤트마다 프리팹 인스턴스의 `ProjectilePhysicsAdapter`를 `Execute()`에 전달
 
 ## 피처 간 의존
 
 - **Skill Feature에 의해 트리거됨**: `ProjectileRequestedEvent`로 연결
-- **Shared**: EventBus, Float3, DomainEntityId
-
-## 참고: SpawnProjectileUseCase
-
-`SpawnProjectileUseCase`는 별도의 UseCase로 존재하지만,
-현재 실제 흐름에서는 `ProjectileSpawner`가 직접 도메인 객체를 생성하고 어댑터를 호출한다.
-향후 UseCase 경유로 리팩토링 가능.
+- **Combat**: `DamageType` (Domain)
+- **Shared**: EventBus, Float3, DomainEntityId, IClockPort

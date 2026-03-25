@@ -8,6 +8,8 @@
 - 로컬 입력 → 이동/점프 처리
 - 위치/회전 네트워크 동기화
 - 로컬/원격 플레이어 분기 초기화
+- Combat Feature의 데미지 파이프라인 참여 (ICombatTargetProvider 구현)
+- 플레이어 HP 이벤트 발행 (PlayerHealthChangedEvent, PlayerDiedEvent)
 
 ## 이벤트 흐름
 
@@ -54,14 +56,29 @@ PlayerNetworkAdapter.RPC_Jump (점프 수신)
   - 로컬: EventBus + PlayerNetworkEventHandler + PlayerUseCases + InputHandler + View 초기화
   - 원격: Input/Motor 비활성화, View만 초기화
 
+## 레이어 메모
+
+- **Domain**: `Player`, `PlayerSpec` (Defense 필드 포함), `MovementRule`
+- **Application**: `PlayerUseCases`, `PlayerNetworkEventHandler`, `PlayerDamageEventHandler`, 이벤트(`PlayerMovedEvent`, `PlayerJumpedEvent`, `PlayerHealthChangedEvent`, `PlayerDiedEvent`, `PlayerRespawnedEvent`, `PlayerSpawnedEvent`), 포트(`IPlayerMotorPort`, `IPlayerNetworkCommandPort`, `IPlayerNetworkCallbackPort`)
+- **Infrastructure**: `PlayerMotorAdapter`, `PlayerNetworkAdapter`, `PlayerCombatTargetProvider` (Combat의 `ICombatTargetProvider` 구현)
+- **Presentation**: `PlayerInputHandler`, `PlayerView`, `PlayerHealthHudView`
+- **Bootstrap**: `PlayerBootstrap` (씬 레벨, Photon Instantiate), `PlayerSetup` (프리팹 레벨, 로컬/원격 분기 초기화)
+
 ## 도메인 물리
 
 `Player` 엔티티가 이동 계산을 도메인 레벨에서 수행한다:
 - `MovementRule`: 속도 선택 (걷기/달리기), 수평 이동 델타, 중력 적용
-- `PlayerSpec`: walkSpeed, sprintMultiplier, jumpForce, gravity
+- `PlayerSpec`: walkSpeed, sprintMultiplier, jumpForce, gravity, defense
 - 실제 CharacterController 이동은 `PlayerMotorAdapter`(Infrastructure)가 담당
+
+## Combat 연동
+
+- `PlayerCombatTargetProvider` (Infrastructure): Player 도메인을 Combat의 `ICombatTargetProvider`에 연결
+- `PlayerDamageEventHandler` (Application): `DamageAppliedEvent` 구독 → `PlayerHealthChangedEvent`/`PlayerDiedEvent` 발행
+- `PlayerSetup`에서 `CombatTargetProvider`를 생성하고, `PlayerBootstrap`에서 `CombatBootstrap.RegisterTarget()`으로 등록
 
 ## 피처 간 의존
 
-- **Skill Feature가 이 프리팹을 사용**: `SkillSetup`과 `SkillNetworkAdapter`가 같은 PlayerCharacter 프리팹에 부착됨
+- **Skill**: `SkillSetup`과 `SkillNetworkAdapter`가 같은 PlayerCharacter 프리팹에 부착됨
+- **Combat**: `ICombatTargetProvider` (구현), `DamageAppliedEvent` (구독)
 - **Shared**: EventBus, Float3, DomainEntityId, IClockPort
