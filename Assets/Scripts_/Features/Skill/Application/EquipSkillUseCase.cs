@@ -13,7 +13,7 @@ namespace Features.Skill.Application
         private readonly IEventPublisher _eventBus;
         private readonly CooldownTracker _cooldownTracker;
 
-        public EquipSkillUseCase(IEventPublisher eventBus, CooldownTracker cooldownTracker = null)
+        public EquipSkillUseCase(IEventPublisher eventBus, CooldownTracker cooldownTracker)
         {
             _eventBus = eventBus;
             _cooldownTracker = cooldownTracker;
@@ -26,7 +26,7 @@ namespace Features.Skill.Application
 
             var oldSkill = bar.GetSkill(slotIndex);
             if (oldSkill != null)
-                _cooldownTracker?.ClearCooldown(oldSkill.Id);
+                _cooldownTracker.ClearCooldown(oldSkill.Id);
 
             bar.Equip(slotIndex, skill);
             _eventBus.Publish(new SkillEquippedEvent(slotIndex, skill.Id, skill.Spec));

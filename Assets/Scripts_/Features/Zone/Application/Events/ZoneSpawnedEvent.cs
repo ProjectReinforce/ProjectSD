@@ -4,6 +4,7 @@ using Shared.Math;
 
 namespace Features.Zone.Application.Events
 {
+    /// <summary>Published when a zone effect is spawned in the world.</summary>
     public readonly struct ZoneSpawnedEvent
     {
         public ZoneSpawnedEvent(

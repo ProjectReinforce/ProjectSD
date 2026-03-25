@@ -12,23 +12,22 @@ namespace Features.Projectile.Application
 {
     public sealed class SpawnProjectileUseCase
     {
-        private readonly IProjectilePhysicsPort _physics;
         private readonly IClockPort _clock;
         private readonly IEventPublisher _eventBus;
 
-        public SpawnProjectileUseCase(IProjectilePhysicsPort physics, IClockPort clock, IEventPublisher eventBus)
+        public SpawnProjectileUseCase(IClockPort clock, IEventPublisher eventBus)
         {
-            _physics = physics;
             _clock = clock;
             _eventBus = eventBus;
         }
 
-        public Result Execute(DomainEntityId ownerId, ProjectileSpec spec)
+        public Result Execute(IProjectilePhysicsPort physics, DomainEntityId ownerId, ProjectileSpec spec)
         {
-            return Execute(ownerId, spec, 0f, DamageType.Magical);
+            return Execute(physics, ownerId, spec, 0f, DamageType.Magical);
         }
 
         public Result Execute(
+            IProjectilePhysicsPort physics,
             DomainEntityId ownerId,
             ProjectileSpec spec,
             float baseDamage,
@@ -45,7 +44,7 @@ namespace Features.Projectile.Application
             var trajectory = TrajectoryFactory.Create(spec.TrajectoryType);
             var hitResolver = HitResolverFactory.Create(spec.HitType);
 
-            _physics.Spawn(projectile, trajectory, hitResolver);
+            physics.Spawn(projectile, trajectory, hitResolver);
             _eventBus.Publish(new ProjectileSpawnedEvent(projectile.Id, ownerId));
             return Result.Success();
         }

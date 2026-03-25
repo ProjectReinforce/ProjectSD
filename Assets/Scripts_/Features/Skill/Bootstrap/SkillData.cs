@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Features.Skill.Bootstrap
 {
+    /// <summary>ScriptableObject that defines a single skill's inspector configuration.</summary>
     [CreateAssetMenu(fileName = "NewSkill", menuName = "Skill/SkillData")]
     public sealed class SkillData : ScriptableObject
     {

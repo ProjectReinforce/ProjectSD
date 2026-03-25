@@ -21,7 +21,7 @@ Never do these:
 * Dual-path damage — do not apply damage twice for a single event (e.g. projectile hit). One UseCase calculates damage; other features react via result events.
 * Port on provider instead of consumer — when feature A calls feature B, define the port interface in A's Application. Implementation goes in B's Infrastructure. (Dependency Inversion Principle)
 * Bootstrap containing selection/cycling logic — Bootstrap only wires. Skill rotation, next-target selection, etc. must be extracted to a dedicated Application-layer class.
-* Unity types in Application — do not put Sprite, GameObject, AudioClip, Color, etc. in Application-layer events, ports, or use cases. If a port needs Unity types, it belongs in Presentation, not Application/Ports.
+* Unity types in Application — do not put Sprite, GameObject, AudioClip, Color, Debug.Log/LogWarning/LogError, or any UnityEngine API in Application-layer events, ports, or use cases. If a port needs Unity types, it belongs in Presentation, not Application/Ports. Logging belongs in Bootstrap/Infrastructure.
 
 ---
 

@@ -33,6 +33,13 @@ Allowed:
 * Network port interfaces
 * Domain event structs (e.g. LobbyUpdatedEvent)
 
+Not allowed:
+
+* Unity API (including UnityEngine.Debug.Log/LogWarning/LogError)
+* Photon API
+* MonoBehaviour
+* Direct file IO
+
 Rules:
 
 * UseCases coordinate domain logic.
@@ -85,6 +92,13 @@ Allowed:
 * Object creation
 * Dependency wiring
 * Initialization order
+* Event subscription (delegate handling to Application)
+
+Not allowed:
+
+* Event handling logic (subscribe here, handle in Application EventHandler)
+* Business logic (position calculation, damage formula, selection logic)
+* Domain entity creation (use UseCase instead)
 
 Rules:
 

@@ -1,8 +1,6 @@
 using Features.Skill.Application.Events;
 using Features.Zone.Application;
-using Features.Zone.Domain;
 using Shared.EventBus;
-using Shared.Math;
 using Shared.Time;
 using UnityEngine;
 
@@ -47,18 +45,10 @@ namespace Features.Zone.Bootstrap
             }
 
             var result = _spawnZoneUseCase.Execute(
-                e.CasterId,
-                CalculateSpawnPosition(e.Position, e.Direction, e.Spec.Range),
-                new ZoneSpec(e.Spec.Range, e.Spec.Cooldown, ZoneAnchorType.World, ZoneHitType.Tick)
-            );
+                e.CasterId, e.Position, e.Direction, e.Spec.Range, e.Spec.Cooldown);
 
             if (result.IsFailure)
                 Debug.LogError($"[ZoneSetup] Spawn failed: {result.Error}", this);
-        }
-
-        private static Float3 CalculateSpawnPosition(Float3 position, Float3 direction, float range)
-        {
-            return position + direction.Normalized * (range * 0.5f);
         }
     }
 }

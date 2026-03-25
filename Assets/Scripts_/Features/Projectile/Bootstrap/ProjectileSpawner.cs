@@ -39,6 +39,7 @@ namespace Features.Projectile.Bootstrap
         {
             _eventBus = eventBus;
             _publisher = publisher;
+            _spawnUseCase = new SpawnProjectileUseCase(new ClockAdapter(), _publisher);
 
             _eventBus.Subscribe(
                 this,
@@ -66,15 +67,19 @@ namespace Features.Projectile.Bootstrap
             var go = Instantiate(prefab, pos + dir, rotation, _spawnRoot);
 
             var physicsAdapter = go.GetComponent<ProjectilePhysicsAdapter>();
-            if (physicsAdapter != null)
+            if (physicsAdapter == null)
             {
-                physicsAdapter.Initialize(_publisher);
-                _spawnUseCase = new SpawnProjectileUseCase(physicsAdapter, new ClockAdapter(), _publisher);
-                _spawnUseCase.Execute(e.OwnerId, e.Spec, e.BaseDamage, e.DamageType);
+                Debug.LogError("[ProjectileSpawner] ProjectilePhysicsAdapter missing on prefab.", go);
+                return;
             }
 
+            physicsAdapter.Initialize(_publisher);
+            _spawnUseCase.Execute(physicsAdapter, e.OwnerId, e.Spec, e.BaseDamage, e.DamageType);
+
             var view = go.GetComponent<ProjectileView>();
-            if (view != null)
+            if (view == null)
+                Debug.LogWarning("[ProjectileSpawner] ProjectileView missing on prefab.", go);
+            else
                 view.SetColor(GetColor(e.Spec.TrajectoryType));
 
             Debug.Log($"[ProjectileSpawner] Spawned: {go.name}");

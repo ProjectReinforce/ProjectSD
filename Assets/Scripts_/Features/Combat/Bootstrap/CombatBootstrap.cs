@@ -48,7 +48,7 @@ namespace Features.Combat.Bootstrap
 
             _targetAdapter.Initialize();
             _applyDamage = new ApplyDamageUseCase(_targetAdapter, _eventBus, networkPort ?? NoOpCombatNetworkPort.Instance);
-            _eventHandler = new CombatNetworkEventHandler(_applyDamage, _eventBus);
+            _eventHandler = new CombatNetworkEventHandler(_applyDamage);
             _eventBus.Subscribe(this, new System.Action<ProjectileHitEvent>(OnProjectileHit));
 
             for (var i = 0; i < _targetViews.Length; i++)
@@ -83,7 +83,11 @@ namespace Features.Combat.Bootstrap
 
         private void OnProjectileHit(ProjectileHitEvent e)
         {
-            _eventHandler?.HandleProjectileHit(e);
+            if (_eventHandler == null) return;
+
+            var result = _eventHandler.HandleProjectileHit(e);
+            if (result.IsFailure)
+                Debug.LogWarning($"[CombatBootstrap] Damage failed: {result.Error}");
         }
 
         public void RegisterTarget(DomainEntityId targetId, ICombatTargetProvider provider)

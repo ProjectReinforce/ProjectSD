@@ -21,12 +21,14 @@ namespace Features.Zone.Application
             _eventBus = eventBus;
         }
 
-        public Result Execute(DomainEntityId casterId, Float3 position, ZoneSpec spec)
+        public Result Execute(DomainEntityId casterId, Float3 position, Float3 direction, float range, float cooldown)
         {
-            var zone = new Domain.Zone(_clock.NewId(), casterId, position, spec);
+            var spawnPos = position + direction.Normalized * (range * 0.5f);
+            var spec = new ZoneSpec(range, cooldown, ZoneAnchorType.World, ZoneHitType.Tick);
+            var id = _clock.NewId();
 
-            _zoneEffect.SpawnZone(position, spec.Radius, spec.Duration);
-            _eventBus.Publish(new ZoneSpawnedEvent(zone.Id, casterId, position, spec));
+            _zoneEffect.SpawnZone(spawnPos, spec.Radius, spec.Duration);
+            _eventBus.Publish(new ZoneSpawnedEvent(id, casterId, spawnPos, spec));
             return Result.Success();
         }
     }
