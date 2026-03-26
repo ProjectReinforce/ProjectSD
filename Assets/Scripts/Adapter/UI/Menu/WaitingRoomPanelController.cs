@@ -8,7 +8,23 @@ using UnityEngine.UI;
 
 namespace Adapter.UI.Menu
 {
-    public class WaitingRoomPanelController : MonoBehaviourPunCallbacks
+    /// <summary>
+    /// 대기실(Lobby) 패널 컨트롤러.
+    ///
+    /// 변경 이력:
+    ///   [1] 뒤로가기 → 방 리스트 패널로 이동 (기존: 타이틀)
+    ///   [2] 캐릭터 셀렉트 버튼 → CharacterSelectUI 팝업 열기 → 확인 시 적용
+    ///   [3] 준비 상태에서 캐릭터 셀렉트 차단 (버튼 비활성 + 팝업 강제 닫기)
+    ///
+    /// 설계 원칙:
+    ///   SRP — 대기실 UI 흐름(준비/시작/카운트다운)만 담당.
+    ///         캐릭터 선택의 데이터 바인딩은 CharacterSelectUI에 위임.
+    ///   DIP — ICharacterSelectCallback을 구현하여 CharacterSelectUI로부터
+    ///         역방향 의존 없이 선택 결과를 받는다.
+    ///   OCP — 새로운 캐릭터가 추가되어도 이 클래스는 변경되지 않는다.
+    ///         CharacterDatabase SO와 CharacterSelectUI만 수정하면 된다.
+    /// </summary>
+    public class WaitingRoomPanelController : MonoBehaviourPunCallbacks, ICharacterSelectCallback
     {
         private const string CountdownActiveKey = "startCountdownActive";
         private const string CountdownEndTimeKey = "startCountdownEndTime";
@@ -25,8 +41,18 @@ namespace Adapter.UI.Menu
         [SerializeField] private Button startButton;
         [SerializeField] private TMP_Text readyStartButtonText;
 
+        [Header("캐릭터 선택")]
+        [Tooltip("캐릭터 셀렉트 팝업을 여는 버튼")]
+        [SerializeField] private Button characterSelectButton;
+        [Tooltip("CharacterSelectUI가 부착된 팝업 패널")]
+        [SerializeField] private CharacterSelectUI characterSelectUI;
+
         private int displayedCountdown = -1;
         private bool isLoadingGameScene;
+
+        // ===================================================================
+        // MonoBehaviour / PunCallbacks 라이프사이클
+        // ===================================================================
 
         public override void OnEnable()
         {
@@ -55,8 +81,21 @@ namespace Adapter.UI.Menu
                     PhotonNetwork.CurrentRoom.IsOpen = true;
                 }
             }
+
             NetworkManager.Instance.PlayersInRoomChanged += HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom += HandleLeftRoom;
+
+            // 캐릭터 선택 팝업 초기 상태: 닫힘
+            if (characterSelectUI != null)
+            {
+                characterSelectUI.Close();
+            }
+
+            // 캐릭터 셀렉트 버튼 리스너 등록
+            if (characterSelectButton != null)
+            {
+                characterSelectButton.onClick.AddListener(OnClickCharacterSelect);
+            }
 
             RefreshRoomUi();
             RefreshRoleUi();
@@ -72,12 +111,22 @@ namespace Adapter.UI.Menu
 
             NetworkManager.Instance.PlayersInRoomChanged -= HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom -= HandleLeftRoom;
+
+            // 캐릭터 셀렉트 버튼 리스너 해제
+            if (characterSelectButton != null)
+            {
+                characterSelectButton.onClick.RemoveListener(OnClickCharacterSelect);
+            }
         }
 
         private void Update()
         {
             UpdateCountdownUiAndStart();
         }
+
+        // ===================================================================
+        // PunCallbacks 오버라이드
+        // ===================================================================
 
         public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
         {
@@ -106,12 +155,56 @@ namespace Adapter.UI.Menu
             UpdateCountdownUiAndStart();
         }
 
-        public void OnSelectCharacter(int characterId)
+        // ===================================================================
+        // ICharacterSelectCallback 구현
+        // ===================================================================
+
+        /// <summary>
+        /// CharacterSelectUI에서 확인 버튼을 눌렀을 때 콜백.
+        /// 네트워크에 캐릭터 ID를 전파하고 UI를 갱신한다.
+        /// </summary>
+        public void OnCharacterConfirmed(int characterId)
         {
             NetworkManager.Instance?.SetLocalCharacter(characterId);
-            SetStateText($"Character changed: {characterId}");
-            Debug.Log($"Character changed: {characterId}");
+            SetStateText($"캐릭터 선택 완료: {characterId}");
+            Debug.Log($"[WaitingRoom] Character confirmed: {characterId}");
+            RefreshRoomUi();
         }
+
+        // ===================================================================
+        // 캐릭터 선택 — 요구사항 [2], [3]
+        // ===================================================================
+
+        /// <summary>
+        /// 캐릭터 셀렉트 버튼 클릭 핸들러.
+        /// 준비 상태가 아닐 때만 팝업을 연다.
+        ///
+        /// 왜 interactable 대신 코드 가드도 넣는가:
+        ///   interactable = false 상태에서도 코드에서 onClick.Invoke()를 호출할 수 있다.
+        ///   방어적 프로그래밍으로 양쪽 모두 막는 것이 안전하다.
+        /// </summary>
+        private void OnClickCharacterSelect()
+        {
+            // [3] 준비 상태에서는 선택 불가
+            if (IsLocalPlayerReady())
+            {
+                SetStateText("준비 상태에서는 캐릭터를 변경할 수 없습니다.");
+                return;
+            }
+
+            if (characterSelectUI == null)
+            {
+                Debug.LogWarning("[WaitingRoom] CharacterSelectUI 참조가 없습니다.");
+                return;
+            }
+
+            characterSelectUI.Open(this); // this = ICharacterSelectCallback
+            SetStateText("캐릭터를 선택하세요.");
+        }
+
+        // ===================================================================
+        // 준비/시작 버튼
+        // ===================================================================
 
         public void OnToggleReady(bool ready)
         {
@@ -122,6 +215,10 @@ namespace Adapter.UI.Menu
 
             NetworkManager.Instance.SetLocalReady(ready);
             SetStateText(ready ? "준비 완료." : "준비 취소.");
+
+            // [3] 준비 상태 변경 시 캐릭터 선택 UI 동기화
+            SyncCharacterSelectWithReadyState(ready);
+
             RefreshRoleUi();
         }
 
@@ -146,11 +243,66 @@ namespace Adapter.UI.Menu
             OnClickReadyOrStart();
         }
 
+        // ===================================================================
+        // 뒤로가기 — 요구사항 [1]
+        // ===================================================================
+
+        /// <summary>
+        /// 뒤로가기 버튼 클릭.
+        ///
+        /// 변경 전: HandleLeftRoom() → ShowTitle()
+        /// 변경 후: HandleLeftRoom() → ShowRoomList()
+        ///
+        /// 왜 ShowRoomList()인가:
+        ///   대기실은 "방 리스트에서 방을 선택해 진입한 곳"이므로,
+        ///   뒤로가기의 자연스러운 목적지는 방 리스트이다.
+        ///   타이틀로 보내면 사용자가 다시 방 리스트까지 2단계를 거쳐야 하므로 UX가 나빠진다.
+        /// </summary>
         public void OnClickLeaveRoom()
         {
             CancelCountdown();
+
+            // 캐릭터 선택 팝업이 열려 있으면 닫기
+            if (characterSelectUI != null && characterSelectUI.IsOpen)
+            {
+                characterSelectUI.Close();
+            }
+
             NetworkManager.Instance?.LeaveRoom();
         }
+
+        // ===================================================================
+        // 준비 상태 ↔ 캐릭터 선택 동기화 — 요구사항 [3]
+        // ===================================================================
+
+        /// <summary>
+        /// 준비 상태가 변경될 때 캐릭터 선택 관련 UI를 동기화한다.
+        ///
+        /// 왜 이 로직을 별도 메서드로 분리하는가:
+        ///   OnToggleReady()는 "준비 상태를 네트워크에 전파"하는 책임이고,
+        ///   이 메서드는 "준비 상태에 따라 UI를 제어"하는 책임이다.
+        ///   SRP에 따라 분리하면 각각 독립적으로 변경 가능하다.
+        ///   (예: 나중에 장비 선택 UI가 추가되어도 여기에 한 줄만 추가하면 됨)
+        /// </summary>
+        private void SyncCharacterSelectWithReadyState(bool isReady)
+        {
+            // 셀렉트 버튼 interactable 제어
+            if (characterSelectButton != null)
+            {
+                characterSelectButton.interactable = !isReady;
+            }
+
+            // 준비 상태 진입 시 열려 있는 선택 팝업 강제 닫기
+            if (isReady && characterSelectUI != null && characterSelectUI.IsOpen)
+            {
+                characterSelectUI.Close();
+                SetStateText("준비 완료 — 캐릭터 선택창이 닫혔습니다.");
+            }
+        }
+
+        // ===================================================================
+        // 이벤트 핸들러
+        // ===================================================================
 
         private void HandlePlayersChanged()
         {
@@ -177,6 +329,11 @@ namespace Adapter.UI.Menu
             }
         }
 
+        /// <summary>
+        /// 방 퇴장 완료 콜백.
+        ///
+        /// [1] 변경: ShowTitle() → ShowRoomList()
+        /// </summary>
         private void HandleLeftRoom()
         {
             CancelCountdown();
@@ -186,17 +343,25 @@ namespace Adapter.UI.Menu
             }
 
             ShowCountdownText(string.Empty);
-            menuSceneManager?.ShowTitle();
+
+            // ★ [1] 방 리스트 패널로 이동 (기존: menuSceneManager?.ShowTitle())
+            menuSceneManager?.ShowRoomList();
         }
+
+        // ===================================================================
+        // UI 갱신
+        // ===================================================================
 
         private void RefreshRoleUi()
         {
+            var isReady = IsLocalPlayerReady();
+
             if (readyToggle != null)
             {
                 readyToggle.interactable = true;
                 if (NetworkManager.Instance != null && PhotonNetwork.InRoom)
                 {
-                    readyToggle.isOn = NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
+                    readyToggle.isOn = isReady;
                 }
             }
 
@@ -208,12 +373,36 @@ namespace Adapter.UI.Menu
 
             if (readyStartButtonText != null)
             {
-                var isReady = NetworkManager.Instance != null &&
-                              PhotonNetwork.InRoom &&
-                              NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
                 readyStartButtonText.text = isReady ? "준비취소" : "준비";
             }
+
+            // [3] 준비 상태에 따라 캐릭터 셀렉트 버튼 interactable 동기화
+            // RefreshRoleUi()는 다른 플레이어의 상태 변경에도 호출되므로,
+            // 여기서도 로컬 플레이어의 준비 상태를 기준으로 버튼을 제어한다.
+            if (characterSelectButton != null)
+            {
+                characterSelectButton.interactable = !isReady;
+            }
         }
+
+        // ===================================================================
+        // 헬퍼
+        // ===================================================================
+
+        /// <summary>
+        /// 로컬 플레이어의 준비 상태를 조회하는 헬퍼.
+        /// 여러 곳에서 반복되는 null 체크를 한곳에 모아 가독성을 높인다.
+        /// </summary>
+        private bool IsLocalPlayerReady()
+        {
+            return NetworkManager.Instance != null
+                   && PhotonNetwork.InRoom
+                   && NetworkManager.Instance.IsPlayerReady(PhotonNetwork.LocalPlayer);
+        }
+
+        // ===================================================================
+        // 카운트다운 (기존 로직 유지)
+        // ===================================================================
 
         private void StartCountdown()
         {
@@ -227,7 +416,6 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 카운트다운 중 외부 입장 차단
             PhotonNetwork.CurrentRoom.IsOpen = false;
 
             var props = new Hashtable
@@ -254,7 +442,6 @@ namespace Adapter.UI.Menu
                 return;
             }
 
-            // 카운트다운 취소 시 다시 입장 허용
             PhotonNetwork.CurrentRoom.IsOpen = true;
 
             var props = new Hashtable
@@ -334,7 +521,6 @@ namespace Adapter.UI.Menu
 
             ShowCountdownText(string.Empty);
 
-            // 모든 클라이언트: 게임 시작 대비 씬 동기화 활성화
             PhotonNetwork.AutomaticallySyncScene = true;
 
             if (!PhotonNetwork.IsMasterClient || isLoadingGameScene)
@@ -351,7 +537,6 @@ namespace Adapter.UI.Menu
             isLoadingGameScene = true;
             CancelCountdown(false);
 
-            // 게임씬 진입 시 로비 목록에서 숨김 (마스터만 방 속성 변경 가능)
             if (PhotonNetwork.CurrentRoom != null)
             {
                 PhotonNetwork.CurrentRoom.IsVisible = false;
@@ -375,6 +560,10 @@ namespace Adapter.UI.Menu
                 countdownText.gameObject.SetActive(shouldShow);
             }
         }
+
+        // ===================================================================
+        // 방 정보 UI (기존 로직 유지)
+        // ===================================================================
 
         private void RefreshRoomUi()
         {
@@ -432,6 +621,10 @@ namespace Adapter.UI.Menu
         {
             OnClickReadyOrStart();
         }
+
+        // ===================================================================
+        // UI 자동 생성 (기존 로직 유지)
+        // ===================================================================
 
         private void EnsureUiReferences()
         {
