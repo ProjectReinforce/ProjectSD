@@ -38,7 +38,7 @@ namespace SwDreams.Adapter.Entity
         // 호스트가 주기적으로 전송하는 위치로 부드럽게 보정
         private Vector2 networkTargetPos;
         private bool hasNetworkTarget;
-        [SerializeField] private float networkLerpSpeed = 10f;
+        private bool isFirstNetworkPos = true;  // 첫 수신 시 스냅용
 
         [Header("Anti Overlap")]
         [SerializeField] private bool resolveEnemyOverlap = true;
@@ -76,6 +76,7 @@ namespace SwDreams.Adapter.Entity
             hasLifetime = false;
             aliveTimer = 0f;
             hasNetworkTarget = false;
+            isFirstNetworkPos = true;
 
             // EnemyType에 따라 전략 자동 선택
             movementStrategy = CreateStrategy(enemyRef.EnemyType);
@@ -111,8 +112,8 @@ namespace SwDreams.Adapter.Entity
                 Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
                 return;
 
-            // Swarm 수명 체크
-            if (hasLifetime)
+            // Swarm 수명 체크 (호스트만 — ForceReturn은 호스트 권한)
+            if (hasLifetime && PhotonNetwork.IsMasterClient)
             {
                 aliveTimer += Time.deltaTime;
                 if (aliveTimer >= lifetime)
@@ -121,6 +122,23 @@ namespace SwDreams.Adapter.Entity
                     return;
                 }
             }
+
+            // 클라이언트: 호스트에서 수신한 위치로 보간만 수행
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                if (hasNetworkTarget)
+                {
+                    // 적 이동속도의 1.5배로 추적 (호스트 위치를 따라잡기 위해 약간 빠르게)
+                    float catchUpSpeed = enemy.MoveSpeed * 1.5f;
+                    transform.position = Vector2.MoveTowards(
+                        transform.position,
+                        networkTargetPos,
+                        catchUpSpeed * Time.deltaTime);
+                }
+                return;
+            }
+
+            // ===== 이하 호스트만 실행 =====
 
             // 슬로우 타이머
             if (slowTimer > 0f)
@@ -133,7 +151,6 @@ namespace SwDreams.Adapter.Entity
             float moveSpeed = enemy.MoveSpeed * slowMul;
             Transform target = FindClosestPlayer();
 
-            // 이동 전략 실행 (호스트/클라이언트 모두 — 클라이언트는 예측용)
             if (movementStrategy != null)
             {
                 if (target != null || movementStrategy is SwarmMovement)
@@ -141,20 +158,12 @@ namespace SwDreams.Adapter.Entity
                     movementStrategy.UpdateMovement(transform, target, moveSpeed);
                 }
             }
-
-            // 클라이언트: 호스트 위치로 부드럽게 보정
-            if (!PhotonNetwork.IsMasterClient && hasNetworkTarget)
-            {
-                transform.position = Vector2.Lerp(
-                    transform.position,
-                    networkTargetPos,
-                    networkLerpSpeed * Time.deltaTime);
-            }
         }
 
         private void LateUpdate()
         {
             if (!resolveEnemyOverlap) return;
+            if (!PhotonNetwork.IsMasterClient) return; // 클라이언트는 네트워크 보간만
             if (enemy == null || !enemy.IsAlive) return;
 
             if (Manager.GameManager.Instance != null &&
@@ -191,12 +200,19 @@ namespace SwDreams.Adapter.Entity
 
         /// <summary>
         /// 호스트 위치 수신. SpawnManager.RPC_SyncEnemyPositions에서 호출.
-        /// 클라이언트에서만 의미 있음 — Update에서 이 위치로 Lerp 보정.
+        /// 클라이언트에서만 의미 있음 — Update에서 이 위치로 MoveTowards 보정.
         /// </summary>
         public void SetNetworkPosition(Vector2 pos)
         {
             networkTargetPos = pos;
             hasNetworkTarget = true;
+
+            // 첫 수신 시 즉시 스냅 (스폰 직후 적이 멈춰보이는 현상 방지)
+            if (isFirstNetworkPos)
+            {
+                isFirstNetworkPos = false;
+                transform.position = pos;
+            }
         }
 
         private void ResolveEnemyOverlap()

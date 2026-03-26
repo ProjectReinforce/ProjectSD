@@ -104,3 +104,7 @@ InitTestScene*.unity*
 ._*
 .Spotlight-V100
 .Trashes
+
+# Visual Studio .slnx 파일 무시
+*.slnx
+
