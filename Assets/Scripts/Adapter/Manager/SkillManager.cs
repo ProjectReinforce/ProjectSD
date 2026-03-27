@@ -52,6 +52,10 @@ namespace SwDreams.Adapter.Skill
         // 빈 오브젝트에 Skill 컴포넌트만 붙은 프리팹.
         // SkillEffect는 SkillEffectFactory가 동적 추가.
 
+        [SerializeField] private GameObject executorPrefab;
+        // 빈 오브젝트에 SkillExecutor 컴포넌트만 붙은 프리팹.
+        // PoolManager에서 풀링. SkillEffectFactory에 전달.
+
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
         private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
@@ -87,7 +91,7 @@ namespace SwDreams.Adapter.Skill
         private void Awake()
         {
             effectFactory = new SkillEffectFactory();
-            effectFactory.RegisterDefaults();
+            effectFactory.RegisterDefaults(executorPrefab);
             cachedStats = GetComponentInParent<PlayerStats>();
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Adapter.Manager;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -37,6 +38,9 @@ namespace SwDreams.Adapter.Skill
 
         private readonly Dictionary<SkillEffectType, EffectCreator> creators
             = new Dictionary<SkillEffectType, EffectCreator>();
+
+        // [Step 4-3] Executor 프리팹. SkillManager에서 주입.
+        private GameObject executorPrefab;
 
         // ===== 등록 =====
 
@@ -108,31 +112,36 @@ namespace SwDreams.Adapter.Skill
         /// <summary>
         /// 기본 이펙트 타입들을 등록.
         /// SkillManager.Awake()에서 호출.
-        ///
-        /// Phase 5 확장 시 이 메서드에 Register() 추가:
-        /// - AreaEffect
-        /// - OrbitalEffect
-        /// - PlacedEffect
-        /// - DebuffEffect
         /// </summary>
-        public void RegisterDefaults()
+        /// <param name="executorPrefab">SkillExecutor 프리팹. SkillManager에서 전달.</param>
+        public void RegisterDefaults(GameObject executorPrefab)
         {
-            // ── Phase 2~4: Projectile ──
+            this.executorPrefab = executorPrefab;
+
+            if (executorPrefab != null)
+                PoolManager.Instance?.Prewarm(executorPrefab, 5);
+
+            // ── Phase 2~4: Projectile ── [Step 4-3] Executor 경유로 변경
             Register(SkillEffectType.Projectile, (slotObj, data) =>
             {
                 var effect = slotObj.AddComponent<ProjectileEffect>();
-                if (data.projectilePrefab != null)
-                    effect.SetProjectilePrefab(data.projectilePrefab);
-                else
+                var spawner = new ProjectileSpawner(data.projectilePrefab);
+                spawner.Prewarm(data);
+                effect.Initialize(executorPrefab, spawner);
+                if (data.projectilePrefab == null)
                     Debug.LogWarning($"[SkillEffectFactory] {data.skillName}: projectilePrefab 미설정!");
                 return effect;
             });
 
-            // ── Phase 5: Area (장판형) ──
+            // ── Phase 5: Area (장판형) ── [Step 4-4] Executor 경유로 변경
             Register(SkillEffectType.Area, (slotObj, data) =>
             {
                 var effect = slotObj.AddComponent<AreaEffect>();
-                effect.Initialize(data);
+                var spawner = new AreaSpawner(data.effectPrefab, data.maxInstances);
+                spawner.Prewarm(data);
+                effect.Initialize(executorPrefab, spawner);
+                if (data.effectPrefab == null)
+                    Debug.LogWarning($"[SkillEffectFactory] {data.skillName}: effectPrefab 미설정!");
                 return effect;
             });
 

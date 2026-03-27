@@ -63,6 +63,16 @@ namespace SwDreams.Editor
             // ===== 액티브 스킬 타입별 필드 =====
             if (skillType == SkillType.Active)
             {
+                // 발사 모드 (Executor)
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("발사 모드 (Executor)", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("firingMode"));
+
+                var firingMode = (SwDreams.Domain.ValueObjects.FiringMode)
+                    serializedObject.FindProperty("firingMode").enumValueIndex;
+                if (firingMode == SwDreams.Domain.ValueObjects.FiringMode.DelayedBurst)
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("burstDelay"));
+
                 // 투사체 전용
                 if (effectType == SkillEffectType.Projectile)
                 {

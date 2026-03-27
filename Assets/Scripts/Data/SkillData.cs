@@ -72,6 +72,12 @@ namespace SwDreams.Data
         public int[] damagePerLevel = { 15, 18, 22, 26, 31, 37, 45 };
         public float[] cooldownPerLevel = { 1.5f, 1.4f, 1.3f, 1.2f, 1.1f, 1.0f, 0.9f };
 
+        [Header("발사 모드 (Executor)")]
+        [Tooltip("Executor 발사 패턴. Simultaneous=동시, DelayedBurst=시간차, TwoPhase=2단계, Single=1개")]
+        public FiringMode firingMode = FiringMode.SimultaneousSpread;
+        [Tooltip("DelayedBurst 모드에서 각 발사 간 딜레이 (초)")]
+        public float burstDelay = 0.1f;
+
         [Header("패시브 전용")]
         public PassiveBonusType bonusType;
         public float bonusPerLevel = 0f;

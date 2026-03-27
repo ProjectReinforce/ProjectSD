@@ -337,7 +337,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de7c1983c212a2c45bae77a0a63fb653, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Skill.SkillManager
-  skillSlotPrefab: {fileID: 0}
+  skillSlotPrefab: {fileID: 8561853373761582339, guid: 0d05060c1451c7341842c5b5076238ef, type: 3}
+  executorPrefab: {fileID: 5000548785752676140, guid: a1f1595e21133004e8b15626db2c4fe3, type: 3}
 --- !u!114 &8593987351426206606
 MonoBehaviour:
   m_ObjectHideFlags: 0

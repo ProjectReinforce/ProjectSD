@@ -23,6 +23,8 @@ MonoBehaviour:
   damagePerLevel: 28000000
   cooldownPerLevel:
   - 1.28
+  firingMode: 0
+  burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 5eab93aac1be8c2468b53d9003dc0e88, type: 3}
@@ -36,7 +38,7 @@ MonoBehaviour:
   trajectoryType: 1
   waveAmplitude: 0.8
   waveFrequency: 5
-  homingRotateSpeed: 150
+  homingRotateSpeed: 300
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0

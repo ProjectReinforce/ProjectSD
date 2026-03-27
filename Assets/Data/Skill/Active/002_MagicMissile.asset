@@ -29,6 +29,8 @@ MonoBehaviour:
   - 1.5
   - 1.38
   - 1.28
+  firingMode: 1
+  burstDelay: 0.2
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 5eab93aac1be8c2468b53d9003dc0e88, type: 3}
@@ -36,13 +38,13 @@ MonoBehaviour:
   projectileCount: 1
   projectileLifetime: 4
   penetrates: 0
-  aimType: 3
-  spreadPattern: 2
+  aimType: 1
+  spreadPattern: 0
   spreadAngle: 15
   trajectoryType: 1
   waveAmplitude: 0.8
   waveFrequency: 5
-  homingRotateSpeed: 100
+  homingRotateSpeed: 200
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0

@@ -29,6 +29,8 @@ MonoBehaviour:
   - 4
   - 3.5
   - 3
+  firingMode: 3
+  burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 275e103cfdd0f00468aa79206ac99773, type: 3}
