@@ -280,6 +280,12 @@ namespace SwDreams.Adapter.Skill
             else
                 ctx.healMultiplier = 1f;
 
+            // ── 치명타 데미지 배율 (필터 적용) ──
+            if (playerStats != null && data.IsStatApplicable(StatType.CritDamage))
+                ctx.critDamageMultiplier = playerStats.CritDamageMultiplier;
+            else
+                ctx.critDamageMultiplier = 1.5f; // PlayerStats.baseCritDamage 기본값
+
             // ── 발사 방향 ──
             ctx.baseDirection = GetBaseDirection(data.aimType);
 
@@ -287,13 +293,24 @@ namespace SwDreams.Adapter.Skill
         }
 
         /// <summary>
-        /// applicableStats 필터 적용된 투사체 개수.
-        /// Single 모드에서는 무조건 1.
+        /// applicableStats 필터 적용된 발사 횟수.
+        /// Single 모드: 무조건 1.
+        /// Orbital: objectCount를 base로 사용 + 패시브 보너스 적용.
+        /// 그 외: projectileCount + 패시브 보너스.
         /// </summary>
         private int GetFilteredProjectileCount()
         {
             if (firingMode == FiringMode.Single)
                 return 1;
+
+            // Orbital은 objectCount를 base로 사용 + 패시브 보너스 적용
+            if (skillData.effectType == SkillEffectType.Orbital)
+            {
+                int orbitalBase = skillData.objectCount;
+                if (playerStats != null)
+                    return playerStats.GetFilteredProjectileCount(orbitalBase, skillData);
+                return orbitalBase;
+            }
 
             int baseCount = skillData.projectileCount;
             if (playerStats != null)

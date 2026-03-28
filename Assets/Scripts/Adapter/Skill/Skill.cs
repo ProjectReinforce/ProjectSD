@@ -2,13 +2,18 @@ using System;
 using UnityEngine;
 using SwDreams.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Skill.TriggerEffects;
+using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Adapter.Skill
 {
     /// <summary>
-    /// 스킬 슬롯. 쿨다운 관리 + SkillEffect에 실행 위임.
+    /// 스킬 슬롯. 쿨다운 관리 + Executor 생성.
     /// 서바이벌라이크 특성상 자동 발동.
-    /// 
+    ///
+    /// [Step 4-6] SkillEffect 레이어 제거.
+    /// Fire() → Executor → Spawner 직통 구조.
+    ///
     /// Player(또는 PlayerStub)의 자식 오브젝트에 부착.
     /// 로컬 플레이어에서만 동작 (원격 플레이어의 스킬은 비활성).
     /// </summary>
@@ -31,33 +36,35 @@ namespace SwDreams.Adapter.Skill
         public event Action<Skill> OnFired;
         public event Action<Skill> OnLevelChanged;
 
-        // 실행 담당
-        private SkillEffect skillEffect;
+        // [Step 4-6] Executor 직접 호출
+        private ISkillSpawner spawner;
+        private GameObject executorPrefab;
 
         // PlayerStats 캐시 (CDR 적용용)
         private PlayerStats cachedStats;
+
+        // TriggerSystem 캐시
+        private SkillTriggerSystem triggerSystem;
 
         // 로컬 플레이어 전용 플래그
         private bool isActive = false;
 
         private void Awake()
         {
-            skillEffect = GetComponent<SkillEffect>();
             cachedStats = GetComponentInParent<PlayerStats>();
         }
 
         /// <summary>
         /// 스킬 활성화. 로컬 플레이어에서만 호출.
         /// </summary>
-        public void Activate(SkillData data, SkillEffect effect = null)
+        public void Activate(SkillData data, ISkillSpawner spawner, GameObject executorPrefab)
         {
             skillData = data;
+            this.spawner = spawner;
+            this.executorPrefab = executorPrefab;
             Level = 1;
             CooldownRemaining = 0f;
             isActive = true;
-
-            if (effect != null)
-                skillEffect = effect;
 
             if (cachedStats == null)
                 cachedStats = GetComponentInParent<PlayerStats>();
@@ -79,7 +86,10 @@ namespace SwDreams.Adapter.Skill
 
         private void Update()
         {
-            if (!isActive || skillData == null || skillEffect == null) return;
+            if (!isActive || skillData == null) return;
+
+            // 패시브/혼돈은 spawner가 없음 — 쿨다운 체크 불필요
+            if (spawner == null) return;
 
             if (GameManager.Instance != null &&
                 GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
@@ -97,13 +107,46 @@ namespace SwDreams.Adapter.Skill
 
         private void Fire()
         {
-            // [Step 1-4] CDR + 혼돈 쿨다운 배율 모두 GetEffectiveCooldown에서 처리
+            // CDR + 혼돈 쿨다운 배율
             float cooldown = CurrentCooldown;
             if (cachedStats != null)
                 cooldown = cachedStats.GetEffectiveCooldown(cooldown);
 
             CooldownRemaining = cooldown;
-            skillEffect.Execute(this);
+
+            // Executor를 풀에서 꺼내서 시작
+            if (executorPrefab == null)
+            {
+                Debug.LogWarning($"[Skill] {skillData.skillName}: executorPrefab 미설정");
+                return;
+            }
+
+            // TriggerSystem lazy cache
+            if (triggerSystem == null)
+                triggerSystem = GetComponent<SkillTriggerSystem>();
+
+            GameObject executorObj = PoolManager.Instance.Get(executorPrefab);
+            var executor = executorObj.GetComponent<SkillExecutor>();
+
+            if (executor == null)
+            {
+                Debug.LogError($"[Skill] {skillData.skillName}: SkillExecutor 컴포넌트 없음");
+                PoolManager.Instance.Return(executorObj);
+                return;
+            }
+
+            executor.Begin(this, spawner, cachedStats, transform.root, triggerSystem);
+
+            // OnFire 트리거
+            if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnFire))
+            {
+                triggerSystem.FireTrigger(TriggerType.OnFire, new Domain.ValueObjects.TriggerContext
+                {
+                    position = transform.root.position,
+                    owner = transform.root
+                });
+            }
+
             OnFired?.Invoke(this);
         }
 

@@ -199,19 +199,8 @@ namespace SwDreams.Adapter.Skill
         /// <summary>적 적중 시 OnHit 트리거 발동. 호스트에서만 호출됨.</summary>
         protected void FireOnHit(Transform target)
         {
-            // [DEBUG] 트리거 진단 — 문제 확인 후 제거
-            if (triggerSystem == null)
-            {
-                Debug.LogWarning($"[Projectile] FireOnHit — triggerSystem이 null");
-                return;
-            }
-            if (!triggerSystem.HasTrigger(TriggerType.OnHit))
-            {
-                Debug.LogWarning($"[Projectile] FireOnHit — OnHit 트리거 없음 (등록된 효과: {triggerSystem.TotalEffectCount}개)");
-                return;
-            }
-
-            Debug.Log($"[Projectile] FireOnHit — 트리거 발동! 효과 수: {triggerSystem.TotalEffectCount}");
+            if (triggerSystem == null) return;
+            if (!triggerSystem.HasTrigger(TriggerType.OnHit)) return;
 
             triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
             {

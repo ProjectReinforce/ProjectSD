@@ -57,6 +57,9 @@ namespace SwDreams.Adapter.Skill
         /// <summary>회복량 배율 (패시브 보너스 적용 완료).</summary>
         public float healMultiplier;
 
+        /// <summary>치명타 데미지 배율 (패시브 보너스 적용 완료).</summary>
+        public float critDamageMultiplier;
+
         // ===== TriggerSystem 참조 =====
 
         /// <summary>스킬의 TriggerSystem. 투사체/장판에 연결용. null 가능.</summary>

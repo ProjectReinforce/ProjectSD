@@ -159,6 +159,7 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("orbitRadius"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("rotationSpeed"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("objectCount"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("areaDuration"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("knockbackForce"));
                 }
 
@@ -167,6 +168,7 @@ namespace SwDreams.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("설치형 전용", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("areaDuration"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRange"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("attackCooldown"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("alwaysCritical"));

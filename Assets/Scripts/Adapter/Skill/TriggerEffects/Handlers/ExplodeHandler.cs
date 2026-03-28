@@ -19,13 +19,7 @@ namespace SwDreams.Adapter.Skill.TriggerEffects
             float damageMultiplier = parameters.secondary > 0f ? parameters.secondary : 1f;
             int damage = Mathf.RoundToInt(context.damage * damageMultiplier);
 
-            Debug.Log($"[ExplodeHandler] 폭발! 반경={radius}, 데미지={damage}, 위치={context.position}");
-
-            if (radius <= 0f)
-            {
-                Debug.LogWarning("[ExplodeHandler] 폭발 반경이 0 이하");
-                return;
-            }
+            if (radius <= 0f) return;
 
             var hits = Physics2D.OverlapCircleAll(context.position, radius);
             foreach (var hit in hits)

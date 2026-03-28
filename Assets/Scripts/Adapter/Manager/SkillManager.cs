@@ -18,10 +18,8 @@ namespace SwDreams.Adapter.Skill
     /// - 선택지 생성 (호스트용)
     /// - 패시브 스킬 → PlayerStats 반영
     ///
-    /// Phase 5 개선사항:
-    /// - [CHANGED] SkillEffectFactory 도입 → AddSkillEffect() switch문 제거
-    /// - [CHANGED] GameplayConfig는 GameManager.Instance.Config에서 접근
-    ///   (SkillManager가 직접 SO를 들고 있지 않음)
+    /// [Step 4-6] SkillSpawnerFactory 도입. SkillEffect 레이어 제거.
+    /// Skill.Fire() → Executor → Spawner 직통 구조.
     /// </summary>
     public class SkillManager : MonoBehaviour
     {
@@ -50,18 +48,17 @@ namespace SwDreams.Adapter.Skill
         [Header("스킬 프리팹")]
         [SerializeField] private GameObject skillSlotPrefab;
         // 빈 오브젝트에 Skill 컴포넌트만 붙은 프리팹.
-        // SkillEffect는 SkillEffectFactory가 동적 추가.
 
         [SerializeField] private GameObject executorPrefab;
         // 빈 오브젝트에 SkillExecutor 컴포넌트만 붙은 프리팹.
-        // PoolManager에서 풀링. SkillEffectFactory에 전달.
+        // PoolManager에서 풀링.
 
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
         private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
 
-        // [CHANGED] 팩토리 인스턴스. Awake()에서 초기화.
-        private SkillEffectFactory effectFactory;
+        // [Step 4-6] SkillSpawnerFactory. Awake()에서 초기화.
+        private SkillSpawnerFactory spawnerFactory;
 
         // [Step 1-3] PlayerStats 캐시. 패시브 modifier 직접 등록용.
         private PlayerStats cachedStats;
@@ -87,11 +84,16 @@ namespace SwDreams.Adapter.Skill
 
         // ===== 초기화 =====
 
-        // [CHANGED] Awake에서 팩토리 초기화
+        // [Step 4-6] Awake에서 팩토리 초기화
         private void Awake()
         {
-            effectFactory = new SkillEffectFactory();
-            effectFactory.RegisterDefaults(executorPrefab);
+            spawnerFactory = new SkillSpawnerFactory();
+            spawnerFactory.RegisterDefaults();
+
+            // Executor 프리팹 프리웜
+            if (executorPrefab != null)
+                PoolManager.Instance?.Prewarm(executorPrefab, 5);
+
             cachedStats = GetComponentInParent<PlayerStats>();
         }
 
@@ -624,7 +626,7 @@ namespace SwDreams.Adapter.Skill
         /// <summary>
         /// 스킬 오브젝트 생성 + 활성화.
         /// SkillManager의 자식으로 생성.
-        /// [CHANGED] SkillEffect는 SkillEffectFactory가 동적 추가.
+        /// [Step 4-6] SkillEffect 제거. Spawner를 Skill에 직접 전달.
         /// </summary>
         private Skill CreateSkillSlot(SkillData skillData)
         {
@@ -648,14 +650,14 @@ namespace SwDreams.Adapter.Skill
             if (skill == null)
                 skill = slotObj.AddComponent<Skill>();
 
-            // [CHANGED] SkillEffect 생성을 팩토리에 위임 (액티브 스킬만)
-            SkillEffect effect = null;
+            // [Step 4-6] Spawner 생성 (액티브 스킬만)
+            ISkillSpawner spawner = null;
             if (skillData.skillType == SkillType.Active)
             {
-                effect = effectFactory.Create(skillData.effectType, slotObj, skillData);
+                spawner = spawnerFactory.Create(skillData.effectType, skillData);
             }
 
-            skill.Activate(skillData, effect);
+            skill.Activate(skillData, spawner, executorPrefab);
 
             // [Step 3-4] SkillTriggerSystem 초기화 (triggerEffects가 있는 경우)
             if (skillData.triggerEffects != null && skillData.triggerEffects.Count > 0)
@@ -669,10 +671,9 @@ namespace SwDreams.Adapter.Skill
             return skill;
         }
 
-        // ===== [삭제됨] AddSkillEffect() switch문 =====
-        // 기존 switch(skillData.effectType) 로직이 SkillEffectFactory로 이동.
-        // 새 SkillEffect 타입 추가 시 SkillEffectFactory.RegisterDefaults()에
-        // Register() 한 줄만 추가하면 됨. SkillManager 수정 불필요.
+        // ===== [Step 4-6] SkillEffect 레이어 완전 제거 =====
+        // Skill.Fire() → Executor → Spawner 직통.
+        // 새 스킬 추가 시 ISkillSpawner 구현 + SkillSpawnerFactory.RegisterDefaults()에 등록.
 
         // ===== GameState 연동 =====
 
@@ -702,10 +703,9 @@ namespace SwDreams.Adapter.Skill
         // ===== 외부 접근: 팩토리 =====
 
         /// <summary>
-        /// 외부에서 런타임에 이펙트 타입을 추가 등록할 때 사용.
-        /// 예: Phase 5에서 모드별 커스텀 이펙트 지원 시.
+        /// 외부에서 런타임에 Spawner 타입을 추가 등록할 때 사용.
         /// </summary>
-        public SkillEffectFactory EffectFactory => effectFactory;
+        public SkillSpawnerFactory SpawnerFactory => spawnerFactory;
 
         // ===== 디버그 =====
 
