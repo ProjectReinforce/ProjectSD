@@ -29,6 +29,8 @@ MonoBehaviour:
   - 6
   - 5.5
   - 5
+  firingMode: 1
+  burstDelay: 1
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 275e103cfdd0f00468aa79206ac99773, type: 3}
@@ -36,6 +38,7 @@ MonoBehaviour:
   projectileCount: 1
   projectileLifetime: 2
   penetrates: 0
+  subProjectilePrefab: {fileID: 0}
   aimType: 1
   spreadPattern: 2
   spreadAngle: 15
@@ -43,17 +46,18 @@ MonoBehaviour:
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 100
+  chainFlightCount: 0
+  chainSearchRadius: 5
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
   spiralExpandSpeed: 1
   areaRadius: 0.5
-  areaDuration: 2
+  areaDuration: 3
   tickRate: 0.5
   isHealingEffect: 1
   spawnAtRandomPosition: 0
   randomSpawnRadius: 0.8
-  isDualZone: 0
   orbitRadius: 0.25
   rotationSpeed: 360
   objectCount: 1

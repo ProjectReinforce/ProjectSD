@@ -71,6 +71,7 @@ MonoBehaviour:
   - RPC_LoadGameScene
   - RPC_InitBoss
   - RPC_SyncEnemyPositions
+  - RPC_Heal
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

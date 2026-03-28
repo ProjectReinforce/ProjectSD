@@ -32,13 +32,16 @@ MonoBehaviour:
   projectileCount: 1
   projectileLifetime: 3
   penetrates: 0
-  aimType: 3
+  subProjectilePrefab: {fileID: 0}
+  aimType: 1
   spreadPattern: 2
   spreadAngle: 15
   trajectoryType: 1
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 300
+  chainFlightCount: 3
+  chainSearchRadius: 3
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
@@ -49,7 +52,6 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 3
-  isDualZone: 0
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
@@ -64,12 +66,6 @@ MonoBehaviour:
   maxInstances: 3
   effectPrefab: {fileID: 0}
   applicableStats: 
-  triggerEffects:
-  - trigger: 1
-    action: 2
-    parameters:
-      primary: 3
-      secondary: 3
-      tertiary: 0
+  triggerEffects: []
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

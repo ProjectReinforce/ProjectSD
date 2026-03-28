@@ -23,6 +23,8 @@ MonoBehaviour:
   damagePerLevel: 41000000
   cooldownPerLevel:
   - 0.9
+  firingMode: 0
+  burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 0}
@@ -30,6 +32,7 @@ MonoBehaviour:
   projectileCount: 1
   projectileLifetime: 5
   penetrates: 0
+  subProjectilePrefab: {fileID: 0}
   aimType: 0
   spreadPattern: 1
   spreadAngle: 15
@@ -37,6 +40,8 @@ MonoBehaviour:
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 300
+  chainFlightCount: 0
+  chainSearchRadius: 5
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
@@ -47,9 +52,8 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 3
-  isDualZone: 0
   orbitRadius: 1
-  rotationSpeed: 360
+  rotationSpeed: 180
   objectCount: 5
   knockbackForce: 0.35
   attackRange: 5
