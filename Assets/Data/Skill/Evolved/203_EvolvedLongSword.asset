@@ -22,8 +22,8 @@ MonoBehaviour:
   maxLevel: 1
   damagePerLevel: 41000000
   cooldownPerLevel:
-  - 0.9
-  firingMode: 0
+  - 3.5
+  firingMode: 2
   burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
