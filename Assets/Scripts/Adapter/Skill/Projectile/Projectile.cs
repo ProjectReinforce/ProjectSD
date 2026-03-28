@@ -6,6 +6,7 @@ using SwDreams.Adapter.Manager;
 using SwDreams.Adapter.Entity;
 using SwDreams.Adapter.Skill.TriggerEffects;
 using SwDreams.Adapter.Skill.Trajectories;
+using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -100,11 +101,31 @@ namespace SwDreams.Adapter.Skill
         protected SkillTriggerSystem triggerSystem;
         protected Transform ownerTransform;
 
-        /// <summary>ProjectileEffect에서 스폰 후 호출. TriggerSystem 연결.</summary>
+        // ===== 소유자 판별 (C안 데미지 요청) =====
+        // 로컬 플레이어의 투사체인지 여부. 데미지 처리 분기에 사용.
+        // - true + IsMasterClient → TakeDamage 직접
+        // - true + !IsMasterClient → ShowHitVisuals + RequestDamage
+        // - false → ShowHitVisuals만 (이중 데미지 방지)
+        protected bool isLocalPlayerOwned;
+        protected int ownerActorNumber = -1;
+
+        /// <summary>ProjectileEffect에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
         public void SetTriggerSystem(SkillTriggerSystem system, Transform owner)
         {
             triggerSystem = system;
             ownerTransform = owner;
+
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
+            if (owner != null)
+            {
+                var pv = owner.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    isLocalPlayerOwned = pv.IsMine;
+                    ownerActorNumber = pv.Owner != null ? pv.Owner.ActorNumber : -1;
+                }
+            }
         }
 
         public virtual void Initialize(Vector2 position, Vector2 direction,
@@ -162,24 +183,75 @@ namespace SwDreams.Adapter.Skill
         protected virtual void OnTriggerEnter2D(Collider2D other)
         {
             if (!other.CompareTag("Enemy")) return;
-            
-            if (PhotonNetwork.IsMasterClient)
+
+            // IDamageable로 체크 (Enemy + Boss 모두 지원)
+            var damageable = other.GetComponent<IDamageable>();
+            if (damageable == null || !damageable.IsAlive) return;
+
+            // Enemy 컴포넌트는 넉백/ShowHitVisuals/킬러추적용 (Boss는 null)
+            var enemy = other.GetComponent<Enemy>();
+
+            if (ownerTransform == null)
             {
-                var damageable = other.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
+                // 소유자 미설정 (서브 투사체 등): 기존 호스트 권한 방식
+                if (PhotonNetwork.IsMasterClient)
                 {
+                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                     damageable.TakeDamage(damage);
-
-                    if (knockbackForce > 0f)
-                    {
-                        var enemy = other.GetComponent<Enemy>();
-                        if (enemy != null)
-                            enemy.ApplyKnockback(transform.position, knockbackForce);
-                    }
-
-                    // [Step 3-5] OnHit 트리거 발동
+                    if (knockbackForce > 0f && enemy != null)
+                        enemy.ApplyKnockback(transform.position, knockbackForce);
                     FireOnHit(other.transform);
                 }
+            }
+            else if (isLocalPlayerOwned)
+            {
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    // 호스트의 자기 투사체: 직접 데미지 처리
+                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    damageable.TakeDamage(damage);
+                    if (knockbackForce > 0f && enemy != null)
+                        enemy.ApplyKnockback(transform.position, knockbackForce);
+                    FireOnHit(other.transform);
+                }
+                else
+                {
+                    // 클라이언트의 자기 투사체: 비주얼 즉시 + 호스트에 데미지 요청
+                    if (enemy != null)
+                    {
+                        enemy.ShowHitVisuals(damage);
+                        if (knockbackForce > 0f)
+                            enemy.ApplyKnockback(transform.position, knockbackForce);
+                        SpawnManager.Instance?.RequestDamage(
+                            enemy.EnemyId, damage, ownerActorNumber);
+                        if (knockbackForce > 0f)
+                            SpawnManager.Instance?.RequestKnockback(
+                                enemy.EnemyId, transform.position, knockbackForce);
+                    }
+                    else
+                    {
+                        // Boss: PhotonView RPC로 직접 데미지 요청
+                        var boss = other.GetComponent<Boss>();
+                        if (boss != null)
+                        {
+                            DamagePopup.Spawn(other.transform.position, damage);
+                            HitEffect.Spawn(other.transform.position);
+                            boss.RequestDamageFromClient(damage);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // 다른 플레이어의 투사체: 비주얼만 표시, 충돌 무시 (관통)
+                if (enemy != null)
+                    enemy.ShowHitVisuals(damage);
+                else
+                {
+                    DamagePopup.Spawn(other.transform.position, damage);
+                    HitEffect.Spawn(other.transform.position);
+                }
+                return; // OnHitEnemy 스킵 → ReturnToPool 안 됨 → 투사체 유지
             }
 
             OnHitEnemy(other);
@@ -296,6 +368,8 @@ namespace SwDreams.Adapter.Skill
             gameObject.SetActive(false);
             triggerSystem = null;
             ownerTransform = null;
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
             trajectoryBehavior?.Reset();
             trajectoryBehavior = null;
             penetratesOverride = null;

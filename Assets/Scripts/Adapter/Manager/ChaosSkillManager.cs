@@ -137,21 +137,12 @@ namespace SwDreams.Adapter.Skill
         private void ApplyGlassCannon()
         {
             hasGlassCannon = true;
+
+            // MaxHP를 50%로 낮추는 modifier 등록.
+            // PlayerStats.Recalculate() → OnStatsChanged → PlayerHealth.OnPlayerStatsChanged()
+            // → MaxHP 갱신 + CurrentHP를 새 MaxHP 이하로 자동 클램프.
+            // 별도 TakeDamage 불필요 (이중 HP 감소 방지).
             RecalculateChaosModifiers();
-
-            // HP 감소는 소유자 클라이언트에서만 실행
-            var pv = GetComponentInParent<PhotonView>();
-            if (pv != null && !pv.IsMine) return;
-
-            if (playerDamageable != null && playerDamageable.IsAlive)
-            {
-                int halfHP = playerDamageable.CurrentHP / 2;
-                int dmg = playerDamageable.CurrentHP - Mathf.Max(1, halfHP);
-                if (dmg > 0)
-                    playerDamageable.TakeDamage(dmg);
-
-                Debug.Log($"[ChaosSkillManager] 유리대포 — HP → {playerDamageable.CurrentHP}");
-            }
         }
 
         private void ApplyChainExplosion()
@@ -340,7 +331,9 @@ namespace SwDreams.Adapter.Skill
         // ===== 연쇄 폭발 =====
 
         /// <summary>
-        /// 적 사망 시 호출 (호스트만). SpawnManager 또는 Enemy.OnDied에서 연결.
+        /// 적 사망 시 호출 (호스트만). SpawnManager.OnEnemyDied에서 전체 플레이어 순회.
+        /// 데미지: 호스트에서 모든 플레이어의 연쇄폭발 처리 (정상).
+        /// 비주얼: 자기 캐릭터의 연쇄폭발만 표시 (다른 플레이어 것은 클라이언트에서 표시).
         /// </summary>
         public void OnEnemyKilled(Vector2 position)
         {
@@ -349,10 +342,51 @@ namespace SwDreams.Adapter.Skill
             if (chainCountThisFrame >= maxChainPerFrame) return;
 
             chainCountThisFrame++;
-            TriggerExplosion(position);
+
+            // 데미지는 모든 플레이어의 연쇄폭발에 대해 처리
+            TriggerExplosionDamage(position);
+
+            // 비주얼은 자기(호스트) 캐릭터 것만 표시
+            // 클라이언트 플레이어의 비주얼은 OnReceiveDeathBatch → OnEnemyKilledVisualOnly에서 처리
+            if (IsLocalPlayer())
+                SpawnExplosionVisual(position);
         }
 
-        private void TriggerExplosion(Vector2 position)
+        /// <summary>
+        /// 클라이언트용: 연쇄폭발 비주얼 + 데미지 팝업 재생.
+        /// SpawnManager.OnReceiveDeathBatch에서 호출.
+        /// 자기 캐릭터의 연쇄폭발만 표시.
+        /// </summary>
+        public void OnEnemyKilledVisualOnly(Vector2 position)
+        {
+            if (!hasChainExplosion) return;
+            if (!IsLocalPlayer()) return; // 자기 캐릭터 것만
+            if (chainCountThisFrame >= maxChainPerFrame) return;
+
+            chainCountThisFrame++;
+            SpawnExplosionVisual(position);
+
+            // 폭발 범위 내 적에게 비주얼 피드백 (데미지 팝업)
+            var hits = Physics2D.OverlapCircleAll(position, explosionRadius);
+            foreach (var hit in hits)
+            {
+                if (!hit.CompareTag("Enemy")) continue;
+                var enemy = hit.GetComponent<SwDreams.Adapter.Entity.Enemy>();
+                if (enemy != null && enemy.IsAlive)
+                    enemy.ShowHitVisuals(explosionDamage);
+            }
+        }
+
+        /// <summary>
+        /// 이 ChaosSkillManager가 로컬 플레이어에 속하는지 확인.
+        /// </summary>
+        private bool IsLocalPlayer()
+        {
+            var pv = GetComponentInParent<PhotonView>();
+            return pv != null && pv.IsMine;
+        }
+
+        private void SpawnExplosionVisual(Vector2 position)
         {
             if (explosionEffectPrefab != null)
             {
@@ -360,7 +394,10 @@ namespace SwDreams.Adapter.Skill
                 if (fx != null)
                     fx.transform.position = position;
             }
+        }
 
+        private void TriggerExplosionDamage(Vector2 position)
+        {
             var hits = Physics2D.OverlapCircleAll(position, explosionRadius);
             foreach (var hit in hits)
             {

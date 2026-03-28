@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
+using ExitGames.Client.Photon;
 using SwDreams.Application;
 using SwDreams.Data;
 using SwDreams.Adapter.Entity;
@@ -15,17 +16,19 @@ namespace SwDreams.Adapter.Manager
     /// 4종 적 타입을 비율에 따라 스폰.
     /// 
     /// 동기화 방식:
-    /// - 평소: 호스트가 RPC_SpawnEnemy를 RpcTarget.All로 전송
+    /// - 스폰: 호스트가 RPC_SpawnEnemy를 RpcTarget.All로 전송
+    /// - 위치: RaiseEvent Unreliable 배치 (Dead Reckoning 보정용)
+    /// - 사망: RaiseEvent Reliable 배치 (프레임 당 1회, 대량 동시 사망 최적화)
+    /// - 강제 제거: RaiseEvent Reliable 배치
+    /// - 데미지 요청: 클라이언트 → 호스트 RPC (C안)
     /// - 중도 참가: 호스트가 OnPlayerEnteredRoom에서 현재 활성 적 목록 전송
-    /// - 사망: 호스트가 RPC_EnemyDied를 RpcTarget.All로 전송
-    /// - 강제 제거: 호스트가 RPC_EnemyRemoved를 RpcTarget.All로 전송
     /// 
     /// 셋업:
     /// - GameScene에 빈 GameObject → SpawnManager + PhotonView 부착
     /// - enemyPrefab, 4개 EnemyData SO, DifficultyData SO 인스펙터에서 연결
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
-    public class SpawnManager : MonoBehaviourPunCallbacks
+    public class SpawnManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         public static SpawnManager Instance { get; private set; }
 
@@ -68,6 +71,15 @@ namespace SwDreams.Adapter.Manager
 
         // EnemyType → EnemyData 매핑
         private Dictionary<EnemyType, EnemyData> enemyDataMap;
+
+        // ===== RaiseEvent 이벤트 코드 =====
+        private const byte EventCode_PositionSync = 10;   // Unreliable
+        private const byte EventCode_EnemyDeathBatch = 11; // Reliable
+        private const byte EventCode_EnemyRemoveBatch = 12; // Reliable
+
+        // ===== 사망/제거 배치 큐 (호스트 전용) =====
+        private readonly List<(int enemyId, Vector2 pos, int exp, int killerActorNumber)> deathQueue = new();
+        private readonly List<int> removeQueue = new();
 
         private void Awake()
         {
@@ -315,23 +327,23 @@ namespace SwDreams.Adapter.Manager
                 Debug.Log($"[SpawnManager] 투사체/이펙트 {count}개 정리");
         }
 
-        // ===== 적 위치 동기화 (호스트 → 클라이언트) =====
+        // ===== 적 위치 동기화 (호스트 → 클라이언트, Unreliable) =====
 
         /// <summary>
         /// 호스트가 주기적으로 활성 적 위치를 배치 전송.
-        /// 클라이언트에서 EnemyMovement가 독립 실행하므로 위치가 벌어지는 것을 보정.
+        /// Unreliable 채널 사용 — 패킷 손실 시 다음 틱 데이터로 대체.
+        /// Dead Reckoning으로 클라이언트가 자체 이동하므로 손실 허용 가능.
         /// </summary>
         private void UpdatePositionSync()
         {
             if (activeEnemies.Count == 0) return;
-            if (PhotonNetwork.CurrentRoom.PlayerCount <= 1) return; // 솔로면 불필요
+            if (PhotonNetwork.CurrentRoom.PlayerCount <= 1) return;
 
             positionSyncTimer += Time.deltaTime;
             if (positionSyncTimer < positionSyncInterval) return;
             positionSyncTimer = 0f;
 
             // 배치 데이터 구성: [id, posX, posY, id, posX, posY, ...]
-            // float 배열 하나로 통합 (RPC 호출 1회로 처리)
             float[] batch = new float[activeEnemies.Count * 3];
             int idx = 0;
 
@@ -340,39 +352,21 @@ namespace SwDreams.Adapter.Manager
                 Enemy enemy = kvp.Value;
                 if (enemy == null || !enemy.IsAlive) continue;
 
-                batch[idx++] = kvp.Key; // enemyId (int → float)
+                batch[idx++] = kvp.Key;
                 batch[idx++] = enemy.transform.position.x;
                 batch[idx++] = enemy.transform.position.y;
             }
 
-            // 실제 데이터 크기에 맞게 자르기 (비활성 적 제외)
             if (idx < batch.Length)
                 System.Array.Resize(ref batch, idx);
 
-            if (batch.Length > 0)
-                photonView.RPC(nameof(RPC_SyncEnemyPositions), RpcTarget.Others, batch);
-        }
+            if (batch.Length == 0) return;
 
-        [PunRPC]
-        private void RPC_SyncEnemyPositions(float[] batch)
-        {
-            // 3개씩 묶음: [enemyId, posX, posY]
-            for (int i = 0; i + 2 < batch.Length; i += 3)
-            {
-                int enemyId = (int)batch[i];
-                float x = batch[i + 1];
-                float y = batch[i + 2];
-
-                if (activeEnemies.TryGetValue(enemyId, out Enemy enemy))
-                {
-                    if (enemy != null && enemy.IsAlive)
-                    {
-                        var movement = enemy.GetComponent<EnemyMovement>();
-                        if (movement != null)
-                            movement.SetNetworkPosition(new Vector2(x, y));
-                    }
-                }
-            }
+            PhotonNetwork.RaiseEvent(
+                EventCode_PositionSync,
+                batch,
+                new RaiseEventOptions { Receivers = ReceiverGroup.Others },
+                SendOptions.SendUnreliable);
         }
 
         // ===== 중도 참가 처리 =====
@@ -470,28 +464,67 @@ namespace SwDreams.Adapter.Manager
             }
         }
 
-        [PunRPC]
-        private void RPC_EnemyDied(int enemyId, Vector2 deathPosition, int expValue)
+        // ===== 사망/제거는 OnEvent에서 배치 처리 — 아래 OnEvent 참조 =====
+
+        // ===== 클라이언트 → 호스트 데미지 요청 (C안) =====
+
+        /// <summary>
+        /// 클라이언트에서 호출. 자기 투사체/장판이 적을 맞혔을 때
+        /// 호스트에 데미지 처리를 요청.
+        /// actorNumber: 데미지를 준 플레이어 (킬러 귀속 효과용).
+        /// </summary>
+        public void RequestDamage(int enemyId, int damage, int actorNumber)
         {
-            if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
+            if (PhotonNetwork.IsMasterClient)
+            {
+                ApplyDamageOnHost(enemyId, damage, actorNumber);
+                return;
+            }
+            photonView.RPC(nameof(RPC_RequestDamage), RpcTarget.MasterClient,
+                enemyId, damage, actorNumber);
+        }
 
-            activeEnemies.Remove(enemyId);
-            PoolManager.Instance.Return(enemy.gameObject);
-
-            SpawnExpOrb(deathPosition, expValue);
-
-            // 적 사망 SFX — 로컬 플레이어 근처에서만 재생
-            if (IsNearLocalPlayer(deathPosition, 15f))
-                GameAudioConnector.Instance?.OnEnemyDied();
+        /// <summary>
+        /// 클라이언트에서 호출. 넉백 요청.
+        /// </summary>
+        public void RequestKnockback(int enemyId, Vector2 sourcePos, float force)
+        {
+            if (PhotonNetwork.IsMasterClient)
+            {
+                ApplyKnockbackOnHost(enemyId, sourcePos, force);
+                return;
+            }
+            photonView.RPC(nameof(RPC_RequestKnockback), RpcTarget.MasterClient,
+                enemyId, sourcePos, force);
         }
 
         [PunRPC]
-        private void RPC_EnemyRemoved(int enemyId)
+        private void RPC_RequestDamage(int enemyId, int damage, int actorNumber)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            ApplyDamageOnHost(enemyId, damage, actorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_RequestKnockback(int enemyId, Vector2 sourcePos, float force)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            ApplyKnockbackOnHost(enemyId, sourcePos, force);
+        }
+
+        private void ApplyDamageOnHost(int enemyId, int damage, int actorNumber)
         {
             if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
+            if (enemy == null || !enemy.IsAlive) return;
+            enemy.LastDamagerActorNumber = actorNumber;
+            enemy.TakeDamage(damage);
+        }
 
-            activeEnemies.Remove(enemyId);
-            PoolManager.Instance.Return(enemy.gameObject);
+        private void ApplyKnockbackOnHost(int enemyId, Vector2 sourcePos, float force)
+        {
+            if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
+            if (enemy == null || !enemy.IsAlive) return;
+            enemy.ApplyKnockback(sourcePos, force);
         }
 
         private void SpawnExpOrb(Vector2 position, int expValue)
@@ -519,25 +552,53 @@ namespace SwDreams.Adapter.Manager
             // Phase 7: 킬 카운트 추적
             GameStatTracker.Instance?.RecordKill();
 
-            // [Phase 5] 연쇄 폭발 체크 (호스트에서만)
-            NotifyChaosManagers(enemy.transform.position);
+            // [Phase 5] 연쇄 폭발 체크 — 킬러만 대상
+            NotifyChaosManagers(enemy.transform.position, enemy.LastDamagerActorNumber);
 
-            photonView.RPC(nameof(RPC_EnemyDied), RpcTarget.All,
-                enemy.EnemyId, (Vector2)enemy.transform.position, enemy.ExpValue);
+            // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
+            deathQueue.Add((enemy.EnemyId, (Vector2)enemy.transform.position,
+                enemy.ExpValue, enemy.LastDamagerActorNumber));
         }
 
         /// <summary>
-        /// 모든 플레이어의 ChaosSkillManager에 적 사망 알림.
-        /// 연쇄 폭발 등 혼돈 스킬 효과 트리거.
+        /// 킬러 플레이어의 ChaosSkillManager에만 적 사망 알림.
+        /// 연쇄 폭발 등 킬러 귀속 효과 트리거.
         /// </summary>
-        private void NotifyChaosManagers(Vector3 enemyPosition)
+        private void NotifyChaosManagers(Vector3 enemyPosition, int killerActorNumber)
         {
+            if (killerActorNumber < 0) return;
+
             var players = GameObject.FindGameObjectsWithTag("Player");
             foreach (var p in players)
             {
+                var pv = p.GetComponent<PhotonView>();
+                if (pv == null || pv.Owner == null) continue;
+                if (pv.Owner.ActorNumber != killerActorNumber) continue;
+
                 var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
                 if (chaos != null)
                     chaos.OnEnemyKilled(enemyPosition);
+            }
+        }
+
+        /// <summary>
+        /// 클라이언트용: 킬러 플레이어의 연쇄폭발 비주얼만 재생.
+        /// OnReceiveDeathBatch에서 호출.
+        /// </summary>
+        private void NotifyChaosManagersVisualOnly(Vector2 deathPosition, int killerActorNumber)
+        {
+            if (killerActorNumber < 0) return;
+
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                var pv = p.GetComponent<PhotonView>();
+                if (pv == null || pv.Owner == null) continue;
+                if (pv.Owner.ActorNumber != killerActorNumber) continue;
+
+                var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
+                if (chaos != null)
+                    chaos.OnEnemyKilledVisualOnly(deathPosition);
             }
         }
 
@@ -546,7 +607,135 @@ namespace SwDreams.Adapter.Manager
             enemy.OnDiedWithRef -= OnEnemyDied;
             enemy.OnForceReturned -= OnEnemyForceReturned;
 
-            photonView.RPC(nameof(RPC_EnemyRemoved), RpcTarget.All, enemy.EnemyId);
+            // 즉시 RPC 대신 큐에 적재 → LateUpdate에서 배치 전송
+            removeQueue.Add(enemy.EnemyId);
+        }
+
+        // ===== 사망/제거 배치 전송 (프레임 당 1회) =====
+
+        private void LateUpdate()
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            FlushDeathQueue();
+            FlushRemoveQueue();
+        }
+
+        private void FlushDeathQueue()
+        {
+            if (deathQueue.Count == 0) return;
+
+            // [enemyId, posX, posY, exp, killerActorNumber, ...]
+            float[] batch = new float[deathQueue.Count * 5];
+            for (int i = 0; i < deathQueue.Count; i++)
+            {
+                var d = deathQueue[i];
+                batch[i * 5]     = d.enemyId;
+                batch[i * 5 + 1] = d.pos.x;
+                batch[i * 5 + 2] = d.pos.y;
+                batch[i * 5 + 3] = d.exp;
+                batch[i * 5 + 4] = d.killerActorNumber;
+            }
+
+            PhotonNetwork.RaiseEvent(
+                EventCode_EnemyDeathBatch,
+                batch,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable);
+
+            deathQueue.Clear();
+        }
+
+        private void FlushRemoveQueue()
+        {
+            if (removeQueue.Count == 0) return;
+
+            int[] batch = removeQueue.ToArray();
+
+            PhotonNetwork.RaiseEvent(
+                EventCode_EnemyRemoveBatch,
+                batch,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable);
+
+            removeQueue.Clear();
+        }
+
+        // ===== RaiseEvent 수신 (IOnEventCallback) =====
+
+        public void OnEvent(EventData photonEvent)
+        {
+            switch (photonEvent.Code)
+            {
+                case EventCode_PositionSync:
+                    OnReceivePositionSync((float[])photonEvent.CustomData);
+                    break;
+
+                case EventCode_EnemyDeathBatch:
+                    OnReceiveDeathBatch((float[])photonEvent.CustomData);
+                    break;
+
+                case EventCode_EnemyRemoveBatch:
+                    OnReceiveRemoveBatch((int[])photonEvent.CustomData);
+                    break;
+            }
+        }
+
+        private void OnReceivePositionSync(float[] batch)
+        {
+            for (int i = 0; i + 2 < batch.Length; i += 3)
+            {
+                int enemyId = (int)batch[i];
+                float x = batch[i + 1];
+                float y = batch[i + 2];
+
+                if (activeEnemies.TryGetValue(enemyId, out Enemy enemy))
+                {
+                    if (enemy != null && enemy.IsAlive)
+                    {
+                        var movement = enemy.GetComponent<EnemyMovement>();
+                        if (movement != null)
+                            movement.SetNetworkPosition(new Vector2(x, y));
+                    }
+                }
+            }
+        }
+
+        private void OnReceiveDeathBatch(float[] batch)
+        {
+            for (int i = 0; i + 4 < batch.Length; i += 5)
+            {
+                int enemyId = (int)batch[i];
+                Vector2 deathPos = new Vector2(batch[i + 1], batch[i + 2]);
+                int expValue = (int)batch[i + 3];
+                int killerActorNumber = (int)batch[i + 4];
+
+                if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) continue;
+
+                activeEnemies.Remove(enemyId);
+                PoolManager.Instance.Return(enemy.gameObject);
+
+                SpawnExpOrb(deathPos, expValue);
+
+                if (IsNearLocalPlayer(deathPos, 15f))
+                    GameAudioConnector.Instance?.OnEnemyDied();
+
+                // 연쇄폭발 비주얼 — 킬러만 (클라이언트 전용, 호스트는 OnEnemyDied에서 처리)
+                if (!PhotonNetwork.IsMasterClient)
+                    NotifyChaosManagersVisualOnly(deathPos, killerActorNumber);
+            }
+        }
+
+        private void OnReceiveRemoveBatch(int[] batch)
+        {
+            for (int i = 0; i < batch.Length; i++)
+            {
+                int enemyId = batch[i];
+                if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) continue;
+
+                activeEnemies.Remove(enemyId);
+                PoolManager.Instance.Return(enemy.gameObject);
+            }
         }
 
         // ===== 유틸리티 =====

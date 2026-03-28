@@ -40,6 +40,10 @@ namespace SwDreams.Adapter.Skill
         // 판정 반경 (인스펙터에서 조정 가능)
         [SerializeField] private float hitRadius = 0.3f;
 
+        // 소유자 판별 (C안 데미지 요청)
+        private bool isLocalPlayerOwned;
+        private int ownerActorNumber = -1;
+
         // 이미 맞은 적 추적 (1회전 동안 중복 방지)
         private readonly HashSet<int> hitEnemyIds = new HashSet<int>();
 
@@ -47,7 +51,8 @@ namespace SwDreams.Adapter.Skill
         /// OrbitalSpawner에서 호출. 궤도 파라미터 포함.
         /// </summary>
         public void Initialize(int damage, float knockbackForce, float duration,
-            Transform playerTransform, float baseAngle, float orbitRadius, float rotationSpeed)
+            Transform playerTransform, float baseAngle, float orbitRadius, float rotationSpeed,
+            Transform ownerTransform)
         {
             this.damage = damage;
             this.knockbackForce = knockbackForce;
@@ -56,6 +61,19 @@ namespace SwDreams.Adapter.Skill
             this.baseAngle = baseAngle;
             this.orbitRadius = orbitRadius;
             this.rotationSpeed = rotationSpeed;
+
+            // 소유자 판별
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
+            if (ownerTransform != null)
+            {
+                var pv = ownerTransform.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    isLocalPlayerOwned = pv.IsMine;
+                    ownerActorNumber = pv.Owner != null ? pv.Owner.ActorNumber : -1;
+                }
+            }
 
             currentAngle = baseAngle;
             aliveTime = 0f;
@@ -90,34 +108,61 @@ namespace SwDreams.Adapter.Skill
                 UpdateOrbitalPosition();
             }
 
-            // 호스트에서만 데미지 판정
-            if (!PhotonNetwork.IsMasterClient) return;
+            // 자기 궤도 무기가 아니고 호스트도 아니면 판정 스킵
+            if (!isLocalPlayerOwned && !PhotonNetwork.IsMasterClient) return;
 
             var hits = Physics2D.OverlapCircleAll(transform.position, hitRadius);
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Enemy")) continue;
 
-                int enemyId = hit.gameObject.GetInstanceID();
-
-                // 이미 맞은 적이면 스킵
-                if (hitEnemyIds.Contains(enemyId)) continue;
+                int enemyInstanceId = hit.gameObject.GetInstanceID();
+                if (hitEnemyIds.Contains(enemyInstanceId)) continue;
 
                 var damageable = hit.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
-                {
-                    damageable.TakeDamage(damage);
+                if (damageable == null || !damageable.IsAlive) continue;
 
-                    if (knockbackForce > 0f)
+                // Enemy 컴포넌트는 넉백/ShowHitVisuals/EnemyId용 (Boss는 null)
+                var enemy = hit.GetComponent<Enemy>();
+
+                if (isLocalPlayerOwned)
+                {
+                    if (PhotonNetwork.IsMasterClient)
                     {
-                        var enemy = hit.GetComponent<Enemy>();
-                        if (enemy != null)
+                        if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                        damageable.TakeDamage(damage);
+                        if (knockbackForce > 0f && enemy != null)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
                     }
-
-                    // 맞은 적 기록
-                    hitEnemyIds.Add(enemyId);
+                    else if (enemy != null)
+                    {
+                        enemy.ShowHitVisuals(damage);
+                        if (knockbackForce > 0f)
+                            enemy.ApplyKnockback(transform.position, knockbackForce);
+                        Manager.SpawnManager.Instance?.RequestDamage(
+                            enemy.EnemyId, damage, ownerActorNumber);
+                        if (knockbackForce > 0f)
+                            Manager.SpawnManager.Instance?.RequestKnockback(
+                                enemy.EnemyId, transform.position, knockbackForce);
+                    }
+                    else
+                    {
+                        // Boss: PhotonView RPC로 직접 데미지 요청
+                        var boss = hit.GetComponent<Boss>();
+                        if (boss != null)
+                            boss.RequestDamageFromClient(damage);
+                    }
                 }
+                else
+                {
+                    // 남의 궤도 무기 (호스트에서만 여기 도달): 직접 데미지
+                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    damageable.TakeDamage(damage);
+                    if (knockbackForce > 0f && enemy != null)
+                        enemy.ApplyKnockback(transform.position, knockbackForce);
+                }
+
+                hitEnemyIds.Add(enemyInstanceId);
             }
         }
 
@@ -152,6 +197,8 @@ namespace SwDreams.Adapter.Skill
         public void OnReturnToPool()
         {
             isActive = false;
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
             playerTransform = null;
             hitEnemyIds.Clear();
             gameObject.SetActive(false);

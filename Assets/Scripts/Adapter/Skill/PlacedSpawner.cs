@@ -73,7 +73,8 @@ namespace SwDreams.Adapter.Skill
                 attackCooldown: data.attackCooldown,
                 duration: duration,
                 alwaysCritical: data.alwaysCritical,
-                critDamageMultiplier: ctx.critDamageMultiplier
+                critDamageMultiplier: ctx.critDamageMultiplier,
+                ownerTransform: ctx.playerTransform
             );
 
             activeTurrets.Add(turretObj);

@@ -45,6 +45,13 @@ namespace SwDreams.Adapter.Entity
         public EnemyType EnemyType => enemyData != null ? enemyData.enemyType : EnemyType.Chaser;
         public float KnockbackResistance => enemyData != null ? enemyData.knockbackResistance : 0f;
 
+        /// <summary>
+        /// 마지막으로 데미지를 준 플레이어의 ActorNumber.
+        /// 사망 시 연쇄폭발 등 킬러 귀속 효과에 사용.
+        /// 데미지 소스에서 TakeDamage 호출 전에 설정.
+        /// </summary>
+        public int LastDamagerActorNumber { get; set; } = -1;
+
         // 이벤트
         public event Action<int, int> OnHealthChanged;
         public event Action OnDied;
@@ -122,6 +129,20 @@ namespace SwDreams.Adapter.Entity
 
             if (!IsAlive)
                 Die();
+        }
+
+        /// <summary>
+        /// 클라이언트용 비주얼 피드백만 재생 (HP 변경 없음).
+        /// 클라이언트에서 자기 투사체가 적에게 적중했을 때 호출.
+        /// 데미지 팝업, 히트 플래시, 히트 이펙트를 표시.
+        /// 
+        /// 실제 HP 감소와 사망 판정은 호스트의 TakeDamage()에서만 처리.
+        /// </summary>
+        public void ShowHitVisuals(int displayDamage)
+        {
+            TriggerHitFlash();
+            DamagePopup.Spawn(transform.position, displayDamage);
+            HitEffect.Spawn(transform.position);
         }
 
         // ===== 피격 플래시 =====
@@ -205,6 +226,7 @@ namespace SwDreams.Adapter.Entity
             OnForceReturned = null;
             CurrentHP = 0;
             EnemyId = -1;
+            LastDamagerActorNumber = -1;
             gameObject.SetActive(false);
         }
     }

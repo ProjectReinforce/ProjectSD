@@ -174,6 +174,27 @@ namespace SwDreams.Adapter.Entity
                 hpSyncTimer = hpSyncInterval;
         }
 
+        /// <summary>
+        /// 클라이언트에서 호출. 보스에게 데미지 요청.
+        /// Boss는 PhotonView가 있으므로 직접 RPC 전송 가능.
+        /// </summary>
+        public void RequestDamageFromClient(int damage)
+        {
+            if (PhotonNetwork.IsMasterClient)
+            {
+                TakeDamage(damage);
+                return;
+            }
+            photonView.RPC(nameof(RPC_RequestBossDamage), RpcTarget.MasterClient, damage);
+        }
+
+        [PunRPC]
+        private void RPC_RequestBossDamage(int damage)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            TakeDamage(damage);
+        }
+
         /// <summary>배치된 HP를 클라이언트에 전송.</summary>
         private void FlushHPSync()
         {

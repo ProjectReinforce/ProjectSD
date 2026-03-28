@@ -6,19 +6,19 @@ namespace SwDreams.Adapter.Entity
 {
     /// <summary>
     /// 적의 이동 처리.
-    /// 모든 클라이언트에서 로컬 실행 (플레이어 위치가 PhotonTransformView로
-    /// 동기화되므로 추적 결과가 거의 동일).
+    ///
+    /// Dead Reckoning 동기화:
+    /// - 호스트 + 클라이언트 모두 동일한 시뮬레이션 실행
+    ///   (추적 로직 + 넉백 + Anti-Overlap 겹침 해소)
+    /// - 양쪽 시뮬레이션 결과가 거의 동일하므로 네트워크 보정이 거의 개입하지 않음
+    /// - 플레이어 위치는 PhotonTransformView로 동기화되어 추적 입력이 일치
+    /// - 호스트가 주기적으로 보내는 위치와 오차가 임계값 이상이면 Lerp 보정
     ///
     /// Phase 3 변경:
     /// - EnemyType에 따라 이동 전략 자동 선택
-    ///   Chaser, Runner, Tank → ChaseMovement (속도만 다름, EnemyData에서 결정)
-    ///   Swarm → SwarmMovement (랜덤 방향 직진)
+    ///   Chaser, Runner, Tank → ChaseMovement
+    ///   Swarm → SwarmMovement
     /// - Swarm 수명 관리 (lifetime 만료 시 ForceReturn)
-    ///
-    /// Anti Overlap:
-    /// - 기존 이동 전략은 유지
-    /// - LateUpdate에서 실제 겹친 적만 살짝 밀어내어 시각적 겹침 완화
-    /// - 플레이어 탐색은 프레임 캐시로 중복 Find 호출 감소
     /// </summary>
     public class EnemyMovement : MonoBehaviour
     {
@@ -39,10 +39,15 @@ namespace SwDreams.Adapter.Entity
         private const float KnockbackDecay = 8f; // 초당 감쇠 속도
 
         // 네트워크 위치 보정 (클라이언트 전용)
-        // 호스트가 주기적으로 전송하는 위치로 부드럽게 보정
+        // Dead Reckoning: 클라이언트도 동일 추적 로직 실행 + 호스트 위치로 보정
         private Vector2 networkTargetPos;
         private bool hasNetworkTarget;
         private bool isFirstNetworkPos = true;  // 첫 수신 시 스냅용
+
+        // 보정 임계값
+        private const float CorrectionThreshold = 0.3f;  // 이 이하 오차는 무시 (자체 추적으로 충분)
+        private const float SnapThreshold = 3.0f;         // 이 이상이면 즉시 스냅 (워프 방지)
+        private const float CorrectionSpeed = 5f;          // Lerp 보정 속도
 
         [Header("Anti Overlap")]
         [SerializeField] private bool resolveEnemyOverlap = true;
@@ -128,24 +133,7 @@ namespace SwDreams.Adapter.Entity
                 }
             }
 
-            // 클라이언트: 호스트에서 수신한 위치로 보간만 수행
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                if (hasNetworkTarget)
-                {
-                    // 적 이동속도의 1.5배로 추적 (호스트 위치를 따라잡기 위해 약간 빠르게)
-                    float catchUpSpeed = enemy.MoveSpeed * 1.5f;
-                    transform.position = Vector2.MoveTowards(
-                        transform.position,
-                        networkTargetPos,
-                        catchUpSpeed * Time.deltaTime);
-                }
-                return;
-            }
-
-            // ===== 이하 호스트만 실행 =====
-
-            // 슬로우 타이머
+            // ===== 슬로우 타이머 (호스트 + 클라이언트 공통) =====
             if (slowTimer > 0f)
             {
                 slowTimer -= Time.deltaTime;
@@ -156,6 +144,9 @@ namespace SwDreams.Adapter.Entity
             float moveSpeed = enemy.MoveSpeed * slowMul;
             Transform target = FindClosestPlayer();
 
+            // ===== 이동 전략 실행 (호스트 + 클라이언트 공통) =====
+            // Dead Reckoning: 클라이언트도 동일한 추적 로직을 실행하여
+            // 프레임 단위로 부드러운 이동을 보장.
             if (movementStrategy != null)
             {
                 if (target != null || movementStrategy is SwarmMovement)
@@ -164,22 +155,29 @@ namespace SwDreams.Adapter.Entity
                 }
             }
 
-            // 넉백 적용 (감쇠)
+            // ===== 넉백 적용 (호스트 + 클라이언트 공통) =====
+            // Dead Reckoning: 양쪽에서 동일한 넉백을 적용해야 위치 오차 최소화
             if (knockbackVelocity.sqrMagnitude > 0.01f)
             {
                 transform.position += (Vector3)(knockbackVelocity * Time.deltaTime);
-                knockbackVelocity = Vector2.Lerp(knockbackVelocity, Vector2.zero, KnockbackDecay * Time.deltaTime);
+                knockbackVelocity = Vector2.Lerp(knockbackVelocity, Vector2.zero,
+                    KnockbackDecay * Time.deltaTime);
             }
             else
             {
                 knockbackVelocity = Vector2.zero;
+            }
+
+            // ===== 클라이언트: 호스트 위치와의 오차 보정 =====
+            if (!PhotonNetwork.IsMasterClient && hasNetworkTarget)
+            {
+                ApplyNetworkCorrection();
             }
         }
 
         private void LateUpdate()
         {
             if (!resolveEnemyOverlap) return;
-            if (!PhotonNetwork.IsMasterClient) return; // 클라이언트는 네트워크 보간만
             if (enemy == null || !enemy.IsAlive) return;
 
             if (Manager.GameManager.Instance != null &&
@@ -187,6 +185,9 @@ namespace SwDreams.Adapter.Entity
                 Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
                 return;
 
+            // 호스트 + 클라이언트 모두 실행.
+            // Dead Reckoning 핵심: 양쪽이 동일한 시뮬레이션(추적 + 넉백 + 겹침 해소)을
+            // 실행해야 위치 오차가 최소화되어 네트워크 보정이 거의 개입하지 않음.
             ResolveEnemyOverlap();
         }
 
@@ -225,7 +226,7 @@ namespace SwDreams.Adapter.Entity
 
         /// <summary>
         /// 호스트 위치 수신. SpawnManager.RPC_SyncEnemyPositions에서 호출.
-        /// 클라이언트에서만 의미 있음 — Update에서 이 위치로 MoveTowards 보정.
+        /// 클라이언트에서만 의미 있음 — Dead Reckoning 보정 기준점으로 사용.
         /// </summary>
         public void SetNetworkPosition(Vector2 pos)
         {
@@ -238,6 +239,35 @@ namespace SwDreams.Adapter.Entity
                 isFirstNetworkPos = false;
                 transform.position = pos;
             }
+        }
+
+        /// <summary>
+        /// 클라이언트 Dead Reckoning 보정.
+        /// 자체 추적 로직으로 이동한 위치와 호스트 실제 위치의 오차를 부드럽게 보정.
+        /// 
+        /// - 오차 < CorrectionThreshold: 무시 (자체 추적으로 충분히 정확)
+        /// - 오차 > SnapThreshold: 즉시 스냅 (텔레포트/넉백 등 큰 위치 변화)
+        /// - 중간: Lerp로 부드럽게 수렴
+        /// </summary>
+        private void ApplyNetworkCorrection()
+        {
+            float distance = Vector2.Distance(transform.position, networkTargetPos);
+
+            // 오차가 작으면 무시 (자체 추적으로 충분히 정확)
+            if (distance < CorrectionThreshold) return;
+
+            // 오차가 너무 크면 즉시 스냅 (넉백, 풀 등으로 큰 위치 변화 발생)
+            if (distance > SnapThreshold)
+            {
+                transform.position = networkTargetPos;
+                return;
+            }
+
+            // 중간 오차: 부드럽게 보정
+            transform.position = Vector2.Lerp(
+                transform.position,
+                networkTargetPos,
+                CorrectionSpeed * Time.deltaTime);
         }
 
         private void ResolveEnemyOverlap()

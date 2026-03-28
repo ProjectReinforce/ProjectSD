@@ -72,7 +72,8 @@ namespace SwDreams.Adapter.Skill
                 playerTransform: ctx.playerTransform,
                 baseAngle: baseAngle,
                 orbitRadius: radius,
-                rotationSpeed: data.rotationSpeed
+                rotationSpeed: data.rotationSpeed,
+                ownerTransform: ctx.playerTransform
             );
         }
     }

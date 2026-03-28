@@ -14,16 +14,13 @@ namespace SwDreams.Adapter.Entity
 
     /// <summary>
     /// 기본 추적형 이동. 가장 가까운 플레이어를 직선 추적.
+    /// GameState 체크는 EnemyMovement.Update()에서 이미 수행하므로 여기서는 생략.
     /// </summary>
     public class ChaseMovement : IEnemyMovementStrategy
     {
         public void UpdateMovement(Transform enemy, Transform target, float speed)
         {
             if (target == null) return;
-
-            if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing)
-                return;
 
             Vector2 direction = (target.position - enemy.position).normalized;
             enemy.position += (Vector3)(direction * speed * Time.deltaTime);

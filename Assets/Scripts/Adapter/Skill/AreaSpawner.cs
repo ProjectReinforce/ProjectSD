@@ -102,9 +102,8 @@ namespace SwDreams.Adapter.Skill
                 isHealing: data.isHealingEffect
             );
 
-            // TriggerSystem 연결
-            if (ctx.triggerSystem != null)
-                zone.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
+            // TriggerSystem + 소유자 연결 (항상 호출 — 소유자 판별에 필요)
+            zone.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
 
             activeZones.Add(zoneObj);
         }

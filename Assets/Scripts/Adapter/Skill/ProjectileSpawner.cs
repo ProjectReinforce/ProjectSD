@@ -68,9 +68,8 @@ namespace SwDreams.Adapter.Skill
                 knockbackForce: ctx.knockbackForce
             );
 
-            // ── TriggerSystem 연결 ──
-            if (ctx.triggerSystem != null)
-                projectile.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
+            // ── TriggerSystem + 소유자 연결 (항상 호출 — 소유자 판별에 필요) ──
+            projectile.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
 
             // ── Trajectory 부착 ──
             ITrajectoryBehavior trajectory = TrajectoryFactory.Create(data.trajectoryType, data);

@@ -72,6 +72,9 @@ MonoBehaviour:
   - RPC_InitBoss
   - RPC_SyncEnemyPositions
   - RPC_Heal
+  - RPC_RequestDamage
+  - RPC_RequestKnockback
+  - RPC_RequestBossDamage
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

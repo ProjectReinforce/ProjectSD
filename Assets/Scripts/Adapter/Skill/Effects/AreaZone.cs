@@ -43,11 +43,27 @@ namespace SwDreams.Adapter.Skill
         private SkillTriggerSystem triggerSystem;
         private Transform ownerTransform;
 
-        /// <summary>AreaEffect에서 스폰 후 호출. TriggerSystem 연결.</summary>
+        // 소유자 판별 (C안 데미지 요청)
+        private bool isLocalPlayerOwned;
+        private int ownerActorNumber = -1;
+
+        /// <summary>AreaSpawner에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
         public void SetTriggerSystem(SkillTriggerSystem system, Transform owner)
         {
             triggerSystem = system;
             ownerTransform = owner;
+
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
+            if (owner != null)
+            {
+                var pv = owner.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    isLocalPlayerOwned = pv.IsMine;
+                    ownerActorNumber = pv.Owner != null ? pv.Owner.ActorNumber : -1;
+                }
+            }
         }
 
         private void Awake()
@@ -109,8 +125,9 @@ namespace SwDreams.Adapter.Skill
                 return;
             }
 
-            // 틱 판정 (호스트만)
-            if (!PhotonNetwork.IsMasterClient) return;
+            // 틱 판정: 자기 장판이면 클라이언트에서도 실행 (C안)
+            // 남의 장판은 호스트에서만 실행
+            if (!isLocalPlayerOwned && !PhotonNetwork.IsMasterClient) return;
 
             tickTimer += Time.deltaTime;
             if (tickTimer >= tickRate)
@@ -145,10 +162,38 @@ namespace SwDreams.Adapter.Skill
                 var damageable = hit.GetComponent<IDamageable>();
                 if (damageable == null || !damageable.IsAlive) continue;
 
-                // 일반 데미지
-                damageable.TakeDamage(damage);
+                // Enemy 컴포넌트는 ShowHitVisuals/EnemyId용 (Boss는 null)
+                var enemy = hit.GetComponent<Enemy>();
 
-                // OnHit 트리거 발동 (슬로우, 즉사 등은 SO triggerEffects에서 정의)
+                if (isLocalPlayerOwned)
+                {
+                    if (PhotonNetwork.IsMasterClient)
+                    {
+                        if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                        damageable.TakeDamage(damage);
+                    }
+                    else if (enemy != null)
+                    {
+                        enemy.ShowHitVisuals(damage);
+                        SpawnManager.Instance?.RequestDamage(
+                            enemy.EnemyId, damage, ownerActorNumber);
+                    }
+                    else
+                    {
+                        // Boss: PhotonView RPC로 직접 데미지 요청
+                        var boss = hit.GetComponent<Boss>();
+                        if (boss != null)
+                            boss.RequestDamageFromClient(damage);
+                    }
+                }
+                else
+                {
+                    // 남의 장판 (호스트에서만 여기 도달): 직접 데미지
+                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    damageable.TakeDamage(damage);
+                }
+
+                // OnHit 트리거 발동
                 if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnHit))
                 {
                     triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
@@ -213,6 +258,10 @@ namespace SwDreams.Adapter.Skill
         public void OnReturnToPool()
         {
             isActive = false;
+            triggerSystem = null;
+            ownerTransform = null;
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
             gameObject.SetActive(false);
         }
     }

@@ -3,6 +3,7 @@ using System.Collections;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -48,6 +49,10 @@ namespace SwDreams.Adapter.Skill
         private float targetSearchTimer;
         private const float TARGET_SEARCH_INTERVAL = 0.2f;
 
+        // 소유자 판별 (C안 데미지 요청)
+        private bool isLocalPlayerOwned;
+        private int ownerActorNumber = -1;
+
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -78,7 +83,7 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         public void Initialize(Vector2 position, int damage, float attackRange,
             float attackCooldown, float duration, bool alwaysCritical,
-            float critDamageMultiplier)
+            float critDamageMultiplier, Transform ownerTransform)
         {
             transform.position = position;
             this.damage = damage;
@@ -87,6 +92,19 @@ namespace SwDreams.Adapter.Skill
             this.duration = duration;
             this.alwaysCritical = alwaysCritical;
             this.critDamageMultiplier = critDamageMultiplier;
+
+            // 소유자 판별
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
+            if (ownerTransform != null)
+            {
+                var pv = ownerTransform.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    isLocalPlayerOwned = pv.IsMine;
+                    ownerActorNumber = pv.Owner != null ? pv.Owner.ActorNumber : -1;
+                }
+            }
 
             aliveTime = 0f;
             attackTimer = 0f;
@@ -130,7 +148,7 @@ namespace SwDreams.Adapter.Skill
                 transform.rotation = Quaternion.Euler(0, 0, angle);
             }
 
-            // === 모든 클라이언트: 공격 타이밍 + 비주얼 ===
+            // === 공격 타이밍 ===
             attackTimer += Time.deltaTime;
             if (attackTimer >= attackCooldown && currentTarget != null
                 && currentTarget.gameObject.activeInHierarchy)
@@ -140,21 +158,50 @@ namespace SwDreams.Adapter.Skill
                 {
                     attackTimer -= attackCooldown;
 
+                    int finalDamage = damage;
+                    if (alwaysCritical)
+                        finalDamage = Mathf.RoundToInt(damage * critDamageMultiplier);
+
                     // 비주얼: 모든 클라이언트에서 표시
                     ShowAttackLine(currentTarget.position);
 
-                    // 데미지: 호스트만 처리
-                    if (PhotonNetwork.IsMasterClient)
+                    var enemy = currentTarget.GetComponent<Enemy>();
+
+                    if (isLocalPlayerOwned)
                     {
+                        if (PhotonNetwork.IsMasterClient)
+                        {
+                            // 호스트의 자기 터렛: 직접 데미지
+                            if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                            var damageable = currentTarget.GetComponent<IDamageable>();
+                            if (damageable != null && damageable.IsAlive)
+                                damageable.TakeDamage(finalDamage);
+                        }
+                        else
+                        {
+                            // 클라이언트의 자기 터렛: 비주얼 + 데미지 요청
+                            if (enemy != null && enemy.IsAlive)
+                            {
+                                enemy.ShowHitVisuals(finalDamage);
+                                SpawnManager.Instance?.RequestDamage(
+                                    enemy.EnemyId, finalDamage, ownerActorNumber);
+                            }
+                            else
+                            {
+                                // Boss: PhotonView RPC로 직접 데미지 요청
+                                var boss = currentTarget.GetComponent<Boss>();
+                                if (boss != null)
+                                    boss.RequestDamageFromClient(finalDamage);
+                            }
+                        }
+                    }
+                    else if (PhotonNetwork.IsMasterClient)
+                    {
+                        // 남의 터렛 (호스트에서만): 직접 데미지
+                        if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                         var damageable = currentTarget.GetComponent<IDamageable>();
                         if (damageable != null && damageable.IsAlive)
-                        {
-                            int finalDamage = damage;
-                            if (alwaysCritical)
-                                finalDamage = Mathf.RoundToInt(damage * critDamageMultiplier);
-
                             damageable.TakeDamage(finalDamage);
-                        }
                     }
                 }
             }
@@ -227,6 +274,8 @@ namespace SwDreams.Adapter.Skill
         public void OnReturnToPool()
         {
             isActive = false;
+            isLocalPlayerOwned = false;
+            ownerActorNumber = -1;
             currentTarget = null;
             StopAllCoroutines();
             if (attackLine != null)
