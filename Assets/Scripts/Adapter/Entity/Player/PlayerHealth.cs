@@ -121,6 +121,34 @@ namespace SwDreams.Adapter.Entity.Player
             Debug.Log($"[PlayerHealth] 부활! HP: {CurrentHP}/{MaxHP}");
         }
 
+        // ===== 회복 =====
+
+        /// <summary>
+        /// 체력 회복. 호스트에서 호출 → RPC로 전파.
+        /// HealSelfHandler, AreaZone(회복) 등에서 사용.
+        /// </summary>
+        public void Heal(int amount)
+        {
+            if (!IsAlive || amount <= 0) return;
+            photonView.RPC(nameof(RPC_Heal), RpcTarget.All, amount);
+        }
+
+        [PunRPC]
+        private void RPC_Heal(int amount)
+        {
+            if (!IsAlive) return;
+
+            int before = CurrentHP;
+            CurrentHP = Mathf.Clamp(CurrentHP + amount, 0, MaxHP);
+            int healed = CurrentHP - before;
+
+            if (healed > 0)
+            {
+                OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+                DamagePopup.Spawn(transform.position, healed, isHeal: true);
+            }
+        }
+
         // ===== PlayerStats 연동 =====
 
         private void OnPlayerStatsChanged()

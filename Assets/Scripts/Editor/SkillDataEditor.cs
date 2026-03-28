@@ -83,6 +83,7 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileCount"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileLifetime"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("penetrates"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("subProjectilePrefab"));
 
                     // 배치 패턴
                     EditorGUILayout.Space();
@@ -105,6 +106,9 @@ namespace SwDreams.Editor
                     if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Homing)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("homingRotateSpeed"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("chainFlightCount"));
+                        if (serializedObject.FindProperty("chainFlightCount").intValue > 0)
+                            EditorGUILayout.PropertyField(serializedObject.FindProperty("chainSearchRadius"));
                     }
                     else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Boomerang)
                     {
@@ -147,8 +151,6 @@ namespace SwDreams.Editor
 
                     if (serializedObject.FindProperty("spawnAtRandomPosition").boolValue)
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("randomSpawnRadius"));
-
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isDualZone"));
                 }
 
                 // 회전형 전용

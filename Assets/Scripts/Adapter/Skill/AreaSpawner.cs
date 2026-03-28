@@ -99,8 +99,7 @@ namespace SwDreams.Adapter.Skill
                 radius: radius,
                 duration: duration,
                 tickRate: data.tickRate,
-                isHealing: data.isHealingEffect,
-                isDualZone: data.isDualZone
+                isHealing: data.isHealingEffect
             );
 
             // TriggerSystem 연결

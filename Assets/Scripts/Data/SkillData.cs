@@ -89,6 +89,8 @@ namespace SwDreams.Data
         public float projectileLifetime = 5f;
         [Tooltip("적 적중 시 관통 여부. true면 소멸하지 않음.")]
         public bool penetrates = false;
+        [Tooltip("적중/소멸 시 생성할 서브 투사체 프리팹 (분기탄 등). null이면 미사용.")]
+        public GameObject subProjectilePrefab;
 
         [Header("투사체 배치/궤적")]
         [Tooltip("발사 기준 방향")]
@@ -107,6 +109,10 @@ namespace SwDreams.Data
         [Header("투사체 — 유도/왕복/회오리 파라미터")]
         [Tooltip("유도 회전 속도 (도/초). 높을수록 급선회")]
         public float homingRotateSpeed = 300f;
+        [Tooltip("체인 비행 횟수. 0이면 비활성. 적중 시 소멸 대신 타겟 교체.")]
+        public int chainFlightCount = 0;
+        [Tooltip("체인 비행 시 다음 타겟 탐색 반경")]
+        public float chainSearchRadius = 5f;
         [Tooltip("회오리 끌어당김 반경")]
         public float pullRadius = 2f;
         [Tooltip("회오리 끌어당김 힘")]
@@ -127,8 +133,6 @@ namespace SwDreams.Data
         public bool spawnAtRandomPosition = false;
         [Tooltip("랜덤 생성 반경 (플레이어 기준)")]
         public float randomSpawnRadius = 3f;
-        [Tooltip("회복+데미지 동시 (심판의 성역)")]
-        public bool isDualZone = false;
 
         [Header("회전형 전용 (Orbital)")]
         [Tooltip("궤도 반경 (플레이어 중심 거리)")]

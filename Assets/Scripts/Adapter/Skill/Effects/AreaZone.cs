@@ -30,7 +30,6 @@ namespace SwDreams.Adapter.Skill
         private float tickRate;
         private float radius;
         private bool isHealing;
-        private bool isDualZone;        // 적 데미지 + 플레이어 회복 동시
 
         // 타이머
         private float aliveTime;
@@ -60,8 +59,7 @@ namespace SwDreams.Adapter.Skill
         /// AreaEffect에서 스폰 후 호출.
         /// </summary>
         public void Initialize(Vector2 position, int damage, float radius,
-            float duration, float tickRate, bool isHealing,
-            bool isDualZone = false)
+            float duration, float tickRate, bool isHealing)
         {
             transform.position = position;
             this.damage = damage;
@@ -69,7 +67,6 @@ namespace SwDreams.Adapter.Skill
             this.duration = duration;
             this.tickRate = Mathf.Max(0.1f, tickRate);
             this.isHealing = isHealing;
-            this.isDualZone = isDualZone;
 
             aliveTime = 0f;
             tickTimer = 0f;
@@ -91,7 +88,7 @@ namespace SwDreams.Adapter.Skill
             }
 
             Debug.Log($"[AreaZone] 생성 — pos:{position}, radius:{radius}, " +
-                      $"duration:{duration}, tick:{tickRate}, healing:{isHealing}, dmg:{damage}");
+                      $"duration:{duration}, tick:{tickRate}, healing:{isHealing}");
         }
 
         private void Update()
@@ -125,17 +122,15 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>
         /// 틱 판정. 범위 내 대상에게 효과 적용.
+        /// 회복 장판이라도 OnHit 트리거가 있으면 적에게도 판정 (심판의 성역).
         /// </summary>
         private void ApplyTick()
         {
-            if (isDualZone)
-            {
-                ApplyDamageTick();
+            if (isHealing)
                 ApplyHealTick();
-            }
-            else if (isHealing)
-                ApplyHealTick();
-            else
+
+            // 피해 장판이거나, 회복 장판이라도 OnHit 트리거가 있으면 적 판정
+            if (!isHealing || (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnHit)))
                 ApplyDamageTick();
         }
 
@@ -171,41 +166,18 @@ namespace SwDreams.Adapter.Skill
         {
             var hits = Physics2D.OverlapCircleAll(transform.position, radius);
 
-            if (hits.Length == 0)
-            {
-                Debug.Log($"[AreaZone] 회복 틱 — 감지 콜라이더 0개 (pos:{transform.position}, radius:{radius})");
-                return;
-            }
-
-            bool foundPlayer = false;
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Player")) continue;
-                foundPlayer = true;
 
-                var damageable = hit.GetComponent<IDamageable>();
-                if (damageable == null)
-                {
-                    Debug.LogWarning($"[AreaZone] {hit.name}에 IDamageable 없음!");
-                    continue;
-                }
-
-                if (!damageable.IsAlive) continue;
-
-                int hpBefore = damageable.CurrentHP;
+                var health = hit.GetComponent<Entity.Player.PlayerHealth>();
+                if (health == null || !health.IsAlive) continue;
 
                 // 풀피면 스킵 (불필요한 RPC 방지)
-                if (hpBefore >= damageable.MaxHP)
-                    continue;
+                if (health.CurrentHP >= health.MaxHP) continue;
 
-                // 음수 데미지 = 회복
-                // TODO [Phase 5]: Player에 Heal(int) 메서드 추가 후 교체
-                damageable.TakeDamage(-damage);
-                Debug.Log($"[AreaZone] 회복! HP:{hpBefore}→{damageable.CurrentHP}/{damageable.MaxHP} (회복량:{damage})");
+                health.Heal(damage);
             }
-
-            if (!foundPlayer)
-                Debug.Log($"[AreaZone] 회복 틱 — 콜라이더 {hits.Length}개 감지했으나 Player 태그 없음");
         }
 
         private void ReturnToPool()

@@ -18,8 +18,6 @@ namespace SwDreams.Adapter.Skill.TriggerEffects
             int chainCount = Mathf.RoundToInt(parameters.primary);
             float searchRadius = parameters.secondary > 0f ? parameters.secondary : 0.65f;
 
-            Debug.Log($"[ChainHandler] 체인! 횟수={chainCount}, 반경={searchRadius}, 타겟={context.target?.name}");
-
             if (chainCount <= 0 || context.target == null) return;
             if (!Photon.Pun.PhotonNetwork.IsMasterClient) return;
 

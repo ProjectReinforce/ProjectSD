@@ -34,5 +34,8 @@ namespace SwDreams.Domain.ValueObjects
 
         /// <summary>스킬 소유자(플레이어) Transform.</summary>
         public Transform owner;
+
+        /// <summary>서브 투사체 프리팹. SpawnProjectileHandler에서 사용. null 가능.</summary>
+        public GameObject subProjectilePrefab;
     }
 }

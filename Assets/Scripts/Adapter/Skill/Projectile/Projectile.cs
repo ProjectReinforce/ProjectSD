@@ -43,6 +43,14 @@ namespace SwDreams.Adapter.Skill
         // SO에서 관통 설정 (Trajectory 기본값을 오버라이드)
         private bool? penetratesOverride;
 
+        // ===== 체인 비행 (체인 미사일 진화) =====
+        private int chainFlightCount;
+        private float chainSearchRadius;
+        private System.Collections.Generic.HashSet<int> chainHitIds;
+
+        // ===== 서브 투사체 (분기탄 등) =====
+        private GameObject subProjectilePrefab;
+
         /// <summary>궤적 행동 부착. ProjectileEffect에서 스폰 후 호출.</summary>
         public void SetTrajectory(ITrajectoryBehavior behavior)
         {
@@ -54,6 +62,25 @@ namespace SwDreams.Adapter.Skill
         public void SetPenetrates(bool value)
         {
             penetratesOverride = value;
+        }
+
+        /// <summary>
+        /// 체인 비행 설정. ProjectileSpawner에서 호출.
+        /// 적중 시 소멸 대신 타겟 교체 + 계속 비행.
+        /// HomingTrajectory와 함께 사용.
+        /// </summary>
+        public void SetChainFlight(int count, float searchRadius)
+        {
+            chainFlightCount = count;
+            chainSearchRadius = searchRadius;
+            if (count > 0)
+                chainHitIds = new System.Collections.Generic.HashSet<int>();
+        }
+
+        /// <summary>서브 투사체 프리팹 설정. SpawnProjectileHandler용.</summary>
+        public void SetSubProjectilePrefab(GameObject prefab)
+        {
+            subProjectilePrefab = prefab;
         }
 
         /// <summary>Behavior에서 호출. 투사체 강제 풀 반환.</summary>
@@ -160,11 +187,40 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>
         /// 적 히트 시 후처리.
-        /// 우선순위: SO penetrates 오버라이드 → Trajectory 기본값.
-        /// 관통이면 소멸하지 않음.
+        /// 체인 비행 활성화 시: 소멸 대신 타겟 교체 + 계속 비행.
+        /// 그 외: SO penetrates 오버라이드 → Trajectory 기본값.
         /// </summary>
         protected virtual void OnHitEnemy(Collider2D other)
         {
+            // ── 체인 비행 처리 ──
+            if (chainFlightCount > 0 && trajectoryBehavior is Trajectories.HomingTrajectory homing)
+            {
+                // 맞은 적 기록
+                chainHitIds.Add(other.gameObject.GetInstanceID());
+                chainFlightCount--;
+
+                if (chainFlightCount <= 0)
+                {
+                    ReturnToPool();
+                    return;
+                }
+
+                // 다음 타겟 탐색 (이미 맞은 적 제외)
+                Transform next = homing.FindTargetExcluding(
+                    transform.position, chainSearchRadius, chainHitIds);
+
+                if (next != null)
+                {
+                    homing.SetTarget(next);
+                    return; // 소멸하지 않고 계속 비행
+                }
+
+                // 타겟 없으면 소멸
+                ReturnToPool();
+                return;
+            }
+
+            // ── 기본 관통/소멸 처리 ──
             // SO 오버라이드가 있으면 우선
             if (penetratesOverride.HasValue)
             {
@@ -208,7 +264,8 @@ namespace SwDreams.Adapter.Skill
                 direction = direction,
                 target = target,
                 damage = damage,
-                owner = ownerTransform
+                owner = ownerTransform,
+                subProjectilePrefab = subProjectilePrefab
             });
         }
 
@@ -223,7 +280,8 @@ namespace SwDreams.Adapter.Skill
                 position = transform.position,
                 direction = direction,
                 damage = damage,
-                owner = ownerTransform
+                owner = ownerTransform,
+                subProjectilePrefab = subProjectilePrefab
             });
         }
 
@@ -241,6 +299,9 @@ namespace SwDreams.Adapter.Skill
             trajectoryBehavior?.Reset();
             trajectoryBehavior = null;
             penetratesOverride = null;
+            chainFlightCount = 0;
+            chainHitIds?.Clear();
+            subProjectilePrefab = null;
         }
     }
 }

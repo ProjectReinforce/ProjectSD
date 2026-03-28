@@ -4,7 +4,7 @@ namespace SwDreams.Adapter.Skill.Trajectories
 {
     /// <summary>
     /// 유도 궤적. 가장 가까운 적을 추적, 없으면 직선.
-    /// 기존 HomingProjectile 로직 포팅.
+    /// [Step 4 체인 비행] SetTarget/FindTargetExcluding 추가.
     /// </summary>
     public class HomingTrajectory : ITrajectoryBehavior
     {
@@ -31,6 +31,43 @@ namespace SwDreams.Adapter.Skill.Trajectories
         {
             target = null;
             retargetTimer = 0f;
+        }
+
+        /// <summary>
+        /// 외부에서 타겟 직접 지정. 체인 비행 시 Projectile이 호출.
+        /// </summary>
+        public void SetTarget(Transform newTarget)
+        {
+            target = newTarget;
+            retargetTimer = 0f; // 즉시 추적 시작
+        }
+
+        /// <summary>
+        /// 제외 목록을 사용하여 가장 가까운 적 탐색.
+        /// 체인 비행 시 이미 맞은 적을 제외.
+        /// </summary>
+        /// <returns>찾은 타겟. 없으면 null.</returns>
+        public Transform FindTargetExcluding(Vector2 fromPosition, float searchRadius,
+            System.Collections.Generic.HashSet<int> excludeIds)
+        {
+            Transform closest = null;
+            float minDist = float.MaxValue;
+            var enemies = GameObject.FindGameObjectsWithTag("Enemy");
+
+            foreach (var e in enemies)
+            {
+                if (!e.activeInHierarchy) continue;
+                if (excludeIds != null && excludeIds.Contains(e.GetInstanceID())) continue;
+
+                float dist = Vector2.Distance(fromPosition, e.transform.position);
+                if (dist > searchRadius) continue;
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    closest = e.transform;
+                }
+            }
+            return closest;
         }
 
         public void UpdateMovement(Projectile projectile, float deltaTime)

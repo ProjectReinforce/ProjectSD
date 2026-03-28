@@ -82,13 +82,14 @@ namespace SwDreams.Adapter.Skill.TriggerEffects
             Register(EffectActionType.ApplySlow, new ApplySlowHandler());
             Register(EffectActionType.Chain, new ChainHandler());
             Register(EffectActionType.Execute, new ExecuteHandler());
-            // TODO: 추후 구현 시 등록
-            // Register(EffectActionType.ApplyDoT, new ApplyDoTHandler());
-            // Register(EffectActionType.Pull, new PullHandler());
+            Register(EffectActionType.ApplyDoT, new ApplyDoTHandler());
+            Register(EffectActionType.Pull, new PullHandler());
+            Register(EffectActionType.SpawnProjectile, new SpawnProjectileHandler());
+            Register(EffectActionType.ApplyVulnerability, new ApplyVulnerabilityHandler());
+            Register(EffectActionType.HealSelf, new HealSelfHandler());
+
+            // TODO: [Phase 5+] 메아리 스킬 구현 시 등록
             // Register(EffectActionType.Refire, new RefireHandler());
-            // Register(EffectActionType.SpawnProjectile, new SpawnProjectileHandler());
-            // Register(EffectActionType.ApplyVulnerability, new ApplyVulnerabilityHandler());
-            // Register(EffectActionType.HealSelf, new HealSelfHandler());
 
             Debug.Log($"[EffectActionRegistry] 기본 등록 완료: {handlers.Count}개");
         }

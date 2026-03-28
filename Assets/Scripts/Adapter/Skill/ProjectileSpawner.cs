@@ -93,6 +93,14 @@ namespace SwDreams.Adapter.Skill
             // ── 관통 설정 ──
             if (data.penetrates)
                 projectile.SetPenetrates(true);
+
+            // ── 체인 비행 설정 ──
+            if (data.chainFlightCount > 0)
+                projectile.SetChainFlight(data.chainFlightCount, data.chainSearchRadius);
+
+            // ── 서브 투사체 프리팹 (분기탄 등) ──
+            if (data.subProjectilePrefab != null)
+                projectile.SetSubProjectilePrefab(data.subProjectilePrefab);
         }
 
         /// <summary>
