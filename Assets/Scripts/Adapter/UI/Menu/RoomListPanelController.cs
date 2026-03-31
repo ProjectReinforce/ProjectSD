@@ -15,12 +15,17 @@ namespace Adapter.UI.Menu
     ///   - 방 생성/참가 요청 중계
     ///   - 비밀번호 팝업 흐름 관리
     ///   - 새로고침 버튼 쿨다운 제어
+    ///   - 방 생성 옵션(인원수) 관리
     ///   - UI 아이템의 실제 생성/재활용은 RoomListView에 위임
     ///
     /// 새로고침 정책:
     ///   Photon PUN2는 로비에 있으면 서버가 방 목록 변경을 자동 푸시한다.
     ///   따라서 수동 새로고침 버튼은 현재 캐시된 목록으로 UI를 다시 그리는 역할이며,
     ///   연타 방지를 위한 쿨다운만 적용한다.
+    ///
+    /// 변경 이력:
+    ///   [1] 인원수 선택 기능 추가 — playerCountToggles 배열로 1~4인 선택,
+    ///       선택값을 NetworkManager.CreateRoom()에 전달하여 MaxPlayers 반영.
     /// </summary>
     public class RoomListPanelController : MonoBehaviour, IRoomListItemHandler
     {
@@ -31,6 +36,14 @@ namespace Adapter.UI.Menu
         [SerializeField] private GameObject makeRoomPanel;
         [SerializeField] private TMP_InputField roomNameInputField;
         [SerializeField] private TMP_InputField createRoomPasswordInputField;
+
+        [Header("Create Room — Player Count")]
+        [Tooltip("인원수 선택 토글 배열. 인덱스 0 = 1인, 인덱스 3 = 4인. Inspector에서 순서대로 연결.")]
+        [SerializeField] private Toggle[] playerCountToggles;
+        [Tooltip("ToggleGroup 컴포넌트. 단일 선택을 보장한다. 토글들의 부모 또는 별도 오브젝트에 부착.")]
+        [SerializeField] private ToggleGroup playerCountToggleGroup;
+        [Tooltip("인원수 선택 토글의 기본값 (팝업 열릴 때 초기 선택)")]
+        [SerializeField] private byte defaultMaxPlayers = 4;
 
         [Header("Search Room Popup")]
         [SerializeField] private GameObject searchRoomPopup;
@@ -54,6 +67,18 @@ namespace Adapter.UI.Menu
         private string pendingJoinRoomName = string.Empty;
         private float refreshCooldownTimer;
 
+        /// <summary>
+        /// 방 생성 팝업에서 선택된 최대 인원수.
+        /// 팝업이 열릴 때 defaultMaxPlayers로 초기화되고,
+        /// 인원수 버튼 클릭 시 갱신된다.
+        ///
+        /// 왜 byte인가:
+        ///   Photon RoomOptions.MaxPlayers가 byte 타입이므로 형변환 없이 그대로 전달.
+        /// </summary>
+        private byte selectedMaxPlayers;
+
+        // ===== 라이프사이클 =====
+
         private void OnEnable()
         {
             if (NetworkManager.Instance == null)
@@ -70,6 +95,7 @@ namespace Adapter.UI.Menu
             SetJoinPasswordPopup(false);
             SetSearchRoomPopup(false);
             ClearAllInputFields();
+            ResetCreateRoomOptions();
 
             refreshCooldownTimer = 0f;
 
@@ -89,6 +115,8 @@ namespace Adapter.UI.Menu
             NetworkManager.Instance.JoinRoomFailed -= HandleJoinRoomFailed;
             NetworkManager.Instance.CreateRoomFailed -= HandleCreateRoomFailed;
             NetworkManager.Instance.RoomListChanged -= HandleRoomListChanged;
+
+            UnbindPlayerCountToggles();
 
             if (roomListView != null)
             {
@@ -146,6 +174,7 @@ namespace Adapter.UI.Menu
 
         public void OnClickOpenCreateRoomPopup()
         {
+            ResetCreateRoomOptions();
             SetCreateRoomPanel(true);
             SetStatus("Enter room options.");
         }
@@ -158,9 +187,16 @@ namespace Adapter.UI.Menu
         public void OnClickCloseCreateRoomPopup()
         {
             SetCreateRoomPanel(false);
-            ClearCreateRoomInputFields();
+            ResetCreateRoomOptions();
         }
 
+        /// <summary>
+        /// 방 만들기 확인 버튼 클릭.
+        ///
+        /// [1] 변경: selectedMaxPlayers를 NetworkManager.CreateRoom()에 전달.
+        ///     이전에는 NetworkManager 내부의 maxPlayersPerRoom(하드코딩 4)만 사용했으나,
+        ///     이제 UI에서 선택한 인원수가 방의 MaxPlayers에 반영된다.
+        /// </summary>
         public void OnClickConfirmCreateRoom()
         {
             if (NetworkManager.Instance == null)
@@ -176,11 +212,13 @@ namespace Adapter.UI.Menu
             }
 
             var password = createRoomPasswordInputField != null ? createRoomPasswordInputField.text : string.Empty;
-            NetworkManager.Instance.CreateRoom(roomName, password);
+
+            // ★ [1] 선택된 인원수를 전달
+            NetworkManager.Instance.CreateRoom(roomName, password, selectedMaxPlayers);
 
             SetStatus(string.IsNullOrWhiteSpace(password)
-                ? $"Creating room: {roomName}"
-                : $"Creating room: {roomName} (password)");
+                ? $"Creating room: {roomName} ({selectedMaxPlayers}P)"
+                : $"Creating room: {roomName} ({selectedMaxPlayers}P, password)");
         }
 
         /// <summary>
@@ -259,6 +297,109 @@ namespace Adapter.UI.Menu
         {
             pendingJoinRoomName = string.Empty;
             SetJoinPasswordPopup(false);
+        }
+
+        // ===== 인원수 선택 — 요구사항 [1] =====
+
+        /// <summary>
+        /// 인원수 토글 이벤트 바인딩.
+        ///
+        /// 왜 Toggle[] + ToggleGroup인가:
+        ///   UI가 이미 토글로 구현되어 있고, ToggleGroup이 "단일 선택" 제약을
+        ///   Unity 엔진 레벨에서 보장한다. 코드에서 상호 배제 로직을 직접 구현할
+        ///   필요가 없으므로 버그 가능성이 줄어든다.
+        ///
+        /// 배열 인덱스 ↔ 인원수 매핑:
+        ///   인덱스 0 → 1인, 인덱스 1 → 2인, ..., 인덱스 3 → 4인
+        ///   추후 5인 이상 지원 시 배열에 토글만 추가하면 코드 변경 불필요 (OCP).
+        ///
+        /// ToggleGroup 세팅 (Inspector):
+        ///   1. 토글들의 공통 부모(또는 별도 빈 오브젝트)에 ToggleGroup 컴포넌트 추가
+        ///   2. 각 Toggle의 Group 필드에 해당 ToggleGroup 연결
+        ///   3. allowSwitchOff = false (항상 하나는 선택된 상태 유지)
+        /// </summary>
+        private void BindPlayerCountToggles()
+        {
+            if (playerCountToggles == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < playerCountToggles.Length; i++)
+            {
+                if (playerCountToggles[i] == null)
+                {
+                    continue;
+                }
+
+                // 클로저가 올바른 값을 캡처하도록 로컬 변수 사용
+                var playerCount = (byte)(i + 1);
+                playerCountToggles[i].onValueChanged.AddListener(isOn => OnPlayerCountToggleChanged(playerCount, isOn));
+            }
+        }
+
+        /// <summary>
+        /// 인원수 토글 이벤트 해제.
+        /// OnDisable에서 호출하여 리스너 누적을 방지한다.
+        /// </summary>
+        private void UnbindPlayerCountToggles()
+        {
+            if (playerCountToggles == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < playerCountToggles.Length; i++)
+            {
+                if (playerCountToggles[i] != null)
+                {
+                    playerCountToggles[i].onValueChanged.RemoveAllListeners();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 인원수 토글 값 변경 콜백.
+        ///
+        /// ToggleGroup 특성상 하나를 켜면 기존 것이 꺼지면서
+        /// onValueChanged가 2번 호출된다 (기존 OFF + 새 ON).
+        /// isOn == true인 경우에만 selectedMaxPlayers를 갱신하여
+        /// OFF 콜백에서 불필요한 갱신을 방지한다.
+        /// </summary>
+        private void OnPlayerCountToggleChanged(byte count, bool isOn)
+        {
+            if (!isOn)
+            {
+                return;
+            }
+
+            selectedMaxPlayers = count;
+        }
+
+        /// <summary>
+        /// 인원수 토글의 선택 상태를 코드에서 강제 설정.
+        /// ResetCreateRoomOptions()에서 기본값 복원 시 호출한다.
+        ///
+        /// ToggleGroup이 allowSwitchOff = false일 때,
+        /// SetIsOnWithoutNotify()를 사용하면 리스너를 트리거하지 않으므로
+        /// 초기화 시 불필요한 콜백 호출을 피할 수 있다.
+        /// </summary>
+        private void SetPlayerCountToggleWithoutNotify(byte count)
+        {
+            if (playerCountToggles == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < playerCountToggles.Length; i++)
+            {
+                if (playerCountToggles[i] == null)
+                {
+                    continue;
+                }
+
+                playerCountToggles[i].SetIsOnWithoutNotify((i + 1) == count);
+            }
         }
 
         // ===== 새로고침 =====
@@ -386,6 +527,7 @@ namespace Adapter.UI.Menu
             SetJoinPasswordPopup(false);
             SetSearchRoomPopup(false);
             ClearAllInputFields();
+            ResetCreateRoomOptions();
             menuSceneManager?.ShowWaitingRoom();
         }
 
@@ -516,6 +658,36 @@ namespace Adapter.UI.Menu
             {
                 createRoomPasswordInputField.text = string.Empty;
             }
+        }
+
+        /// <summary>
+        /// 방 생성 옵션(인원수 등)을 기본값으로 초기화.
+        ///
+        /// 호출 시점:
+        ///   - OnEnable (패널 최초 진입)
+        ///   - OnClickOpenCreateRoomPopup (팝업 열기)
+        ///   - OnClickCloseCreateRoomPopup (팝업 닫기)
+        ///   - HandleJoinedRoom (방 진입 성공)
+        ///
+        /// 왜 ClearCreateRoomInputFields()와 분리하는가:
+        ///   SRP — InputField 텍스트 초기화와 선택형 옵션 초기화는 서로 다른 책임이다.
+        ///   InputField는 "텍스트를 비운다"이고, 옵션은 "기본값으로 되돌린다"이다.
+        ///   추후 난이도, 맵 선택 등 옵션이 추가되면 이 메서드에만 초기화 로직을 넣으면 된다.
+        /// </summary>
+        private void ResetCreateRoomOptions()
+        {
+            selectedMaxPlayers = defaultMaxPlayers;
+
+            // ToggleGroup이 항상 하나 선택된 상태를 유지하도록 보장
+            if (playerCountToggleGroup != null)
+            {
+                playerCountToggleGroup.allowSwitchOff = false;
+            }
+
+            // 이전 팝업의 리스너가 남아있을 수 있으므로 해제 후 재바인딩
+            UnbindPlayerCountToggles();
+            BindPlayerCountToggles();
+            SetPlayerCountToggleWithoutNotify(selectedMaxPlayers);
         }
     }
 }

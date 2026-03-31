@@ -123,7 +123,7 @@ namespace Adapter.Manager
             });
         }
 
-        public void CreateRoom(string roomName, string password = "")
+        public void CreateRoom(string roomName, string password = "", byte maxPlayers = 0)
         {
             RunWhenMatchmakingReady(() =>
             {
@@ -133,8 +133,6 @@ namespace Adapter.Manager
                 }
 
                 var hasPassword = !string.IsNullOrWhiteSpace(password);
-                // 비밀번호 유무/값을 방 커스텀 프로퍼티에 저장해
-                // 클라이언트가 입장 전에 비밀번호 입력 필요 여부를 판단할 수 있게 함
                 var customProps = new Hashtable
                 {
                     [HasPasswordKey] = hasPassword
@@ -144,14 +142,16 @@ namespace Adapter.Manager
                     customProps[PasswordKey] = password.Trim();
                 }
 
+                // maxPlayers가 0이면 Inspector 기본값 사용, 아니면 전달받은 값 사용
+                var effectiveMaxPlayers = maxPlayers > 0 ? maxPlayers : maxPlayersPerRoom;
+
                 var options = new RoomOptions
                 {
-                    MaxPlayers = maxPlayersPerRoom,
+                    MaxPlayers = effectiveMaxPlayers,
                     IsVisible = true,
                     IsOpen = true,
                     CleanupCacheOnLeave = true,
                     CustomRoomProperties = customProps,
-                    // 로비에는 hasPw만 노출하고, 실제 비밀번호 값은 노출하지 않음.
                     CustomRoomPropertiesForLobby = new[] { HasPasswordKey }
                 };
 
