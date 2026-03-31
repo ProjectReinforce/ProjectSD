@@ -35,7 +35,16 @@ namespace Adapter.UI.Menu
         [Header("Create Room UI")]
         [SerializeField] private GameObject makeRoomPanel;
         [SerializeField] private TMP_InputField roomNameInputField;
+
+        [Header("Create Room — Password")]
+        [Tooltip("비밀번호 InputField. 체크박스 OFF 시 게임오브젝트 비활성화.")]
         [SerializeField] private TMP_InputField createRoomPasswordInputField;
+        [Tooltip("비밀번호 활성화 체크박스 버튼 (Btn_Check). 클릭 시 비밀번호 입력 토글.")]
+        [SerializeField] private Button createRoomPasswordCheckButton;
+        [Tooltip("체크 활성 비주얼 (Btn_Check/On). 비밀번호 활성 시 보이고, 비활성 시 숨긴다.")]
+        [SerializeField] private GameObject passwordCheckOnVisual;
+        [Tooltip("체크 해제 비주얼 (Btn_Check/Off). 비밀번호 활성 시 숨기고, 비활성 시 보인다.")]
+        [SerializeField] private GameObject passwordCheckOffVisual;
 
         [Header("Create Room — Player Count")]
         [Tooltip("인원수 선택 토글 배열. 인덱스 0 = 1인, 인덱스 3 = 4인. Inspector에서 순서대로 연결.")]
@@ -77,6 +86,12 @@ namespace Adapter.UI.Menu
         /// </summary>
         private byte selectedMaxPlayers;
 
+        /// <summary>
+        /// 비밀번호 체크박스의 현재 상태.
+        /// false = 비밀번호 비활성 (InputField 잠김), true = 비밀번호 활성 (입력 가능).
+        /// </summary>
+        private bool isPasswordEnabled;
+
         // ===== 라이프사이클 =====
 
         private void OnEnable()
@@ -117,6 +132,7 @@ namespace Adapter.UI.Menu
             NetworkManager.Instance.RoomListChanged -= HandleRoomListChanged;
 
             UnbindPlayerCountToggles();
+            UnbindPasswordCheckButton();
 
             if (roomListView != null)
             {
@@ -402,6 +418,101 @@ namespace Adapter.UI.Menu
             }
         }
 
+        // ===== 비밀번호 체크박스 — 요구사항 [2] =====
+
+        /// <summary>
+        /// 비밀번호 체크박스 버튼 리스너 등록.
+        /// </summary>
+        private void BindPasswordCheckButton()
+        {
+            if (createRoomPasswordCheckButton != null)
+            {
+                createRoomPasswordCheckButton.onClick.AddListener(OnClickPasswordCheck);
+            }
+        }
+
+        /// <summary>
+        /// 비밀번호 체크박스 버튼 리스너 해제.
+        /// </summary>
+        private void UnbindPasswordCheckButton()
+        {
+            if (createRoomPasswordCheckButton != null)
+            {
+                createRoomPasswordCheckButton.onClick.RemoveListener(OnClickPasswordCheck);
+            }
+        }
+
+        /// <summary>
+        /// 비밀번호 체크박스 클릭 콜백.
+        ///
+        /// 클릭할 때마다 isPasswordEnabled를 반전시키고 InputField 상태를 동기화한다.
+        /// Button이므로 on/off 상태를 코드에서 직접 관리한다.
+        ///
+        /// 왜 Toggle이 아닌 Button인가:
+        ///   Btn_Check 오브젝트에 이미 Button 컴포넌트가 붙어있고,
+        ///   체크 비주얼(체크마크 이미지)도 자체적으로 관리하는 구조이므로
+        ///   Toggle로 교체하면 기존 UI 프리팹을 변경해야 한다.
+        ///   Button + bool 플래그로 동일한 동작을 구현할 수 있으므로
+        ///   기존 UI 구조를 그대로 유지한다.
+        /// </summary>
+        private void OnClickPasswordCheck()
+        {
+            isPasswordEnabled = !isPasswordEnabled;
+            ApplyPasswordState();
+        }
+
+        /// <summary>
+        /// isPasswordEnabled 상태에 따라 InputField와 체크 비주얼을 동기화.
+        ///
+        /// isPasswordEnabled == true:
+        ///   - InputField 게임오브젝트 활성화 (비밀번호 입력 가능)
+        ///   - off 비주얼 숨김 (체크된 상태로 보임)
+        ///
+        /// isPasswordEnabled == false:
+        ///   - InputField 게임오브젝트 비활성화 (비밀번호 입력 불가)
+        ///   - InputField 텍스트 초기화 (의도치 않은 비밀번호 방 생성 방지)
+        ///   - off 비주얼 표시 (체크 해제 상태로 보임)
+        ///
+        /// 왜 interactable이 아닌 SetActive인가:
+        ///   UI 스크린샷 기준으로 비밀번호 InputField는 체크박스 OFF 시
+        ///   완전히 숨겨진 상태이므로, interactable(회색 처리)이 아니라
+        ///   게임오브젝트 자체를 켜고 끄는 것이 실제 UI 동작과 일치한다.
+        /// </summary>
+        private void ApplyPasswordState()
+        {
+            // InputField 게임오브젝트 활성/비활성
+            if (createRoomPasswordInputField != null)
+            {
+                createRoomPasswordInputField.gameObject.SetActive(isPasswordEnabled);
+
+                // 비활성화 시 이전 입력 텍스트 제거
+                if (!isPasswordEnabled)
+                {
+                    createRoomPasswordInputField.text = string.Empty;
+                }
+            }
+
+            // 체크 비주얼: On/Off 오브젝트를 상호 배타적으로 토글
+            if (passwordCheckOnVisual != null)
+            {
+                passwordCheckOnVisual.SetActive(isPasswordEnabled);
+            }
+
+            if (passwordCheckOffVisual != null)
+            {
+                passwordCheckOffVisual.SetActive(!isPasswordEnabled);
+            }
+        }
+
+        /// <summary>
+        /// 비밀번호 체크박스 + InputField를 초기 상태(비활성)로 복원.
+        /// </summary>
+        private void ResetPasswordCheck()
+        {
+            isPasswordEnabled = false;
+            ApplyPasswordState();
+        }
+
         // ===== 새로고침 =====
 
         /// <summary>
@@ -676,18 +787,22 @@ namespace Adapter.UI.Menu
         /// </summary>
         private void ResetCreateRoomOptions()
         {
+            // --- 인원수 ---
             selectedMaxPlayers = defaultMaxPlayers;
 
-            // ToggleGroup이 항상 하나 선택된 상태를 유지하도록 보장
             if (playerCountToggleGroup != null)
             {
                 playerCountToggleGroup.allowSwitchOff = false;
             }
 
-            // 이전 팝업의 리스너가 남아있을 수 있으므로 해제 후 재바인딩
             UnbindPlayerCountToggles();
             BindPlayerCountToggles();
             SetPlayerCountToggleWithoutNotify(selectedMaxPlayers);
+
+            // --- 비밀번호 [2] ---
+            UnbindPasswordCheckButton();
+            ResetPasswordCheck();
+            BindPasswordCheckButton();
         }
     }
 }
