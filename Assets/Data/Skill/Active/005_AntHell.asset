@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 0
   effectType: 2
   chaosEffectType: 0
-  icon: {fileID: 21300000, guid: 900236f2e2e2c574d8481da80d89ffb0, type: 3}
+  icon: {fileID: 21300000, guid: 0e036693faa219c448e22f9914cc0e0a, type: 3}
   description: "\uC9C0\uC9C1"
   maxLevel: 7
   damagePerLevel: 080000000a0000000c0000000f00000012000000160000001b000000
