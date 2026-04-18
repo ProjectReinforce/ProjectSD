@@ -108,3 +108,6 @@ InitTestScene*.unity*
 # Visual Studio .slnx 파일 무시
 *.slnx
 
+# Claude Code — personal (non-shared) settings
+.claude/settings.local.json
+

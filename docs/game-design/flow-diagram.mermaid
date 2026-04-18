@@ -1,0 +1,172 @@
+---
+title: "게임 플로우 다이어그램 - Sweepin' Dreams"
+---
+flowchart TD
+    %% ═══ 스타일 정의 ═══
+    classDef screen fill:#2B5797,color:#fff,stroke:#1F3864,stroke-width:2px,font-weight:bold
+    classDef popup fill:#E8F0FE,color:#1F3864,stroke:#2B5797,stroke-width:1px
+    classDef action fill:#FFF3E0,color:#5D4037,stroke:#FF9800,stroke-width:1px
+    classDef error fill:#FFEBEE,color:#C62828,stroke:#EF5350,stroke-width:1px
+    classDef game fill:#E8F5E9,color:#1B5E20,stroke:#43A047,stroke-width:2px,font-weight:bold
+    classDef result fill:#F3E5F5,color:#4A148C,stroke:#AB47BC,stroke-width:2px,font-weight:bold
+    classDef network fill:#FFFDE7,color:#F57F17,stroke:#FDD835,stroke-width:1px
+
+    %% ═══════════════════════════════════════
+    %% MenuScene (UI 패널 전환으로 처리)
+    %% ═══════════════════════════════════════
+    subgraph MENU_SCENE ["🎬 MenuScene"]
+        direction TB
+
+        %% ─── TitlePanel ───
+        subgraph TITLE_PANEL ["TitlePanel"]
+            TITLE[🎮 타이틀 화면]:::screen
+            SOLO[혼자하기]:::action
+            MULTI[같이하기]:::action
+            SETTINGS[설정]:::popup
+            QUIT[종료]
+        end
+
+        TITLE --> SOLO
+        TITLE --> MULTI
+        TITLE --> SETTINGS
+        TITLE --> QUIT
+
+        %% ─── 혼자하기 경로 ───
+        SOLO --> SOLO_CONNECT{Photon 접속}:::network
+        SOLO_CONNECT -->|성공| SOLO_ROOM[자동 방 생성\nmaxPlayers=1]:::action
+        SOLO_CONNECT -->|실패| CONN_ERR[접속 실패 팝업\n재시도 / 돌아가기]:::error
+        CONN_ERR -->|재시도| SOLO_CONNECT
+        CONN_ERR -->|돌아가기| TITLE
+        SOLO_ROOM --> LOBBY
+
+        %% ─── 같이하기 경로 ───
+        MULTI --> MULTI_CONNECT{Photon 접속}:::network
+        MULTI_CONNECT -->|성공| ROOMLIST
+        MULTI_CONNECT -->|실패| CONN_ERR2[접속 실패 팝업]:::error
+        CONN_ERR2 -->|재시도| MULTI_CONNECT
+        CONN_ERR2 -->|돌아가기| TITLE
+
+        %% ─── RoomListPanel ───
+        subgraph ROOMLIST_PANEL ["RoomListPanel"]
+            ROOMLIST[📋 방 리스트 화면]:::screen
+        end
+
+        ROOMLIST --> CREATE_BTN[방 만들기]:::action
+        ROOMLIST --> CODE_BTN[코드 입장]:::action
+        ROOMLIST --> JOIN_ROOM[방 클릭하여 참가]:::action
+        ROOMLIST --> BACK_TITLE[뒤로가기]:::action
+        BACK_TITLE --> TITLE
+
+        CREATE_BTN --> CREATE_POPUP[🔧 방 만들기 팝업\n방이름 / 비밀번호 / 인원\n난이도 / 맵]:::popup
+        CREATE_POPUP -->|생성| CREATE_ROOM{방 생성}:::network
+        CREATE_POPUP -->|취소| ROOMLIST
+        CREATE_ROOM -->|성공| LOBBY
+        CREATE_ROOM -->|실패| CREATE_ERR[방 생성 실패 팝업]:::error
+        CREATE_ERR --> ROOMLIST
+
+        CODE_BTN --> CODE_POPUP[🔑 코드 입장 팝업\n방 코드 입력]:::popup
+        CODE_POPUP -->|입장| CODE_JOIN{코드로 참가}:::network
+        CODE_POPUP -->|취소| ROOMLIST
+        CODE_JOIN -->|성공| LOBBY
+        CODE_JOIN -->|코드 무효| CODE_ERR[유효하지 않은 코드]:::error
+        CODE_ERR --> CODE_POPUP
+
+        JOIN_ROOM --> JOIN_CHECK{방 참가}:::network
+        JOIN_CHECK -->|성공| LOBBY
+        JOIN_CHECK -->|꽉참| FULL_ERR[방이 가득 찼습니다]:::error
+        JOIN_CHECK -->|비밀번호| PW_POPUP[비밀번호 입력 팝업]:::popup
+        FULL_ERR --> ROOMLIST
+        PW_POPUP -->|정확| LOBBY
+        PW_POPUP -->|틀림| PW_ERR[비밀번호 틀림]:::error
+        PW_ERR --> PW_POPUP
+
+        %% ─── WaitingRoomPanel ───
+        subgraph WAITING_PANEL ["WaitingRoomPanel"]
+            LOBBY[🏠 대기실\n참가자 리스트 / 캐릭터 프리뷰\n준비 상태 / 방 정보]:::screen
+        end
+
+        LOBBY --> CHAR_BTN[캐릭터 변경]:::action
+        CHAR_BTN --> CHAR_POPUP[👤 캐릭터 선택 팝업\n캐릭터 리스트\n이름 / 스킬 / 특성]:::popup
+        CHAR_POPUP -->|선택| LOBBY
+        CHAR_POPUP -->|취소| LOBBY
+
+        LOBBY --> READY[준비 완료 토글]:::action
+        READY --> READY_CHECK{전원 준비?}:::network
+        READY_CHECK -->|아니오| LOBBY
+        READY_CHECK -->|예| COUNTDOWN[3초 카운트다운]:::action
+
+        LOBBY --> LEAVE_LOBBY[나가기]:::action
+        LEAVE_LOBBY --> ROOMLIST
+
+        COUNTDOWN --> CD_CANCEL{준비 취소 발생?}
+        CD_CANCEL -->|예| LOBBY
+    end
+
+    %% ═══ 씬 전환 ═══
+    CD_CANCEL -->|"아니오\n(PhotonNetwork.LoadLevel)"| GAME_LOAD
+
+    %% ═══════════════════════════════════════
+    %% GameScene (인게임 + 결과 화면)
+    %% ═══════════════════════════════════════
+    subgraph GAME_SCENE ["⚔️ GameScene"]
+        direction TB
+
+        GAME_LOAD[게임 씬 로드\nPhotonNetwork.LoadLevel]:::network
+
+        subgraph HUD_PANEL ["GameHUDPanel"]
+            INGAME[⚔️ 인게임\n자동 전투 + 이동]:::game
+        end
+
+        GAME_LOAD --> INGAME
+
+        INGAME --> LEVELUP_CHECK{레벨업?}
+        LEVELUP_CHECK -->|일반 레벨업| PAUSE_NORMAL[게임 일시정지\n강화 카드 3장 표시]:::popup
+        LEVELUP_CHECK -->|Lv.10/20/30| PAUSE_CHAOS[게임 일시정지\n혼돈 스킬 카드 3장 표시]:::popup
+        LEVELUP_CHECK -->|아니오| TIMER_CHECK
+
+        PAUSE_NORMAL --> SELECT_SKILL[각 플레이어 1개 선택\n타임아웃 시 자동 선택]:::action
+        PAUSE_CHAOS --> SELECT_CHAOS[각 플레이어 1개 선택\nLv.30: 미선택 → 보스 부여]:::action
+        SELECT_SKILL --> ALL_SELECTED{전원 선택 완료?}:::network
+        SELECT_CHAOS --> ALL_SELECTED
+        ALL_SELECTED -->|예| INGAME
+        ALL_SELECTED -->|타임아웃| AUTO_SELECT[미선택자 랜덤 자동 선택]:::action
+        AUTO_SELECT --> INGAME
+
+        TIMER_CHECK{보스 등장 타이머\n현재 15분 (밸런싱 시 10분 가능)}
+        TIMER_CHECK -->|아직| INGAME
+        TIMER_CHECK -->|경과| BOSS_SPAWN[🔥 보스 등장\n혼돈 스킬 표시 3초]:::game
+        BOSS_SPAWN --> BOSS_FIGHT[보스전\nPhase 1 → 2 → 3]:::game
+
+        INGAME --> DEATH{플레이어 사망?}
+        DEATH -->|개인 사망| RESPAWN[10초 후 자동 부활\nHP 50%]:::action
+        RESPAWN --> INGAME
+        DEATH -->|전원 사망| GAME_OVER
+
+        BOSS_FIGHT --> BOSS_RESULT{보스 결과}
+        BOSS_RESULT -->|보스 처치| GAME_CLEAR
+        BOSS_RESULT -->|전원 사망| GAME_OVER
+
+        INGAME --> HOST_DC{호스트 이탈?}:::error
+        HOST_DC -->|감지| HOST_WAIT[게임 일시정지\n5초 재연결 대기]:::error
+        HOST_WAIT -->|재연결 성공| INGAME
+        HOST_WAIT -->|재연결 실패| EMERGENCY[새 호스트 전환\n비상 보스전 시작]:::error
+        EMERGENCY --> BOSS_FIGHT
+
+        subgraph RESULT_PANEL ["ResultPanel (오버레이)"]
+            GAME_CLEAR[🏆 클리어!]:::result
+            GAME_OVER[💀 실패...]:::result
+            RESULT[📊 결과 화면\n통계 / 빌드 요약\n보스 혼돈 스킬]:::result
+        end
+
+        GAME_CLEAR --> RESULT
+        GAME_OVER --> RESULT
+    end
+
+    %% ═══ 결과 → 씬 전환 ═══
+    RESULT --> RETRY["다시 하기\n(LoadLevel → MenuScene\nreturnToWaitingRoom 플래그)"]:::action
+    RESULT --> EXIT["나가기\n(LeaveRoom → MenuScene)"]:::action
+    RETRY -->|"방 유지 + 씬 전환"| LOBBY
+    EXIT -->|"방 퇴장 + 씬 전환"| TITLE
+
+    %% 혼돈 레벨: Lv.10/20/30 확정 (밸런싱은 세부 수치만)
+    %% 보스 타이머: 현재 15분, 밸런싱에서 10분 단축 가능
