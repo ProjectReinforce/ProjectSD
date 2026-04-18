@@ -1,6 +1,7 @@
 using UnityEngine;
 using DG.Tweening;
 using SwDreams.Domain;
+using SwDreams.Shared.Domain;
 
 namespace SwDreams.Presentation
 {

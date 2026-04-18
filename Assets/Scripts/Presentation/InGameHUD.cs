@@ -4,9 +4,12 @@ using UnityEngine.UI;
 using TMPro;
 using Photon.Pun;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Skill;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Presentation
 {

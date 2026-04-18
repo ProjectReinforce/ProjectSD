@@ -1,5 +1,5 @@
 using System;
-using Adapter.Manager;
+using SwDreams.Shared.Managers;
 using Photon.Realtime;
 using TMPro;
 using UnityEngine;

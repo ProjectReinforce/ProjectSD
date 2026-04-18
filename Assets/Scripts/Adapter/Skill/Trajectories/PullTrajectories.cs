@@ -1,6 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Adapter.Skill.Trajectories
 {

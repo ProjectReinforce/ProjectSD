@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Adapter.Skill
 {

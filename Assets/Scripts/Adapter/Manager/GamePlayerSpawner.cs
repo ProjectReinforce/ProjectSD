@@ -1,6 +1,6 @@
 using Photon.Pun;
 using UnityEngine;
-using Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Adapter.Entity.Player
 {
@@ -40,8 +40,8 @@ namespace SwDreams.Adapter.Entity.Player
             // 호스트가 게임 시작 상태로 전환
             if (PhotonNetwork.IsMasterClient)
             {
-                SwDreams.Adapter.Manager.GameManager.Instance?.ChangeStateNetwork(
-                    SwDreams.Adapter.Manager.GameManager.GameState.Playing);
+                SwDreams.Shared.Managers.GameManager.Instance?.ChangeStateNetwork(
+                    SwDreams.Shared.Managers.GameManager.GameState.Playing);
             }
         }
 

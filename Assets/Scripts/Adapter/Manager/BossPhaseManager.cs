@@ -1,10 +1,14 @@
 using System.Collections.Generic;
+using SwDreams.Shared.Managers;
 using UnityEngine;
 using Photon.Pun;
 using DG.Tweening;
 using SwDreams.Domain;
+using SwDreams.Shared.Domain;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Manager

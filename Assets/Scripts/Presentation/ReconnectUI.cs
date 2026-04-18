@@ -50,7 +50,7 @@ namespace SwDreams.Presentation
 
         private void TrySubscribe()
         {
-            var handler = Adapter.Manager.HostMigrationHandler.Instance;
+            var handler = SwDreams.Shared.Managers.HostMigrationHandler.Instance;
             if (handler != null && !subscribed)
             {
                 handler.OnMigrationStarted += Show;
@@ -80,7 +80,7 @@ namespace SwDreams.Presentation
             fadeTween?.Kill();
             if (subscribed)
             {
-                var handler = Adapter.Manager.HostMigrationHandler.Instance;
+                var handler = SwDreams.Shared.Managers.HostMigrationHandler.Instance;
                 if (handler != null)
                 {
                     handler.OnMigrationStarted -= Show;

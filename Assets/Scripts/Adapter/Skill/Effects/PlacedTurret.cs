@@ -2,7 +2,9 @@ using UnityEngine;
 using System.Collections;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill

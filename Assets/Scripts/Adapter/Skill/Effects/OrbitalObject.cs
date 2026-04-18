@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Skill
@@ -175,10 +177,10 @@ namespace SwDreams.Adapter.Skill
                         enemy.ShowHitVisuals(damage);
                         if (knockbackForce > 0f)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
-                        Manager.SpawnManager.Instance?.RequestDamage(
+                        SwDreams.Shared.Managers.SpawnManager.Instance?.RequestDamage(
                             enemy.EnemyId, damage, ownerActorNumber);
                         if (knockbackForce > 0f)
-                            Manager.SpawnManager.Instance?.RequestKnockback(
+                            SwDreams.Shared.Managers.SpawnManager.Instance?.RequestKnockback(
                                 enemy.EnemyId, transform.position, knockbackForce);
                     }
                     else

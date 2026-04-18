@@ -1,7 +1,9 @@
 using System;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Skill.TriggerEffects;
 using SwDreams.Domain.ValueObjects;
 

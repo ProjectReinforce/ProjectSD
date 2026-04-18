@@ -1,9 +1,11 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Skill.Spread;
 using SwDreams.Adapter.Skill.Trajectories;
 using SwDreams.Domain.ValueObjects;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Adapter.Skill
 {

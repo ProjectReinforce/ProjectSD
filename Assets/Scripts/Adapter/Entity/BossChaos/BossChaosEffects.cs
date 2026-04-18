@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Adapter.Entity.BossChaos

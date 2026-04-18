@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Skill.TriggerEffects;
 
 namespace SwDreams.Adapter.Skill

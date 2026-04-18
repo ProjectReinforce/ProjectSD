@@ -2,8 +2,11 @@ using System;
 using System.Collections;
 using UnityEngine;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Application;
+using SwDreams.Shared.Managers;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Skill;
 using SwDreams.Presentation;
 

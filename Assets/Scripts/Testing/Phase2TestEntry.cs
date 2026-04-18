@@ -109,10 +109,10 @@ namespace SwDreams.Testing
             PhotonNetwork.Instantiate(playerPrefabName, spawnPos, Quaternion.identity);
 
             // GameManager를 Playing 상태로
-            if (Adapter.Manager.GameManager.Instance != null)
+            if (SwDreams.Shared.Managers.GameManager.Instance != null)
             {
-                Adapter.Manager.GameManager.Instance.ChangeState(
-                    Adapter.Manager.GameManager.GameState.Playing);
+                SwDreams.Shared.Managers.GameManager.Instance.ChangeState(
+                    SwDreams.Shared.Managers.GameManager.GameState.Playing);
             }
         }
 

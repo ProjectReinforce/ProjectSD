@@ -1,7 +1,9 @@
 using UnityEngine;
 using TMPro;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Presentation
 {

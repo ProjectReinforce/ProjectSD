@@ -1,4 +1,4 @@
-using Adapter.Manager;
+using SwDreams.Shared.Managers;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.UI;

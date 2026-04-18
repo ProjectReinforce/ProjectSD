@@ -1,4 +1,5 @@
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Adapter.Skill.Trajectories

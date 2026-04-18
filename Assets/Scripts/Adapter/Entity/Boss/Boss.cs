@@ -2,9 +2,13 @@ using System;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain;
+using SwDreams.Shared.Domain;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Presentation;
 
 namespace SwDreams.Adapter.Entity

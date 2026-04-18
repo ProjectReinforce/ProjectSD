@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Adapter.Skill
 {

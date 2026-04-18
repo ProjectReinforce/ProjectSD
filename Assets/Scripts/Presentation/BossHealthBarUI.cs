@@ -3,8 +3,10 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 using SwDreams.Domain;
+using SwDreams.Shared.Domain;
 using SwDreams.Adapter.Entity;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Presentation
 {

@@ -1,9 +1,12 @@
 using System;
+using SwDreams.Shared.Managers;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Adapter.Manager
 {

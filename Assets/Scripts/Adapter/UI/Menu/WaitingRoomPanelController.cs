@@ -1,5 +1,5 @@
 using System.Text;
-using Adapter.Manager;
+using SwDreams.Shared.Managers;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using TMPro;

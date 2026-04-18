@@ -1,8 +1,10 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Domain.ValueObjects;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Adapter.Skill.TriggerEffects
 {

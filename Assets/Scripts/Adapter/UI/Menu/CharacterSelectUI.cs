@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace Adapter.UI.Menu
 {

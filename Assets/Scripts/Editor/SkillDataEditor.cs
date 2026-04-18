@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Editor
 {

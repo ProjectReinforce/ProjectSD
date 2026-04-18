@@ -90,7 +90,7 @@ namespace SwDreams.Adapter.Skill.TriggerEffects
             {
                 tickTimer -= tickInterval;
 
-                var damageable = GetComponent<Domain.Interfaces.IDamageable>();
+                var damageable = GetComponent<SwDreams.Shared.Domain.Interfaces.IDamageable>();
                 if (damageable != null && damageable.IsAlive)
                     damageable.TakeDamage(tickDamage);
             }

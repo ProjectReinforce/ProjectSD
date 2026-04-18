@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Presentation
 {

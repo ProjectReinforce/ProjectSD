@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using SwDreams.Shared.Managers;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Adapter.Entity;
 using SwDreams.Adapter.Entity.BossChaos;
 using SwDreams.Adapter.Skill;

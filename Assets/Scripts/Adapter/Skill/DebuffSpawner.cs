@@ -1,8 +1,10 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Entity;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Adapter.Skill
 {

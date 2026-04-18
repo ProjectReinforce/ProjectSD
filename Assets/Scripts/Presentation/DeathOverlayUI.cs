@@ -3,6 +3,7 @@ using TMPro;
 using DG.Tweening;
 using Photon.Pun;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Presentation
 {

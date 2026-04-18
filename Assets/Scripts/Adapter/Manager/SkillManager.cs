@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Domain.ValueObjects;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Adapter.Skill.TriggerEffects;
 
 namespace SwDreams.Adapter.Skill

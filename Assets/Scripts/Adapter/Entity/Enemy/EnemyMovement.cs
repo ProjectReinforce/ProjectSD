@@ -1,6 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Adapter.Entity
 {
@@ -117,9 +118,9 @@ namespace SwDreams.Adapter.Entity
         {
             if (enemy == null || !enemy.IsAlive) return;
 
-            if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
+            if (SwDreams.Shared.Managers.GameManager.Instance != null &&
+                SwDreams.Shared.Managers.GameManager.Instance.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.Playing &&
+                SwDreams.Shared.Managers.GameManager.Instance.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.BossFight)
                 return;
 
             // Swarm 수명 체크 (호스트만 — ForceReturn은 호스트 권한)
@@ -180,9 +181,9 @@ namespace SwDreams.Adapter.Entity
             if (!resolveEnemyOverlap) return;
             if (enemy == null || !enemy.IsAlive) return;
 
-            if (Manager.GameManager.Instance != null &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.Playing &&
-                Manager.GameManager.Instance.CurrentState != Manager.GameManager.GameState.BossFight)
+            if (SwDreams.Shared.Managers.GameManager.Instance != null &&
+                SwDreams.Shared.Managers.GameManager.Instance.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.Playing &&
+                SwDreams.Shared.Managers.GameManager.Instance.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.BossFight)
                 return;
 
             // 호스트 + 클라이언트 모두 실행.
@@ -342,7 +343,7 @@ namespace SwDreams.Adapter.Entity
                 if (player == null || !player.activeInHierarchy) continue;
 
                 // Phase 6: 사망한 플레이어 제외
-                var damageable = player.GetComponent<Domain.Interfaces.IDamageable>();
+                var damageable = player.GetComponent<SwDreams.Shared.Domain.Interfaces.IDamageable>();
                 if (damageable != null && !damageable.IsAlive) continue;
 
                 float dist = Vector2.Distance(transform.position, player.transform.position);

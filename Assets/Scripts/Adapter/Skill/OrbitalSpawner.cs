@@ -1,6 +1,8 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
+using SwDreams.Shared.Managers;
 using SwDreams.Data;
+using SwDreams.Shared.Data;
 using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Adapter.Skill

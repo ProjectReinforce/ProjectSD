@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Domain.Interfaces;
+using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Adapter.Entity
 {
