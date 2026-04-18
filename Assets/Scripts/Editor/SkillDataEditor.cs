@@ -163,6 +163,27 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("objectCount"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("areaDuration"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("knockbackForce"));
+
+                    // TwoPhase: Phase2 투사체 설정 (장검 진화 등)
+                    if (firingMode == SwDreams.Domain.ValueObjects.FiringMode.TwoPhase)
+                    {
+                        EditorGUILayout.Space();
+                        EditorGUILayout.LabelField("TwoPhase — Phase2 투사체", EditorStyles.boldLabel);
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("projectilePrefab"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileSpeed"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileCount"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileLifetime"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("penetrates"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("aimType"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadPattern"));
+
+                        var spreadType = (SwDreams.Domain.ValueObjects.SpreadPatternType)
+                            serializedObject.FindProperty("spreadPattern").enumValueIndex;
+                        if (spreadType == SwDreams.Domain.ValueObjects.SpreadPatternType.Fan)
+                            EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadAngle"));
+
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("trajectoryType"));
+                    }
                 }
 
                 // 설치형 전용

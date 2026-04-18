@@ -27,7 +27,7 @@ MonoBehaviour:
   burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 7830792750639668327, guid: d285ed01e873e3e418dd184fe11dd0cc, type: 3}
   projectileSpeed: 5
   projectileCount: 1
   projectileLifetime: 5
@@ -54,7 +54,7 @@ MonoBehaviour:
   randomSpawnRadius: 3
   orbitRadius: 1
   rotationSpeed: 180
-  objectCount: 5
+  objectCount: 3
   knockbackForce: 0.35
   attackRange: 5
   attackCooldown: 0.5

@@ -38,6 +38,7 @@ namespace SwDreams.Adapter.Skill
 
         // [Step 4-6] Executor 직접 호출
         private ISkillSpawner spawner;
+        private ISkillSpawner phase2Spawner; // TwoPhase Phase2용
         private GameObject executorPrefab;
 
         // PlayerStats 캐시 (CDR 적용용)
@@ -57,10 +58,12 @@ namespace SwDreams.Adapter.Skill
         /// <summary>
         /// 스킬 활성화. 로컬 플레이어에서만 호출.
         /// </summary>
-        public void Activate(SkillData data, ISkillSpawner spawner, GameObject executorPrefab)
+        public void Activate(SkillData data, ISkillSpawner spawner, GameObject executorPrefab,
+            ISkillSpawner phase2Spawner = null)
         {
             skillData = data;
             this.spawner = spawner;
+            this.phase2Spawner = phase2Spawner;
             this.executorPrefab = executorPrefab;
             Level = 1;
             CooldownRemaining = 0f;
@@ -136,6 +139,10 @@ namespace SwDreams.Adapter.Skill
             }
 
             executor.Begin(this, spawner, cachedStats, transform.root, triggerSystem);
+
+            // TwoPhase: Phase2 Spawner 설정 (Begin 이후 — Begin에서 phase2Spawner를 null 초기화하므로)
+            if (phase2Spawner != null)
+                executor.SetPhase2Spawner(phase2Spawner);
 
             // OnFire 트리거
             if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnFire))

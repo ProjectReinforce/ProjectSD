@@ -18,7 +18,7 @@ MonoBehaviour:
   projectileSpreadAngle: 15
   baseKnockbackForce: 0.9
   damagePopupPrefab: {fileID: 3592730811667847698, guid: e4f05311935ceb341a05096caa40fa50, type: 3}
-  hitEffectPrefab: {fileID: 2235243875857906632, guid: a9a74a668999d01448932bc9bf5771f2, type: 3}
+  hitEffectPrefab: {fileID: 4748681987041982144, guid: e3fae2b483b7e1640adbdd6fdb97e265, type: 3}
   selectionTimeout: 15
   choiceCount: 3
   evolutionChance: 0.7

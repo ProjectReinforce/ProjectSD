@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
+using SwDreams.Domain.ValueObjects;
 using SwDreams.Adapter.Manager;
 using SwDreams.Adapter.Skill.TriggerEffects;
 
@@ -652,12 +653,21 @@ namespace SwDreams.Adapter.Skill
 
             // [Step 4-6] Spawner 생성 (액티브 스킬만)
             ISkillSpawner spawner = null;
+            ISkillSpawner phase2Spawner = null;
             if (skillData.skillType == SkillType.Active)
             {
                 spawner = spawnerFactory.Create(skillData.effectType, skillData);
+
+                // TwoPhase: Phase2 Spawner 생성 (장검 진화 등 — 궤도 후 투사체 발사)
+                if (skillData.firingMode == FiringMode.TwoPhase
+                    && skillData.projectilePrefab != null)
+                {
+                    phase2Spawner = new ProjectileSpawner(skillData.projectilePrefab);
+                    phase2Spawner.Prewarm(skillData);
+                }
             }
 
-            skill.Activate(skillData, spawner, executorPrefab);
+            skill.Activate(skillData, spawner, executorPrefab, phase2Spawner);
 
             // [Step 3-4] SkillTriggerSystem 초기화 (triggerEffects가 있는 경우)
             if (skillData.triggerEffects != null && skillData.triggerEffects.Count > 0)

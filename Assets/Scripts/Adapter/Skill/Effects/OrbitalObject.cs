@@ -37,6 +37,11 @@ namespace SwDreams.Adapter.Skill
         private float rotationSpeed;
         private float currentAngle;
 
+        // TwoPhase: 1바퀴 회전 완료 시 Phase2 트리거
+        private bool fireOnOneRotation;
+        private float angleTraveled;
+        private bool phase1Fired;
+
         // 판정 반경 (인스펙터에서 조정 가능)
         [SerializeField] private float hitRadius = 0.3f;
 
@@ -47,12 +52,25 @@ namespace SwDreams.Adapter.Skill
         // 이미 맞은 적 추적 (1회전 동안 중복 방지)
         private readonly HashSet<int> hitEnemyIds = new HashSet<int>();
 
+        // TwoPhase 완료 콜백 (Executor.NotifyPhase1Complete). 현재 위치/바깥 방향 전달.
+        private System.Action<Vector2, Vector2> onComplete;
+
+        /// <summary>
+        /// TwoPhase 완료 콜백 설정. OrbitalSpawner에서 호출.
+        /// 1바퀴 회전 완료 시 Executor에 Phase1 완료를 알림(자기 위치 + 바깥 방향 포함).
+        /// </summary>
+        public void SetOnComplete(System.Action<Vector2, Vector2> callback)
+        {
+            onComplete = callback;
+        }
+
         /// <summary>
         /// OrbitalSpawner에서 호출. 궤도 파라미터 포함.
+        /// fireOnOneRotation=true이면 duration 대신 1바퀴 완주 후 콜백 + 소멸(TwoPhase 전용).
         /// </summary>
         public void Initialize(int damage, float knockbackForce, float duration,
             Transform playerTransform, float baseAngle, float orbitRadius, float rotationSpeed,
-            Transform ownerTransform)
+            Transform ownerTransform, bool fireOnOneRotation = false)
         {
             this.damage = damage;
             this.knockbackForce = knockbackForce;
@@ -77,6 +95,9 @@ namespace SwDreams.Adapter.Skill
 
             currentAngle = baseAngle;
             aliveTime = 0f;
+            angleTraveled = 0f;
+            phase1Fired = false;
+            this.fireOnOneRotation = fireOnOneRotation;
             hitEnemyIds.Clear();
             isActive = true;
 
@@ -92,9 +113,9 @@ namespace SwDreams.Adapter.Skill
                 GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
-            // 수명 체크
+            // 수명 체크 — TwoPhase 모드는 duration 대신 1바퀴 완주로 종료하므로 스킵
             aliveTime += Time.deltaTime;
-            if (aliveTime >= duration)
+            if (!fireOnOneRotation && aliveTime >= duration)
             {
                 ReturnToPool();
                 return;
@@ -103,8 +124,23 @@ namespace SwDreams.Adapter.Skill
             // 자체 궤도 관리
             if (playerTransform != null)
             {
-                currentAngle += rotationSpeed * Time.deltaTime;
+                float delta = rotationSpeed * Time.deltaTime;
+                currentAngle += delta;
                 if (currentAngle >= 360f) currentAngle -= 360f;
+                else if (currentAngle < 0f) currentAngle += 360f;
+
+                // TwoPhase: 1바퀴 누적되면 Phase2로 전환
+                if (fireOnOneRotation && !phase1Fired)
+                {
+                    angleTraveled += Mathf.Abs(delta);
+                    if (angleTraveled >= 360f)
+                    {
+                        phase1Fired = true;
+                        TriggerPhase1Complete();
+                        return;
+                    }
+                }
+
                 UpdateOrbitalPosition();
             }
 
@@ -178,9 +214,34 @@ namespace SwDreams.Adapter.Skill
             transform.rotation = Quaternion.Euler(0, 0, rotZ);
         }
 
+        /// <summary>
+        /// TwoPhase 1바퀴 완주 시 호출. 현재 궤도 위치 + 바깥 방향을 Executor에 전달 후 풀 반환.
+        /// duration 만료로 인한 소멸(비 TwoPhase)에는 호출되지 않음.
+        /// </summary>
+        private void TriggerPhase1Complete()
+        {
+            isActive = false;
+
+            Vector2 currentPosition = transform.position;
+            Vector2 outward = Vector2.right;
+            if (playerTransform != null)
+            {
+                Vector2 delta = currentPosition - (Vector2)playerTransform.position;
+                if (delta.sqrMagnitude > 0.0001f)
+                    outward = delta.normalized;
+            }
+
+            onComplete?.Invoke(currentPosition, outward);
+            onComplete = null;
+
+            PoolManager.Instance?.Return(gameObject);
+        }
+
         private void ReturnToPool()
         {
             isActive = false;
+            // TwoPhase 완료 경로가 아니면 onComplete 미호출 (중도 소멸/duration 만료)
+            onComplete = null;
             PoolManager.Instance?.Return(gameObject);
         }
 
@@ -199,6 +260,7 @@ namespace SwDreams.Adapter.Skill
             isActive = false;
             isLocalPlayerOwned = false;
             ownerActorNumber = -1;
+            onComplete = null;
             playerTransform = null;
             hitEnemyIds.Clear();
             gameObject.SetActive(false);

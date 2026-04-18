@@ -64,6 +64,12 @@ namespace SwDreams.Adapter.Skill
 
         /// <summary>스킬의 TriggerSystem. 투사체/장판에 연결용. null 가능.</summary>
         public SkillTriggerSystem triggerSystem;
+
+        /// <summary>
+        /// Phase1 완료 콜백 (TwoPhase 전용).
+        /// OrbitalObject가 1바퀴 완주 시 (position, outwardDirection)을 Executor에 전달.
+        /// </summary>
+        public System.Action<Vector2, Vector2> onSpawnComplete;
     }
 
     /// <summary>

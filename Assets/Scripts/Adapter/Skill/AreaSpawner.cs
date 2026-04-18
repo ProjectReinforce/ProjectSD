@@ -123,11 +123,30 @@ namespace SwDreams.Adapter.Skill
         {
             if (activeZones.Count == 0) return;
 
-            GameObject oldest = activeZones[0];
-            activeZones.RemoveAt(0);
+            // 최소 1틱을 발동한 장판부터 제거 (아직 데미지 못 준 장판 보호)
+            for (int i = 0; i < activeZones.Count; i++)
+            {
+                GameObject zoneObj = activeZones[i];
+                if (zoneObj == null || !zoneObj.activeInHierarchy)
+                {
+                    activeZones.RemoveAt(i);
+                    return;
+                }
 
-            if (oldest != null && oldest.activeInHierarchy)
-                PoolManager.Instance?.Return(oldest);
+                var zone = zoneObj.GetComponent<AreaZone>();
+                if (zone == null || zone.HasTicked)
+                {
+                    activeZones.RemoveAt(i);
+                    PoolManager.Instance?.Return(zoneObj);
+                    return;
+                }
+            }
+
+            // 모든 장판이 아직 틱 안 했으면 어쩔 수 없이 가장 오래된 것 제거
+            GameObject fallback = activeZones[0];
+            activeZones.RemoveAt(0);
+            if (fallback != null && fallback.activeInHierarchy)
+                PoolManager.Instance?.Return(fallback);
         }
     }
 }

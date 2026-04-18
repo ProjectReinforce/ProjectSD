@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Data;
 using SwDreams.Domain.Interfaces;
@@ -47,6 +48,11 @@ namespace SwDreams.Adapter.Skill
         private bool waitingForPhase2;
         private Action onPhase1Complete; // 외부에서 Phase1 완료 시 호출
 
+        // Phase1 완료된 orbital들의 (위치, 바깥 방향) 집계. 전원 완료 시 Phase2 일괄 발사.
+        private readonly List<(Vector2 position, Vector2 direction)> phase1Results
+            = new List<(Vector2, Vector2)>();
+        private int phase1ExpectedCount;
+
         // ===== 공통 상태 =====
         private bool isActive;
 
@@ -79,6 +85,8 @@ namespace SwDreams.Adapter.Skill
             firedCount = 0;
             waitingForPhase2 = false;
             phase2Spawner = null;
+            phase1Results.Clear();
+            phase1ExpectedCount = 0;
 
             // 투사체 개수 (필터 적용)
             totalCount = GetFilteredProjectileCount();
@@ -120,26 +128,52 @@ namespace SwDreams.Adapter.Skill
         }
 
         /// <summary>
-        /// TwoPhase 모드에서 Phase1이 완료됐음을 알림.
-        /// OrbitalSpawner 등 외부에서 호출.
+        /// TwoPhase 모드에서 개별 orbital의 Phase1 완료를 알림.
+        /// 각 orbital은 1바퀴 완주 시 자기 위치(position)와 바깥 방향(outward)을 전달.
+        /// 모든 orbital이 완료되면 Phase2를 각 위치에서 일괄 발사.
         /// </summary>
-        public void NotifyPhase1Complete()
+        public void NotifyPhase1Complete(Vector2 position, Vector2 outwardDirection)
         {
             if (!isActive || !waitingForPhase2) return;
 
-            waitingForPhase2 = false;
+            phase1Results.Add((position, outwardDirection));
 
-            if (phase2Spawner != null)
+            // 아직 모든 orbital이 완료되지 않음 — 대기
+            if (phase1Results.Count < phase1ExpectedCount) return;
+
+            waitingForPhase2 = false;
+            FirePhase2();
+            Complete();
+        }
+
+        /// <summary>
+        /// 집계된 Phase1 결과를 기반으로 Phase2 투사체를 각 orbital 위치에서 바깥 방향으로 발사.
+        /// Phase2는 per-shot 단일 발사 (spread 적용 X, 각자 독립 방향).
+        /// </summary>
+        private void FirePhase2()
+        {
+            if (phase2Spawner == null || playerTransform == null)
             {
-                // Phase2는 SimultaneousSpread로 실행
-                var phase2Spawner_local = phase2Spawner;
-                var savedSpawner = spawner;
-                spawner = phase2Spawner_local;
-                ExecuteSimultaneous();
-                spawner = savedSpawner;
+                phase1Results.Clear();
+                return;
             }
 
-            Complete();
+            int count = phase1Results.Count;
+            for (int i = 0; i < count; i++)
+            {
+                SpawnContext ctx = BuildContext(i);
+
+                // 각 장검 위치에서 바깥 방향으로 단일 발사
+                ctx.playerPosition = phase1Results[i].position;
+                ctx.baseDirection = phase1Results[i].direction;
+                ctx.totalCount = 1;
+                ctx.fireIndex = 0;
+                ctx.onSpawnComplete = null; // Phase2는 재귀 방지
+
+                phase2Spawner.Spawn(ctx);
+            }
+
+            phase1Results.Clear();
         }
 
         // ===== Update (DelayedBurst 타이머) =====
@@ -187,15 +221,15 @@ namespace SwDreams.Adapter.Skill
 
         private void ExecutePhase1()
         {
-            // Phase1: spawner로 한 번 실행
-            // totalCount=1로 강제 (Phase1은 단일 실행)
-            int savedTotal = totalCount;
-            totalCount = 1;
-            FireOnce(0);
-            totalCount = savedTotal;
-
+            // Phase1: objectCount만큼 orbital을 균등 각도로 스폰.
+            // 각 orbital은 1바퀴 완주 시 NotifyPhase1Complete(pos, dir)를 호출.
+            // 전원 완료 시 Phase2로 전환.
+            phase1Results.Clear();
+            phase1ExpectedCount = Mathf.Max(1, totalCount);
             waitingForPhase2 = true;
-            // Phase1 완료는 외부에서 NotifyPhase1Complete() 호출
+
+            for (int i = 0; i < phase1ExpectedCount; i++)
+                FireOnce(i);
         }
 
         // ===== 단일 발사 =====
@@ -288,6 +322,10 @@ namespace SwDreams.Adapter.Skill
 
             // ── 발사 방향 ──
             ctx.baseDirection = GetBaseDirection(data.aimType);
+
+            // ── TwoPhase 완료 콜백 ──
+            if (firingMode == FiringMode.TwoPhase)
+                ctx.onSpawnComplete = NotifyPhase1Complete;
 
             return ctx;
         }
@@ -412,6 +450,8 @@ namespace SwDreams.Adapter.Skill
             isActive = false;
             firedCount = 0;
             waitingForPhase2 = false;
+            phase1Results.Clear();
+            phase1ExpectedCount = 0;
         }
 
         public void OnReturnToPool()
@@ -425,6 +465,8 @@ namespace SwDreams.Adapter.Skill
             playerTransform = null;
             triggerSystem = null;
             sourceSkill = null;
+            phase1Results.Clear();
+            phase1ExpectedCount = 0;
         }
     }
 }

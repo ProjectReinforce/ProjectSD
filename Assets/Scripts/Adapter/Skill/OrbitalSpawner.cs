@@ -1,6 +1,7 @@
 using UnityEngine;
 using SwDreams.Adapter.Manager;
 using SwDreams.Data;
+using SwDreams.Domain.ValueObjects;
 
 namespace SwDreams.Adapter.Skill
 {
@@ -65,6 +66,9 @@ namespace SwDreams.Adapter.Skill
             // 균등 각도 배치 (360° / totalCount)
             float baseAngle = (360f / ctx.totalCount) * ctx.fireIndex;
 
+            // TwoPhase: duration 대신 1바퀴 완주 시 Phase2 전환
+            bool fireOnOneRotation = data.firingMode == FiringMode.TwoPhase;
+
             orbital.Initialize(
                 damage: ctx.damage,
                 knockbackForce: ctx.knockbackForce,
@@ -73,8 +77,13 @@ namespace SwDreams.Adapter.Skill
                 baseAngle: baseAngle,
                 orbitRadius: radius,
                 rotationSpeed: data.rotationSpeed,
-                ownerTransform: ctx.playerTransform
+                ownerTransform: ctx.playerTransform,
+                fireOnOneRotation: fireOnOneRotation
             );
+
+            // TwoPhase: Phase1 완료 콜백 연결 (각 orbital이 자기 위치/방향 전달)
+            if (ctx.onSpawnComplete != null)
+                orbital.SetOnComplete(ctx.onSpawnComplete);
         }
     }
 }

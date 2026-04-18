@@ -35,6 +35,13 @@ namespace SwDreams.Adapter.Skill
         private float aliveTime;
         private float tickTimer;
         private bool isActive;
+        private bool hasTicked;
+
+        /// <summary>
+        /// 최소 1회 데미지 틱이 발동했는지. 
+        /// AreaSpawner가 maxInstances 초과 시 제거 대상 판별에 사용.
+        /// </summary>
+        public bool HasTicked => hasTicked;
 
         // 캐시
         private SpriteRenderer spriteRenderer;
@@ -86,6 +93,7 @@ namespace SwDreams.Adapter.Skill
 
             aliveTime = 0f;
             tickTimer = 0f;
+            hasTicked = false;
             isActive = true;
 
             // 비주얼 크기 조정 — 스프라이트 실제 크기 기준으로 스케일 계산
@@ -143,6 +151,8 @@ namespace SwDreams.Adapter.Skill
         /// </summary>
         private void ApplyTick()
         {
+            hasTicked = true;
+
             if (isHealing)
                 ApplyHealTick();
 
@@ -252,12 +262,14 @@ namespace SwDreams.Adapter.Skill
             gameObject.SetActive(true);
             aliveTime = 0f;
             tickTimer = 0f;
+            hasTicked = false;
             isActive = true;
         }
 
         public void OnReturnToPool()
         {
             isActive = false;
+            hasTicked = false;
             triggerSystem = null;
             ownerTransform = null;
             isLocalPlayerOwned = false;
