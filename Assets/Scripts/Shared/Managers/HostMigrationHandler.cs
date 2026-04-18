@@ -1,13 +1,12 @@
 using System.Collections;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.UI.Presentation;
+using SwDreams.Features.Progression.Adapter;
+using SwDreams.Features.Boss.Adapter;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
-using SwDreams.Domain.Interfaces;
 using SwDreams.Shared.Domain.Interfaces;
-using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Shared.Managers
 {
@@ -263,8 +262,8 @@ namespace SwDreams.Shared.Managers
                     obj.SetActive(false);
 
                     // RespawnManager에서 제거
-                    if (RespawnManager.Instance != null)
-                        RespawnManager.Instance.UnregisterPlayer(pv.ViewID);
+                    if (SwDreams.Features.Character.Adapter.RespawnManager.Instance != null)
+                        SwDreams.Features.Character.Adapter.RespawnManager.Instance.UnregisterPlayer(pv.ViewID);
 
                     Debug.Log($"[HostMigration] 퇴장 플레이어 비활성화: {leftPlayer.NickName}");
                     break;

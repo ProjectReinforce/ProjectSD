@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using SwDreams.Adapter.Manager;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;

@@ -1,6 +1,7 @@
 using UnityEngine;
+using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.Skill.Domain.ValueObjects;
 using UnityEditor;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
 
 namespace SwDreams.Editor
@@ -69,9 +70,9 @@ namespace SwDreams.Editor
                 EditorGUILayout.LabelField("발사 모드 (Executor)", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("firingMode"));
 
-                var firingMode = (SwDreams.Domain.ValueObjects.FiringMode)
+                var firingMode = (SwDreams.Features.Skill.Domain.ValueObjects.FiringMode)
                     serializedObject.FindProperty("firingMode").enumValueIndex;
-                if (firingMode == SwDreams.Domain.ValueObjects.FiringMode.DelayedBurst)
+                if (firingMode == SwDreams.Features.Skill.Domain.ValueObjects.FiringMode.DelayedBurst)
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("burstDelay"));
 
                 // 투사체 전용
@@ -92,26 +93,26 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("aimType"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadPattern"));
 
-                    var spreadType = (SwDreams.Domain.ValueObjects.SpreadPatternType)
+                    var spreadType = (SwDreams.Features.Skill.Domain.ValueObjects.SpreadPatternType)
                         serializedObject.FindProperty("spreadPattern").enumValueIndex;
-                    if (spreadType == SwDreams.Domain.ValueObjects.SpreadPatternType.Fan)
+                    if (spreadType == SwDreams.Features.Skill.Domain.ValueObjects.SpreadPatternType.Fan)
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadAngle"));
 
                     // 궤적 패턴
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("trajectoryType"));
 
-                    var trajType = (SwDreams.Domain.ValueObjects.TrajectoryType)
+                    var trajType = (SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType)
                         serializedObject.FindProperty("trajectoryType").enumValueIndex;
 
                     // 궤적별 파라미터
-                    if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Homing)
+                    if (trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.Homing)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("homingRotateSpeed"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("chainFlightCount"));
                         if (serializedObject.FindProperty("chainFlightCount").intValue > 0)
                             EditorGUILayout.PropertyField(serializedObject.FindProperty("chainSearchRadius"));
                     }
-                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Boomerang)
+                    else if (trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.Boomerang)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("hasPullOnReturn"));
                         if (serializedObject.FindProperty("hasPullOnReturn").boolValue)
@@ -120,19 +121,19 @@ namespace SwDreams.Editor
                             EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
                         }
                     }
-                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Tornado)
+                    else if (trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.Tornado)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("pullRadius"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
                     }
-                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Spiral)
+                    else if (trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.Spiral)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("pullRadius"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("pullForce"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("spiralExpandSpeed"));
                     }
-                    else if (trajType == SwDreams.Domain.ValueObjects.TrajectoryType.Zigzag ||
-                             trajType == SwDreams.Domain.ValueObjects.TrajectoryType.SinWave)
+                    else if (trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.Zigzag ||
+                             trajType == SwDreams.Features.Skill.Domain.ValueObjects.TrajectoryType.SinWave)
                     {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("waveAmplitude"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("waveFrequency"));
@@ -166,7 +167,7 @@ namespace SwDreams.Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("knockbackForce"));
 
                     // TwoPhase: Phase2 투사체 설정 (장검 진화 등)
-                    if (firingMode == SwDreams.Domain.ValueObjects.FiringMode.TwoPhase)
+                    if (firingMode == SwDreams.Features.Skill.Domain.ValueObjects.FiringMode.TwoPhase)
                     {
                         EditorGUILayout.Space();
                         EditorGUILayout.LabelField("TwoPhase — Phase2 투사체", EditorStyles.boldLabel);
@@ -178,9 +179,9 @@ namespace SwDreams.Editor
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("aimType"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadPattern"));
 
-                        var spreadType = (SwDreams.Domain.ValueObjects.SpreadPatternType)
+                        var spreadType = (SwDreams.Features.Skill.Domain.ValueObjects.SpreadPatternType)
                             serializedObject.FindProperty("spreadPattern").enumValueIndex;
-                        if (spreadType == SwDreams.Domain.ValueObjects.SpreadPatternType.Fan)
+                        if (spreadType == SwDreams.Features.Skill.Domain.ValueObjects.SpreadPatternType.Fan)
                             EditorGUILayout.PropertyField(serializedObject.FindProperty("spreadAngle"));
 
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("trajectoryType"));

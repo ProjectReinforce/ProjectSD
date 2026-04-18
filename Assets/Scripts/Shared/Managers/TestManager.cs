@@ -1,5 +1,4 @@
 using Photon.Pun;
-using SwDreams.Adapter.Manager;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 

@@ -1,10 +1,10 @@
 using System;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.Progression.Application;
+using SwDreams.Features.Character.Adapter.Data;
+using SwDreams.Features.Character.Adapter;
 using UnityEngine;
 using Photon.Pun;
-using SwDreams.Application;
 using SwDreams.Shared.Managers;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
 
 namespace SwDreams.Shared.Managers

@@ -1,0 +1,50 @@
+using UnityEngine;
+using SwDreams.Features.Character.Adapter.Data;
+using SwDreams.Features.Skill.Adapter.Data;
+
+namespace SwDreams.Features.Character.Adapter.Data
+{
+    /// <summary>
+    /// 캐릭터 데이터 ScriptableObject.
+    /// 대기실에서 선택한 캐릭터 정보를 GameScene에 전달.
+    ///
+    /// 셋업:
+    ///   Assets/Data/Characters/ 폴더에서 Create → SwDreams/CharacterData
+    ///   캐릭터 3종 각각 SO 생성 후 필드 채우기.
+    ///
+    /// 네트워크:
+    ///   대기실에서 characterId를 CustomProperties에 저장.
+    ///   GameScene 진입 시 CharacterDatabase.GetById()로 SO 조회.
+    /// </summary>
+    [CreateAssetMenu(fileName = "NewCharacterData", menuName = "SwDreams/CharacterData")]
+    public class CharacterData : ScriptableObject
+    {
+        [Header("기본 정보")]
+        public int id;
+        public string displayName;
+        public Sprite portrait;
+
+        [Header("시작 스킬")]
+        [Tooltip("게임 시작 시 자동 획득하는 액티브 스킬")]
+        public SkillData startingActiveSkill;
+
+        [Tooltip("게임 시작 시 자동 획득하는 패시브 스킬 (기존 13종 중 1개)")]
+        public SkillData startingPassiveSkill;
+
+        [Header("Base 스탯")]
+        public int maxHP = 100;
+        public float moveSpeed = 0.8f;
+        public float attackMultiplier = 1f;
+        public float projectileSpeed = 0f;
+        public int projectileCount = 0;
+        public float skillRange = 0f;
+        [Range(0f, 1f)]
+        public float cooldownReduction = 0f;
+        public float knockback = 1f;
+        public float critDamage = 1.5f;
+        public float expMultiplier = 1f;
+        public float defenseMultiplier = 1f;
+        public float healMultiplier = 1f;
+        public float skillDuration = 0f;
+    }
+}

@@ -56,32 +56,81 @@ Presentation ──▶ Adapter ──▶ Application ──▶ Domain
 | DOTween Pro | `Assets/Scripts/Presentation/`, UI Adapter | |
 | Unity AssetStore SFX/BGM | `Assets/Scripts/Adapter/Audio/` | |
 
-## 7. 현재 구조 (재구성 전)
+## 7. 현재 구조 (Feature-first 재구성 완료)
 
 ```
 Assets/Scripts/
-├── Adapter/          ← 실제 Unity 구현
-│   ├── Entity/{Player, Enemy, Boss, BossChaos}/
-│   ├── Skill/        ← Skill, SkillExecutor, SkillSpawnerFactory + Effects/Projectile/Spread/Trajectories/TriggerEffects
-│   ├── UI/, Manager/, Network/
-├── Domain/           ← 인터페이스, ValueObjects, 수식
-├── Data/             ← ScriptableObject DB
-├── Application/, AppService/, InfraStructure/
-├── Presentation/     ← DamagePopup 등
-├── BootStrap/, Editor/, Testing/, WFC/
+├── Features/
+│   ├── Skill/
+│   │   ├── Domain/             ← Formulas (DamageFormula), ValueObjects (9종)
+│   │   ├── Application/        ← DamageService
+│   │   ├── Adapter/            ← Skill, SkillExecutor, Spawner 5종, Effects/Projectile/Spread/Trajectories/TriggerEffects, SkillManager, ChaosSkillManager
+│   │   │   └── Data/           ← SkillData + SkillSubTypes (7종)
+│   │   └── Presentation/       (현재 비어 있음, UI Feature 로 이동)
+│   ├── Enemy/
+│   │   └── Adapter/            ← Enemy, EnemyMovement, EnemyContact, Movement/
+│   │       └── Data/           ← EnemyData
+│   ├── Boss/
+│   │   ├── Domain/             ← BossPhase, Interfaces (IBossAttackPattern, IBossChaosEffect)
+│   │   ├── Application/        ← BossPhaseService
+│   │   ├── Adapter/            ← Boss, Attack/, BossChaosEffects, BossSpawner, BossPhaseManager, BossChaosApplicator
+│   │   │   └── Data/           ← BossData
+│   │   └── Presentation/       ← BossHealthBarUI, BossWarningUI
+│   ├── Character/              ← Player
+│   │   ├── Domain/             ← ValueObjects (StatModifier, StatModifierCollection, StatType)
+│   │   └── Adapter/            ← Player, PlayerMovement/Health/Stats/Visual/Spawner/Stub, Camerafollow, HitEffect, GamePlayerSpawner, RespawnManager
+│   │       └── Data/           ← CharacterData, CharacterDatabase
+│   ├── Progression/            ← 경험치 · 레벨업
+│   │   ├── Domain/             ← Formulas (LevelTable)
+│   │   ├── Application/        ← ExperienceService
+│   │   └── Adapter/            ← ExperienceOrb, LevelUpManager
+│   └── UI/
+│       ├── Adapter/            ← Common/, Menu/ (RoomList, Lobby 포함)
+│       └── Presentation/       ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, DamagePopup, DeathOverlayUI, ReconnectUI, ResultPanelUI, DebugOverlay
+├── Shared/
+│   ├── Domain/                 ← IDamageable, IPoolable, GameResult
+│   ├── Data/                   ← AudioLibrary, DifficultyData, GameplayConfig
+│   ├── Managers/               ← GameManager, NetworkManager, PoolManager, SpawnManager, AudioManager, DifficultyManager, HostMigrationHandler, ResultManager, GameStatTracker, TestManager, GameAudioConnector
+│   └── Network/                ← NetworkAdapter
+├── BootStrap/, Editor/, Testing/, WFC/    ← 유지
 ```
 
-## 8. 재구성 로드맵
+**namespace 규약:** `SwDreams.Features.{Feature}.{Layer}[.{Sub}]` / `SwDreams.Shared.{Sub}`
 
-1. 현재 Adapter-중심 구조에서 Feature-first 로 전환.
-2. 각 Feature 에 Domain/Application/Adapter/Presentation 4레이어 생성.
-3. .asmdef 로 의존성 고정.
-4. `architecture-guardian` 서브에이전트로 PR마다 레이어 위반 감사.
+## 8. 재구성 완료 상태 및 후속 작업
+
+**완료 (2026-04-18):**
+- ✅ 141개 `.cs` 파일을 Features/Shared 로 재배치
+- ✅ namespace 일괄 재작성 + using / fully-qualified 경로 교체
+- ✅ 빈 최상위 폴더 (Adapter/, Data/, Domain/, Application/, Presentation/ 등) 제거
+
+**후속 작업 (별도 PR, 우선순위 순 — `architecture-guardian` 감사 결과 반영):**
+
+1. **Shared → Features 역방향 의존 해소 (Critical, 29건)** — `Shared/Managers/` 의 `GameManager`, `NetworkManager`, `SpawnManager`, `ResultManager`, `HostMigrationHandler`, `GameAudioConnector`, `DifficultyManager`, `GameStatTracker` 등이 Features 다수를 직접 import. `Shared/Data/GameplayConfig`, `Shared/Network/NetworkAdapter` 도 동일. 구조적 원인: 이들은 게임 전체를 오케스트레이션하는 "god 객체" 성격이라 Shared 가 아니라 **`Assets/Scripts/Composition/` (또는 `Bootstrap/`) 레이어**로 분리해야 원칙 준수 가능.
+
+2. **Domain 레이어 순수성 위반 (Critical, 4건)**
+   - `Features/Boss/Domain/Interfaces/IBossAttackPattern.cs` — `using UnityEngine;` (Vector3/Transform 노출 추정)
+   - `Features/Skill/Domain/ValueObjects/SkillTriggerEffect.cs` — `using UnityEngine;`
+   - `Features/Skill/Domain/ValueObjects/TriggerContext.cs` — `using UnityEngine;` (TriggerEffect 파이프라인 전체 기반이라 가장 시급)
+   - `Features/Character/Domain/ValueObjects/StatModifierCollection.cs` — 같은 Feature 의 Adapter import (주석과 실제 모순, 레이어 역방향)
+
+3. **Feature 간 Adapter ↔ Adapter 직접 참조 (대량)** — Skill 의 `AreaZone/OrbitalObject/PlacedTurret/Projectile` 이 `Boss/Character.Adapter` 직접 참조, `ChaosSkillManager/SkillManager` 가 `Character/Progression` 참조, `Boss.Adapter` 가 `Character/Skill` 참조 등. `Shared/Domain/Interfaces/IDamageable` 로 다운캐스트 경로 통일 시 약 70% 해소 예상.
+
+4. **알려진 경계 위반 (세부)**
+   - `Skill → PlayerStats/PlayerHealth` 직접 참조 → `IPlayerStateProvider` 공유 인터페이스로 격리
+   - `BossHealthBarUI → Boss` 직접 참조 → 이벤트 구독 방식
+
+5. **Application 레이어의 `UnityEngine` import** — `Features/Boss/Application/BossPhaseService.cs` 가 `using UnityEngine;` (Mathf/Debug 추정). `System.Math` 로 치환 또는 제거.
+
+6. **`.asmdef` 도입** — 각 Feature 에 어셈블리 부여하여 컴파일 타임에 역방향 의존 차단. 위 1~5 가 선결되어야 에러 없이 부여 가능.
+
+7. **namespace-class 이름 충돌 완화** — `Features.Boss` (namespace) vs `Boss` (class) 같은 충돌이 fully-qualified 참조를 강제하는 곳 5건 이상 존재. 장기적으로 `BossEntity`, `SkillEntity` 같은 이름으로 변경 고려.
 
 상세 Phase 진행 상태는 [implementation-roadmap.md](implementation-roadmap.md).
 
 ## 9. 작성 후 체크리스트
 
-- [ ] CLAUDE.md "2. 아키텍처 원칙" 섹션과 동기화
-- [ ] `architecture-guardian` 서브에이전트 규칙이 본 문서 반영
-- [ ] Feature-first 재구성 진행 시 본 문서 업데이트
+- [ ] CLAUDE.md §3 "폴더 지도" 현재 구조로 갱신
+- [ ] CLAUDE.md "2. 아키텍처 원칙" 섹션과 동기화 확인
+- [ ] `architecture-guardian` 서브에이전트로 재구성 직후 레이어 위반 감사 1회 실행
+- [ ] `.asmdef` 도입 PR 준비

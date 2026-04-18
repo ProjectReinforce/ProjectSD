@@ -1,13 +1,14 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
+using SwDreams.Features.UI.Presentation;
+using SwDreams.Features.Character.Adapter;
+using SwDreams.Features.Boss.Adapter;
 using UnityEngine.InputSystem;
 using Photon.Pun;
-using SwDreams.Adapter.Manager;
 using SwDreams.Shared.Managers;
-using SwDreams.Adapter.Skill;
-using SwDreams.Presentation;
+using SwDreams.Features.Skill.Adapter;
 
-namespace SwDreams.Adapter.Entity.Player
+namespace SwDreams.Testing
 {
     /// <summary>
     /// 디버그 입력 처리. 에디터/개발 빌드 전용.

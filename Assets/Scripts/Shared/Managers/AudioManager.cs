@@ -1,7 +1,5 @@
 using UnityEngine;
-using SwDreams.Adapter.Manager;
 using DG.Tweening;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
 
 namespace SwDreams.Shared.Managers

@@ -1,7 +1,6 @@
 using System;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.Enemy.Adapter.Data;
 using UnityEngine;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
 
 namespace SwDreams.Shared.Managers

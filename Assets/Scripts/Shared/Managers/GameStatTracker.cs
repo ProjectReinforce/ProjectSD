@@ -1,5 +1,5 @@
 using UnityEngine;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.Character.Adapter;
 using Photon.Pun;
 
 namespace SwDreams.Shared.Managers

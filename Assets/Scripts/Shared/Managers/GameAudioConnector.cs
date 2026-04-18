@@ -1,8 +1,7 @@
 using UnityEngine;
-using SwDreams.Adapter.Manager;
-using SwDreams.Domain;
+using SwDreams.Features.Boss.Domain;
+using SwDreams.Features.Boss.Adapter;
 using SwDreams.Shared.Domain;
-using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Shared.Managers
 {

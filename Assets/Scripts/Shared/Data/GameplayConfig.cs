@@ -1,4 +1,7 @@
 using UnityEngine;
+using SwDreams.Features.UI.Presentation;
+using SwDreams.Features.Progression.Adapter;
+using SwDreams.Features.Character.Adapter;
 
 namespace SwDreams.Shared.Data
 {

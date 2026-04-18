@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using SwDreams.Adapter.Manager;
 using UnityEngine;
-using SwDreams.Domain.Interfaces;
 using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Shared.Managers

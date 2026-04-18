@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.UI.Presentation;
+using SwDreams.Features.UI.Adapter.Menu;
+using SwDreams.Features.Character.Adapter.Data;
+using SwDreams.Features.Character.Adapter;
+using SwDreams.Features.Boss.Adapter;
 using UnityEngine;
 using Photon.Pun;
-using SwDreams.Domain;
 using SwDreams.Shared.Domain;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
-using SwDreams.Adapter.Skill;
-using SwDreams.Presentation;
+using SwDreams.Features.Skill.Adapter;
 using SwDreams.Shared.Managers;
-using Adapter.UI.Menu;
 
 namespace SwDreams.Shared.Managers
 {
@@ -342,14 +342,14 @@ namespace SwDreams.Shared.Managers
 
         // ===== 유틸리티 =====
 
-        private SwDreams.Testing.PlayerStub FindLocalPlayerStub()
+        private SwDreams.Features.Character.Adapter.PlayerStub FindLocalPlayerStub()
         {
             var players = GameObject.FindGameObjectsWithTag("Player");
             foreach (var go in players)
             {
                 var pv = go.GetComponent<PhotonView>();
                 if (pv != null && pv.IsMine)
-                    return go.GetComponent<SwDreams.Testing.PlayerStub>();
+                    return go.GetComponent<SwDreams.Features.Character.Adapter.PlayerStub>();
             }
             return null;
         }

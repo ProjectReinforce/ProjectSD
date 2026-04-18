@@ -1,14 +1,16 @@
 using System.Collections.Generic;
-using SwDreams.Adapter.Manager;
+using SwDreams.Features.Boss.Adapter;
+using SwDreams.Features.Progression.Adapter;
+using SwDreams.Features.Enemy.Adapter.Data;
+using SwDreams.Features.Enemy.Adapter;
+using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Skill.Application;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 using ExitGames.Client.Photon;
-using SwDreams.Application;
 using SwDreams.Shared.Managers;
-using SwDreams.Data;
 using SwDreams.Shared.Data;
-using SwDreams.Adapter.Entity;
 
 namespace SwDreams.Shared.Managers
 {
@@ -297,7 +299,7 @@ namespace SwDreams.Shared.Managers
             int count = 0;
 
             // Projectile 컴포넌트를 가진 모든 오브젝트
-            var projectiles = FindObjectsByType<SwDreams.Adapter.Skill.Projectile>(
+            var projectiles = FindObjectsByType<SwDreams.Features.Skill.Adapter.Projectile>(
                 FindObjectsSortMode.None);
             foreach (var proj in projectiles)
             {
@@ -312,7 +314,7 @@ namespace SwDreams.Shared.Managers
             }
 
             // SkillEffect 산하 AreaZone 등 독립 이펙트 (Enemy 태그가 아닌 것만)
-            var zones = FindObjectsByType<SwDreams.Adapter.Skill.AreaZone>(
+            var zones = FindObjectsByType<SwDreams.Features.Skill.Adapter.AreaZone>(
                 FindObjectsSortMode.None);
             foreach (var zone in zones)
             {
@@ -578,7 +580,7 @@ namespace SwDreams.Shared.Managers
                 if (pv == null || pv.Owner == null) continue;
                 if (pv.Owner.ActorNumber != killerActorNumber) continue;
 
-                var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
+                var chaos = p.GetComponentInChildren<SwDreams.Features.Skill.Adapter.ChaosSkillManager>();
                 if (chaos != null)
                     chaos.OnEnemyKilled(enemyPosition);
             }
@@ -599,7 +601,7 @@ namespace SwDreams.Shared.Managers
                 if (pv == null || pv.Owner == null) continue;
                 if (pv.Owner.ActorNumber != killerActorNumber) continue;
 
-                var chaos = p.GetComponentInChildren<SwDreams.Adapter.Skill.ChaosSkillManager>();
+                var chaos = p.GetComponentInChildren<SwDreams.Features.Skill.Adapter.ChaosSkillManager>();
                 if (chaos != null)
                     chaos.OnEnemyKilledVisualOnly(deathPosition);
             }

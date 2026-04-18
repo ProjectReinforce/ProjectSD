@@ -1,5 +1,6 @@
 using UnityEngine;
-using SwDreams.Data;
+using SwDreams.Features.Enemy.Adapter.Data;
+using SwDreams.Features.Progression.Adapter;
 using SwDreams.Shared.Data;
 
 namespace SwDreams.Testing
@@ -26,7 +27,7 @@ namespace SwDreams.Testing
         private static readonly Color SwarmColor = new Color(1f, 0.85f, 0.2f);        // 연노랑
 
         private SpriteRenderer sr;
-        private Adapter.Entity.Enemy enemyRef;
+        private SwDreams.Features.Enemy.Adapter.Enemy enemyRef;
 
         private void Start()
         {
@@ -58,7 +59,7 @@ namespace SwDreams.Testing
         private Color GetColorByType()
         {
             // 적 타입별 색상
-            enemyRef = GetComponent<Adapter.Entity.Enemy>();
+            enemyRef = GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
             if (enemyRef != null)
             {
                 switch (enemyRef.EnemyType)
@@ -71,8 +72,8 @@ namespace SwDreams.Testing
                 return ChaserColor;
             }
 
-            if (GetComponent<Adapter.Skill.Projectile>())      return ProjectileColor;
-            if (GetComponent<Adapter.Entity.ExperienceOrb>())   return OrbColor;
+            if (GetComponent<SwDreams.Features.Skill.Adapter.Projectile>())      return ProjectileColor;
+            if (GetComponent<SwDreams.Features.Progression.Adapter.ExperienceOrb>())   return OrbColor;
             if (CompareTag("Player"))                           return PlayerColor;
 
             return Color.white;
