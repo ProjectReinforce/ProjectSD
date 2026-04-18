@@ -1392,7 +1392,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2230475754307771068}
   - component: {fileID: 2409256874010504056}
-  - component: {fileID: 843390489847799774}
+  - component: {fileID: 2335420366374375503}
+  - component: {fileID: 5136835907334854555}
   m_Layer: 5
   m_Name: BG_Image
   m_TagString: Untagged
@@ -1427,7 +1428,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2887334386254062458}
   m_CullTransparentMesh: 1
---- !u!114 &843390489847799774
+--- !u!114 &2335420366374375503
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1436,9 +1437,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2887334386254062458}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -1447,16 +1448,31 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: b1d040703dcbcc14b9e54f9c3a2dcf0d, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_Texture: {fileID: 2800000, guid: b1d040703dcbcc14b9e54f9c3a2dcf0d, type: 3}
+  m_UVRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+--- !u!114 &5136835907334854555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2887334386254062458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeaf0ec833719874e97735b20d9865c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.UI.Presentation.UIImageBlur
+  downsample: 2
+  iterations: 4
+  startOffset: 1
+  offsetStep: 1
+  overrideSource: {fileID: 0}
+  fadeInDuration: 0
 --- !u!1 &2905042461369231984
 GameObject:
   m_ObjectHideFlags: 0
