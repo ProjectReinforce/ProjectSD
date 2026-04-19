@@ -27,7 +27,7 @@ MonoBehaviour:
   burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
-  projectilePrefab: {fileID: 7830792750639668327, guid: d285ed01e873e3e418dd184fe11dd0cc, type: 3}
+  projectilePrefab: {fileID: 2361586414690528474, guid: 89cd69b0eca7a764791f10bd645c9b79, type: 3}
   projectileSpeed: 5
   projectileCount: 1
   projectileLifetime: 5
