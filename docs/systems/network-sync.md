@@ -56,23 +56,79 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 - 스킬 발동 알림 (어떤 스킬, 어디서)
 - 강화 선택 결과 (레벨업 시)
 
-## 5. 주요 RPC / 이벤트 목록
+## 5. 주요 RPC / 이벤트 목록 (실제 코드 기준)
+
+> 본 표는 실제 `[PunRPC]` 어트리뷰트가 붙은 메서드의 실측 목록이다. 새 RPC 를 추가/제거하면 본 표를 동기화한다.
+
+### 5-1. 게임 진행 (Shared/Managers/)
+
+| 명칭 | 정의 위치 | 용도 |
+|---|---|---|
+| `RPC_SyncExp(int currentExp, int requiredExp, int level, int levelUpCount)` | `Shared/Managers/GameManager.cs:117` | 호스트 → 전체. 팀 경험치/레벨 동기화 |
+| `RPC_ChangeState(int stateInt)` | `Shared/Managers/GameManager.cs:151` | 호스트 → 전체. `GameState` 전이 (Playing/Paused/BossFight/GameClear/GameOver) |
+| `RPC_SendBuildToHost(int actorNumber, string playerName, int characterId, int[] skillIds, int[] skillLevels, int[] chaosIds)` | `Shared/Managers/ResultManager.cs:139` | 클라 → 호스트. 종료 시 로컬 빌드 데이터 전송 |
+| `RPC_ShowResult(bool isCleared, float playTime, int teamLevel, int totalKills, int totalDeaths, int bossChaos, int[] buildPayload)` | `Shared/Managers/ResultManager.cs:222` | 호스트 → 전체. 결과 화면 표시 |
+
+### 5-2. 스폰 / 데미지 (Shared/Managers/SpawnManager.cs)
+
+| 명칭 | 라인 | 용도 |
+|---|---|---|
+| `RPC_SpawnEnemy(int enemyId, int enemyTypeInt, Vector2 position, float hpMultiplier)` | 409 | 호스트 → 전체. 일반 적 스폰 |
+| `RPC_SpawnSwarm(int enemyId, Vector2 position, float hpMultiplier, float baseAngle)` | 443 | 호스트 → 전체. 무리형 스폰 |
+| `RPC_RequestDamage(int enemyId, int damage, int actorNumber)` | 506 | 클라 → 호스트. 적 피해 요청 (C안 데미지 요청) |
+| `RPC_RequestKnockback(int enemyId, Vector2 sourcePos, float force)` | 513 | 클라 → 호스트. 넉백 요청 |
+
+### 5-3. 스킬 트리거 (Shared/Network/NetworkAdapter.cs)
+
+| 명칭 | 라인 | 용도 |
+|---|---|---|
+| `RPC_NotifySkillTriggered(int actorNumber, int skillId)` | 19 | 호스트 → 전체. 스킬 발동 통지 (이펙트/사운드용) |
+| `RPC_NotifyDamageApplied(int targetViewId, float damage)` | 25 | 호스트 → 전체. 데미지 적용 통지 (DamagePopup 표시용) |
+
+### 5-4. 보스 (Features/Boss/Adapter/)
+
+| 명칭 | 정의 위치 | 용도 |
+|---|---|---|
+| `RPC_RequestBossDamage(int damage)` | `Boss.cs:196` | 클라 → 호스트. 보스 피해 요청 |
+| `RPC_SyncHP(int hp, int maxHp, int phaseInt, bool phaseChanged)` | `Boss.cs:217` | 호스트 → 전체. 보스 HP / Phase 동기화 |
+| `RPC_BossDied()` | `Boss.cs:247` | 호스트 → 전체. 보스 처치 |
+| `RPC_SetBossChaosSkill(int chaosTypeInt)` | `BossChaosApplicator.cs:109` | 호스트 → 전체. 보스 혼돈 적용 |
+| `RPC_ShowCircleWarning(float x, float y, float radius, float delay)` | `BossPhaseManager.cs:318` | 호스트 → 전체. 보스 패턴 경고 비주얼 |
+| `RPC_ShowExplosion(float x, float y, float radius)` | `BossPhaseManager.cs:341` | 호스트 → 전체. 폭발 이펙트 |
+| `RPC_ApplyGlobalSlow(float multiplier, float duration)` | `BossPhaseManager.cs:362` | 호스트 → 전체. 전역 슬로우 |
+| `RPC_RemoveGlobalSlow()` | `BossPhaseManager.cs:373` | 호스트 → 전체. 슬로우 해제 |
+| `RPC_BossWarning(float duration)` | `BossSpawner.cs:225` | 호스트 → 전체. 보스 등장 사전 경고 |
+| `RPC_InitBoss(int bossViewID, int maxHP)` | `BossSpawner.cs:240` | 호스트 → 전체. 보스 인스턴스 초기화 |
+
+### 5-5. 레벨업 / 진행도 (Features/Progression/Adapter/Levelupmanager.cs)
+
+| 명칭 | 라인 | 용도 |
+|---|---|---|
+| `RPC_ReceiveChoices(int[] choiceIds, bool isChaos)` | 263 | 호스트 → 각 클라. 레벨업 선택지 전달 |
+| `RPC_StartTimer(float duration)` | 289 | 호스트 → 전체. 선택 타이머 시작 |
+| `RPC_PlayerSelected(int actorNumber, int skillId)` | 323 | 클라 → 호스트. 선택 결과 보고 |
+| `RPC_LevelUpEnded()` | 531 | 호스트 → 전체. 레벨업 종료 (게임 재개) |
+| `RPC_ForceChoice(int skillId)` | 547 | 호스트 → 전체. 타임아웃 자동 선택 |
+| `RPC_SyncSkillAcquisition(int actorNumber, int skillId)` | 568 | 호스트 → 전체. 스킬 획득 동기화 |
+
+### 5-6. 부활 (Features/Character/Adapter/RespawnManager.cs)
+
+| 명칭 | 라인 | 용도 |
+|---|---|---|
+| `RPC_StartRespawnCountdown(int photonViewID, float totalTime)` | 216 | 호스트 → 전체. 부활 카운트다운 시작 |
+| `RPC_ExecuteRespawn(int photonViewID, int respawnHP, float posX, float posY)` | 227 | 호스트 → 전체. 부활 실행 (위치/HP) |
+
+### 5-7. 씬 전환 / 룸 상태
 
 | 명칭 | 방향 | 용도 |
 |---|---|---|
 | `PhotonNetwork.LoadLevel("GameScene")` | 호스트 → 전체 | 씬 전환 (AutomaticallySyncScene=true) |
-| `RPC_TriggerLevelUp(int[] skillIds)` | 호스트 → 각 클라 | 레벨업 선택지 전달 |
-| `RPC_SkillSelected(int playerId, int skillId)` | 클라 → 호스트 | 선택 결과 |
-| `RPC_BossSpawn(int chaosSkillId)` | 호스트 → 전체 | 보스 등장 + 혼돈 스킬 |
-| `RPC_BossPhaseChange(int phase)` | 호스트 → 전체 | Phase 전이 |
-| `RPC_GameResult(bool isVictory, string statsJson)` | 호스트 → 전체 | 게임 결과 |
-| `RPC_Respawn(int playerId)` | 호스트 → 전체 | 플레이어 부활 |
-| `RPC_HostMigration` | Photon 자동 | MasterClientSwitched |
-| `SetCustomProperties({characterId})` | 플레이어 | 캐릭터 선택 |
-| `SetCustomProperties({isReady})` | 플레이어 | 준비 상태 |
-| `SetCustomProperties({returnToWaitingRoom})` | 호스트 | 결과 → 대기실 복귀 |
+| `OnMasterClientSwitched` | Photon 자동 | 호스트 마이그레이션. `Shared/Managers/HostMigrationHandler.cs` 가 처리 |
+| `SetCustomProperties({characterId})` | 플레이어 | 캐릭터 선택. 키 `NetworkManager.CharacterIdKey` |
+| `SetCustomProperties({isReady})` | 플레이어 | 준비 상태. 키 `NetworkManager.IsReadyKey` |
+| `SetCustomProperties({hasPw, pw})` | 호스트(룸 생성 시) | 비밀번호 방. 키 `HasPasswordKey`, `PasswordKey` |
 
-각 RPC 의 실제 시그니처는 `Assets/Scripts/Adapter/Network/NetworkManager.cs` 참조.
+각 RPC 의 실제 시그니처는 위 정의 위치 (`Shared/Managers/`, `Shared/Network/`, `Features/{Boss,Progression,Character}/Adapter/`) 의 코드를 참조한다. 새 RPC 추가 시 `photon-sync-auditor` 서브에이전트가 본 표 기준으로 감사한다.
 
 ## 6. 소유권 / 권한
 
@@ -124,8 +180,10 @@ source 명명 규칙:
 
 ## 11. 기존 코드 참조
 
-- `Assets/Scripts/Adapter/Network/` — NetworkManager 등
-- `Assets/Scripts/Adapter/Entity/Player/`, `Enemy/`, `Boss/` — PhotonView 부착 컴포넌트
+- `Assets/Scripts/Shared/Network/NetworkAdapter.cs` — 트리거/데미지 통지 RPC
+- `Assets/Scripts/Shared/Managers/NetworkManager.cs` — Photon 연결·룸 콜백·CustomProperties 키 정의
+- `Assets/Scripts/Shared/Managers/HostMigrationHandler.cs` — MasterClient 전환 처리
+- `Assets/Scripts/Features/Character/Adapter/Player*.cs`, `Features/Enemy/Adapter/Enemy.cs`, `Features/Boss/Adapter/Boss.cs` — PhotonView 부착 컴포넌트
 
 ## 12. 알려진 제약
 

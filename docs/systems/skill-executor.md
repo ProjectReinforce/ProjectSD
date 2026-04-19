@@ -23,14 +23,14 @@ Skill (쿨다운 타이머)
 
 | 컴포넌트 | 파일 | 역할 |
 |---|---|---|
-| `Skill` | `Assets/Scripts/Adapter/Skill/Skill.cs` | 쿨다운 관리, Executor 호출 |
-| `SkillExecutor` | `Assets/Scripts/Adapter/Skill/SkillExecutor.cs` | 발사 모드 분기, Spawner 선택 |
-| `ISkillSpawner` | `Assets/Scripts/Adapter/Skill/ISkillSpawner.cs` | 실제 오브젝트 생성 인터페이스 |
-| `SkillSpawnerFactory` | `Assets/Scripts/Adapter/Skill/SkillSpawnerFactory.cs` | SkillData 타입별 Spawner 선택 |
-| `IFireRecorder` | `Assets/Scripts/Adapter/Skill/IFireRecorder.cs` | 메아리/Refire용 발사 기록 (현재 stub) |
-| `SpreadPatterns` | `Assets/Scripts/Adapter/Skill/Spread/SpreadPatterns.cs` | 부채꼴·360° 균등분할 방향 계산 |
+| `Skill` | `Assets/Scripts/Features/Skill/Adapter/Skill.cs` | 쿨다운 관리, Executor 호출 |
+| `SkillExecutor` | `Assets/Scripts/Features/Skill/Adapter/SkillExecutor.cs` | 발사 모드 분기, Spawner 선택, applicableStats 필터 적용 |
+| `ISkillSpawner` | `Assets/Scripts/Features/Skill/Adapter/ISkillSpawner.cs` | 실제 오브젝트 생성 인터페이스 |
+| `SkillSpawnerFactory` | `Assets/Scripts/Features/Skill/Adapter/SkillSpawnerFactory.cs` | SkillData 타입별 Spawner 선택 |
+| `IFireRecorder` + `FireRecord` | `Assets/Scripts/Features/Skill/Adapter/IFireRecorder.cs` | 메아리/Refire용 발사 기록 (인터페이스·VO 정의 완료, 호출부·구현체 미작성) |
+| `SpreadPatterns` | `Assets/Scripts/Features/Skill/Adapter/Spread/SpreadPatterns.cs` | 부채꼴·360° 균등분할 방향 계산 |
 
-Spawner 구현체: `ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `DebuffSpawner`, `PlacedSpawner`.
+Spawner 구현체: `ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `DebuffSpawner`, `PlacedSpawner` (`Features/Skill/Adapter/`).
 
 ## 2. 발사 모드 (4종)
 
@@ -66,17 +66,22 @@ Spawner 구현체: `ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `Debuff
 - Executor가 발사 시점에 필터를 통해 해당 스킬에 적용되는 스탯만 `PlayerStats` 에서 읽어 주입.
 - **각 Effect가 직접 `playerStats.XXX` 를 읽는 하드코딩은 금지.**
 
-**현재 상태 (2026-04-18):**
-- `GetFilteredXxx()` 메서드는 이미 존재하나 **호출부가 비어있는 stub** 상태.
-- 실제 스탯 주입 경로가 Executor를 거치지 않고 각 Effect가 읽는 구간이 남아있다.
-- 스킬 리팩터링 2차(`c96861eff`~`deb23b669`)에서 일부 정리, 잔여분은 추후 작업.
+**현재 상태 (2026-04-19):**
+- ✅ `PlayerStats.GetFilteredXxx(SkillData)` 메서드 8종 정의됨 (`PlayerStats.cs:361-418`): `GetFilteredStat`, `GetFilteredProjectileCount`, `GetFilteredProjectileSpeed`, `GetFilteredAttackMultiplier`, `GetFilteredSkillRangeBonus`, `GetFilteredSkillDurationBonus`, `GetFilteredKnockbackMultiplier`, `GetFilteredHealMultiplier`.
+- ✅ `SkillExecutor.BuildContext()` 가 발사 시점에 위 메서드들을 호출하여 컨텍스트에 주입 완료 (`SkillExecutor.cs:276, 286, 299, 305, 311, 317`).
+- ✅ Projectile/Area 등 Effect 측은 `context.attackMultiplier` 등 사전 계산된 값을 읽으므로 하드코딩 제거됨.
+- ⚠️ 신규 추가될 스탯이 있으면 위 두 곳(필터 메서드 + Executor 호출)에 짝을 맞춰 추가해야 한다.
 
 ## 4. IFireRecorder (메아리용)
 
 - Executor가 발사 시 `{ skillId, origin, direction, timestamp }` 를 기록.
 - **메아리(#17)** 스킬이 이 기록을 읽어 **데미지 계수만 낮춰서 재실행**.
 - **진화형 메아리**는 최근 2개 기록을 재현.
-- [trigger-effects.md § Refire](trigger-effects.md) 핸들러가 이 인터페이스를 호출하도록 설계되어 있으나 **현재 구현체 없음 (stub)**.
+- [trigger-effects.md § Refire](trigger-effects.md) 핸들러가 이 인터페이스를 호출하도록 설계됨.
+
+**현재 상태:**
+- ✅ `IFireRecorder` 인터페이스 + `FireRecord` struct 정의 완료 (`Features/Skill/Adapter/IFireRecorder.cs`).
+- ⬜ 호출부(`SkillExecutor` 내 기록), 구현체(메모리 버퍼), `RefireHandler` 미작성.
 - **우선순위:** 메아리 스킬 구현 시점에 함께 작성.
 
 ## 5. 체인 비행 (Projectile 시스템)
@@ -104,12 +109,16 @@ ChainHandler(TriggerEffect)와는 **다른** 개념. 투사체가 적중 시 소
 - **Executor는 호스트에서만 실행.** 결과물(투사체/장판)은 각 클라이언트가 로컬 렌더.
 - 히트 판정은 호스트. 상세는 [network-sync.md](network-sync.md).
 
-### 6.3 정리 대상 (기존 코드)
-스킬 리팩터링 2차 이후 남은 정리 사항:
+### 6.3 정리 대상 / 완료 사항
 
-- **삭제 대상 서브클래스:** `HomingProjectile`, `BoomerangProjectile`, `TornadoProjectile`, `SpiralTornadoProjectile`, `ExplodingProjectile`, `ChainProjectile` — 외부 참조 0개 확인 완료. 동작은 `Trajectory` + `TriggerEffect` 조합으로 대체됨.
-- **applicableStats 하드코딩 제거:** 각 Effect에서 `playerStats.XXX` 직접 읽는 코드 → Executor 필터로 전환.
-- **디버그 로그 정리:** `Projectile`, `ExplodeHandler`, `ChainHandler` 에 임시 삽입된 로그 제거.
+**완료:**
+- ✅ `HomingProjectile`, `BoomerangProjectile`, `TornadoProjectile`, `SpiralTornadoProjectile`, `ExplodingProjectile`, `ChainProjectile` 등 서브클래스 삭제 완료. 동작은 `Trajectory` + `TriggerEffect` 조합으로 대체.
+- ✅ `applicableStats` 하드코딩 제거 — Executor 필터 경유로 전환 완료 (§ 3 참조).
+- ✅ `SkillData.subProjectilePrefab` SO 필드화 완료 — `ProjectileSpawner` → `Projectile.SetSubProjectilePrefab` → `TriggerContext.subProjectilePrefab` 으로 전달 (`SpawnProjectileHandler.cs:35` 에서 읽음).
+
+**잔여:**
+- 디버그 로그 정리: `Projectile`, `ExplodeHandler`, `ChainHandler` 등에 남아있는 임시 로그 제거.
+- `IFireRecorder` 호출부·구현체·`RefireHandler` 작성 (메아리 스킬 구현 시).
 
 ## 7. SO 설정 원칙
 
@@ -120,13 +129,14 @@ ChainHandler(TriggerEffect)와는 **다른** 개념. 투사체가 적중 시 소
 
 ## 8. 기존 코드 참조
 
-- `Assets/Scripts/Adapter/Skill/` — Executor, Spawner, Trajectories, TriggerEffects
-- `Assets/Scripts/Data/SkillData.cs`, `Assets/Scripts/Data/SkillSubTypes/*.cs`
-- `Assets/Scripts/Adapter/Skill/Spread/SpreadPatterns.cs`
-- `Assets/Scripts/Adapter/Skill/Trajectories/` — `ITrajectoryBehavior`, `HomingTrajectory`, `BoomerangTrajectory`, `PullTrajectories`, `SimpleTrajectories`, `TrajectoryFactory`
+- `Assets/Scripts/Features/Skill/Adapter/` — Executor, Spawner 5종, Spread, TriggerEffects, Trajectories, IFireRecorder, Skill, SkillSpawnerFactory
+- `Assets/Scripts/Features/Skill/Adapter/Data/SkillData.cs` (+ 서브타입: `ProjectileSkillData`, `AreaSkillData`, `OrbitalSkillData`, `PlacedSkillData`, `DebuffSkillData`, `PassiveSkillData`, `ChaosSkillData`)
+- `Assets/Scripts/Features/Skill/Adapter/Spread/SpreadPatterns.cs`
+- `Assets/Scripts/Features/Skill/Adapter/Trajectories/` — `ITrajectoryBehavior`, `HomingTrajectory`, `BoomerangTrajectory`, `PullTrajectories`, `SimpleTrajectories`(Tornado/Spiral/Zigzag/SinWave 포함), `TrajectoryFactory`
+- `Assets/Scripts/Features/Skill/Domain/ValueObjects/` — `FiringMode`, `TriggerType`, `EffectActionType`, `TrajectoryType` (7종 enum), `SpreadPatternType`, `AimType`, `SkillTriggerEffect`, `TriggerContext`, `DamageResult`
+- `Assets/Scripts/Features/Character/Adapter/PlayerStats.cs` — `GetFilteredXxx(SkillData)` 8종 메서드
 
-## 9. 알려진 제약
+## 9. 알려진 제약 / 남은 작업
 
-- [ ] `IFireRecorder` **미구현 (stub)** — 메아리 구현 시 함께 작성
-- [ ] `applicableStats` 필터 호출부 **일부 stub** — 2차 리팩터링 후속 작업
-- [ ] `SpawnProjectileHandler.SetProjectilePrefab()` 은 현재 **코드 수동 설정** — `SkillData.subProjectilePrefab` 필드 추가 예정
+- [ ] `IFireRecorder` **호출부·구현체·`RefireHandler` 미작성** — 메아리(#17) 스킬 구현 시 함께 작성
+- [ ] 디버그 로그 정리 (Projectile/ExplodeHandler/ChainHandler 등 임시 로그)

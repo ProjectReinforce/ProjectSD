@@ -15,7 +15,7 @@ SkillTriggerSystem
 
 - 이벤트 발생 시 `SkillTriggerSystem.FireTrigger(triggerType, context)` 호출.
 - 매칭되는 모든 효과의 `IEffectActionHandler` 가 실행된다.
-- 코드: `Assets/Scripts/Adapter/Skill/TriggerEffects/SkillTriggerSystem.cs`, `EffectActionRegistry.cs`, `Handlers/*.cs`
+- 코드: `Assets/Scripts/Features/Skill/Adapter/TriggerEffects/SkillTriggerSystem.cs`, `EffectActionRegistry.cs`, `Handlers/*.cs`
 
 ## 2. TriggerType (발동 시점)
 
@@ -100,7 +100,7 @@ SkillTriggerSystem
 
 `context.position` 에서 균등 방향으로 서브 투사체 생성.
 
-> ⚠️ **현재 `SpawnProjectileHandler.SetProjectilePrefab()` 으로 코드에서 수동 설정**해야 함. `SkillData.subProjectilePrefab` 필드 추가 예정.
+> ✅ **서브 프리팹은 SO에서 직접 지정.** `SkillData.subProjectilePrefab` 필드를 SO 인스펙터에서 설정하면 `ProjectileSpawner` → `Projectile.SetSubProjectilePrefab` → `TriggerContext.subProjectilePrefab` 으로 전달되어 본 핸들러가 읽음 (`SpawnProjectileHandler.cs:35`). 코드 수동 설정 불필요.
 > 프리팹 미설정 시 fallback으로 방향별 즉시 데미지 처리.
 
 ### 3.8 `ApplyVulnerability` — 받는 피해 증가
@@ -183,7 +183,9 @@ triggerSystem.RemoveByPrefix("essence_");
 
 ## 7. 핸들러 파일 참조
 
-`Assets/Scripts/Adapter/Skill/TriggerEffects/Handlers/`:
+`EffectActionType` enum 은 11종이지만, `EffectActionRegistry.cs` 에 등록된 핸들러는 **10종**(Refire 미구현).
+
+`Assets/Scripts/Features/Skill/Adapter/TriggerEffects/Handlers/`:
 - `ApplyDoTHandler.cs`
 - `ApplySlowHandler.cs`
 - `ApplyVulnerabilityHandler.cs`
@@ -193,11 +195,10 @@ triggerSystem.RemoveByPrefix("essence_");
 - `ExplodeHandler.cs`
 - `HealSelfHandler.cs`
 - `PullHandler.cs`
-- `SpawnProjectileHandler.cs`
-- (`RefireHandler` — 미구현)
+- `SpawnProjectileHandler.cs` ✓ (SO 필드 `subProjectilePrefab` 사용)
+- (`RefireHandler` — 미구현. `IFireRecorder` + 메아리 스킬 구현 시 함께 작성)
 
-## 8. 알려진 제약
+## 8. 알려진 제약 / 남은 작업
 
-- [ ] `Refire` 핸들러 미구현. `IFireRecorder` 와 함께 메아리 구현 시점에 작성.
-- [ ] `SpawnProjectile` 서브 프리팹은 코드 수동 설정 상태. `SkillData.subProjectilePrefab` 필드 추가 필요.
+- [ ] `Refire` 핸들러 미구현 — `IFireRecorder` 와 함께 메아리(#17) 구현 시점에 작성. 현재 `EffectActionRegistry` 등록 누락.
 - [ ] Chain 감쇄율 80% 는 현재 하드코딩 — SO 노출 검토.

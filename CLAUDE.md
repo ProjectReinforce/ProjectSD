@@ -9,9 +9,10 @@
 ## 1. 프로젝트 개요
 
 - **이름:** ProjectSD / **Sweepin' Dreams** (게임 타이틀 — "Sweet Dream + Sweep")
-- **엔진:** Unity 2D URP + Photon PUN 2 멀티플레이
+- **엔진:** Unity 2D URP + Photon PUN 2 멀티플레이 (보이스챗은 Photon Voice 2 예정, 미구현)
 - **장르/컨셉:** **1~4인 Co-op Survivors-like** (Vampire Survivors 계열). 보스전 제외 최대 15분.
 - **핵심 시스템:** 스킬 시스템(진화·혼돈 포함), 적/보스 AI, 플레이어 스탯/패시브, 정수·무기, 프레임 UI(팝업/토스트).
+- **출시 순서:** **Stove Indie → Steam.** 한국 게임 등급 분류를 Stove 인디로 먼저 받고 Steam 출시. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
 - **현재 상태:** Feature-first 재구성 준비 중. 브랜치 `Skill_Refactor` — 스킬 시스템 2차 리팩터링 이후 잔여 작업. 상세는 [docs/architecture/implementation-roadmap.md](docs/architecture/implementation-roadmap.md).
 
 ---
@@ -44,34 +45,35 @@ Presentation ──▶ Adapter ──▶ Application ──▶ Domain
 
 ---
 
-## 3. 폴더 지도 (현재 구조 — 재구성 전)
+## 3. 폴더 지도 (Feature-first 전환 완료 후 — 커밋 `78853035f`)
 
 ```
 Assets/Scripts/
-├── Adapter/          ← 실제 Unity 구현
-│   ├── Entity/
-│   │   ├── Player/   ← Player, PlayerMovement, PlayerHealth, PlayerStats, PlayerVisual, PlayerSpawner
-│   │   ├── Enemy/    ← Enemy, EnemyMovement, EnemyContact + Movement/
-│   │   ├── Boss/
-│   │   └── BossChaos/
-│   ├── Skill/        ← Skill, SkillExecutor, SkillSpawnerFactory
-│   │   ├── Projectile/, Spread/, Trajectories/, Effects/
-│   │   ├── {Projectile|Area|Orbital|Placed|Debuff}Spawner
-│   │   └── TriggerEffects/Handlers/ (11종 핸들러)
-│   ├── UI/           ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, MenuSceneManager, RoomList/Menu/Common/
-│   ├── Manager/, Network/
-├── Domain/           ← 인터페이스, ValueObjects, 수식
-├── Data/             ← ScriptableObject DB
-│   ├── SkillData (+ SkillSubTypes: Projectile/Area/Orbital/Placed/Debuff/Passive/Chaos)
-│   └── CharacterData, EnemyData, BossData, DifficultyData, GameplayConfig, AudioLibrary
-├── Application/, AppService/, InfraStructure/
-├── Presentation/     ← DamagePopup 등
-├── BootStrap/, Editor/, Testing/, WFC/
+├── Features/                ← 각 Feature 내부에 자체 레이어
+│   ├── Skill/
+│   │   ├── Domain/          ← FiringMode, TriggerType, EffectActionType, TrajectoryType (7종), SkillTriggerEffect, TriggerContext, DamageFormula
+│   │   ├── Adapter/         ← SkillExecutor, SkillSpawnerFactory, ISkillSpawner + {Projectile|Area|Orbital|Placed|Debuff}Spawner, Trajectories/, TriggerEffects/Handlers/, Spread/, IFireRecorder
+│   │   └── Adapter/Data/    ← SkillData (+ ProjectileSkillData/AreaSkillData 등 서브타입)
+│   ├── Enemy/               ← Adapter (Enemy, EnemyContact + Movement/)
+│   ├── Boss/                ← Domain(Formulas) + Application(BossPhaseService) + Adapter(Boss, BossChaosApplicator, BossPhaseManager, BossSpawner)
+│   ├── Character/           ← Adapter (Player/PlayerStub, PlayerStats, PlayerMovement, PlayerHealth, PlayerVisual, RespawnManager) + Adapter/Data (CharacterData)
+│   ├── Progression/         ← Adapter (Levelupmanager, SkillManager, ChaosSkillManager, 진화·경험치)
+│   └── UI/
+│       ├── Adapter/Menu/    ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
+│       └── Presentation/    ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, ResultPanelUI, DamagePopup, DeathOverlayUI, ReconnectUI, DebugOverlay, UIBackgroundBlur, UIImageBlur
+├── Shared/                  ← Feature 경계를 넘는 공유 코드
+│   ├── Domain/              ← 순수 C# (GameResult, PlayerBuildData, IDamageable, IPoolable)
+│   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
+│   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, TestManager
+│   └── Network/             ← NetworkAdapter
+├── Editor/                  ← 에디터 전용 (SkillDataEditor 등)
+├── Testing/                 ← 테스트 엔트리 (Phase2TestEntry 등)
+└── WFC/                     ← 맵 Wave Function Collapse
 ```
 
-UI 프리팹: `Assets/Resources/Prefabs/UI/Frame_PopUp.prefab`, `FrameToast.prefab`.
+UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.prefab`, `Frame_InputPassWord.prefab`, `Frame_MakeRoom.prefab`, `Frame_RoomList.prefab`, `Frame_SearchRoom.prefab`, `InGameHUD.prefab`, `BossHealthBar.prefab`, `ChaosIcon.prefab`, `DeathOverlay.prefab`, `ReconnectOverlay.prefab`, `Panel_Lobby.prefab`, `Panel_Title.prefab`, `RoomListPanel.prefab`, `Slot_RoomList.prefab`, `SkillSlot.prefab`, `TeammateEntry.prefab`. (`Frame_PopUp.prefab` 은 아직 미작성 — [docs/systems/ui-frame.md](docs/systems/ui-frame.md))
 
-**재구성 후 목표(단계별):** `Assets/Scripts/Features/{Skill,Enemy,Character,UI}/{Domain,Application,Adapter,Presentation}` 구조. 공유 도메인은 `Assets/Scripts/Shared/`. 상세는 [docs/architecture/overview.md](docs/architecture/overview.md).
+**신규 파일 위치 원칙:** Feature 내부는 `Domain/Application/Adapter/Presentation` 레이어 구조 유지. Feature 경계를 넘는 것만 `Shared/` 로. 상세는 [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ---
 
@@ -84,15 +86,15 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/Frame_PopUp.prefab`, `FrameToast.pref
 - **4등급 체계:** 일반 / 희귀 / 영웅 / 전설 — 혼돈 스킬·능력치 공용.
 
 **스킬 시스템**
-- **Skill (스킬):** 플레이어 자동 발동 능력. 액티브 24종 / 패시브 19종 / 혼돈 19종. `Assets/Scripts/Adapter/Skill/`.
+- **Skill (스킬):** 플레이어 자동 발동 능력. 액티브 24종 / 패시브 19종 / 혼돈 19종. `Features/Skill/Adapter/`.
 - **Executor:** 쿨다운 도달 시 발사를 담당하는 컴포넌트. 4가지 발사 모드. [docs/systems/skill-executor.md](docs/systems/skill-executor.md).
 - **발사 모드:** `SimultaneousSpread` / `DelayedBurst` / `TwoPhase` / `Single`.
-- **Trajectory:** 발사체 궤적. `Straight / Homing / Boomerang / Spiral / Pull` 등. `Adapter/Skill/Trajectories/`.
-- **TriggerEffect:** 이벤트(OnFire/OnHit/OnKill/OnExpire/OnInterval/OnPlayerHit) × 액션(DealDamage/Explode/Chain/ApplyDoT/... 11종) 매핑. [docs/systems/trigger-effects.md](docs/systems/trigger-effects.md).
+- **Trajectory:** 발사체 궤적. `Straight / Homing / Boomerang / Tornado / Spiral / Zigzag / SinWave` (7종). `Features/Skill/Adapter/Trajectories/`.
+- **TriggerEffect:** 이벤트(OnFire/OnHit/OnKill/OnExpire/OnInterval/OnPlayerHit) × 액션(DealDamage/Explode/Chain/ApplyDoT/... 11종 enum, 핸들러 10종 등록 + Refire 미구현) 매핑. [docs/systems/trigger-effects.md](docs/systems/trigger-effects.md).
 - **Evolution (진화):** 액티브 + 특정 패시브가 모두 최대 레벨 시 발동. 10종 조합(예: 장검+스킬 범위 → 검무). 2슬롯→1슬롯.
 - **Chaos Skill (혼돈 스킬):** 게임 규칙 자체를 바꾸는 스킬. **레벨 10/20/30에 1회씩 선택.** 레벨 30 미선택 1개가 보스에게 부여.
-- **applicableStats 필터:** 스킬이 어떤 플레이어 스탯을 반영하는지 SO로 선언. 현재 일부 stub.
-- **IFireRecorder:** 메아리(#17) 스킬용 발사 기록 인터페이스. 현재 미구현.
+- **applicableStats 필터:** 스킬이 어떤 플레이어 스탯을 반영하는지 SO로 선언. Executor 경유 주입 경로 완성 (`PlayerStats.GetFilteredXxx` → `SkillExecutor.BuildContext`).
+- **IFireRecorder:** 메아리(#17) 스킬용 발사 기록 인터페이스. 인터페이스·`FireRecord` VO 정의 완료, 호출부와 구현체는 메아리 구현 시 작성.
 
 **적 / 보스**
 - **일반 적 4종:** 기본 추적형 / 빠른형 / 둔한형 / 무리형. [docs/game-design/enemies/INDEX.md](docs/game-design/enemies/INDEX.md).
@@ -105,6 +107,10 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/Frame_PopUp.prefab`, `FrameToast.pref
 - **MenuScene / GameScene:** 2개 씬 구조. [docs/systems/scene-structure.md](docs/systems/scene-structure.md).
 - **호스트-클라이언트:** Photon MasterClient 가 권위. 투사체는 로컬 렌더, 히트는 호스트. [docs/systems/network-sync.md](docs/systems/network-sync.md).
 - **런타임 Effect source prefix:** `essence_*` / `weapon_*` / `chaos_*` / `buff_*`.
+- **Voice (보이스챗):** Photon Voice 2 사용 예정. 무료 티어 20 CCU. 미구현 — 설계만 [docs/systems/voice-chat.md](docs/systems/voice-chat.md).
+
+**플랫폼 / 인프라**
+- **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
 
 **정수 / 무기**
 - **Essence (정수):** 엘리트 드랍, 속성 부여(얼음/불/번개). 최대 2개. 조합 히든 효과.
@@ -124,7 +130,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/Frame_PopUp.prefab`, `FrameToast.pref
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -133,6 +139,8 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/Frame_PopUp.prefab`, `FrameToast.pref
 - **새 시스템 설계 →** `docs/templates/system-spec.md` → `docs/systems/{system-id}.md`
 - **아키텍처/레이어 관련 →** `docs/architecture/overview.md`
 - **네트워크 변경 →** `docs/systems/network-sync.md` + `photon-sync-auditor` 서브에이전트
+- **보이스챗(마이크) 구현 →** [docs/systems/voice-chat.md](docs/systems/voice-chat.md) 만 보면 완결. Photon Voice 2 기반
+- **Steam/Stove SDK 통합 →** [docs/systems/platform-integration.md](docs/systems/platform-integration.md). Phase A(추상화) → B(Stove) → C(Steam) 순
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

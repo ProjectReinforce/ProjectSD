@@ -17,18 +17,23 @@ Sweepin' Dreams 의 매니저 클래스 구조. 각 매니저의 생명주기·�
 
 ## 3. 매니저 목록과 생명주기
 
-| 매니저 | 생명주기 | 이유 |
-|---|---|---|
-| **NetworkManager** | DontDestroyOnLoad | 모든 씬에서 Photon 연결 유지 |
-| **AudioManager** | DontDestroyOnLoad | BGM 끊기지 않게 |
-| **SceneController** | DontDestroyOnLoad | 씬 전환 관리 |
-| **GameManager** | GameScene 만 | 게임 로직은 플레이 중에만 |
-| **UIManager** | 각 씬마다 | 씬마다 UI 다름 |
-| **SpawnManager** | GameScene 만 | 적 스폰은 플레이 중에만 |
-| **SkillManager** | GameScene 만 | 스킬 상태는 게임 중에만 |
-| **PoolManager** | GameScene 만 | 오브젝트 풀링 |
-| **DamageCalculator** | GameScene 만 (정적/매니저 어느 쪽이든) | 호스트 판정 |
-| **MenuSceneManager** | MenuScene 만 | 패널 전환 |
+| 매니저 | 위치 | 생명주기 | 이유 |
+|---|---|---|---|
+| **NetworkManager** | `Shared/Managers/` | DontDestroyOnLoad | 모든 씬에서 Photon 연결 유지 |
+| **AudioManager** | `Shared/Managers/` | DontDestroyOnLoad | BGM 끊기지 않게 |
+| **GameManager** | `Shared/Managers/` | GameScene 만 | 게임 로직 + 팀 경험치/레벨 + GameState |
+| **ResultManager** | `Shared/Managers/` | GameScene 만 | 결과 수집·RPC 브로드캐스트·씬 전환 |
+| **SpawnManager** | `Shared/Managers/` | GameScene 만 | 적 스폰 (호스트만 판정) |
+| **PoolManager** | `Shared/Managers/` | GameScene 만 | 오브젝트 풀링 |
+| **GameStatTracker** | `Shared/Managers/` | GameScene 만 | 킬/데스 누적 (호스트만 기록) |
+| **DifficultyManager** | `Shared/Managers/` | GameScene 만 | 난이도 곡선·시간대 스케일링 |
+| **HostMigrationHandler** | `Shared/Managers/` | DontDestroyOnLoad | MasterClient 전환 시 비상 처리 |
+| **GameAudioConnector** | `Shared/Managers/` | GameScene 만 | 게임 이벤트 → AudioManager 다리 |
+| **TestManager** | `Shared/Managers/` | 옵션 | 디버그 단축키·치트 |
+| **UIManager (`UImanager`)** | `Features/UI/Presentation/` | 각 씬마다 | 씬마다 UI 다름. 파일명 소문자 m 주의 |
+| **MenuSceneManager** | `Features/UI/Adapter/Menu/` | MenuScene 만 | 패널 전환 (Title/RoomList/WaitingRoom) |
+| **Levelupmanager / SkillManager / ChaosSkillManager** | `Features/Progression/Adapter/` | GameScene 만 | 레벨업·스킬·혼돈 슬롯 관리. 파일명 표기 그대로 |
+| **RespawnManager** | `Features/Character/Adapter/` | GameScene 만 | 부활 RPC + 카운트다운 |
 
 ### 싱글톤 패턴 원칙
 
@@ -76,54 +81,52 @@ public class GameManager : MonoBehaviour
 - 콜백 중앙 처리: `OnConnectedToMaster`, `OnJoinedRoom`, `OnDisconnected`, `OnMasterClientSwitched` 등.
 - 주요 RPC 목록은 [network-sync.md § 5](network-sync.md).
 
-## 6. SceneController
+## 6. 씬 전환 (전용 SceneController 없음)
 
-**역할:** 씬 전환 관리 (DontDestroyOnLoad).
+별도의 `SceneController` 매니저는 **현재 존재하지 않는다.** 씬 전환은 다음 두 곳에서 직접 호출한다:
 
-```csharp
-public class SceneController : MonoBehaviour
-{
-    public static SceneController Instance;
-
-    public void LoadGameScene()
-    {
-        if (PhotonNetwork.IsMasterClient)
-            PhotonNetwork.LoadLevel("GameScene");
-    }
-
-    public void ReturnToWaitingRoom()
-    {
-        PhotonNetwork.CurrentRoom.SetCustomProperties(
-            new Hashtable { { "returnToWaitingRoom", true } });
-        PhotonNetwork.LoadLevel("MenuScene");
-    }
-}
-```
+- **MenuScene → GameScene:** `WaitingRoomPanelController` 또는 `NetworkManager` 가 `PhotonNetwork.LoadLevel("GameScene")` 직접 호출. `AutomaticallySyncScene = true` 라 호스트만 호출하면 전체 전환.
+- **GameScene → MenuScene (다시 하기/나가기):** `Shared/Managers/ResultManager.cs` 의 `OnRetry()` / `OnExit()` 가 처리. 다시 하기는 방을 유지한 채 `SceneManager.LoadScene("MenuScene")`, 나가기는 `LeaveRoom()` → 콜백에서 씬 전환.
 
 씬 구조 상세는 [scene-structure.md](scene-structure.md).
 
 ## 7. MenuSceneManager
 
-**역할:** MenuScene 내부 패널 전환 (TitlePanel / RoomListPanel / WaitingRoomPanel).
+**역할:** MenuScene 내부 패널 전환 (`TitlePanel` / `RoomListPanel` / `WaitingRoomPanel`).
+
+**복귀 로직:** 씬 간 전달은 **CustomProperties 가 아니라 `static bool ReturnToRoomList` 플래그**.
 
 ```csharp
-void Start()
+// Features/UI/Adapter/Menu/MenuSceneManager.cs
+public static bool ReturnToRoomList { get; set; }  // 한 번 읽으면 소비
+
+private void Start()
 {
+    AudioManager.Instance?.PlayMenuBGM();
+
+    // 방에 남아 돌아온 경우 (다시 하기) → 대기실
     if (PhotonNetwork.InRoom)
     {
-        var props = PhotonNetwork.CurrentRoom.CustomProperties;
-        if (props.ContainsKey("returnToWaitingRoom"))
-        {
-            ShowWaitingRoom();
-            // 플래그 제거
-            return;
-        }
+        ShowWaitingRoom();
+        return;
     }
+
+    // 게임씬 나가기로 돌아온 경우 → 방 리스트
+    if (ReturnToRoomList)
+    {
+        ReturnToRoomList = false;
+        ShowRoomList();
+        return;
+    }
+
+    // 그 외 → 타이틀
     ShowTitle();
 }
 ```
 
-관련 컴포넌트: `TitlePanelController`, `RoomListPanelController`, `WaitingRoomPanelController`, `CharacterSelectUI`.
+> **WHY static 플래그:** 씬 전환 시 모든 MonoBehaviour 인스턴스가 파괴되므로 이전 씬에서 다음 씬으로 값을 전달하려면 static 또는 DontDestroyOnLoad 가 필요. 이 플래그는 MenuSceneManager 만 읽고 쓰므로 SRP 상 여기에 둔다.
+
+관련 컴포넌트: `TitlePanelController`, `RoomListPanelController`, `WaitingRoomPanelController`, `CharacterSelectUI` (모두 `Features/UI/Adapter/Menu/`).
 
 ## 8. UIManager
 
@@ -137,46 +140,57 @@ UI 프레임 시스템은 [ui-frame.md](ui-frame.md) 참조.
 
 ## 9. SpawnManager
 
-**역할:** 적 스폰 (GameScene 에서만, 호스트만 실행).
+**역할:** 적 스폰 (GameScene 에서만, 호스트만 판정).
 
-- 시간대별 스폰 간격/동시 적 수 테이블 적용 (예정, [spawn-rules.md](spawn-rules.md) TBD).
-- 스폰 위치: 맵 경계 랜덤 (플레이어 밀집 지역 회피).
-- 인원수 스케일링 반영.
+- 시간대별 스폰 간격/동시 적 수 테이블 적용 (TBD, [spawn-rules.md](spawn-rules.md))
+- 스폰 위치: 맵 경계 랜덤 (플레이어 밀집 지역 회피)
+- 인원수 스케일링은 `DifficultyManager` 와 연동
+- 데미지 요청 RPC 도 본 매니저가 수신: `RPC_RequestDamage`, `RPC_RequestKnockback` ([network-sync.md § 5-2](network-sync.md))
 
-## 10. SkillManager
+## 10. Levelupmanager / SkillManager / ChaosSkillManager
 
-**역할:** 플레이어별 스킬 슬롯 관리 (GameScene, 각 클라이언트).
+**위치:** `Features/Progression/Adapter/`. 파일명은 코드 상 표기 그대로.
 
-- 6슬롯 제한 ([../game-design/rules.md § 1](../game-design/rules.md))
-- 레벨업 선택지 적용
-- 진화 조합 감지·처리
+- **Levelupmanager:** 레벨업 선택지 RPC (`RPC_ReceiveChoices`, `RPC_ForceChoice` 등 6종 — [network-sync.md § 5-5](network-sync.md))
+- **SkillManager:** 플레이어별 스킬 슬롯 관리. 6슬롯 제한 ([../game-design/rules.md § 1](../game-design/rules.md)), 진화 조합 감지·처리
+- **ChaosSkillManager:** 혼돈 스킬 슬롯 별도 관리
 - `applicableStats` 필터 주입은 Executor 경유 ([skill-executor.md § 3](skill-executor.md))
 
 ## 11. PoolManager
 
-**역할:** 오브젝트 풀링 공용.
+**역할:** 오브젝트 풀링 공용. (`Shared/Managers/PoolManager.cs`)
 
 - 적, 투사체, 이펙트, 장판, 경험치 오브 등.
-- 최대 풀 크기는 타입별 SO 설정 권장.
+- 최대 풀 크기는 타입별 SO 설정.
 
-## 12. AudioManager
+## 12. AudioManager + GameAudioConnector
 
-**역할:** BGM/SFX 재생 (DontDestroyOnLoad).
+**위치:** `Shared/Managers/`.
 
-- DOTween 크로스페이드로 BGM 전환.
-- SFX는 `PlayOneShot`.
+- **AudioManager:** BGM/SFX 재생. DontDestroyOnLoad.
+- **GameAudioConnector:** GameScene 전용. 게임 이벤트(보스 등장, 레벨업 등) → AudioManager 호출 다리.
 
-## 13. 관리자 상호 참조
+## 13. ResultManager + GameStatTracker + DifficultyManager + HostMigrationHandler
 
-- GameManager → Network/UI/Spawn/Skill/Damage 에 요청.
-- NetworkManager → UIManager 에 RPC 수신 결과 전달.
-- SceneController → Photon 씬 전환 + CustomProperties 관리.
+**위치:** `Shared/Managers/`.
 
-## 14. 기존 코드 참조
+- **ResultManager:** Run 종료 감지 → 빌드 데이터 수집 → 결과 RPC 브로드캐스트 → UI 표시 → 다시 하기/나가기 처리
+- **GameStatTracker:** 호스트 전용. 킬·데스 누적 (결과 화면용)
+- **DifficultyManager:** 시간대별 난이도 곡선
+- **HostMigrationHandler:** MasterClient 전환 시 비상 처리. DontDestroyOnLoad
 
-- `Assets/Scripts/Adapter/Manager/` — 각 매니저 구현 (신규 추가 시)
-- `Assets/Scripts/Adapter/Network/NetworkManager.cs`
-- `Assets/Scripts/Adapter/UI/UImanager.cs`, `MenuSceneManager.cs`
+## 14. 관리자 상호 참조
+
+- `GameManager` → `NetworkManager`(연결 상태) / `ResultManager`(종료 트리거) / 각 Feature 매니저(레벨업·스폰 등)에 신호
+- `NetworkManager` → 콜백을 `Action`/`event` 로 노출, 다른 매니저가 구독
+- `ResultManager` → `GameStatTracker`, `BossChaosApplicator`, `Player*` 컴포넌트에서 빌드 데이터 수집
+
+## 15. 기존 코드 참조
+
+- `Assets/Scripts/Shared/Managers/*.cs` — 공용 싱글턴 (Network/Game/Result/Spawn/Audio/Pool/GameStat/Difficulty/HostMigration/GameAudioConnector/TestManager)
+- `Assets/Scripts/Shared/Network/NetworkAdapter.cs` — 트리거/데미지 통지 RPC
+- `Assets/Scripts/Features/UI/Presentation/UImanager.cs` — 인게임 UI 매니저
+- `Assets/Scripts/Features/UI/Adapter/Menu/MenuSceneManager.cs` — 메뉴 씬 패널 전환
 
 ## 15. 알려진 제약
 

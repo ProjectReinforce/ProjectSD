@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-18 (현재 브랜치: `Skill_Refactor`)
+최종 업데이트: 2026-04-19 (현재 브랜치: `Hyeon-Woo` — Feature-first 전환 완료 후)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 
@@ -18,6 +18,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Skill_Refactor`**) | 2차 리팩터링 + 장검 진화 Phase2 복구까지 |
 | 6. 보스 + 네트워크 고급 | ⬜ 대기 | 보스 3페이즈, 사망/부활, 호스트 이탈 |
 | 7. 마무리 + 밸런싱 | ⬜ 대기 | |
+| 8. 출시 인프라 (Voice / Platform SDK) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md) |
 
 최근 관련 커밋:
 - `1f225a555` fix: 장검 진화 Phase2 발사 동작 복구 → Phase 5 영역
@@ -168,12 +169,12 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - [ ] 진화 조합 데이터 SO 완성
 
 ### 5-5. 리팩터링 잔여 🟡
-- [x] Trajectory/TriggerEffect 조합 체계 정착
+- [x] Trajectory/TriggerEffect 조합 체계 정착 (Trajectory enum 7종: Straight/Homing/Boomerang/Tornado/Spiral/Zigzag/SinWave)
 - [x] 스킬 서브클래스 6개 삭제 (HomingProjectile/BoomerangProjectile/TornadoProjectile/SpiralTornadoProjectile/ExplodingProjectile/ChainProjectile)
-- [ ] `applicableStats` 필터 호출부 완성 (현재 stub)
-- [ ] `IFireRecorder` 구현 (메아리 연동)
-- [ ] `SpawnProjectileHandler` 서브 프리팹 SO 필드화 (`SkillData.subProjectilePrefab`)
-- [ ] 디버그 로그 정리
+- [x] `applicableStats` 필터 호출부 완성 (`PlayerStats.GetFilteredXxx` 8종 → `SkillExecutor.BuildContext`)
+- [x] `SpawnProjectileHandler` 서브 프리팹 SO 필드화 (`SkillData.subProjectilePrefab` → `TriggerContext.subProjectilePrefab`)
+- [ ] `IFireRecorder` 호출부·구현체·`RefireHandler` 작성 (메아리 #17 연동 시)
+- [ ] 디버그 로그 정리 (Projectile/ExplodeHandler/ChainHandler 등)
 
 ---
 
@@ -217,6 +218,50 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ---
 
+## Phase 8 — 출시 인프라 ⬜ 대기 (설계만 완료)
+
+출시 순서: **Stove Indie → Steam** (한국 게임 등급 분류를 Stove 로 먼저 획득).
+
+### 8-1. Platform 추상화 (Phase A) — 선행 가능
+- [ ] `Assets/Scripts/Shared/Platform/{Domain,Adapter}/` 폴더 생성
+- [ ] `IPlatformService` 인터페이스 + `PlatformUserProfile` VO + `AchievementId` 상수 (Domain)
+- [ ] `LocalPlatformService` (Debug.Log stub) + `PlatformBootstrap` 싱글턴 (Adapter)
+- [ ] `ResultManager`, `GameStatTracker`, `Boss` 에 후크 4~5곳 추가 (`?.` 안전 호출)
+- [ ] `architecture-guardian` 통과 확인
+
+> **컨텐츠 작업과 병행 가능.** 코드 변경 최소, 게임 동작 변화 없음. 상세 [../systems/platform-integration.md § 12](../systems/platform-integration.md)
+
+### 8-2. Photon Voice 2 통합
+- [ ] Photon 대시보드에서 Voice AppId 발급
+- [ ] Asset Store 에서 "Photon Voice 2" 임포트
+- [ ] `PhotonVoiceNetwork` 컴포넌트 씬 배치
+- [ ] Player 프리팹에 `PhotonVoiceView` + `Recorder` + `Speaker` 추가
+- [ ] `Features/Voice/Adapter/VoiceController.cs` 작성 (PTT / Open Mic)
+- [ ] 인게임 HUD 에 마이크 토글 UI 추가
+- [ ] ParrelSync 4인스턴스 테스트
+
+> 상세 [../systems/voice-chat.md](../systems/voice-chat.md)
+
+### 8-3. Stove Indie 출시 (Phase B)
+- [ ] Stove 인디 개발자 등록 + AppId 발급
+- [ ] Stove SDK Unity 패키지 임포트
+- [ ] `StovePlatformService.cs` 구현 (`IPlatformService` 충족)
+- [ ] Stove 포털에 실적·통계 등록 (AchievementId 상수와 동일)
+- [ ] 한국 게임 등급 분류 신청
+- [ ] 빌드 설정 분기 (`PLATFORM_STOVE` define)
+
+### 8-4. Steam 출시 (Phase C)
+- [ ] Steamworks 파트너 등록 + AppId 발급
+- [ ] Steamworks.NET 임포트
+- [ ] `SteamPlatformService.cs` 구현
+- [ ] Steam 파트너 사이트에 실적·통계 등록 (동일 ID)
+- [ ] Steam 페이지 작성 + 출시 심사
+- [ ] 빌드 설정 분기 (`PLATFORM_STEAM` define) + `steam_appid.txt` 배치
+
+**선결 조건:** 8-1 완료, 컨텐츠 안정화, Stove 등급 획득
+
+---
+
 ## 확정된 주요 설계 (2026-04-18)
 
 - **혼돈 스킬 선택 레벨:** 레벨 10 / 20 / 30. 세부 수치는 밸런싱.
@@ -233,6 +278,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | Phase 3/4 | 적 AI 고도화 + 난이도 곡선 | 레벨업 UI (FrameToast/Frame_PopUp 기반) + SkillManager |
 | Phase 5 | 혼돈 스킬 / applicableStats 필터 완성 | 나머지 스킬 (#11~24) + 진화 조합 |
 | Phase 6 | Boss 3페이즈 + 혼돈 적용 | 사망/부활 + 호스트 이탈 |
+| Phase 8 선행 | 8-1 Platform 추상화 (컨텐츠 독립) | 8-2 Photon Voice 2 통합 (Player 프리팹 접근만 필요) |
 
 ## 주의사항
 
