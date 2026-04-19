@@ -1,9 +1,10 @@
-using System.Text;
+using System.Collections.Generic;
 using SwDreams.Features.UI.Adapter.Menu;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Shared.Managers;
 using ExitGames.Client.Photon;
 using Photon.Pun;
+using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -36,12 +37,17 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         [Header("UI")]
         [SerializeField] private TMP_Text roomInfoText;
-        [SerializeField] private TMP_Text playersStatusText;
         [SerializeField] private TMP_Text countdownText;
         [SerializeField] private TMP_Text stateText;
         [SerializeField] private Toggle readyToggle;
         [SerializeField] private Button startButton;
         [SerializeField] private TMP_Text readyStartButtonText;
+
+        [Header("플레이어 리스트 (신규)")]
+        [Tooltip("LobbyPlayerEntry 프리팹이 쌓일 컨테이너 (VerticalLayoutGroup).")]
+        [SerializeField] private Transform lobbyEntryContainer;
+        [Tooltip("플레이어 리스트 1행 프리팹.")]
+        [SerializeField] private LobbyPlayerEntry lobbyEntryPrefab;
 
         [Header("캐릭터 선택")]
         [Tooltip("캐릭터 셀렉트 팝업을 여는 버튼")]
@@ -49,8 +55,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [Tooltip("CharacterSelectUI가 부착된 팝업 패널")]
         [SerializeField] private CharacterSelectUI characterSelectUI;
 
+        [Header("대기실 월드")]
+        [Tooltip("방 입장/퇴장에 맞춰 LobbyPlayer를 스폰/파괴.")]
+        [SerializeField] private LobbyPlayerSpawner lobbyPlayerSpawner;
+
         private int displayedCountdown = -1;
         private bool isLoadingGameScene;
+        private readonly List<LobbyPlayerEntry> entryPool = new List<LobbyPlayerEntry>();
 
         // ===================================================================
         // MonoBehaviour / PunCallbacks 라이프사이클
@@ -70,6 +81,14 @@ namespace SwDreams.Features.UI.Adapter.Menu
             // ready 상태 초기화 (이전 게임의 ready가 남아있을 수 있음)
             NetworkManager.Instance.SetLocalReady(false);
             isLoadingGameScene = false;
+
+            // 디폴트 캐릭터(0) 보정: 방 최초 입장이면 characterId가 아직 없으므로 0으로 세팅.
+            // 기존에 선택했던 값이 있으면 유지.
+            if (PhotonNetwork.InRoom &&
+                !NetworkManager.Instance.TryGetCharacterId(PhotonNetwork.LocalPlayer, out _))
+            {
+                NetworkManager.Instance.SetLocalCharacter(0);
+            }
 
             // 이전 게임의 카운트다운 잔존 데이터 제거 (마스터만)
             if (PhotonNetwork.IsMasterClient)
@@ -93,10 +112,24 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 characterSelectUI.Close();
             }
 
-            // 캐릭터 셀렉트 버튼 리스너 등록
+            // 캐릭터 셀렉트 버튼 리스너 등록 (Remove→Add로 중복 누적 방지)
             if (characterSelectButton != null)
             {
+                characterSelectButton.onClick.RemoveListener(OnClickCharacterSelect);
                 characterSelectButton.onClick.AddListener(OnClickCharacterSelect);
+            }
+
+            // Start 버튼 리스너 등록 (호스트 수동 시작 트리거)
+            if (startButton != null)
+            {
+                startButton.onClick.RemoveListener(OnClickStartGame);
+                startButton.onClick.AddListener(OnClickStartGame);
+            }
+
+            // 방에 입장된 상태에서만 LobbyPlayer 스폰.
+            if (lobbyPlayerSpawner != null && PhotonNetwork.InRoom)
+            {
+                lobbyPlayerSpawner.Spawn();
             }
 
             RefreshRoomUi();
@@ -119,6 +152,24 @@ namespace SwDreams.Features.UI.Adapter.Menu
             {
                 characterSelectButton.onClick.RemoveListener(OnClickCharacterSelect);
             }
+
+            if (startButton != null)
+            {
+                startButton.onClick.RemoveListener(OnClickStartGame);
+            }
+
+            // 대기실을 떠나거나 게임씬으로 들어가기 전에 본인 LobbyPlayer 파괴.
+            // isLoadingGameScene이면 씬 전환이 파괴를 처리하므로 생략 가능하지만,
+            // 안전하게 Despawn 호출 (PhotonNetwork.InRoom 체크 내장).
+            if (lobbyPlayerSpawner != null && !isLoadingGameScene)
+            {
+                lobbyPlayerSpawner.Despawn();
+            }
+
+            // 풀 엔트리는 패널(lobbyEntryContainer)과 함께 비활성되지만,
+            // 다음 OnEnable에서 처음부터 재사용하기 위해 참조를 끊어둔다.
+            // (파괴된 엔트리 참조가 리스트에 잔존해 NullRef를 유발하는 것을 방지)
+            entryPool.RemoveAll(e => e == null);
         }
 
         private void Update()
@@ -140,6 +191,15 @@ namespace SwDreams.Features.UI.Adapter.Menu
             Debug.Log($"[WaitingRoom] {playerName} 퇴장 (남은 인원: {PhotonNetwork.CurrentRoom.PlayerCount})");
         }
 
+        /// <summary>
+        /// 호스트가 방을 떠나 마스터가 이양되면 로컬의 Kick/Start 권한도 바뀐다.
+        /// HandlePlayersChanged를 재호출해 엔트리/역할 UI 갱신 + 카운트다운 검증까지 한 번에 수행.
+        /// </summary>
+        public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
+        {
+            HandlePlayersChanged();
+        }
+
         public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
         {
             if (propertiesThatChanged == null)
@@ -155,6 +215,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             displayedCountdown = -1;
             UpdateCountdownUiAndStart();
+
+            // 카운트다운 시작/취소 즉시 버튼 interactable을 갱신해야
+            // 호스트의 Start 버튼이 카운트다운 진입과 동시에 비활성화된다.
+            RefreshRoleUi();
         }
 
         // ===================================================================
@@ -178,8 +242,12 @@ namespace SwDreams.Features.UI.Adapter.Menu
         // ===================================================================
 
         /// <summary>
-        /// 캐릭터 셀렉트 버튼 클릭 핸들러.
-        /// 준비 상태가 아닐 때만 팝업을 연다.
+        /// 캐릭터 셀렉트 버튼 클릭 핸들러 (토글 동작).
+        ///
+        /// 동작:
+        ///   - Ready 또는 카운트다운 활성 시: 어떤 입력도 무시.
+        ///   - 팝업이 이미 열려 있으면 닫는다. (두 번째 클릭으로 취소 가능)
+        ///   - 닫혀 있으면 연다.
         ///
         /// 왜 interactable 대신 코드 가드도 넣는가:
         ///   interactable = false 상태에서도 코드에서 onClick.Invoke()를 호출할 수 있다.
@@ -187,16 +255,28 @@ namespace SwDreams.Features.UI.Adapter.Menu
         /// </summary>
         private void OnClickCharacterSelect()
         {
-            // [3] 준비 상태에서는 선택 불가
             if (IsLocalPlayerReady())
             {
                 SetStateText("준비 상태에서는 캐릭터를 변경할 수 없습니다.");
                 return;
             }
 
+            if (IsCountdownActive())
+            {
+                SetStateText("카운트다운 중에는 캐릭터를 변경할 수 없습니다.");
+                return;
+            }
+
             if (characterSelectUI == null)
             {
                 Debug.LogWarning("[WaitingRoom] CharacterSelectUI 참조가 없습니다.");
+                return;
+            }
+
+            if (characterSelectUI.IsOpen)
+            {
+                characterSelectUI.Close();
+                SetStateText(string.Empty);
                 return;
             }
 
@@ -218,8 +298,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
             NetworkManager.Instance.SetLocalReady(ready);
             SetStateText(ready ? "준비 완료." : "준비 취소.");
 
-            // [3] 준비 상태 변경 시 캐릭터 선택 UI 동기화
-            SyncCharacterSelectWithReadyState(ready);
+            // 준비 상태 변경 시 캐릭터 선택 UI 잠금 재평가
+            SyncCharacterSelectLockState();
 
             RefreshRoleUi();
         }
@@ -240,9 +320,42 @@ namespace SwDreams.Features.UI.Adapter.Menu
             OnClickReadyOrStart();
         }
 
+        /// <summary>
+        /// Start/Ready 겸용 버튼 클릭 핸들러.
+        ///
+        /// 무엇: 호스트면 카운트다운 시작, 클라면 준비 상태 토글.
+        /// 왜:   대기실 메인 버튼을 둘로 쪼개지 않고 하나로 겸용한다. 텍스트는 RefreshRoleUi가 전환.
+        /// 어떻게: IsMasterClient 분기 → 호스트는 CanStart 충족 시 StartCountdown,
+        ///        클라는 기존 OnClickReadyOrStart(Ready 토글)로 위임.
+        /// </summary>
         public void OnClickStartGame()
         {
-            OnClickReadyOrStart();
+            if (!PhotonNetwork.InRoom || NetworkManager.Instance == null) return;
+
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                // 클라: Ready 토글
+                OnClickReadyOrStart();
+                return;
+            }
+
+            // 이하 호스트 분기
+            // 카운트다운 중이면 같은 버튼이 "취소" 시맨틱 → 취소 경로.
+            if (IsCountdownActive())
+            {
+                SetStateText("카운트다운을 취소했습니다.");
+                CancelCountdown();
+                return;
+            }
+
+            if (!NetworkManager.Instance.CanMasterStartGameInCurrentRoom())
+            {
+                SetStateText("모든 플레이어가 준비되어야 시작할 수 있습니다.");
+                return;
+            }
+
+            SetStateText("게임을 시작합니다...");
+            StartCountdown();
         }
 
         // ===================================================================
@@ -278,27 +391,28 @@ namespace SwDreams.Features.UI.Adapter.Menu
         // ===================================================================
 
         /// <summary>
-        /// 준비 상태가 변경될 때 캐릭터 선택 관련 UI를 동기화한다.
+        /// 캐릭터 선택 UI의 잠금 상태를 현재 게임 상태에 맞춰 동기화한다.
         ///
-        /// 왜 이 로직을 별도 메서드로 분리하는가:
-        ///   OnToggleReady()는 "준비 상태를 네트워크에 전파"하는 책임이고,
-        ///   이 메서드는 "준비 상태에 따라 UI를 제어"하는 책임이다.
-        ///   SRP에 따라 분리하면 각각 독립적으로 변경 가능하다.
-        ///   (예: 나중에 장비 선택 UI가 추가되어도 여기에 한 줄만 추가하면 됨)
+        /// 잠금 조건 = 본인 Ready 상태 OR 카운트다운 활성.
+        ///   - 잠금 시: 선택 버튼 비활성 + 열린 팝업 강제 닫기.
+        ///   - 해제 시: 버튼 다시 활성.
+        ///
+        /// 왜 통합 메서드인가:
+        ///   Ready와 카운트다운 둘 다 "선택을 막아야 할 상태"이므로 잠금 조건을 한 곳에서 관리한다.
+        ///   호출자는 상태 변경 때마다 이 메서드를 한 번 호출하면 된다.
         /// </summary>
-        private void SyncCharacterSelectWithReadyState(bool isReady)
+        private void SyncCharacterSelectLockState()
         {
-            // 셀렉트 버튼 interactable 제어
+            bool locked = IsLocalPlayerReady() || IsCountdownActive();
+
             if (characterSelectButton != null)
             {
-                characterSelectButton.interactable = !isReady;
+                characterSelectButton.interactable = !locked;
             }
 
-            // 준비 상태 진입 시 열려 있는 선택 팝업 강제 닫기
-            if (isReady && characterSelectUI != null && characterSelectUI.IsOpen)
+            if (locked && characterSelectUI != null && characterSelectUI.IsOpen)
             {
                 characterSelectUI.Close();
-                SetStateText("준비 완료 — 캐릭터 선택창이 닫혔습니다.");
             }
         }
 
@@ -317,13 +431,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             if (!PhotonNetwork.IsMasterClient) return;
 
-            if (canStart && !IsCountdownActive())
-            {
-                SetStateText("전원 준비 완료. 카운트다운 시작...");
-                StartCountdown();
-                return;
-            }
-
+            // 카운트다운 중에 누군가 준비를 풀면 즉시 취소 (안전장치).
+            // 자동 시작은 더 이상 수행하지 않고, 호스트의 Start 버튼 클릭을 기다린다.
             if (IsCountdownActive() && !canStart)
             {
                 SetStateText("카운트다운 취소: 준비 상태가 변경되었습니다.");
@@ -367,24 +476,50 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 }
             }
 
+            // 같은 버튼을 역할에 따라 "시작"(호스트) / "준비"(클라)로 겸용.
+            // 무엇: startButton을 항상 보이게 유지하고, 텍스트·interactable만 역할별로 조정.
+            // 왜:   클라에도 준비 수단이 필요하다. 버튼을 둘로 쪼개기보다 하나의 버튼이
+            //       호스트/클라에 따라 의미를 바꾸는 것이 UI 점유와 복잡도를 줄인다.
+            // 어떻게: OnClickStartGame 핸들러 내부에서 IsMasterClient 분기로 실제 동작을 가른다.
+            bool isHost = PhotonNetwork.IsMasterClient;
+
+            bool countdownActive = IsCountdownActive();
+
             if (startButton != null)
             {
                 startButton.gameObject.SetActive(true);
-                startButton.interactable = PhotonNetwork.InRoom;
+
+                if (isHost)
+                {
+                    // 호스트: 카운트다운 중이면 "취소" 기능으로 항상 활성.
+                    // 평시엔 전원 준비되었을 때만 활성(시작 가능 조건).
+                    bool canStart = NetworkManager.Instance != null
+                                    && NetworkManager.Instance.CanMasterStartGameInCurrentRoom();
+                    startButton.interactable = countdownActive || canStart;
+                }
+                else
+                {
+                    // 클라: 항상 준비 토글 가능 (카운트다운 중에도 취소를 위해 허용).
+                    startButton.interactable = true;
+                }
             }
 
             if (readyStartButtonText != null)
             {
-                readyStartButtonText.text = isReady ? "준비취소" : "준비";
+                if (isHost)
+                {
+                    readyStartButtonText.text = countdownActive ? "취소" : "시작";
+                }
+                else
+                {
+                    readyStartButtonText.text = isReady ? "준비취소" : "준비";
+                }
             }
 
-            // [3] 준비 상태에 따라 캐릭터 셀렉트 버튼 interactable 동기화
-            // RefreshRoleUi()는 다른 플레이어의 상태 변경에도 호출되므로,
-            // 여기서도 로컬 플레이어의 준비 상태를 기준으로 버튼을 제어한다.
-            if (characterSelectButton != null)
-            {
-                characterSelectButton.interactable = !isReady;
-            }
+            // 캐릭터 선택 버튼은 Ready + 카운트다운 양쪽을 모두 고려해 잠금.
+            // 카운트다운이 방금 시작됐거나 취소됐을 때 OnRoomPropertiesUpdate가 RefreshRoleUi를
+            // 호출하므로, 이 한 줄로 버튼 활성 상태와 팝업 열림 여부가 자동 동기화된다.
+            SyncCharacterSelectLockState();
         }
 
         // ===================================================================
@@ -582,33 +717,45 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 }
             }
 
-            if (playersStatusText == null || !PhotonNetwork.InRoom || NetworkManager.Instance == null)
-            {
-                return;
-            }
+            RefreshLobbyEntries();
+        }
 
-            var sb = new StringBuilder();
+        /// <summary>
+        /// 플레이어 리스트 엔트리 풀을 갱신한다.
+        ///
+        /// 무엇: PhotonNetwork.PlayerList를 순회하며 LobbyPlayerEntry 프리팹을 인스턴스화/재사용/여분 숨김.
+        /// 왜:   기존 playersStatusText는 한 덩어리 TMP라 행별 Kick 버튼을 달 수 없었다.
+        /// 어떻게: 필요한 만큼 Instantiate(캐시) → 남는 건 SetActive(false).
+        ///        Bind(player)가 Kick 버튼 표시/숨김까지 처리한다.
+        /// </summary>
+        private void RefreshLobbyEntries()
+        {
+            if (lobbyEntryContainer == null || lobbyEntryPrefab == null) return;
+            if (!PhotonNetwork.InRoom) return;
+
             var players = PhotonNetwork.PlayerList;
-            for (var i = 0; i < players.Length; i++)
-            {
-                var player = players[i];
-                var isYou = player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
-                var role = player.IsMasterClient ? "Host" : "Client";
-                var ready = NetworkManager.Instance.IsPlayerReady(player) ? "준비" : "대기";
-                var character = NetworkManager.Instance.TryGetCharacterId(player, out var id) ? id.ToString() : "-";
 
-                sb.Append("P")
-                    .Append(player.ActorNumber)
-                    .Append(isYou ? " (You)" : string.Empty)
-                    .Append(" | ")
-                    .Append(role)
-                    .Append(" | Char: ")
-                    .Append(character)
-                    .Append(" | ")
-                    .AppendLine(ready);
+            // 필요한 개수만큼 풀을 확장.
+            while (entryPool.Count < players.Length)
+            {
+                var entry = Instantiate(lobbyEntryPrefab, lobbyEntryContainer);
+                entryPool.Add(entry);
             }
 
-            playersStatusText.text = sb.ToString();
+            // 바인딩.
+            for (int i = 0; i < entryPool.Count; i++)
+            {
+                if (i < players.Length)
+                {
+                    if (!entryPool[i].gameObject.activeSelf) entryPool[i].gameObject.SetActive(true);
+                    entryPool[i].Bind(players[i]);
+                }
+                else
+                {
+                    entryPool[i].Clear();
+                    if (entryPool[i].gameObject.activeSelf) entryPool[i].gameObject.SetActive(false);
+                }
+            }
         }
 
         private void SetStateText(string text)
@@ -617,11 +764,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
             {
                 stateText.text = text;
             }
-        }
-
-        private void TryStartByHost()
-        {
-            OnClickReadyOrStart();
         }
 
         // ===================================================================
@@ -641,19 +783,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
                     28,
                     TextAlignmentOptions.Center);
             }
-
-            if (playersStatusText == null)
-            {
-                playersStatusText = CreateOrFindText(
-                    "PlayersStatusText",
-                    new Vector2(0f, 1f),
-                    new Vector2(0f, 1f),
-                    new Vector2(260f, -140f),
-                    new Vector2(520f, 280f),
-                    24,
-                    TextAlignmentOptions.TopLeft);
-            }
-            ApplyPlayersStatusLayout(playersStatusText);
 
             if (countdownText == null)
             {
@@ -720,21 +849,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
             textUi.raycastTarget = false;
             textUi.text = string.Empty;
             return textUi;
-        }
-
-        private void ApplyPlayersStatusLayout(TMP_Text target)
-        {
-            if (target == null)
-            {
-                return;
-            }
-
-            var rect = target.rectTransform;
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(260f, -140f);
-            rect.sizeDelta = new Vector2(520f, 280f);
         }
     }
 }

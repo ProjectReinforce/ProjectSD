@@ -52,7 +52,7 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 3
-  orbitRadius: 1
+  orbitRadius: 0.5
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 0.35

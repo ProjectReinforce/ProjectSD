@@ -33,6 +33,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private TMP_InputField roomNameInputField;
         [SerializeField] private TMP_InputField createRoomPasswordInputField;
 
+        [Header("Create Room — Password Toggle")]
+        [Tooltip("비밀번호 사용 여부 Toggle. OnValueChanged(Boolean)에 OnTogglePasswordUse 연결. 체크 아이콘 스왑은 Toggle 자체 기능 사용.")]
+        [SerializeField] private Toggle usePasswordToggle;
+        [Tooltip("비밀번호 미사용 시 보일 'Off' 오브젝트 (회색/플레이스홀더 등).")]
+        [SerializeField] private GameObject passwordOffView;
+        [Tooltip("비밀번호 사용 시 보일 InputField 루트 오브젝트.")]
+        [SerializeField] private GameObject passwordInputView;
+
+        private bool passwordUseOn;
+
         [Header("Search Room Popup")]
         [SerializeField] private GameObject searchRoomPopup;
         [SerializeField] private TMP_InputField searchRoomInputField;
@@ -148,6 +158,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
         public void OnClickOpenCreateRoomPopup()
         {
             SetCreateRoomPanel(true);
+
+            // 팝업 열 때 비밀번호 상태 초기화 (기본: 비밀번호 없음).
+            // Toggle.isOn 재설정이 false→false면 OnValueChanged가 발화되지 않으므로
+            // ApplyPasswordUseState를 명시적으로 호출해 뷰를 확실히 동기화한다.
+            if (usePasswordToggle != null)
+            {
+                usePasswordToggle.SetIsOnWithoutNotify(false);
+            }
+            ApplyPasswordUseState(false);
+
             SetStatus("Enter room options.");
         }
 
@@ -160,6 +180,35 @@ namespace SwDreams.Features.UI.Adapter.Menu
         {
             SetCreateRoomPanel(false);
             ClearCreateRoomInputFields();
+        }
+
+        /// <summary>
+        /// 비밀번호 사용 Toggle의 OnValueChanged(bool) 핸들러.
+        ///
+        /// 무엇: 체크 상태에 따라 Image sprite를 스왑하고 Off/InputField 뷰를 전환한다.
+        /// 왜:   UI가 Toggle 컴포넌트 + 단일 Image sprite 교체 구조로 구성됨.
+        ///       Toggle이 체크 상태를 자체 보존하므로 내부 bool도 함께 동기화해 기록용으로 남긴다.
+        /// 어떻게: Toggle.onValueChanged(Boolean) Inspector 이벤트에 이 메서드를 연결.
+        /// </summary>
+        public void OnTogglePasswordUse(bool useOn)
+        {
+            ApplyPasswordUseState(useOn);
+        }
+
+        private void ApplyPasswordUseState(bool useOn)
+        {
+            passwordUseOn = useOn;
+
+            // Off 뷰 / InputField 뷰 스왑
+            // (체크 이미지 스왑은 Toggle 자체 기능 사용 — 여기서는 처리하지 않음)
+            if (passwordOffView != null) passwordOffView.SetActive(!useOn);
+            if (passwordInputView != null) passwordInputView.SetActive(useOn);
+
+            // 비밀번호 미사용으로 돌아가면 입력 내용 초기화 (잔존 텍스트로 인한 사고 방지)
+            if (!useOn && createRoomPasswordInputField != null)
+            {
+                createRoomPasswordInputField.text = string.Empty;
+            }
         }
 
         public void OnClickConfirmCreateRoom()
@@ -176,7 +225,12 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 return;
             }
 
-            var password = createRoomPasswordInputField != null ? createRoomPasswordInputField.text : string.Empty;
+            // 체크박스가 꺼져 있으면 입력창 텍스트가 남아 있어도 무시하고 빈 값으로 강제.
+            // → "체크 안 하면 비밀번호 없는 방"이라는 UX 약속을 데이터 레벨에서 보장.
+            var password = passwordUseOn && createRoomPasswordInputField != null
+                ? createRoomPasswordInputField.text
+                : string.Empty;
+
             NetworkManager.Instance.CreateRoom(roomName, password);
 
             SetStatus(string.IsNullOrWhiteSpace(password)
@@ -517,6 +571,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
             {
                 createRoomPasswordInputField.text = string.Empty;
             }
+
+            // 체크박스도 초기 상태(비밀번호 없음)로 리셋.
+            if (usePasswordToggle != null)
+            {
+                usePasswordToggle.SetIsOnWithoutNotify(false);
+            }
+            ApplyPasswordUseState(false);
         }
     }
 }

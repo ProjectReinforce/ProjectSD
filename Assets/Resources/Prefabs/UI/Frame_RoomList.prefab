@@ -911,15 +911,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 100
-  m_fontSizeBase: 100
+  m_fontSize: 50
+  m_fontSizeBase: 50
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 0
   m_fontSizeMax: 0
   m_fontStyle: 0
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -950,7 +950,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 20, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -2113,6 +2113,9 @@ MonoBehaviour:
   makeRoomPanel: {fileID: 3131554404325628094}
   roomNameInputField: {fileID: 5827026205118152268}
   createRoomPasswordInputField: {fileID: 1422563908917139973}
+  usePasswordToggle: {fileID: 0}
+  passwordOffView: {fileID: 0}
+  passwordInputView: {fileID: 0}
   searchRoomPopup: {fileID: 5972036800394430701}
   searchRoomInputField: {fileID: 871387745882922573}
   joinRoomPasswordInputField: {fileID: 0}

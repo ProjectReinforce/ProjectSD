@@ -36,7 +36,7 @@ Sweepin' Dreams 의 씬 구조와 각 씬 내부 패널 구성.
 |---|---|---|
 | **TitlePanel** | 로고, 혼자하기, 같이하기, 설정, 종료, 버전 | 씬 최초 로드 시. 방 퇴장 시 복귀 |
 | **RoomListPanel** | 방 리스트, 방 만들기/코드 입장 팝업, 새로고침, 뒤로가기 | 같이하기 + Photon 접속 성공 |
-| **WaitingRoomPanel** | 참가자 리스트, 캐릭터 프리뷰/변경 팝업, 준비, 나가기, 방 정보 | CreateRoom / JoinRoom 성공 |
+| **WaitingRoomPanel** | 월드 공간 캐릭터(WASD 이동, 오버헤드 이름/호스트/준비), 참가자 리스트(호스트 Kick), 캐릭터 프리뷰/변경 팝업, 준비 토글, 호스트 수동 Start + 카운트다운, 나가기 | CreateRoom / JoinRoom 성공 |
 
 ### 전환 흐름
 
@@ -55,6 +55,8 @@ Sweepin' Dreams 의 씬 구조와 각 씬 내부 패널 구성.
 ```
 
 패널 전환 구현은 `MenuSceneManager`. 상세는 [managers.md § 7](managers.md).
+
+**대기실 내부 구조(월드 공간 캐릭터 / 오버헤드 UI / 호스트 Kick·Start·카운트다운)는** [waiting-room.md](waiting-room.md) 참조.
 
 ## 5. GameScene 패널 구조
 

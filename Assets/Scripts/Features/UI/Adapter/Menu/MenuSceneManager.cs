@@ -11,6 +11,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private GameObject roomListPanel;
         [SerializeField] private GameObject waitingRoomPanel;
 
+        [Tooltip("MenuScene에 상주하는 타이틀/룸리스트용 배경 이미지. 대기실에서만 숨긴다.")]
+        [SerializeField] private GameObject titleBackground;
+
         /// <summary>
         /// 씬 전환 전에 이 플래그를 true로 설정하면,
         /// MenuScene 진입 시 타이틀 대신 방 리스트를 표시한다.
@@ -68,6 +71,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (titlePanel != null) titlePanel.SetActive(title);
             if (roomListPanel != null) roomListPanel.SetActive(roomList);
             if (waitingRoomPanel != null) waitingRoomPanel.SetActive(waiting);
+
+            // 대기실은 월드 공간에 캐릭터를 배치하므로 타이틀 배경을 숨긴다.
+            // 타이틀/룸리스트로 돌아오면 다시 노출.
+            if (titleBackground != null) titleBackground.SetActive(!waiting);
         }
     }
 }

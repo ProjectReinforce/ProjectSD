@@ -51,6 +51,12 @@ namespace SwDreams.Shared.Managers
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // MasterClient의 강퇴 기능(PhotonNetwork.CloseConnection)을 활성화한다.
+            // PUN 기본값은 false이며, false 상태에서 CloseConnection을 호출하면
+            // "CloseConnection is disabled. No need to call it." 에러만 찍히고 실제 강퇴는 일어나지 않는다.
+            // 우리 게임은 호스트 권위 Co-op이므로 앱 시작 시 명시적으로 true로 세팅한다.
+            PhotonNetwork.EnableCloseConnection = true;
         }
 
         private void Start()
@@ -183,6 +189,27 @@ namespace SwDreams.Shared.Managers
             }
         }
 
+        /// <summary>
+        /// 대상 플레이어를 방에서 강퇴. MasterClient 전용.
+        ///
+        /// 무엇: PhotonNetwork.CloseConnection(player)로 대상 클라의 연결을 강제 종료 → 서버가 방에서 퇴장시킴.
+        /// 왜:   PUN의 표준 강퇴 API. MasterClient만 호출 권한을 갖는다.
+        /// 어떻게: 마스터가 아니거나 대상이 null/본인이면 no-op. 성공 시 대상 클라에 OnLeftRoom 발화 → 메뉴 복귀.
+        /// </summary>
+        public void KickPlayer(Player player)
+        {
+            if (player == null || player.IsLocal) return;
+
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                Debug.LogWarning("[NetworkManager] KickPlayer는 MasterClient만 호출 가능합니다.");
+                return;
+            }
+
+            PhotonNetwork.CloseConnection(player);
+            Debug.Log($"[NetworkManager] Kick {player.NickName} (Actor #{player.ActorNumber})");
+        }
+
         public void SetLocalCharacter(int characterId)
         {
             if (!PhotonNetwork.InRoom)
@@ -261,6 +288,14 @@ namespace SwDreams.Shared.Managers
             return value is bool boolValue && boolValue;
         }
 
+        /// <summary>
+        /// 호스트가 게임을 시작할 수 있는지 여부.
+        ///
+        /// 무엇: 호스트 외 플레이어들이 모두 준비됐는지 체크.
+        /// 왜:   대기실 UX에서 호스트 버튼은 "시작" 의미이므로 호스트 자신은 Ready 토글을 누를 수 없다.
+        ///       따라서 호스트의 IsReady 여부는 시작 조건에서 제외해야 "전원 준비 → 호스트 시작"이 성립한다.
+        ///       호스트 혼자면 루프가 통과되어 true (솔로 시작 가능).
+        /// </summary>
         public bool CanMasterStartGameInCurrentRoom()
         {
             if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient)
@@ -271,6 +306,7 @@ namespace SwDreams.Shared.Managers
             var players = PhotonNetwork.PlayerList;
             for (var i = 0; i < players.Length; i++)
             {
+                if (players[i].IsMasterClient) continue; // 호스트 본인은 제외
                 if (!IsPlayerReady(players[i]))
                 {
                     return false;

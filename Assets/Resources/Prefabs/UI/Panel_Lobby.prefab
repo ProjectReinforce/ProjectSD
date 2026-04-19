@@ -785,19 +785,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3935812466503674745}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 948581783959561602}
-        m_TargetAssemblyTypeName: Adapter.UI.Menu.WaitingRoomPanelController, Assembly-CSharp
-        m_MethodName: OnClickReadyOrStart
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &3537102374857499937
 GameObject:
   m_ObjectHideFlags: 0
@@ -1193,6 +1181,83 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &3941512493499725504
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 760564170310562568}
+  - component: {fileID: 9202826429257409918}
+  - component: {fileID: 3108964727486036527}
+  m_Layer: 5
+  m_Name: PlayersListContainer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &760564170310562568
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3941512493499725504}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 636745600860546302}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 1, y: 0.5}
+  m_AnchorMax: {x: 1, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 1, y: 0.5}
+--- !u!114 &9202826429257409918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3941512493499725504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 2
+  m_Spacing: 0
+  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 0
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
+--- !u!114 &3108964727486036527
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3941512493499725504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 1
+  m_VerticalFit: 1
 --- !u!1 &4550977975736749801
 GameObject:
   m_ObjectHideFlags: 0
@@ -1608,6 +1673,7 @@ RectTransform:
   - {fileID: 7717482866869119331}
   - {fileID: 7223342989428075595}
   - {fileID: 8767991862785510270}
+  - {fileID: 760564170310562568}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1668,14 +1734,16 @@ MonoBehaviour:
   menuSceneManager: {fileID: 0}
   startCountdownSeconds: 3
   roomInfoText: {fileID: 0}
-  playersStatusText: {fileID: 0}
   countdownText: {fileID: 0}
   stateText: {fileID: 0}
   readyToggle: {fileID: 0}
   startButton: {fileID: 6852518969457488860}
   readyStartButtonText: {fileID: 7592437832421037085}
+  lobbyEntryContainer: {fileID: 760564170310562568}
+  lobbyEntryPrefab: {fileID: 8104156796009253775, guid: 63d11b142043ad94c98c3fb8fc647c67, type: 3}
   characterSelectButton: {fileID: 4515439383751821602}
   characterSelectUI: {fileID: 6175499890731641233}
+  lobbyPlayerSpawner: {fileID: 0}
 --- !u!1 &8675813058958762112
 GameObject:
   m_ObjectHideFlags: 0

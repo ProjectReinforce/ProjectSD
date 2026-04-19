@@ -127,6 +127,8 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `SetCustomProperties({characterId})` | 플레이어 | 캐릭터 선택. 키 `NetworkManager.CharacterIdKey` |
 | `SetCustomProperties({isReady})` | 플레이어 | 준비 상태. 키 `NetworkManager.IsReadyKey` |
 | `SetCustomProperties({hasPw, pw})` | 호스트(룸 생성 시) | 비밀번호 방. 키 `HasPasswordKey`, `PasswordKey` |
+| `SetCustomProperties({startCountdownActive, startCountdownEndTime})` | MasterClient | 대기실 카운트다운 상태. 상세 [waiting-room.md § 3](waiting-room.md) |
+| `PhotonNetwork.CloseConnection(player)` | MasterClient → 대상 | 대기실 강퇴. `NetworkManager.Awake` 에서 `EnableCloseConnection = true` 로 선활성화 (PUN 기본값 false) |
 
 각 RPC 의 실제 시그니처는 위 정의 위치 (`Shared/Managers/`, `Shared/Network/`, `Features/{Boss,Progression,Character}/Adapter/`) 의 코드를 참조한다. 새 RPC 추가 시 `photon-sync-auditor` 서브에이전트가 본 표 기준으로 감사한다.
 

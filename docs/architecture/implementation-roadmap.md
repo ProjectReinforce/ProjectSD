@@ -56,8 +56,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 ### 1-3. 대기실 핵심 기능 ✅
 - [x] 캐릭터 선택 (CustomProperties 동기화) — `CharacterSelectUI`
 - [x] 준비 상태 토글
-- [x] 전원 준비 → 3초 카운트다운 → 씬 전환
+- [x] 전원 준비 → **호스트 수동 Start** → 3초 카운트다운 → 씬 전환
 - [x] 카운트다운 취소 처리
+- [x] **월드 공간 LobbyPlayer + 오버헤드 UI(이름/Host/Ready) + 호스트 Kick** — [../systems/waiting-room.md](../systems/waiting-room.md)
 
 ### 1-4. GameScene 기본 + 플레이어 ✅
 - [x] `GameManager` + GameState
