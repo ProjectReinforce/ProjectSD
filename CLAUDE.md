@@ -112,9 +112,12 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 **플랫폼 / 인프라**
 - **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
 
-**정수 / 무기**
-- **Essence (정수):** 엘리트 드랍, 속성 부여(얼음/불/번개). 최대 2개. 조합 히든 효과.
-- **Weapon (무기):** 낮은 확률 드랍, LoL 아이템식 스탯 부여. 조합 시스템.
+**정수 / 무기 / 퀘스트 / 능력치 / 아이템**
+- **Essence (정수):** 엘리트 드랍, 속성 부여(얼음/불/번개). 최대 2개. 조합 히든 효과. 상세 [docs/game-design/essence.md](docs/game-design/essence.md).
+- **Weapon (무기):** 모든 적 매우 낮은 확률 드랍, LoL 아이템식 스탯 부여. **슬롯 4개** + 조합 시스템. 상세 [docs/game-design/weapon.md](docs/game-design/weapon.md).
+- **Quest (퀘스트):** 맵 거점 진입형 부가 목표 (4유형: 처치/시간내킬/회피/지키기). 시작 시 격리 몹이 구역을 둘러쌈. 보상은 능력치 부스트. 상세 [docs/game-design/quest.md](docs/game-design/quest.md).
+- **Stat Boost (능력치):** 만렙 후 레벨업 / 퀘스트 보상. 4등급 체계. `StatType` enum 사용. 상세 [docs/game-design/stat-boost.md](docs/game-design/stat-boost.md).
+- **Items (추가 아이템):** 자석 / 물약 / 경험치 오브. 상세 [docs/game-design/items.md](docs/game-design/items.md).
 
 ---
 

@@ -15,6 +15,11 @@ docs/
 │   ├── flow-design.md                 ← 화면 전환·UI 플로우
 │   ├── flow-diagram.mermaid           ← 전체 플로우 시각화
 │   ├── rules.md                       ← 6슬롯·사망부활·경험치 등 규칙
+│   ├── essence.md                     ← 정수 시스템 (속성 부여, 엘리트 드랍)
+│   ├── weapon.md                      ← 무기 시스템 (LoL 아이템식, 조합)
+│   ├── quest.md                       ← 퀘스트 시스템 (4유형, 격리 메커니즘)
+│   ├── stat-boost.md                  ← 능력치 시스템 (만렙 후 / 퀘스트 보상)
+│   ├── items.md                       ← 추가 아이템 (자석/물약/경험치 오브)
 │   ├── skills/
 │   │   ├── INDEX.md                   ← 스킬 24종 인덱스
 │   │   ├── {skill-id}.md              ← 스킬 1개당 1 파일 (24개)
@@ -54,6 +59,7 @@ docs/
 |---|---|---|
 | 스킬 선택 UI 플로우 | `game-design/flow-design.md` | 링크만 |
 | 보스 혼돈 스킬 효과 | `game-design/enemies/boss.md` | 링크만 |
+| 정수 / 무기 / 퀘스트 / 능력치 / 추가 아이템 | `game-design/{essence|weapon|quest|stat-boost|items}.md` | overview/rules 는 한 줄+링크 |
 | Phase별 진행 계획·로드맵 | `architecture/implementation-roadmap.md` | 링크만 |
 | 발사 모드·Stat 필터 | `systems/skill-executor.md` | 링크만 |
 | TriggerEffect 핸들러 | `systems/trigger-effects.md` | 링크만 |

@@ -1,0 +1,123 @@
+# 시스템 설계: 정수 (Essence)
+
+> 스킬에 속성을 부여하는 빌드 다양화 시스템. 엘리트 적의 핵심 보상.
+
+## 1. 메타
+
+| 항목 | 값 |
+|---|---|
+| 시스템 ID | `essence` |
+| 분류 | 게임플레이 / 빌드 |
+| 의존 레이어 | Adapter (`Features/Skill/Adapter/TriggerEffects/`), Data (EnemyData) |
+| `source` prefix | `essence_*` (정수 속성) — [trigger-effects.md § 5](../systems/trigger-effects.md) |
+| 최종 업데이트 | 2026-04-19 |
+
+## 2. 컨셉
+
+스킬에 **속성**을 부여해 같은 스킬이 다른 방식으로 작동하게 한다. 빌드 다양성을 확보하는 핵심 요소이며, **엘리트 적 처치를 우선 행동으로 만들기 위한 보상 장치**.
+
+## 3. 게임 규칙
+
+### 3.1 획득
+
+- **드랍원:** [엘리트형](enemies/elite.md) 적이 일정 확률로 드랍. 엘리트 등장 빈도는 밸런싱 단계.
+- **선착순:** 모든 플레이어에게 보이며, 먼저 줍는 사람이 획득.
+- **보유 한계:** 한 플레이어 **최대 2개**.
+  - 이미 2개 보유 시 **추가 획득 불가** (드랍은 그대로 보이지만 줍기 차단).
+
+### 3.2 속성 종류
+
+| 속성 | 효과 | 핸들러 매핑 안 |
+|---|---|---|
+| **얼음** | 적 슬로우 | `OnHit → ApplyDoT` (이속 디버프 변형) 또는 신규 `ApplySlow` 핸들러 안 |
+| **불** | 화상 — 도트 데미지 | `OnHit → ApplyDoT` (기존 [trigger-effects.md](../systems/trigger-effects.md) 의 `ApplyDoTHandler` 그대로 사용) |
+| **번개** | 데미지 입은 적에게서 주변 적에게 데미지 약간 전이 | `OnHit → Chain` (기존 `ChainHandler`, `chainCount=1`, `chainDamageRatio<1.0` 안) |
+
+### 3.3 조합 효과
+
+2개의 정수를 보유하면 두 속성이 동시에 발현된다. **특정 조합**에서는 히든 효과 발동.
+
+| 조합 | 기본 동시 발현 | 히든 효과 안 |
+|---|---|---|
+| 얼음 + 번개 | 슬로우 + 전이 | 슬로우 걸린 적에게 번개 전이는 **치명타** 처리 |
+| 얼음 + 불 | _상충 처리 미정_ | TBD (기획) |
+| 불 + 번개 | 화상 + 전이 | TBD (기획) |
+
+## 4. 수치
+
+> _TBD (밸런싱)_
+
+| 항목 | 값 안 |
+|---|---|
+| 엘리트 정수 드랍 확률 | TBD |
+| 얼음 슬로우 비율 | TBD (예: 이속 -30%) |
+| 얼음 슬로우 지속 | TBD |
+| 불 DoT 데미지 | TBD (`ApplyDoTHandler` 의 (틱수, 간격, 데미지비율)) |
+| 번개 전이 거리 / 데미지 비율 | TBD (`ChainHandler` 의 `chainRange`, `chainDamageRatio`) |
+
+## 5. 데이터 계약
+
+### 5.1 드랍 (EnemyData 확장)
+
+[enemies/elite.md § 7](enemies/elite.md) 의 안:
+
+```
+EnemyData (또는 EliteEnemyData):
+  - essenceDropChance : float (0.0~1.0)
+  - essenceDropTable : EssenceType[] (얼음/불/번개 가중치 안)
+
+  enum EssenceType { Ice, Fire, Lightning }
+```
+
+### 5.2 런타임 주입 (정수 장착 시)
+
+[trigger-effects.md § 5](../systems/trigger-effects.md) 의 `AddRuntimeEffect` 규약을 그대로 사용. 재정의 금지.
+
+```csharp
+// 불 정수 장착
+triggerSystem.AddRuntimeEffect("essence_fire", new SkillTriggerEffect(
+    TriggerType.OnHit,
+    EffectActionType.ApplyDoT,
+    new EffectParams(ticks: 3, interval: 1.0f, ratio: 0.4f)
+));
+
+// 정수 해제
+triggerSystem.RemoveRuntimeEffects("essence_fire");
+// 모든 정수 효과 해제
+triggerSystem.RemoveByPrefix("essence_");
+```
+
+조합 히든 효과는 **별도 source 키**로 추가:
+```csharp
+// 얼음+번개 조합 발현 시
+triggerSystem.AddRuntimeEffect("essence_combo_ice_lightning", ...);
+```
+
+## 6. 네트워크
+
+[network-sync.md](../systems/network-sync.md) 규약을 따른다.
+
+- **드랍 판정:** 호스트
+- **선착순 처리:** 호스트 (동일 드랍에 두 명 동시 진입 시 ViewID 우선)
+- **장착 / 해제 RPC:** `RPC_EquipEssence(playerViewID, essenceType)` → 각 클라이언트가 자신의 SkillTriggerSystem 에 `AddRuntimeEffect` 호출
+
+## 7. UI / 비주얼
+
+- **드랍 비주얼:** 속성별 색상 (얼음 청, 불 적, 번개 황)
+- **HUD 표시:** 보유 정수 2개를 HUD 한쪽에 아이콘으로 노출
+- **2개 보유 시 추가 드랍:** 비주얼은 보이되 줍기 키가 회색 처리 (TBD)
+
+## 8. 관련 문서
+
+- [enemies/elite.md](enemies/elite.md) — 정수 드랍의 유일한 소스
+- [trigger-effects.md § 5](../systems/trigger-effects.md) — 런타임 주입 규약 (SSOT)
+- [overview.md § 12 등급 체계](overview.md) — 정수는 등급 체계 적용 대상 아님 (속성 3종만)
+- [weapon.md](weapon.md) — 동일 패턴의 자매 시스템
+
+## 9. 오픈 이슈
+
+- **상충 조합 (얼음+불) 처리** — 동시 발현? 한쪽 무효화? 새 효과로 변환? (기획)
+- 얼음 슬로우용 **신규 EffectActionType** 필요 여부 (현재 `ApplyDoT` 파생으로 처리 안 vs `ApplySlow` 신규)
+- 정수 드랍이 보스에서도 발생하는지 (현재 안: 엘리트만)
+- 조합 히든 효과 9개 중 6개 (얼음+불 / 불+번개 외) 의 구체 효과
+- 같은 정수 2개 (예: 불+불) 획득 가능 여부 — 현재 안: 가능, 효과 중첩 (TBD)
