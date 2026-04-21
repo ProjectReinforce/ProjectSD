@@ -155,6 +155,10 @@ namespace SwDreams.Features.UI.Presentation
             if (localDamageable != null)
                 UpdateHealth(localDamageable.CurrentHP, localDamageable.MaxHP);
 
+            // 초기 EXP — 프리팹 Inspector 기본값으로 표시되는 현상 방지
+            if (GameManager.Instance != null)
+                UpdateExp(GameManager.Instance.TeamExp, GameManager.Instance.TeamRequiredExp);
+
             // 초기 스킬 슬롯
             RefreshAllSkillSlots();
         }

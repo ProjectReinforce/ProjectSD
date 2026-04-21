@@ -114,6 +114,11 @@ namespace SwDreams.Shared.Managers
         private readonly List<(int enemyId, Vector2 pos, int exp, int killerActorNumber)> deathQueue = new();
         private readonly List<int> removeQueue = new();
 
+        // ===== 활성 경험치 오브 추적 (FIFO, 모든 클라에서 독립적으로 유지) =====
+        // 상한 도달 시 가장 오래된 오브의 XP 를 새 오브에 합산 + 반환.
+        // 사망 배치는 Reliable 채널로 모든 클라에 동일 순서 수신 → 결정론적 병합.
+        private readonly List<ExperienceOrb> activeOrbs = new();
+
         private void Awake()
         {
             if (Instance == null)
@@ -352,6 +357,15 @@ namespace SwDreams.Shared.Managers
             }
 
             activeEnemies.Clear();
+
+            // 잔존 경험치 오브 정리 — 역순 순회로 OnReturnToPool 재진입 안전
+            for (int i = activeOrbs.Count - 1; i >= 0; i--)
+            {
+                var orb = activeOrbs[i];
+                if (orb != null && orb.gameObject.activeInHierarchy)
+                    PoolManager.Instance?.Return(orb.gameObject);
+            }
+            activeOrbs.Clear();
 
             // 잔존 스킬 투사체/이펙트 정리
             CleanupProjectiles();
@@ -785,6 +799,13 @@ namespace SwDreams.Shared.Managers
         {
             if (orbPrefab == null) return;
 
+            // 상한 도달 시 새 오브 드랍 생략 (프레임 드랍 방지)
+            int maxOrbs = GameManager.Instance?.Config != null
+                ? GameManager.Instance.Config.maxActiveExpOrbs
+                : 0;
+            if (maxOrbs > 0 && activeOrbs.Count >= maxOrbs)
+                return;
+
             int playerCount = PhotonNetwork.CurrentRoom?.PlayerCount ?? 1;
             float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
             float expMul = difficulty.GetExpMultiplier(gameTime, playerCount);
@@ -793,7 +814,20 @@ namespace SwDreams.Shared.Managers
 
             GameObject obj = PoolManager.Instance.Get(orbPrefab);
             var orb = obj.GetComponent<ExperienceOrb>();
-            orb?.Initialize(position, adjustedExp);
+            if (orb == null) return;
+
+            orb.Initialize(position, adjustedExp);
+            activeOrbs.Add(orb);
+        }
+
+        /// <summary>
+        /// ExperienceOrb 가 풀로 반환될 때(획득/병합/마이그레이션 리셋) 호출.
+        /// activeOrbs 에서 제거. 이미 제거됐으면 no-op.
+        /// </summary>
+        public void OnExpOrbReturned(ExperienceOrb orb)
+        {
+            if (orb == null) return;
+            activeOrbs.Remove(orb);
         }
 
         // ===== 호스트 전용 이벤트 핸들러 =====

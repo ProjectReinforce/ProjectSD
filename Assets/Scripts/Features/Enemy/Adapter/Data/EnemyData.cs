@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Features.Enemy.Adapter.Data;
+using SwDreams.Shared.Data;
 
 namespace SwDreams.Features.Enemy.Adapter.Data
 {
@@ -75,8 +76,14 @@ namespace SwDreams.Features.Enemy.Adapter.Data
                  "체력/데미지 배율은 이 SO 의 baseHP/contactDamage 에 직접 반영(일반 대비 ×4~6 권장).")]
         public bool isElite = false;
 
-        [Tooltip("엘리트 사망 시 정수(Essence) 드랍 확률 0~1. 실제 Essence 시스템은 별도 구현 — 현재는 훅 로그만.")]
+        [Tooltip("엘리트 사망 시 정수(Essence) 드랍 확률 0~1. 실제 Essence 시스템은 별도 구현 — 현재는 훅 로그만.\n" +
+                 "[Phase 2 예정] 아래 dropTable 로 완전 이관되면 제거.")]
         [Range(0f, 1f)]
         public float essenceDropChance = 0f;
+
+        [Header("드랍 (Phase 0 인프라)")]
+        [Tooltip("정수/무기/자석/물약 드랍 확률 + 등급 가중치. null 이면 DropSpawner 가 아무것도 안 떨어뜨림.\n" +
+                 "엘리트 전용 정수 드랍은 이 SO 의 essenceChance 와 isElite=true 둘 다 만족해야 발동.")]
+        public EnemyDropTable dropTable;
     }
 }

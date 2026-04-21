@@ -1,5 +1,6 @@
 using System;
 using SwDreams.Features.Progression.Application;
+using SwDreams.Features.Progression.Domain.Formulas;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Features.Character.Adapter;
 using UnityEngine;
@@ -67,6 +68,7 @@ namespace SwDreams.Shared.Managers
         private int syncedExp = 0;
         public int TeamLevel => syncedLevel;
         public int TeamExp => syncedExp;
+        public int TeamRequiredExp => LevelTable.GetRequiredExp(syncedLevel);
 
         // 이벤트
         public event Action<int, int> OnExpChanged;     // current, required

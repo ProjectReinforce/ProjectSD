@@ -28,6 +28,14 @@ namespace SwDreams.Shared.Data
         [Tooltip("자석 흡수 이동 속도")]
         public float magnetSpeed = 1.3f;
 
+        [Tooltip("월드에 동시 존재 가능한 경험치 오브 최대 수. 상한 도달 시 새 오브 드랍 생략(프레임 드랍 방지). 0 이하면 무제한")]
+        public int maxActiveExpOrbs = 200;
+
+        // ===== 드랍 / 등급 시스템 (Phase 0 인프라) =====
+        [Header("등급 가중치 (Rarity enum 순서: Common/Rare/Epic/Legendary)")]
+        [Tooltip("혼돈 스킬 / 능력치 부스트 선택지 공용 fallback 가중치. 개별 SO 에 명시된 가중치가 있으면 그것이 우선.")]
+        public float[] defaultRarityWeights = { 60f, 25f, 12f, 3f };
+
         // ===== 스킬 시스템 =====
         [Header("스킬 시스템")]
         [Tooltip("플레이어당 최대 스킬 슬롯 수 (액티브 + 패시브 합계)")]

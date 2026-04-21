@@ -1,52 +1,63 @@
 using UnityEngine;
-using SwDreams.Features.Progression.Adapter;
 using Photon.Pun;
+using SwDreams.Features.Pickup.Domain;
 using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 
-namespace SwDreams.Features.Progression.Adapter
+namespace SwDreams.Features.Pickup.Adapter
 {
     /// <summary>
-    /// 경험치 오브. 자석 흡수 + 획득 처리.
-    /// 모든 클라이언트에서 로컬 생성 (PhotonView 없음).
-    /// 획득 판정은 호스트만 처리.
-    /// 
-    /// 프리팹 구성:
-    /// - ExperienceOrb (이 스크립트)
-    /// - CircleCollider2D (isTrigger = true)
+    /// 모든 월드 픽업 아이템의 베이스. ExperienceOrb 의 자석/GameState 체크 로직을 일반화.
+    ///
+    /// 파생 클래스는 <see cref="OnPickedUpByPlayer"/> 템플릿 메서드만 구현.
+    /// 호스트 권위 판정은 이 베이스에서 일괄 처리.
+    ///
+    /// 프리팹 구성 (파생 클래스 공통):
+    /// - &lt;파생 스크립트&gt; (PickupItemBase 상속)
+    /// - Collider2D (isTrigger = true)
     /// - Rigidbody2D (Kinematic)
-    /// - SpriteRenderer (작은 초록색 등 임시 스프라이트)
+    /// - SpriteRenderer
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
-    public class ExperienceOrb : MonoBehaviour, IPoolable
+    public abstract class PickupItemBase : MonoBehaviour, IPoolable, IPickup
     {
-        private int expValue;
+        [SerializeField] protected string itemId;
+        [SerializeField] protected PickupType type;
+        [SerializeField] protected Rarity rarity = Rarity.Common;
+
+        public string ItemId => itemId;
+        public PickupType Type => type;
+        public Rarity Rarity => rarity;
+
         private Transform attractTarget;
         private bool isAttracted;
         private bool isCollected;
 
-        private float MagnetRange =>
+        protected float MagnetRange =>
             GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetRange : 0.8f;
-        private float MagnetSpeed =>
+        protected float MagnetSpeed =>
             GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetSpeed : 1.3f;
 
-        public void Initialize(Vector2 position, int exp)
+        /// <summary>
+        /// 풀에서 꺼낸 뒤 월드에 배치. 파생 클래스가 추가 초기화가 필요하면 override.
+        /// </summary>
+        public virtual void Initialize(Vector2 position)
         {
             transform.position = position;
-            expValue = exp;
             isAttracted = false;
             isCollected = false;
             attractTarget = null;
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             if (isCollected) return;
 
-            // [Phase 5] 일시정지 중 이동 안 함
-            if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
-                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
+            // 일시정지/비전투 상태에서 이동/흡수 중단
+            var state = GameManager.Instance?.CurrentState;
+            if (state != GameManager.GameState.Playing &&
+                state != GameManager.GameState.BossFight)
                 return;
 
             if (isAttracted && attractTarget != null)
@@ -70,22 +81,25 @@ namespace SwDreams.Features.Progression.Adapter
             }
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
+        protected virtual void OnTriggerEnter2D(Collider2D other)
         {
             if (isCollected) return;
             if (!other.CompareTag("Player")) return;
 
             isCollected = true;
 
-            // 호스트에서만 경험치 처리
+            // 호스트 권위 픽업 판정. 파생 클래스 훅에서 필요 시 RPC 로 전파.
             if (PhotonNetwork.IsMasterClient)
-            {
-                GameManager.Instance?.AddExp(expValue);
-                Debug.Log($"[ExperienceOrb] 획득! +{expValue} EXP");
-            }
+                OnPickedUpByPlayer(other.gameObject);
 
             PoolManager.Instance?.Return(gameObject);
         }
+
+        /// <summary>
+        /// 호스트에서만 호출. 파생 클래스가 실제 획득 로직 구현.
+        /// 획득자 Player GameObject 가 전달됨 — 필요 시 GetComponent/PhotonView 로 소유자 조회.
+        /// </summary>
+        protected abstract void OnPickedUpByPlayer(GameObject playerObj);
 
         private Transform FindClosestPlayer()
         {
@@ -95,30 +109,27 @@ namespace SwDreams.Features.Progression.Adapter
             Transform closest = null;
             float minDist = float.MaxValue;
 
-            foreach (var p in players)
+            for (int i = 0; i < players.Length; i++)
             {
-                float dist = Vector2.Distance(transform.position, p.transform.position);
+                float dist = Vector2.Distance(transform.position, players[i].transform.position);
                 if (dist < minDist)
                 {
                     minDist = dist;
-                    closest = p.transform;
+                    closest = players[i].transform;
                 }
             }
 
             return closest;
         }
 
-        public void OnSpawnFromPool()
+        public virtual void OnSpawnFromPool()
         {
             gameObject.SetActive(true);
             isCollected = false;
         }
 
-        public void OnReturnToPool()
+        public virtual void OnReturnToPool()
         {
-            // 상한 병합/획득 시 SpawnManager가 activeOrbs 에서 제거 (이미 제거됐으면 no-op)
-            SpawnManager.Instance?.OnExpOrbReturned(this);
-
             isAttracted = false;
             isCollected = false;
             attractTarget = null;
