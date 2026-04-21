@@ -20,3 +20,4 @@ MonoBehaviour:
   contactDamage: 10
   expValue: 2
   knockbackResistance: 0
+  resolveOverlap: 0

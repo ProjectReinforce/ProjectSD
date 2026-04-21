@@ -122,11 +122,13 @@ state: Idle → Warning → Strike → Cooldown
 
 ## 10. 구현 체크리스트
 
-- [ ] `StationaryMovement` 구현 (또는 moveSpeed=0 확인)
-- [ ] 추격형 거리 유지 로직
-- [ ] 투사체 공격 프리팹 + 풀링
-- [ ] 경고 비주얼 Area 프리팹 + 시간 기반 Strike
-- [ ] 4가지 조합 SO 생성
+- [x] `StationaryMovement` 구현 ([Features/Enemy/Adapter/StationaryMovement.cs](../../../Assets/Scripts/Features/Enemy/Adapter/StationaryMovement.cs))
+- [x] 추격형 거리 유지 로직 — `KiteMovement(stopDistance = attackRange)` ([Features/Enemy/Adapter/KiteMovement.cs](../../../Assets/Scripts/Features/Enemy/Adapter/KiteMovement.cs))
+- [x] 투사체 공격 프리팹 + 풀링 — `EnemyProjectile` + SpawnManager 공용 prefab ([Features/Enemy/Adapter/Attack/EnemyProjectile.cs](../../../Assets/Scripts/Features/Enemy/Adapter/Attack/EnemyProjectile.cs))
+- [x] 경고 비주얼 Area 프리팹 + 시간 기반 Strike — `TelegraphZone` (DOTween 금지, 자체 타이머 + GameState 체크) ([Features/Enemy/Adapter/Attack/TelegraphZone.cs](../../../Assets/Scripts/Features/Enemy/Adapter/Attack/TelegraphZone.cs))
+- [x] 공격 사이클 — `EnemyAttack` (오케스트레이터, 호스트 권위) + `EnemyTargeter` (타겟 조회) + `EnemyAttackCooldown` (쿨다운) 3 컴포넌트 조합 ([Features/Enemy/Adapter/Attack/](../../../Assets/Scripts/Features/Enemy/Adapter/Attack/))
+- [x] 네트워크 RPC (SpawnManager.RaiseEnemyProjectile / RaiseTelegraph)
+- [ ] 4가지 조합 SO 생성 (에디터 작업)
 - [ ] `photon-sync-auditor`
 - [ ] 플레이테스트 (회피 타이밍·밀집 상황)
 

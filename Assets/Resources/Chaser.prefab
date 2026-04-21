@@ -14,6 +14,9 @@ GameObject:
   - component: {fileID: 6717311327015422765}
   - component: {fileID: 2593780315556395528}
   - component: {fileID: 5078694872400143061}
+  - component: {fileID: -3229088373860463942}
+  - component: {fileID: 1756741348895655780}
+  - component: {fileID: 271643080494629725}
   m_Layer: 0
   m_Name: Chaser
   m_TagString: Enemy
@@ -172,3 +175,39 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
+--- !u!114 &-3229088373860463942
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 661582006748820927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e260efb350d08ff449c5102e8a555312, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Enemy.Adapter.Attack.EnemyTargeter
+--- !u!114 &1756741348895655780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 661582006748820927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21c5813e5dc272246ac371d50c88fa21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Enemy.Adapter.Attack.EnemyAttackCooldown
+--- !u!114 &271643080494629725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 661582006748820927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8159f52cf29f9e948951cfecb9a1b9c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Enemy.Adapter.Attack.EnemyAttack

@@ -25,8 +25,9 @@
 ## 4. 이동 패턴
 
 - **이동 타입:** SwarmMovement (랜덤 방향 직진)
-- **참조:** `Assets/Scripts/Adapter/Entity/Enemy/Movement/` 내 SwarmMovement 구현
+- **참조:** `Assets/Scripts/Features/Enemy/Adapter/SwarmMovement.cs`
 - **특수 동작:** 일정 시간 직진 후 소멸. **5~10마리 그룹 스폰** (SpawnManager가 한 번에 그룹 단위 생성).
+- **겹침 허용:** Swarm은 `EnemyData.resolveOverlap = false` 로 Anti-Overlap(`EnemyMovement.ResolveEnemyOverlap`) 을 비활성화. 밀집 돌진이 컨셉이라 서로 겹쳐도 되고, 그룹 연산 비용도 절약됨. 다른 일반 적은 기본값 `true` 유지.
 
 ## 5. 공격 패턴
 
@@ -57,4 +58,4 @@
 ## 10. 오픈 이슈
 
 - 직진 방향 결정 로직 (완전 랜덤 vs 맵 경계 기준 안쪽)
-- 그룹이 한꺼번에 터질 때의 성능/이펙트 폭증 (풀링)
+- 그룹이 한꺼번에 터질 때의 성능/이펙트 폭증 (풀링) — Anti-Overlap 비활성화로 겹침 연산 부하는 제거됨

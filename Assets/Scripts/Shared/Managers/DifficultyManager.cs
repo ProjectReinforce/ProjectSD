@@ -85,11 +85,18 @@ namespace SwDreams.Shared.Managers
         {
             float t = GetT(gameTime);
 
-            float chaser = Mathf.Lerp(data.chaserRatioStart, data.chaserRatioEnd, t);
-            float runner = Mathf.Lerp(data.runnerRatioStart, data.runnerRatioEnd, t);
-            float tank = Mathf.Lerp(data.tankRatioStart, data.tankRatioEnd, t);
+            // 각 타입의 가중치(합계가 1.0 일 필요 없음 — 아래에서 정규화).
+            float chaser = Mathf.Max(0f, Mathf.Lerp(data.chaserRatioStart, data.chaserRatioEnd, t));
+            float runner = Mathf.Max(0f, Mathf.Lerp(data.runnerRatioStart, data.runnerRatioEnd, t));
+            float tank = Mathf.Max(0f, Mathf.Lerp(data.tankRatioStart, data.tankRatioEnd, t));
+            float swarm = Mathf.Max(0f, Mathf.Lerp(data.swarmRatioStart, data.swarmRatioEnd, t));
+            float ranged = Mathf.Max(0f, Mathf.Lerp(data.rangedRatioStart, data.rangedRatioEnd, t));
 
-            float roll = UnityEngine.Random.value;
+            float total = chaser + runner + tank + swarm + ranged;
+            if (total <= 0.0001f) return EnemyType.Chaser; // 안전 폴백
+
+            // 합계로 나누어 상대 확률로 선택 (어떤 항목만 1로 두면 그것만 100%).
+            float roll = UnityEngine.Random.value * total;
             float cumulative = 0f;
 
             cumulative += chaser;
@@ -100,6 +107,9 @@ namespace SwDreams.Shared.Managers
 
             cumulative += tank;
             if (roll < cumulative) return EnemyType.Tank;
+
+            cumulative += ranged;
+            if (roll < cumulative) return EnemyType.Ranged;
 
             return EnemyType.Swarm;
         }

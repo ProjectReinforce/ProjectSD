@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6e66298a84be5c42816f008d89b7729, type: 3}
+  m_Name: RangedTurretShot
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Enemy.Adapter.Data.EnemyData
+  enemyName: 
+  enemyType: 4
+  sprite: {fileID: 0}
+  baseHP: 30
+  moveSpeed: 0.48
+  contactDamage: 10
+  expValue: 5
+  knockbackResistance: 0
+  resolveOverlap: 1
+  rangedBehavior: 0
+  rangedAttack: 0
+  attackRange: 7
+  attackInterval: 3
+  attackDamage: 20
+  projectilePrefab: {fileID: 6660621669467812939, guid: d0cfe13a624463b41853b391f22d45eb, type: 3}
+  projectileSpeed: 7
+  projectileLifetime: 2
+  telegraphPrefab: {fileID: 5430895258031986938, guid: 80f054be68959c143b86b803075b174a, type: 3}
+  telegraphDuration: 1
+  telegraphRadius: 1.5

@@ -66,6 +66,10 @@ namespace SwDreams.Shared.Data
         [Range(0f, 1f)] public float tankRatioEnd = 0.15f;
         [Range(0f, 1f)] public float swarmRatioEnd = 0.30f;
 
+        [Header("원거리형 비율 (Phase B) — Swarm은 나머지 fallback")]
+        [Range(0f, 1f)] public float rangedRatioStart = 0f;
+        [Range(0f, 1f)] public float rangedRatioEnd = 0f;
+
         // ===== 인원수별 스케일링 =====
         [Header("인원수별 스케일링")]
         public PlayerScaling[] playerScalings = new PlayerScaling[]

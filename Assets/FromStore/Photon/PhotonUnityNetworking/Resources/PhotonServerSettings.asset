@@ -75,6 +75,9 @@ MonoBehaviour:
   - RPC_RequestDamage
   - RPC_RequestKnockback
   - RPC_RequestBossDamage
+  - RPC_SpawnEnemyProjectile
+  - RPC_SpawnRanged
+  - RPC_SpawnTelegraph
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

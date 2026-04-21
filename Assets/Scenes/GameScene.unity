@@ -26213,9 +26213,19 @@ MonoBehaviour:
   runnerData: {fileID: 11400000, guid: 57184a50fa52c5e46bbe5a696fadc2e0, type: 2}
   tankData: {fileID: 11400000, guid: 4ae042e8639145c49ae4d28fe3285f60, type: 2}
   swarmData: {fileID: 11400000, guid: e6fbd977bfb5e35479f4ce172faee56d, type: 2}
+  rangedVariants:
+  - {fileID: 11400000, guid: eeb5e4ea0618b4f4fb75364599635ad8, type: 2}
+  - {fileID: 11400000, guid: d59442b56367c504fa6432c4c24d95ba, type: 2}
+  - {fileID: 11400000, guid: e8f58cabe66d92348a9f00e1b4aa3592, type: 2}
+  - {fileID: 11400000, guid: c21242e3f49145a4c8bc7a5f5d86a3fa, type: 2}
+  enemyProjectilePrefab: {fileID: 6660621669467812939, guid: d0cfe13a624463b41853b391f22d45eb, type: 3}
+  telegraphPrefab: {fileID: 5430895258031986938, guid: 80f054be68959c143b86b803075b174a, type: 3}
   difficultyData: {fileID: 11400000, guid: 89492b6127c89f04296ae9a667e3bb3f, type: 2}
   swarmLifetime: 8
   startDelay: 2
+  orbPrewarmCount: 50
+  enemyProjectilePrewarmCount: 30
+  telegraphPrewarmCount: 20
   positionSyncInterval: 0.2
 --- !u!114 &1135951836
 MonoBehaviour:

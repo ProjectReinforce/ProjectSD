@@ -34,7 +34,7 @@
 | 빠른형 (Runner) | 20% | |
 | 둔한형 (Tank) | 10% | |
 | 무리형 (Swarm) | 10% | 그룹 단위 스폰 |
-| 원거리형 (Ranged) | TBD | 4변형([enemies/ranged.md](../game-design/enemies/ranged.md)). 등장 시점·비율 밸런싱 |
+| 원거리형 (Ranged) | `DifficultyData.rangedRatio{Start,End}` (기본 0) | 4변형([enemies/ranged.md](../game-design/enemies/ranged.md)). SpawnManager.rangedVariants 배열에서 랜덤 선택. 비율 밸런싱 TBD |
 | 엘리트형 (Elite) | TBD (매우 낮음) | [enemies/elite.md](../game-design/enemies/elite.md). 일반 스폰과 별도 확률 롤링 권장 |
 
 **엘리트 스폰 정책(제안):** 일반 스폰과 독립된 빈도로 (예: 1~2분 간격) 1마리씩 추가 스폰. 확정은 밸런싱 단계.

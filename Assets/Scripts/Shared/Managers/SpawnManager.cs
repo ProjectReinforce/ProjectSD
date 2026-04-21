@@ -3,6 +3,7 @@ using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Enemy.Adapter.Data;
 using SwDreams.Features.Enemy.Adapter;
+using SwDreams.Features.Enemy.Adapter.Attack;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Application;
 using UnityEngine;
@@ -47,6 +48,16 @@ namespace SwDreams.Shared.Managers
         [SerializeField] private EnemyData tankData;
         [SerializeField] private EnemyData swarmData;
 
+        // RPC_SpawnRanged / OnPlayerEnteredRoom 이 이 배열의 "인덱스"를 네트워크 식별자로 사용한다.
+        // 배열 순서 변경/중간 요소 제거는 리모트 간 variant 불일치를 일으키므로 금지.
+        // 필요 시 배열 말미에만 추가하고, 중간 요소는 null 로 비워둘 것.
+        [Header("원거리 변형 (고정·추격 × 투사체·경고, 순서 고정 배열)")]
+        [SerializeField] private EnemyData[] rangedVariants;
+
+        [Header("원거리 공격 공용 프리팹")]
+        [SerializeField] private GameObject enemyProjectilePrefab;
+        [SerializeField] private GameObject telegraphPrefab;
+
         [Header("난이도")]
         [SerializeField] private DifficultyData difficultyData;
 
@@ -55,6 +66,11 @@ namespace SwDreams.Shared.Managers
 
         [Header("시작 대기")]
         [SerializeField] private float startDelay = 2f;
+
+        [Header("풀 Prewarm 수량")]
+        [SerializeField] private int orbPrewarmCount = 50;
+        [SerializeField] private int enemyProjectilePrewarmCount = 30;
+        [SerializeField] private int telegraphPrewarmCount = 20;
 
         // 서비스
         private DifficultyManager difficulty;
@@ -110,7 +126,7 @@ namespace SwDreams.Shared.Managers
                 : 900f;
             difficulty = new DifficultyManager(difficultyData, bossTime);
 
-            // EnemyData 매핑
+            // EnemyData 매핑 (Ranged 는 variant 기반이라 rangedVariants 배열로 별도 관리)
             enemyDataMap = new Dictionary<EnemyType, EnemyData>
             {
                 { EnemyType.Chaser, chaserData },
@@ -126,7 +142,11 @@ namespace SwDreams.Shared.Managers
                 PoolManager.Instance?.Prewarm(enemyPrefab, prewarmCount);
             }
             if (orbPrefab != null)
-                PoolManager.Instance?.Prewarm(orbPrefab, 50);
+                PoolManager.Instance?.Prewarm(orbPrefab, orbPrewarmCount);
+            if (enemyProjectilePrefab != null)
+                PoolManager.Instance?.Prewarm(enemyProjectilePrefab, enemyProjectilePrewarmCount);
+            if (telegraphPrefab != null)
+                PoolManager.Instance?.Prewarm(telegraphPrefab, telegraphPrewarmCount);
         }
 
         private void Update()
@@ -219,9 +239,21 @@ namespace SwDreams.Shared.Managers
 
                 EnemyType type = difficulty.GetRandomEnemyType(gameTime);
 
+                // Ranged 가 롤링됐지만 variant 가 비어 있으면 Chaser 로 폴백
+                if (type == EnemyType.Ranged && (rangedVariants == null || rangedVariants.Length == 0))
+                    type = EnemyType.Chaser;
+
                 if (type == EnemyType.Swarm)
                 {
                     SpawnSwarmGroup(hpMultiplier, maxEnemies);
+                }
+                else if (type == EnemyType.Ranged)
+                {
+                    int variantIdx = Random.Range(0, rangedVariants.Length);
+                    Vector2 pos = GetSpawnPosition();
+                    int id = nextEnemyId++;
+                    photonView.RPC(nameof(RPC_SpawnRanged), RpcTarget.All,
+                        id, variantIdx, pos, hpMultiplier);
                 }
                 else
                 {
@@ -385,16 +417,26 @@ namespace SwDreams.Shared.Managers
                 Enemy enemy = kvp.Value;
                 if (enemy != null && enemy.IsAlive)
                 {
-                    int typeInt = (int)enemy.EnemyType;
-
                     if (enemy.EnemyType == EnemyType.Swarm)
                     {
                         // Swarm은 위치만 동기화 (이미 이동 중이라 방향은 달라질 수 있음)
                         photonView.RPC(nameof(RPC_SpawnSwarm), newPlayer,
                             enemy.EnemyId, (Vector2)enemy.transform.position, 1f, 0f);
                     }
+                    else if (enemy.EnemyType == EnemyType.Ranged)
+                    {
+                        int variantIdx = rangedVariants != null
+                            ? System.Array.IndexOf(rangedVariants, enemy.Data)
+                            : -1;
+                        if (variantIdx >= 0)
+                        {
+                            photonView.RPC(nameof(RPC_SpawnRanged), newPlayer,
+                                enemy.EnemyId, variantIdx, (Vector2)enemy.transform.position, 1f);
+                        }
+                    }
                     else
                     {
+                        int typeInt = (int)enemy.EnemyType;
                         photonView.RPC(nameof(RPC_SpawnEnemy), newPlayer,
                             enemy.EnemyId, typeInt, (Vector2)enemy.transform.position, 1f);
                     }
@@ -467,6 +509,88 @@ namespace SwDreams.Shared.Managers
                 enemy.OnDiedWithRef += OnEnemyDied;
                 enemy.OnForceReturned += OnEnemyForceReturned;
             }
+        }
+
+        [PunRPC]
+        private void RPC_SpawnRanged(int enemyId, int variantIdx, Vector2 position, float hpMultiplier)
+        {
+            if (activeEnemies.ContainsKey(enemyId)) return;
+            if (enemyPrefab == null) return;
+            if (rangedVariants == null || variantIdx < 0 || variantIdx >= rangedVariants.Length) return;
+
+            EnemyData data = rangedVariants[variantIdx];
+            if (data == null) return;
+
+            GameObject obj = PoolManager.Instance.Get(enemyPrefab);
+            Enemy enemy = obj.GetComponent<Enemy>();
+
+            if (enemy == null)
+            {
+                PoolManager.Instance.Return(obj);
+                return;
+            }
+
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier);
+            activeEnemies[enemyId] = enemy;
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                enemy.OnDiedWithRef += OnEnemyDied;
+                enemy.OnForceReturned += OnEnemyForceReturned;
+            }
+        }
+
+        // ===== 원거리 공격 RPC (호스트 → 모든 클라, 로컬 렌더/호스트 판정) =====
+
+        /// <summary>
+        /// EnemyAttack(호스트)에서 호출. 투사체를 모든 클라에 스폰.
+        /// </summary>
+        public void RaiseEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            photonView.RPC(nameof(RPC_SpawnEnemyProjectile), RpcTarget.All,
+                pos, dir, speed, damage, lifetime);
+        }
+
+        /// <summary>
+        /// EnemyAttack(호스트)에서 호출. 경고존을 모든 클라에 스폰.
+        /// 만료 시 데미지 판정은 호스트만 (TelegraphZone 내부).
+        /// </summary>
+        public void RaiseTelegraph(Vector2 pos, float duration, float radius, int damage)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            photonView.RPC(nameof(RPC_SpawnTelegraph), RpcTarget.All,
+                pos, duration, radius, damage);
+        }
+
+        [PunRPC]
+        private void RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)
+        {
+            if (enemyProjectilePrefab == null) return;
+
+            GameObject obj = PoolManager.Instance.Get(enemyProjectilePrefab);
+            var proj = obj.GetComponent<EnemyProjectile>();
+            if (proj == null)
+            {
+                PoolManager.Instance.Return(obj);
+                return;
+            }
+            proj.Initialize(pos, dir, speed, damage, lifetime);
+        }
+
+        [PunRPC]
+        private void RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage)
+        {
+            if (telegraphPrefab == null) return;
+
+            GameObject obj = PoolManager.Instance.Get(telegraphPrefab);
+            var zone = obj.GetComponent<TelegraphZone>();
+            if (zone == null)
+            {
+                PoolManager.Instance.Return(obj);
+                return;
+            }
+            zone.Initialize(pos, duration, radius, damage);
         }
 
         // ===== 사망/제거는 OnEvent에서 배치 처리 — 아래 OnEvent 참조 =====

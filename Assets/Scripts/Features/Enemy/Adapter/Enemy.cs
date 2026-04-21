@@ -10,6 +10,7 @@ using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Managers;
 using SwDreams.Shared.Data;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Enemy.Adapter.Attack;
 
 namespace SwDreams.Features.Enemy.Adapter
 {
@@ -37,6 +38,9 @@ namespace SwDreams.Features.Enemy.Adapter
         private EnemyData enemyData;
         private DamageService damageService;
 
+        // SO 참조 (중도 참가 시 variantIdx 역산에 사용)
+        public EnemyData Data => enemyData;
+
         // 상태
         public int CurrentHP { get; private set; }
         public int MaxHP { get; private set; }
@@ -48,6 +52,18 @@ namespace SwDreams.Features.Enemy.Adapter
         // Phase 3: 타입 + 넉백 저항
         public EnemyType EnemyType => enemyData != null ? enemyData.enemyType : EnemyType.Chaser;
         public float KnockbackResistance => enemyData != null ? enemyData.knockbackResistance : 0f;
+        public bool ResolveOverlap => enemyData == null || enemyData.resolveOverlap;
+
+        // Phase B: 원거리형 데이터 (EnemyType.Ranged 에서만 의미 있음)
+        public RangedBehavior RangedBehaviorType => enemyData != null ? enemyData.rangedBehavior : RangedBehavior.Stationary;
+        public RangedAttack RangedAttackType => enemyData != null ? enemyData.rangedAttack : RangedAttack.Projectile;
+        public float AttackRange => enemyData != null ? enemyData.attackRange : 0f;
+        public float AttackInterval => enemyData != null ? enemyData.attackInterval : 0f;
+        public int AttackDamage => enemyData != null ? enemyData.attackDamage : 0;
+        public float ProjectileSpeed => enemyData != null ? enemyData.projectileSpeed : 0f;
+        public float ProjectileLifetime => enemyData != null ? enemyData.projectileLifetime : 0f;
+        public float TelegraphDuration => enemyData != null ? enemyData.telegraphDuration : 0f;
+        public float TelegraphRadius => enemyData != null ? enemyData.telegraphRadius : 0f;
 
         /// <summary>
         /// 마지막으로 데미지를 준 플레이어의 ActorNumber.
@@ -69,6 +85,7 @@ namespace SwDreams.Features.Enemy.Adapter
 
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
+        private EnemyAttack enemyAttack;
 
         // 피격 플래시
         private static readonly Color HitFlashColor = new Color(1f, 0.4f, 0.4f, 1f); // 붉은 틴트
@@ -81,6 +98,7 @@ namespace SwDreams.Features.Enemy.Adapter
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             mpb = new MaterialPropertyBlock();
+            enemyAttack = GetComponent<EnemyAttack>();
         }
 
         /// <summary>
@@ -107,6 +125,14 @@ namespace SwDreams.Features.Enemy.Adapter
 
             GetComponent<EnemyMovement>().Initialize(this);
             GetComponent<EnemyContact>().Initialize(this);
+
+            // Ranged 타입만 공격 사이클 활성화 (부착 안 돼 있으면 no-op)
+            if (enemyAttack != null)
+            {
+                bool isRanged = data.enemyType == EnemyType.Ranged;
+                enemyAttack.enabled = isRanged;
+                if (isRanged) enemyAttack.ConfigureFromEnemy();
+            }
         }
 
         public void TakeDamage(int damage)
@@ -223,6 +249,9 @@ namespace SwDreams.Features.Enemy.Adapter
             }
             if (spriteRenderer != null)
                 spriteRenderer.color = originalColor;
+
+            if (enemyAttack != null)
+                enemyAttack.enabled = false;
 
             OnDied = null;
             OnDiedWithRef = null;

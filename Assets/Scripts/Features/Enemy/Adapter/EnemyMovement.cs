@@ -90,6 +90,9 @@ namespace SwDreams.Features.Enemy.Adapter
             isFirstNetworkPos = true;
             knockbackVelocity = Vector2.zero;
 
+            // SO에서 겹침 해소 여부 반영 (Swarm 등은 false).
+            resolveEnemyOverlap = enemyRef.ResolveOverlap;
+
             // EnemyType에 따라 전략 자동 선택
             movementStrategy = CreateStrategy(enemyRef.EnemyType);
         }
@@ -199,6 +202,11 @@ namespace SwDreams.Features.Enemy.Adapter
             {
                 case EnemyType.Swarm:
                     return new SwarmMovement();
+
+                case EnemyType.Ranged:
+                    return enemy.RangedBehaviorType == RangedBehavior.Stationary
+                        ? (IEnemyMovementStrategy)new StationaryMovement()
+                        : new KiteMovement(enemy.AttackRange);
 
                 case EnemyType.Chaser:
                 case EnemyType.Runner:
