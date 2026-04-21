@@ -1,128 +1,48 @@
 using UnityEngine;
-using SwDreams.Features.Progression.Adapter;
-using Photon.Pun;
-using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Features.Pickup.Adapter;
+using SwDreams.Features.Pickup.Domain;
+using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Progression.Adapter
 {
     /// <summary>
-    /// 경험치 오브. 자석 흡수 + 획득 처리.
+    /// 경험치 오브. PickupItemBase 를 상속하여 자석 흡수/호스트 판정을 베이스에 위임.
+    /// 획득 시 팀 공유 경험치를 호스트가 AddExp 로 누적.
+    ///
     /// 모든 클라이언트에서 로컬 생성 (PhotonView 없음).
-    /// 획득 판정은 호스트만 처리.
-    /// 
+    /// SpawnManager.activeOrbs 상한 추적을 위해 OnReturnToPool 에서 알림 유지.
+    ///
     /// 프리팹 구성:
-    /// - ExperienceOrb (이 스크립트)
+    /// - ExperienceOrb (이 스크립트, PickupItemBase 상속)
     /// - CircleCollider2D (isTrigger = true)
     /// - Rigidbody2D (Kinematic)
-    /// - SpriteRenderer (작은 초록색 등 임시 스프라이트)
+    /// - SpriteRenderer
     /// </summary>
-    [RequireComponent(typeof(Collider2D))]
-    public class ExperienceOrb : MonoBehaviour, IPoolable
+    public class ExperienceOrb : PickupItemBase
     {
         private int expValue;
-        private Transform attractTarget;
-        private bool isAttracted;
-        private bool isCollected;
-
-        private float MagnetRange =>
-            GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetRange : 0.8f;
-        private float MagnetSpeed =>
-            GameManager.Instance?.Config != null ? GameManager.Instance.Config.magnetSpeed : 1.3f;
 
         public void Initialize(Vector2 position, int exp)
         {
-            transform.position = position;
+            base.Initialize(position);
             expValue = exp;
-            isAttracted = false;
-            isCollected = false;
-            attractTarget = null;
+            itemId = "exp_orb";
+            type = PickupType.ExpOrb;
+            rarity = Rarity.Common;
         }
 
-        private void Update()
+        protected override void OnPickedUpByPlayer(GameObject playerObj)
         {
-            if (isCollected) return;
-
-            // [Phase 5] 일시정지 중 이동 안 함
-            if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
-                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
-                return;
-
-            if (isAttracted && attractTarget != null)
-            {
-                transform.position = Vector2.MoveTowards(
-                    transform.position,
-                    attractTarget.position,
-                    MagnetSpeed * Time.deltaTime);
-                return;
-            }
-
-            Transform closest = FindClosestPlayer();
-            if (closest != null)
-            {
-                float dist = Vector2.Distance(transform.position, closest.position);
-                if (dist <= MagnetRange)
-                {
-                    isAttracted = true;
-                    attractTarget = closest;
-                }
-            }
+            GameManager.Instance?.AddExp(expValue);
+            Debug.Log($"[ExperienceOrb] 획득! +{expValue} EXP");
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
+        public override void OnReturnToPool()
         {
-            if (isCollected) return;
-            if (!other.CompareTag("Player")) return;
-
-            isCollected = true;
-
-            // 호스트에서만 경험치 처리
-            if (PhotonNetwork.IsMasterClient)
-            {
-                GameManager.Instance?.AddExp(expValue);
-                Debug.Log($"[ExperienceOrb] 획득! +{expValue} EXP");
-            }
-
-            PoolManager.Instance?.Return(gameObject);
-        }
-
-        private Transform FindClosestPlayer()
-        {
-            var players = GameObject.FindGameObjectsWithTag("Player");
-            if (players.Length == 0) return null;
-
-            Transform closest = null;
-            float minDist = float.MaxValue;
-
-            foreach (var p in players)
-            {
-                float dist = Vector2.Distance(transform.position, p.transform.position);
-                if (dist < minDist)
-                {
-                    minDist = dist;
-                    closest = p.transform;
-                }
-            }
-
-            return closest;
-        }
-
-        public void OnSpawnFromPool()
-        {
-            gameObject.SetActive(true);
-            isCollected = false;
-        }
-
-        public void OnReturnToPool()
-        {
-            // 상한 병합/획득 시 SpawnManager가 activeOrbs 에서 제거 (이미 제거됐으면 no-op)
+            // SpawnManager.activeOrbs FIFO 상한 추적에서 제거 (이미 제거됐으면 no-op)
             SpawnManager.Instance?.OnExpOrbReturned(this);
-
-            isAttracted = false;
-            isCollected = false;
-            attractTarget = null;
-            gameObject.SetActive(false);
+            base.OnReturnToPool();
         }
     }
 }

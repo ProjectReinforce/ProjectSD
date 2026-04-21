@@ -19,6 +19,7 @@ MonoBehaviour:
   moveSpeed: 0.48
   contactDamage: 15
   expValue: 15
+  visualScaleMultiplier: 1.5
   knockbackResistance: 1
   resolveOverlap: 1
   rangedBehavior: 1
@@ -33,4 +34,4 @@ MonoBehaviour:
   telegraphDuration: 1.3
   telegraphRadius: 0.5
   isElite: 1
-  essenceDropChance: 0.5
+  essenceDropChance: 1
