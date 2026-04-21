@@ -129,6 +129,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - [docs/README.md](docs/README.md) — **폴더 지도·SSOT 규칙 먼저 확인**
 - [docs/game-design/overview.md](docs/game-design/overview.md) — GDD 전반 (Sweepin' Dreams)
 - [docs/architecture/implementation-roadmap.md](docs/architecture/implementation-roadmap.md) — Phase별 구현 진행도 (현재 Phase 5 진행 중)
+- [docs/architecture/drop-system-roadmap.md](docs/architecture/drop-system-roadmap.md) — 드랍 시스템(정수/무기/퀘스트/능력치/기타/혼돈등급) 구현 로드맵
 
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
