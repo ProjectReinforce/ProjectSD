@@ -65,6 +65,10 @@ namespace SwDreams.Features.Enemy.Adapter
         public float TelegraphDuration => enemyData != null ? enemyData.telegraphDuration : 0f;
         public float TelegraphRadius => enemyData != null ? enemyData.telegraphRadius : 0f;
 
+        // Phase C: 엘리트
+        public bool IsElite => enemyData != null && enemyData.isElite;
+        public float EssenceDropChance => enemyData != null ? enemyData.essenceDropChance : 0f;
+
         /// <summary>
         /// 마지막으로 데미지를 준 플레이어의 ActorNumber.
         /// 사망 시 연쇄폭발 등 킬러 귀속 효과에 사용.
@@ -87,6 +91,9 @@ namespace SwDreams.Features.Enemy.Adapter
         private SpriteRenderer spriteRenderer;
         private EnemyAttack enemyAttack;
 
+        // 프리팹 기본 스케일 (visualScaleMultiplier 적용 시 기준)
+        private Vector3 initialLocalScale;
+
         // 피격 플래시
         private static readonly Color HitFlashColor = new Color(1f, 0.4f, 0.4f, 1f); // 붉은 틴트
         private const float HitFlashDuration = 0.1f;
@@ -99,6 +106,7 @@ namespace SwDreams.Features.Enemy.Adapter
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             mpb = new MaterialPropertyBlock();
             enemyAttack = GetComponent<EnemyAttack>();
+            initialLocalScale = transform.localScale;
         }
 
         /// <summary>
@@ -115,6 +123,10 @@ namespace SwDreams.Features.Enemy.Adapter
             CurrentHP = MaxHP;
             transform.position = position;
             gameObject.tag = "Enemy";
+
+            // SO 의 visualScaleMultiplier 반영 (엘리트는 보통 >1 로 커 보이게)
+            float mul = data.visualScaleMultiplier > 0.0001f ? data.visualScaleMultiplier : 1f;
+            transform.localScale = initialLocalScale * mul;
 
             if (spriteRenderer != null && data.sprite != null)
                 spriteRenderer.sprite = data.sprite;
@@ -252,6 +264,9 @@ namespace SwDreams.Features.Enemy.Adapter
 
             if (enemyAttack != null)
                 enemyAttack.enabled = false;
+
+            // 스케일 리셋 — 다음 스폰 전 잔상 방지
+            transform.localScale = initialLocalScale;
 
             OnDied = null;
             OnDiedWithRef = null;

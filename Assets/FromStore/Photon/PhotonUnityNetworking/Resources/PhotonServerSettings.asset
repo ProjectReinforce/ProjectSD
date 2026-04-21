@@ -78,6 +78,7 @@ MonoBehaviour:
   - RPC_SpawnEnemyProjectile
   - RPC_SpawnRanged
   - RPC_SpawnTelegraph
+  - RPC_SpawnElite
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

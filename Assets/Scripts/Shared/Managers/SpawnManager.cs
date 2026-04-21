@@ -58,6 +58,17 @@ namespace SwDreams.Shared.Managers
         [SerializeField] private GameObject enemyProjectilePrefab;
         [SerializeField] private GameObject telegraphPrefab;
 
+        // eliteVariants 인덱스를 RPC 식별자로 사용한다 (Ranged 와 동일 계약).
+        // 배열 순서 변경/중간 요소 제거는 리모트 간 variant 불일치를 일으키므로 금지.
+        // 운영 규약: 같은 SO 를 rangedVariants 와 eliteVariants 에 동시 등록하지 말 것.
+        // (스폰 경로가 이중화되어 밸런싱이 뒤틀림. 엘리트 SO 는 항상 isElite=true 로 표시하고
+        //  eliteVariants 에만 등록.)
+        [Header("엘리트 변형 (Phase C, 순서 고정 배열)")]
+        [SerializeField] private EnemyData[] eliteVariants;
+        [Tooltip("엘리트 스폰 간격(초). 일반 스폰과 병행 동작. 0 이하 또는 enableEliteSpawn=false 면 비활성.")]
+        [SerializeField] private float eliteSpawnInterval = 90f;
+        [SerializeField] private bool enableEliteSpawn = true;
+
         [Header("난이도")]
         [SerializeField] private DifficultyData difficultyData;
 
@@ -82,6 +93,7 @@ namespace SwDreams.Shared.Managers
         private int nextEnemyId = 0;
 
         private float spawnTimer;
+        private float eliteSpawnTimer;
         private bool isReady = false;
         private float startDelayTimer = -1f;
 
@@ -179,7 +191,18 @@ namespace SwDreams.Shared.Managers
                 if (startDelayTimer <= 0f)
                 {
                     isReady = true;
+                    // 엘리트 타이머는 "시작 직후 즉시 스폰" 방지를 위해 interval 로 초기화.
+                    eliteSpawnTimer = eliteSpawnInterval;
                     Debug.Log("[SpawnManager] 준비 완료. 스폰 시작.");
+
+                    // 엘리트 스폰 진단 로그 (1회)
+                    int eliteValid = 0;
+                    if (eliteVariants != null)
+                        foreach (var v in eliteVariants) if (v != null) eliteValid++;
+                    if (enableEliteSpawn)
+                        Debug.Log($"[SpawnManager] 엘리트 스폰 활성 — variants 유효={eliteValid}개, interval={eliteSpawnInterval}s");
+                    else
+                        Debug.Log("[SpawnManager] 엘리트 스폰 비활성 (enableEliteSpawn=false)");
                 }
                 return;
             }
@@ -220,6 +243,26 @@ namespace SwDreams.Shared.Managers
                 }
 
                 spawnTimer = difficulty.GetSpawnInterval(gameTime);
+            }
+
+            // 엘리트 독립 스폰 타이머 — 일반 스폰과 병행
+            if (enableEliteSpawn && eliteVariants != null && eliteVariants.Length > 0 && eliteSpawnInterval > 0f)
+            {
+                eliteSpawnTimer -= Time.deltaTime;
+                if (eliteSpawnTimer <= 0f)
+                {
+                    int maxEnemies = difficulty.GetMaxEnemyCount(gameTime, playerCount);
+                    if (activeEnemies.Count < maxEnemies)
+                    {
+                        float hpMul = difficulty.GetHealthMultiplier(gameTime, playerCount);
+                        SpawnElite(hpMul);
+                    }
+                    else
+                    {
+                        Debug.Log($"[SpawnManager] 엘리트 스폰 스킵 — 동시 적 상한 도달 ({activeEnemies.Count}/{maxEnemies}). 다음 interval 까지 대기.");
+                    }
+                    eliteSpawnTimer = eliteSpawnInterval;
+                }
             }
         }
 
@@ -317,6 +360,7 @@ namespace SwDreams.Shared.Managers
             isReady = false;
             startDelayTimer = 1f;
             spawnTimer = 0f;
+            eliteSpawnTimer = eliteSpawnInterval; // 마이그레이션 직후 즉시 엘리트 스폰 방지
             currentPhaseName = "";
 
             Debug.Log($"[SpawnManager] 마이그레이션 리셋 — 적 {cleanedCount}마리 정리, 1초 후 스폰 재개");
@@ -417,7 +461,25 @@ namespace SwDreams.Shared.Managers
                 Enemy enemy = kvp.Value;
                 if (enemy != null && enemy.IsAlive)
                 {
-                    if (enemy.EnemyType == EnemyType.Swarm)
+                    // 엘리트 우선 판정 — 타입과 무관하게 eliteVariants 역인덱스로 재스폰
+                    if (enemy.IsElite)
+                    {
+                        int idx = eliteVariants != null
+                            ? System.Array.IndexOf(eliteVariants, enemy.Data)
+                            : -1;
+                        if (idx >= 0)
+                        {
+                            photonView.RPC(nameof(RPC_SpawnElite), newPlayer,
+                                enemy.EnemyId, idx, (Vector2)enemy.transform.position, 1f);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[SpawnManager] 엘리트 중도참가 재스폰 실패 — " +
+                                $"enemy.Data({enemy.Data?.name}) 가 eliteVariants 배열에 없음. " +
+                                $"인스펙터에서 해당 SO 가 등록됐는지 확인.");
+                        }
+                    }
+                    else if (enemy.EnemyType == EnemyType.Swarm)
                     {
                         // Swarm은 위치만 동기화 (이미 이동 중이라 방향은 달라질 수 있음)
                         photonView.RPC(nameof(RPC_SpawnSwarm), newPlayer,
@@ -519,6 +581,69 @@ namespace SwDreams.Shared.Managers
             if (rangedVariants == null || variantIdx < 0 || variantIdx >= rangedVariants.Length) return;
 
             EnemyData data = rangedVariants[variantIdx];
+            if (data == null) return;
+
+            GameObject obj = PoolManager.Instance.Get(enemyPrefab);
+            Enemy enemy = obj.GetComponent<Enemy>();
+
+            if (enemy == null)
+            {
+                PoolManager.Instance.Return(obj);
+                return;
+            }
+
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier);
+            activeEnemies[enemyId] = enemy;
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                enemy.OnDiedWithRef += OnEnemyDied;
+                enemy.OnForceReturned += OnEnemyForceReturned;
+            }
+        }
+
+        // ===== 엘리트 스폰 (Phase C) =====
+
+        private void SpawnElite(float hpMultiplier)
+        {
+            // 비어있는 슬롯 스킵
+            int candidates = 0;
+            for (int i = 0; i < eliteVariants.Length; i++)
+                if (eliteVariants[i] != null) candidates++;
+
+            if (candidates == 0)
+            {
+                Debug.LogWarning("[SpawnManager] 엘리트 스폰 시도 실패 — eliteVariants 배열에 유효 SO 가 0 개. " +
+                                 "인스펙터에서 Elite Variants 배열에 EnemyData SO 를 드래그했는지 확인.");
+                return;
+            }
+
+            // 유효 인덱스 중 랜덤 선택
+            int pick = Random.Range(0, candidates);
+            int eliteIdx = -1;
+            for (int i = 0; i < eliteVariants.Length; i++)
+            {
+                if (eliteVariants[i] == null) continue;
+                if (pick == 0) { eliteIdx = i; break; }
+                pick--;
+            }
+            if (eliteIdx < 0) return;
+
+            Vector2 pos = GetSpawnPosition();
+            int id = nextEnemyId++;
+            Debug.Log($"[SpawnManager] 엘리트 스폰: {eliteVariants[eliteIdx].enemyName} (idx={eliteIdx}, id={id}, pos={pos})");
+            photonView.RPC(nameof(RPC_SpawnElite), RpcTarget.All,
+                id, eliteIdx, pos, hpMultiplier);
+        }
+
+        [PunRPC]
+        private void RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier)
+        {
+            if (activeEnemies.ContainsKey(enemyId)) return;
+            if (enemyPrefab == null) return;
+            if (eliteVariants == null || eliteIdx < 0 || eliteIdx >= eliteVariants.Length) return;
+
+            EnemyData data = eliteVariants[eliteIdx];
             if (data == null) return;
 
             GameObject obj = PoolManager.Instance.Get(enemyPrefab);
@@ -683,6 +808,14 @@ namespace SwDreams.Shared.Managers
 
             // [Phase 5] 연쇄 폭발 체크 — 킬러만 대상
             NotifyChaosManagers(enemy.transform.position, enemy.LastDamagerActorNumber);
+
+            // Phase C: 엘리트 정수 드랍 훅 (Essence 시스템 미구현 — 현재는 로그만)
+            // TODO(essence): Essence SO/Pickup 구현 시 여기서 RPC 발행으로 드랍 스폰.
+            if (enemy.IsElite && enemy.EssenceDropChance > 0f
+                && UnityEngine.Random.value < enemy.EssenceDropChance)
+            {
+                Debug.Log($"[Elite] {enemy.name} (id={enemy.EnemyId}) → Essence drop roll success (시스템 미구현)");
+            }
 
             // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
             deathQueue.Add((enemy.EnemyId, (Vector2)enemy.transform.position,

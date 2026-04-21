@@ -40,6 +40,11 @@ namespace SwDreams.Features.Enemy.Adapter.Data
         [Header("보상")]
         public int expValue = 5;
 
+        [Header("비주얼")]
+        [Tooltip("스폰 시 Enemy 의 localScale 에 곱할 배율. 프리팹 기본=1.\n" +
+                 "엘리트는 1.3~1.5 로 커 보이게, 작은 적은 0.8 등으로 축소 가능.")]
+        public float visualScaleMultiplier = 1f;
+
         [Header("특수 (Phase 3)")]
         [Range(0f, 1f)]
         public float knockbackResistance = 0f;
@@ -64,5 +69,14 @@ namespace SwDreams.Features.Enemy.Adapter.Data
         public GameObject telegraphPrefab;
         public float telegraphDuration = 1.0f;
         public float telegraphRadius = 1.5f;
+
+        [Header("엘리트 (Phase C)")]
+        [Tooltip("true: 엘리트 취급. SpawnManager 의 eliteVariants 배열에 등록해서 독립 타이머로 스폰.\n" +
+                 "체력/데미지 배율은 이 SO 의 baseHP/contactDamage 에 직접 반영(일반 대비 ×4~6 권장).")]
+        public bool isElite = false;
+
+        [Tooltip("엘리트 사망 시 정수(Essence) 드랍 확률 0~1. 실제 Essence 시스템은 별도 구현 — 현재는 훅 로그만.")]
+        [Range(0f, 1f)]
+        public float essenceDropChance = 0f;
     }
 }

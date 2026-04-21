@@ -76,6 +76,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `RPC_SpawnEnemy(int enemyId, int enemyTypeInt, Vector2 position, float hpMultiplier)` | 409 | 호스트 → 전체. 일반 적 스폰 |
 | `RPC_SpawnSwarm(int enemyId, Vector2 position, float hpMultiplier, float baseAngle)` | 443 | 호스트 → 전체. 무리형 스폰 |
 | `RPC_SpawnRanged(int enemyId, int variantIdx, Vector2 position, float hpMultiplier)` | — | 호스트 → 전체. 원거리형 스폰. **⚠ variantIdx = `SpawnManager.rangedVariants[]` 배열 인덱스. 배열 순서 변경 금지 (리모트 간 variant 불일치). 요소는 말미에만 추가** |
+| `RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier)` | — | 호스트 → 전체. 엘리트 스폰. **⚠ eliteIdx = `SpawnManager.eliteVariants[]` 배열 인덱스. rangedVariants 와 동일 '순서 고정' 계약** |
 | `RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)` | — | 호스트 → 전체. 원거리 적 투사체 스폰. 이동은 각 클라 로컬, 데미지는 호스트 판정 |
 | `RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage)` | — | 호스트 → 전체. 경고존 스폰. Strike(데미지) 판정은 호스트만 |
 | `RPC_RequestDamage(int enemyId, int damage, int actorNumber)` | 506 | 클라 → 호스트. 적 피해 요청 (C안 데미지 요청) |

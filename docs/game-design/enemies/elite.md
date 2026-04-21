@@ -82,11 +82,14 @@
 
 ## 10. 구현 체크리스트
 
-- [ ] 엘리트 변형 SO 4종 이상 생성 (Chaser/Runner/Tank/Ranged 조합)
+- [x] `EnemyData.isElite` / `essenceDropChance` 필드 — 기존 SO 확장, 서브타입 미분화
+- [x] 독립 스폰 타이머 (`SpawnManager.eliteSpawnInterval` 기본 90s) + `RPC_SpawnElite` (호스트→전체, variantIdx 기반)
+- [x] 중도 참가 시 엘리트 variant 역인덱스 동기화
+- [x] 정수 드랍 **훅만** — `SpawnManager.OnEnemyDied` 에서 `isElite + essenceDropChance` 롤링 후 로그. 실제 Essence Pickup/System 은 별도 작업
+- [ ] 엘리트 변형 SO 4종 이상 생성 (에디터 작업)
 - [ ] 스탯 배율이 기반 타입 스케일링과 합리적으로 곱해지는지 검증
-- [ ] 정수 드랍 로직 (호스트 판정 + RPC)
-- [ ] 체력 바 UI (일반 적과 구분)
-- [ ] 엘리트 비주얼 식별 (발광/테두리 등)
+- [ ] 체력 바 UI (일반 적과 구분) — **별건**
+- [ ] 엘리트 비주얼 식별 (발광/테두리 등) — **별건**
 - [ ] `photon-sync-auditor`
 - [ ] 플레이테스트 (엘리트 단독 처치 시간, 정수 체감 밸런스)
 

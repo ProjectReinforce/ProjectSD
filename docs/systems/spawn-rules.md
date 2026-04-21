@@ -35,9 +35,9 @@
 | 둔한형 (Tank) | 10% | |
 | 무리형 (Swarm) | 10% | 그룹 단위 스폰 |
 | 원거리형 (Ranged) | `DifficultyData.rangedRatio{Start,End}` (기본 0) | 4변형([enemies/ranged.md](../game-design/enemies/ranged.md)). SpawnManager.rangedVariants 배열에서 랜덤 선택. 비율 밸런싱 TBD |
-| 엘리트형 (Elite) | TBD (매우 낮음) | [enemies/elite.md](../game-design/enemies/elite.md). 일반 스폰과 별도 확률 롤링 권장 |
+| 엘리트형 (Elite) | `SpawnManager.eliteSpawnInterval` (기본 90s) | [enemies/elite.md](../game-design/enemies/elite.md). 일반 비율과 독립된 타이머로 스폰. `SpawnManager.eliteVariants` 배열에서 랜덤 선택 |
 
-**엘리트 스폰 정책(제안):** 일반 스폰과 독립된 빈도로 (예: 1~2분 간격) 1마리씩 추가 스폰. 확정은 밸런싱 단계.
+**엘리트 스폰 정책 (구현 반영):** 일반 스폰과 병행 동작. 타이머가 만료될 때마다 `eliteVariants` 중 랜덤 1마리 추가. 동시 적 수 상한(`maxEnemies`)을 넘으면 해당 틱 스킵 (다음 타이머까지 대기). `enableEliteSpawn` 토글로 전체 끄기 가능.
 
 ## 5. 인원수 스케일링
 

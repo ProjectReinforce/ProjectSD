@@ -98,7 +98,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - [x] 기본 추적형, 빠른형 (부분) 구현
 - [ ] 둔한형 넉백 저항 튜닝
 - [ ] 무리형 그룹 스폰 완성
-- [ ] **원거리형 / 엘리트형 — 미구현**
+- [x] 무리형 겹침 허용 (`EnemyData.resolveOverlap=false`) — Phase A
+- [x] 원거리형 4변형 (고정·추격 × 투사체·경고) — Phase B
+- [x] 엘리트형 — 스탯 강화 + Essence 드랍 **훅만** (Essence 시스템은 별건) + `visualScaleMultiplier` — Phase C
 
 ### 3-2. 난이도 곡선 🟡
 - [ ] 시간대별 스폰 테이블 (0-3/3-5/5-7/7-10분)

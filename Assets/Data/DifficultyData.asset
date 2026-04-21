@@ -150,7 +150,7 @@ MonoBehaviour:
   runnerRatioEnd: 0.25
   tankRatioEnd: 0.15
   swarmRatioEnd: 0.3
-  rangedRatioStart: 0
+  rangedRatioStart: 1
   rangedRatioEnd: 1
   playerScalings:
   - playerCount: 1

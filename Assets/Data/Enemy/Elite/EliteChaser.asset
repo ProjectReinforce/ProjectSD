@@ -10,27 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a6e66298a84be5c42816f008d89b7729, type: 3}
-  m_Name: RangedTurretShot
+  m_Name: EliteChaser
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Enemy.Adapter.Data.EnemyData
   enemyName: 
-  enemyType: 4
-  sprite: {fileID: 21300000, guid: 878df4221c4b64268bf2f9e825ce0ced, type: 3}
-  baseHP: 30
-  moveSpeed: 0.48
-  contactDamage: 10
-  expValue: 5
-  knockbackResistance: 0
+  enemyType: 0
+  sprite: {fileID: 21300000, guid: e420a5f77b3474e94a87be531c38223e, type: 3}
+  baseHP: 500
+  moveSpeed: 0.6
+  contactDamage: 30
+  expValue: 15
+  knockbackResistance: 1
   resolveOverlap: 1
   rangedBehavior: 0
   rangedAttack: 0
-  attackRange: 2
+  attackRange: 7
   attackInterval: 3
   attackDamage: 20
-  projectilePrefab: {fileID: 6660621669467812939, guid: d0cfe13a624463b41853b391f22d45eb, type: 3}
-  projectileSpeed: 1
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 7
   projectileLifetime: 2
-  telegraphPrefab: {fileID: 5430895258031986938, guid: 80f054be68959c143b86b803075b174a, type: 3}
-  telegraphDuration: 1.3
-  telegraphRadius: 0.5
-  isElite: 0
-  essenceDropChance: 0
+  telegraphPrefab: {fileID: 0}
+  telegraphDuration: 1
+  telegraphRadius: 1.5
+  isElite: 1
+  essenceDropChance: 0.5

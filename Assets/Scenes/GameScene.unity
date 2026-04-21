@@ -26220,6 +26220,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c21242e3f49145a4c8bc7a5f5d86a3fa, type: 2}
   enemyProjectilePrefab: {fileID: 6660621669467812939, guid: d0cfe13a624463b41853b391f22d45eb, type: 3}
   telegraphPrefab: {fileID: 5430895258031986938, guid: 80f054be68959c143b86b803075b174a, type: 3}
+  eliteVariants:
+  - {fileID: 11400000, guid: c4cf7cfb8e8454c40ba2f898cf5e306a, type: 2}
+  - {fileID: 11400000, guid: 8e03b214fcbf5914d815a81c6728b2eb, type: 2}
+  - {fileID: 11400000, guid: b6eab1551858bfa44b87995ba75c2c55, type: 2}
+  - {fileID: 11400000, guid: 49e51b578ead47e4f95c365b4dd2d6bc, type: 2}
+  eliteSpawnInterval: 10
+  enableEliteSpawn: 1
   difficultyData: {fileID: 11400000, guid: 89492b6127c89f04296ae9a667e3bb3f, type: 2}
   swarmLifetime: 8
   startDelay: 2
