@@ -4,6 +4,7 @@ using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Enemy.Adapter.Data;
 using SwDreams.Features.Enemy.Adapter;
 using SwDreams.Features.Enemy.Adapter.Attack;
+using SwDreams.Features.Pickup.Adapter;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Application;
 using UnityEngine;
@@ -795,7 +796,7 @@ namespace SwDreams.Shared.Managers
             enemy.ApplyKnockback(sourcePos, force);
         }
 
-        private void SpawnExpOrb(Vector2 position, int expValue)
+        private void SpawnExpOrb(Vector2 position, int expValue, int enemyId)
         {
             if (orbPrefab == null) return;
 
@@ -812,12 +813,32 @@ namespace SwDreams.Shared.Managers
             int adjustedExp = Mathf.RoundToInt(expValue * expMul);
             if (adjustedExp < 1) adjustedExp = 1;
 
+            // Deterministic scatter — enemyId 시드로 호스트/클라 동일 결과 보장.
+            Vector2 scatteredPos = ScatterExpOrbPos(position, enemyId);
+
             GameObject obj = PoolManager.Instance.Get(orbPrefab);
             var orb = obj.GetComponent<ExperienceOrb>();
             if (orb == null) return;
 
-            orb.Initialize(position, adjustedExp);
+            orb.Initialize(scatteredPos, adjustedExp);
             activeOrbs.Add(orb);
+        }
+
+        /// <summary>
+        /// XP 오브 scatter 위치 계산. enemyId 를 seed 로 하는 deterministic RNG —
+        /// 각 클라가 독립 실행해도 동일한 결과. 포맷 확장 없이 일관성 유지.
+        /// </summary>
+        private static Vector2 ScatterExpOrbPos(Vector2 origin, int enemyId)
+        {
+            float radius = GameManager.Instance?.Config != null
+                ? GameManager.Instance.Config.dropScatterRadius
+                : 0.5f;
+            if (radius <= 0f) return origin;
+
+            var localRng = new System.Random(enemyId);
+            float angle = (float)localRng.NextDouble() * Mathf.PI * 2f;
+            float r = (float)localRng.NextDouble() * radius;
+            return origin + new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
         }
 
         /// <summary>
@@ -843,12 +864,14 @@ namespace SwDreams.Shared.Managers
             // [Phase 5] 연쇄 폭발 체크 — 킬러만 대상
             NotifyChaosManagers(enemy.transform.position, enemy.LastDamagerActorNumber);
 
-            // Phase C: 엘리트 정수 드랍 훅 (Essence 시스템 미구현 — 현재는 로그만)
-            // TODO(essence): Essence SO/Pickup 구현 시 여기서 RPC 발행으로 드랍 스폰.
-            if (enemy.IsElite && enemy.EssenceDropChance > 0f
-                && UnityEngine.Random.value < enemy.EssenceDropChance)
+            // 드랍 롤 (정수/무기/자석/물약) — DropTable 규칙에 따라 DropSpawner 가 확률/등급 결정 후 배치.
+            // Essence 는 dropTable.essenceChance + enemy.IsElite 둘 다 만족해야 발동.
+            if (enemy.Data != null && enemy.Data.dropTable != null)
             {
-                Debug.Log($"[Elite] {enemy.name} (id={enemy.EnemyId}) → Essence drop roll success (시스템 미구현)");
+                DropSpawner.Instance?.TrySpawnDrops(
+                    (Vector2)enemy.transform.position,
+                    enemy.Data.dropTable,
+                    enemy.IsElite);
             }
 
             // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
@@ -1011,7 +1034,7 @@ namespace SwDreams.Shared.Managers
                 activeEnemies.Remove(enemyId);
                 PoolManager.Instance.Return(enemy.gameObject);
 
-                SpawnExpOrb(deathPos, expValue);
+                SpawnExpOrb(deathPos, expValue, enemyId);
 
                 if (IsNearLocalPlayer(deathPos, 15f))
                     GameAudioConnector.Instance?.OnEnemyDied();

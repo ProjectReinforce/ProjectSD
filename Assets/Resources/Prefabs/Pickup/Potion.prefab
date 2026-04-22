@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &4382913653879672792
+--- !u!1 &3059849364639593112
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,41 +8,40 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7389423716536150007}
-  - component: {fileID: 281494027970745657}
-  - component: {fileID: 3824896604337950264}
-  - component: {fileID: 1083305268767968866}
-  - component: {fileID: 1380089420538561750}
-  - component: {fileID: 3663096877322262795}
+  - component: {fileID: 7502925536560904520}
+  - component: {fileID: -1318286631895909178}
+  - component: {fileID: -3845706853137165443}
+  - component: {fileID: 8297111737996023170}
+  - component: {fileID: 4671510891362804978}
   m_Layer: 0
-  m_Name: ExperienceOrb
+  m_Name: Potion
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7389423716536150007
+--- !u!4 &7502925536560904520
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
+  m_GameObject: {fileID: 3059849364639593112}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.003, y: 0.003, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.005, y: 0.005, z: 0.005}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!58 &281494027970745657
+--- !u!58 &-1318286631895909178
 CircleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
+  m_GameObject: {fileID: 3059849364639593112}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -71,15 +70,15 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 8.5
---- !u!50 &3824896604337950264
+  m_Radius: 8
+--- !u!50 &-3845706853137165443
 Rigidbody2D:
   serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
+  m_GameObject: {fileID: 3059849364639593112}
   m_BodyType: 1
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
@@ -99,14 +98,14 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!212 &1083305268767968866
+--- !u!212 &8297111737996023170
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
+  m_GameObject: {fileID: 3059849364639593112}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -148,7 +147,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 79551f887242a40f1b4aa718530406b0, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2b3635d2c7e9e4959a159cf4cca625e1, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -158,27 +157,19 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &1380089420538561750
+--- !u!114 &4671510891362804978
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
+  m_GameObject: {fileID: 3059849364639593112}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89b70f40c5e42644599cb8acd016dcbb, type: 3}
+  m_Script: {fileID: 11500000, guid: 4bcb9b8cba77937479743587a0fa8812, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.ExperienceOrb
---- !u!114 &3663096877322262795
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4382913653879672792}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48a524340532140478186b124f186cf7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Testing.PlaceholderColor
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Pickup.Adapter.PotionPickup
+  itemId: potion
+  type: 2
+  rarity: 0
+  healAmount: 10

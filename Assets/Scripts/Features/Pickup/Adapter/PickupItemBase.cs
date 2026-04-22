@@ -50,7 +50,21 @@ namespace SwDreams.Features.Pickup.Adapter
             attractTarget = null;
         }
 
-        protected virtual void Update()
+        /// <summary>
+        /// 자석(Magnet) 발동 시 외부에서 호출. 거리 무관 즉시 target 으로 끌어당김.
+        /// 이미 획득된 상태면 no-op.
+        /// </summary>
+        public void ForceAttractTo(Transform target)
+        {
+            if (isCollected || target == null) return;
+            isAttracted = true;
+            attractTarget = target;
+        }
+
+        // Unity 매직 메서드는 private non-virtual 권장.
+        // protected virtual 로 선언 시 파생이 override 안 하면 Unity 리플렉션이 Update 를 찾지 못해
+        // 호출이 누락되는 이슈가 있음. 베이스에서 단일 책임 처리.
+        private void Update()
         {
             if (isCollected) return;
 
@@ -81,7 +95,7 @@ namespace SwDreams.Features.Pickup.Adapter
             }
         }
 
-        protected virtual void OnTriggerEnter2D(Collider2D other)
+        private void OnTriggerEnter2D(Collider2D other)
         {
             if (isCollected) return;
             if (!other.CompareTag("Player")) return;

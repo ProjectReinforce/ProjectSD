@@ -67,7 +67,6 @@ namespace SwDreams.Features.Enemy.Adapter
 
         // Phase C: 엘리트
         public bool IsElite => enemyData != null && enemyData.isElite;
-        public float EssenceDropChance => enemyData != null ? enemyData.essenceDropChance : 0f;
 
         /// <summary>
         /// 마지막으로 데미지를 준 플레이어의 ActorNumber.

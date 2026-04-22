@@ -5,11 +5,15 @@ namespace SwDreams.Shared.Network
     ///
     /// RaiseEvent 채널: <see cref="EventCode"/>
     /// Payload: float[] — <see cref="Stride"/> 개 원소 단위로 반복.
-    ///   [0] typeInt  (PickupType enum 값)
+    ///   [0] typeInt    (PickupType enum 값)
     ///   [1] x
     ///   [2] y
-    ///   [3] rarityInt (Rarity enum 값)
-    ///   [4] dataIdHash (string itemId 의 stable hash. 0 이면 random/default)
+    ///   [3] rarityInt  (Rarity enum 값. 무기/혼돈/능력치 등 4등급 체계에만 의미.
+    ///                   정수/자석/물약은 Common(0) 고정.)
+    ///   [4] dataIdHash (다용도 보조 인덱스.
+    ///                   - Essence: 속성 타입 인덱스 (0=Ice, 1=Fire, 2=Lightning)
+    ///                   - Weapon: string itemId 의 stable hash (추후 Phase 4)
+    ///                   - 기타: 0)
     /// </summary>
     public static class DropSpawnBatch
     {

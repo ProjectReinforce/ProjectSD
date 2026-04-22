@@ -12,8 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dbf2f8e7b39957479c870585a2d6e50, type: 3}
   m_Name: GameplayConfig
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.GameplayConfig
-  magnetRange: 1.5
+  magnetRange: 0.7
   magnetSpeed: 2
+  maxActiveExpOrbs: 200
+  defaultRarityWeights:
+  - 60
+  - 25
+  - 12
+  - 3
   maxSkillSlots: 6
   projectileSpreadAngle: 15
   baseKnockbackForce: 0.9

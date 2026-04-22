@@ -5,17 +5,19 @@ using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Features.Character.Adapter
 {
     /// <summary>
     /// 플레이어 체력 내부 로직. 데미지/회복, 사망/부활 처리.
     /// IDamageable은 PlayerStub에서 유지 (외부 호환). PlayerStub이 이 컴포넌트에 위임.
+    /// IHealable 은 Pickup Feature 가 PlayerHealth 를 직접 참조하지 않고 회복 가능하게 함.
     ///
     /// [Phase 7 리팩토링] Step 2-1: PlayerStub에서 분리.
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
-    public class PlayerHealth : MonoBehaviourPun
+    public class PlayerHealth : MonoBehaviourPun, IHealable
     {
         [Header("체력")]
         [SerializeField] private int maxHP = 100;

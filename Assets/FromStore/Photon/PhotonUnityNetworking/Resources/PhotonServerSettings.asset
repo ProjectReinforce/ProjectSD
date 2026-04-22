@@ -79,6 +79,7 @@ MonoBehaviour:
   - RPC_SpawnRanged
   - RPC_SpawnTelegraph
   - RPC_SpawnElite
+  - RPC_ActivateMagnet
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

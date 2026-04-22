@@ -2,6 +2,7 @@ using System.Collections;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Boss.Adapter;
+using SwDreams.Features.Pickup.Adapter;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
@@ -203,12 +204,15 @@ namespace SwDreams.Shared.Managers
             if (BossPhaseManager.Instance != null)
                 BossPhaseManager.Instance.EndBossFight();
 
-            // 2) 모든 적 + 보스 정리 → 스폰 상태 리셋
+            // 2) 모든 적 + 보스 + 드랍 상태 리셋 — 동일 프레임 호출로 순서 독립 보장
             if (SpawnManager.Instance != null)
                 SpawnManager.Instance.ResetForMigration();
 
             if (BossSpawner.Instance != null)
                 BossSpawner.Instance.ResetForMigration();
+
+            if (DropSpawner.Instance != null)
+                DropSpawner.Instance.ResetForMigration();
 
             // 3) 남은 플레이어 전원 사망 체크
             //    2인 플레이 중 살아있던 호스트가 나가고, 죽어있는 클라이언트만 남으면 GameOver

@@ -19,6 +19,7 @@ MonoBehaviour:
   moveSpeed: 0.48
   contactDamage: 10
   expValue: 5
+  visualScaleMultiplier: 1
   knockbackResistance: 0
   resolveOverlap: 1
   rangedBehavior: 0
@@ -33,4 +34,4 @@ MonoBehaviour:
   telegraphDuration: 1.3
   telegraphRadius: 0.5
   isElite: 0
-  essenceDropChance: 0
+  dropTable: {fileID: 11400000, guid: f7b3c499346a58d4791fc434049fb4be, type: 2}

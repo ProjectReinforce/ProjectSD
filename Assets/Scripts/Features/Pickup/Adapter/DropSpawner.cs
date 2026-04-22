@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
@@ -21,17 +22,26 @@ namespace SwDreams.Features.Pickup.Adapter
     /// 3. LateUpdate 에서 <see cref="DropSpawnBatch.EventCode"/> 로 RaiseEvent (Reliable/All).
     /// 4. 모든 클라 (호스트 포함) 가 수신해 로컬 풀에서 픽업 프리팹 스폰.
     ///
-    /// 프리팹은 <see cref="pickupPrefabsByType"/> 배열에 PickupType enum 순서대로 할당.
-    /// (index 0 = ExpOrb, 1 = Magnet, 2 = Potion, 3 = Essence, 4 = Weapon)
+    /// ExpOrb 는 DropSpawner 경로가 아니라 SpawnManager 가 직접 관리 — 100% 드랍이라 확률 롤 불필요.
+    /// 따라서 이 컴포넌트는 Magnet/Potion/Essence/Weapon 4종만 담당.
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
     public class DropSpawner : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         public static DropSpawner Instance { get; private set; }
 
-        [Header("픽업 프리팹 (PickupType enum 순서 고정)")]
-        [Tooltip("[0]ExpOrb [1]Magnet [2]Potion [3]Essence [4]Weapon. null 이면 해당 타입 드랍은 스폰 생략 + 경고.")]
-        [SerializeField] private GameObject[] pickupPrefabsByType;
+        [Header("픽업 프리팹")]
+        [Tooltip("자석. null 이면 해당 타입 드랍은 스폰 생략 + 경고.")]
+        [SerializeField] private GameObject magnetPrefab;
+
+        [Tooltip("물약. null 이면 스폰 생략 + 경고.")]
+        [SerializeField] private GameObject potionPrefab;
+
+        [Tooltip("정수. Phase 3 이후. null 이면 스폰 생략 + 경고.")]
+        [SerializeField] private GameObject essencePrefab;
+
+        [Tooltip("무기. Phase 4 이후. null 이면 스폰 생략 + 경고.")]
+        [SerializeField] private GameObject weaponPrefab;
 
         [Header("풀 Prewarm")]
         [SerializeField] private int prewarmPerType = 16;
@@ -53,12 +63,16 @@ namespace SwDreams.Features.Pickup.Adapter
 
         private void Start()
         {
-            if (pickupPrefabsByType == null) return;
-            for (int i = 0; i < pickupPrefabsByType.Length; i++)
-            {
-                if (pickupPrefabsByType[i] != null)
-                    PoolManager.Instance?.Prewarm(pickupPrefabsByType[i], prewarmPerType);
-            }
+            PrewarmIfSet(magnetPrefab);
+            PrewarmIfSet(potionPrefab);
+            PrewarmIfSet(essencePrefab);
+            PrewarmIfSet(weaponPrefab);
+        }
+
+        private void PrewarmIfSet(GameObject prefab)
+        {
+            if (prefab != null)
+                PoolManager.Instance?.Prewarm(prefab, prewarmPerType);
         }
 
         // ===== 호스트: 드랍 결정 + 큐 적재 =====
@@ -72,26 +86,68 @@ namespace SwDreams.Features.Pickup.Adapter
             if (!PhotonNetwork.IsMasterClient) return;
             if (table == null) return;
 
-            // 정수: 엘리트 전용
+            // 정수: 엘리트 전용. 등급 개념 없음 — 속성 타입(Ice/Fire/Lightning) 가중치로 롤.
+            // dataIdHash 자리에 속성 인덱스(0=Ice, 1=Fire, 2=Lightning)를 저장.
+            // rarity 자리는 Common 고정 (정수는 등급 체계 미적용).
             if (isElite && Roll(table.essenceChance))
             {
-                Rarity r = RarityWeightedRoller.Roll(table.essenceRarityWeights, rng);
-                dropQueue.Add((PickupType.Essence, position, r, 0));
+                int essenceTypeIdx = RollWeightedIndex(table.essenceTypeWeights);
+                dropQueue.Add((PickupType.Essence, ScatterFrom(position), Rarity.Common, essenceTypeIdx));
             }
 
-            // 무기
+            // 무기: 4등급 체계 롤.
             if (Roll(table.weaponChance))
             {
                 Rarity r = RarityWeightedRoller.Roll(table.weaponRarityWeights, rng);
-                dropQueue.Add((PickupType.Weapon, position, r, 0));
+                dropQueue.Add((PickupType.Weapon, ScatterFrom(position), r, 0));
             }
 
-            // 자석 / 물약 — 등급 개념 없음 → Common
+            // 자석 / 물약 — 등급 개념 없음 → Common 고정.
             if (Roll(table.magnetChance))
-                dropQueue.Add((PickupType.Magnet, position, Rarity.Common, 0));
+                dropQueue.Add((PickupType.Magnet, ScatterFrom(position), Rarity.Common, 0));
 
             if (Roll(table.potionChance))
-                dropQueue.Add((PickupType.Potion, position, Rarity.Common, 0));
+                dropQueue.Add((PickupType.Potion, ScatterFrom(position), Rarity.Common, 0));
+        }
+
+        /// <summary>
+        /// 사망 위치를 중심으로 GameplayConfig.dropScatterRadius 내 임의 위치 반환.
+        /// 호스트에서 결정되어 배치 RPC 로 전파되므로 클라 일관성 보장.
+        /// </summary>
+        private Vector2 ScatterFrom(Vector2 origin)
+        {
+            float radius = GameManager.Instance?.Config != null
+                ? GameManager.Instance.Config.dropScatterRadius
+                : 0.5f;
+            if (radius <= 0f) return origin;
+
+            float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
+            float r = (float)rng.NextDouble() * radius;
+            return origin + new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
+        }
+
+        /// <summary>
+        /// weights 에 비례한 인덱스 롤. 총합이 0 이하면 0 반환.
+        /// Rarity 가 아닌 임의 분류(정수 속성 등) 롤에 사용.
+        /// </summary>
+        private int RollWeightedIndex(float[] weights)
+        {
+            if (weights == null || weights.Length == 0) return 0;
+
+            float total = 0f;
+            for (int i = 0; i < weights.Length; i++)
+                if (weights[i] > 0f) total += weights[i];
+            if (total <= 0f) return 0;
+
+            float pick = (float)rng.NextDouble() * total;
+            float acc = 0f;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                if (weights[i] <= 0f) continue;
+                acc += weights[i];
+                if (pick <= acc) return i;
+            }
+            return 0;
         }
 
         private bool Roll(float chance)
@@ -159,7 +215,7 @@ namespace SwDreams.Features.Pickup.Adapter
             if (prefab == null)
             {
                 Debug.LogWarning($"[DropSpawner] {type} 프리팹 미등록 — 드랍 스킵. " +
-                                 "Inspector 의 pickupPrefabsByType 배열에 할당 필요.");
+                                 "Inspector 의 해당 프리팹 필드에 할당 필요.");
                 return;
             }
 
@@ -179,10 +235,76 @@ namespace SwDreams.Features.Pickup.Adapter
 
         private GameObject GetPrefab(PickupType type)
         {
-            if (pickupPrefabsByType == null) return null;
-            int idx = (int)type;
-            if (idx < 0 || idx >= pickupPrefabsByType.Length) return null;
-            return pickupPrefabsByType[idx];
+            switch (type)
+            {
+                case PickupType.Magnet:  return magnetPrefab;
+                case PickupType.Potion:  return potionPrefab;
+                case PickupType.Essence: return essencePrefab;
+                case PickupType.Weapon:  return weaponPrefab;
+                // ExpOrb 는 DropSpawner 관리 대상 아님 — SpawnManager 가 직접 스폰.
+                case PickupType.ExpOrb:
+                default:
+                    return null;
+            }
+        }
+
+        // ===== 자석(Magnet) 효과 브로드캐스트 =====
+
+        /// <summary>
+        /// 호스트 전용. 자석 픽업 발동 시 모든 클라에 RPC 를 보내
+        /// 맵의 모든 PickupItemBase 를 해당 플레이어에게 즉시 끌어당긴다.
+        /// actorNumber 는 자석을 획득한 플레이어의 Photon ActorNumber.
+        /// </summary>
+        public void RaiseMagnetActivated(int actorNumber)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (photonView == null || photonView.ViewID == 0)
+            {
+                Debug.LogError("[DropSpawner] PhotonView ViewID 미할당! 씬 오브젝트면 Scene 저장 후 재시작.");
+                return;
+            }
+            photonView.RPC(nameof(RPC_ActivateMagnet), RpcTarget.All, actorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_ActivateMagnet(int actorNumber)
+        {
+            // RPC 와 DropSpawnBatch(RaiseEvent) 는 서로 다른 Photon 채널이라
+            // 동일 프레임에 자석 발동 + 적 대량 사망이 쌓이면 자석이 배치 스폰보다 먼저 도착할 수 있다.
+            // 한 프레임 지연 후 픽업 스캔하여 "막 스폰된 오브"까지 포함.
+            StartCoroutine(ApplyMagnetNextFrame(actorNumber));
+        }
+
+        private IEnumerator ApplyMagnetNextFrame(int actorNumber)
+        {
+            yield return null;
+
+            Transform target = FindPlayerByActor(actorNumber);
+            if (target == null) yield break;
+
+            // 자석은 경험치 오브만 끌어온다. 다른 자석/물약/정수/무기까지 끌어오면
+            // 자석 연쇄 발동 등 의도치 않은 연쇄 효과가 발생할 수 있음.
+            var pickups = FindObjectsByType<PickupItemBase>(FindObjectsSortMode.None);
+            for (int i = 0; i < pickups.Length; i++)
+            {
+                var p = pickups[i];
+                if (p == null) continue;
+                if (!p.gameObject.activeInHierarchy) continue;
+                if (p.Type != PickupType.ExpOrb) continue;
+                p.ForceAttractTo(target);
+            }
+        }
+
+        private Transform FindPlayerByActor(int actorNumber)
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < players.Length; i++)
+            {
+                var pv = players[i].GetComponent<PhotonView>();
+                if (pv != null && pv.Owner != null && pv.Owner.ActorNumber == actorNumber)
+                    return players[i].transform;
+            }
+            return null;
         }
 
         // ===== 유틸 =====

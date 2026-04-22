@@ -34,4 +34,4 @@ MonoBehaviour:
   telegraphDuration: 1
   telegraphRadius: 1.5
   isElite: 1
-  essenceDropChance: 1
+  dropTable: {fileID: 11400000, guid: 0a421dfc545b9ed48b62f351732f75c4, type: 2}

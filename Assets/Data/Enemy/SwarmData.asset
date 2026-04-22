@@ -19,5 +19,19 @@ MonoBehaviour:
   moveSpeed: 0.55
   contactDamage: 10
   expValue: 2
+  visualScaleMultiplier: 1
   knockbackResistance: 0
   resolveOverlap: 0
+  rangedBehavior: 0
+  rangedAttack: 0
+  attackRange: 7
+  attackInterval: 3
+  attackDamage: 20
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 7
+  projectileLifetime: 2
+  telegraphPrefab: {fileID: 0}
+  telegraphDuration: 1
+  telegraphRadius: 1.5
+  isElite: 0
+  dropTable: {fileID: 11400000, guid: f7b3c499346a58d4791fc434049fb4be, type: 2}
