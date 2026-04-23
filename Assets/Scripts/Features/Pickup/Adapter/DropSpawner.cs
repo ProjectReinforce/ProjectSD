@@ -9,6 +9,8 @@ using SwDreams.Features.Essence.Adapter;
 using SwDreams.Features.Essence.Adapter.Data;
 using SwDreams.Features.Essence.Domain;
 using SwDreams.Features.Pickup.Domain;
+using SwDreams.Features.Weapon.Adapter;
+using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
@@ -99,10 +101,20 @@ namespace SwDreams.Features.Pickup.Adapter
             }
 
             // 무기: 4등급 체계 롤.
+            // 호스트가 WeaponDatabase 에서 실제 SO 1개를 샘플링 → 인덱스를 dataIdHash 에 담아 전송.
+            // 인덱스는 WeaponDatabase.All 의 리스트 순서. 같은 SO 에셋을 모든 클라가 참조하므로 안정.
             if (Roll(table.weaponChance))
             {
                 Rarity r = RarityWeightedRoller.Roll(table.weaponRarityWeights, rng);
-                dropQueue.Add((PickupType.Weapon, ScatterFrom(position), r, 0));
+                var db = GameManager.Instance?.WeaponDB;
+                if (db != null)
+                {
+                    var picked = db.GetRandomByRarity(r, rng);
+                    int idx = ResolveWeaponIndex(db, picked);
+                    if (picked != null && idx >= 0)
+                        dropQueue.Add((PickupType.Weapon, ScatterFrom(position), r, idx));
+                    // 해당 등급에 무기가 없으면 드랍 생략 (null 스폰 방지).
+                }
             }
 
             // 자석 / 물약 — 등급 개념 없음 → Common 고정.
@@ -151,6 +163,19 @@ namespace SwDreams.Features.Pickup.Adapter
                 if (pick <= acc) return i;
             }
             return 0;
+        }
+
+        /// <summary>
+        /// WeaponData 의 Database.All 내 인덱스. 없으면 -1.
+        /// 캐시를 두지 않는 이유: 드랍 롤 빈도가 낮고 WeaponData 수가 적어 O(n) 탐색으로 충분.
+        /// </summary>
+        private static int ResolveWeaponIndex(WeaponDatabase db, WeaponData data)
+        {
+            if (db == null || data == null) return -1;
+            var all = db.All;
+            for (int i = 0; i < all.Count; i++)
+                if (ReferenceEquals(all[i], data)) return i;
+            return -1;
         }
 
         private bool Roll(float chance)
@@ -239,6 +264,15 @@ namespace SwDreams.Features.Pickup.Adapter
             {
                 var db = GameManager.Instance?.EssenceDB;
                 essence.InitializeEssence(pos, (EssenceType)dataIdHash, db);
+            }
+            else if (type == PickupType.Weapon && pickup is WeaponPickup weapon)
+            {
+                // dataIdHash = WeaponDatabase.All 내 인덱스. 동일 SO 참조라 모든 클라가 같은 WeaponData 해결.
+                var db = GameManager.Instance?.WeaponDB;
+                WeaponData data = null;
+                if (db != null && dataIdHash >= 0 && dataIdHash < db.All.Count)
+                    data = db.All[dataIdHash];
+                weapon.InitializeWeapon(pos, data);
             }
             else
             {

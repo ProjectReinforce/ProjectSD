@@ -109,27 +109,37 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
 
         /// <summary>
         /// 특정 StatType의 최종값 계산.
-        /// 공식: (baseValue + 모든 Add) × 모든 Multiply
-        /// 
-        /// Multiply의 기본값은 1.0 (modifier가 없으면 곱연산 없음).
-        /// 여러 Multiply가 있으면 모두 곱함 (예: ×0.5 × ×2.0 = ×1.0).
+        /// 공식: (baseValue + ΣAdd) × (1 + ΣPercentBonus) × ΠMultiplicative
+        ///
+        /// - Add: 플랫 가산.
+        /// - PercentBonus: 가산 % 스택 (0=기본). 예) 0.1 + 0.1 = 0.2 → ×1.2.
+        /// - Multiplicative: 배율 곱 스택 (1=기본). 예) 0.5 × 2.0 = ×1.0.
         /// </summary>
         public float Calculate(StatType type, float baseValue)
         {
             float addSum = 0f;
+            float percentBonusSum = 0f;
             float mulProduct = 1f;
 
             for (int i = 0; i < modifiers.Count; i++)
             {
                 if (modifiers[i].StatType != type) continue;
 
-                if (modifiers[i].Operation == ModifierOp.Add)
-                    addSum += modifiers[i].Value;
-                else
-                    mulProduct *= modifiers[i].Value;
+                switch (modifiers[i].Operation)
+                {
+                    case ModifierOp.Add:
+                        addSum += modifiers[i].Value;
+                        break;
+                    case ModifierOp.PercentBonus:
+                        percentBonusSum += modifiers[i].Value;
+                        break;
+                    case ModifierOp.Multiplicative:
+                        mulProduct *= modifiers[i].Value;
+                        break;
+                }
             }
 
-            return (baseValue + addSum) * mulProduct;
+            return (baseValue + addSum) * (1f + percentBonusSum) * mulProduct;
         }
 
         /// <summary>
@@ -149,18 +159,35 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
         }
 
         /// <summary>
-        /// 특정 StatType의 Multiply 누적값 반환. 디버그용.
+        /// 특정 StatType의 Multiplicative 누적값 (ΠMultiplicative) 반환.
+        /// GetEffectiveCooldown 처럼 공식 외부에서 CDR(Add) 와 쿨다운 배율을 분리 적용할 때 사용.
         /// </summary>
-        public float GetMultiplyTotal(StatType type)
+        public float GetMultiplicativeTotal(StatType type)
         {
             float product = 1f;
             for (int i = 0; i < modifiers.Count; i++)
             {
                 if (modifiers[i].StatType == type &&
-                    modifiers[i].Operation == ModifierOp.Multiply)
+                    modifiers[i].Operation == ModifierOp.Multiplicative)
                     product *= modifiers[i].Value;
             }
             return product;
+        }
+
+        /// <summary>
+        /// 특정 StatType의 PercentBonus 가산 합 반환. 디버그용.
+        /// 공식 최종 인수는 (1 + 이 값).
+        /// </summary>
+        public float GetPercentBonusTotal(StatType type)
+        {
+            float sum = 0f;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                if (modifiers[i].StatType == type &&
+                    modifiers[i].Operation == ModifierOp.PercentBonus)
+                    sum += modifiers[i].Value;
+            }
+            return sum;
         }
 
         // ===== 조회 =====

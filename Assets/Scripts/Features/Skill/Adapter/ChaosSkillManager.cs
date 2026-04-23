@@ -315,18 +315,19 @@ namespace SwDreams.Features.Skill.Adapter
             cachedMoveBonus = moveBonus;
             cachedHpMul = hpMul;
 
-            // PlayerStats에 modifier 등록
+            // PlayerStats에 modifier 등록.
+            // 혼돈 스킬은 "언제나 n배" 의미라 Multiplicative (곱 스택). 다른 % 아이템 영향 없이 독립 보존.
             playerStats.AddModifier(new StatModifier(
-                "chaos_attack", StatType.AttackMultiplier, ModifierOp.Multiply, attackMul));
+                "chaos_attack", StatType.AttackMultiplier, ModifierOp.Multiplicative, attackMul));
 
             playerStats.AddModifier(new StatModifier(
-                "chaos_cdr", StatType.CooldownReduction, ModifierOp.Multiply, cdMul));
+                "chaos_cdr", StatType.CooldownReduction, ModifierOp.Multiplicative, cdMul));
 
             playerStats.AddModifier(new StatModifier(
                 "chaos_movespeed", StatType.MoveSpeed, ModifierOp.Add, moveBonus));
 
             playerStats.AddModifier(new StatModifier(
-                "chaos_maxhp", StatType.MaxHP, ModifierOp.Multiply, hpMul));
+                "chaos_maxhp", StatType.MaxHP, ModifierOp.Multiplicative, hpMul));
 
             playerStats.Recalculate();
         }

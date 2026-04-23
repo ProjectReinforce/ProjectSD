@@ -20,6 +20,13 @@ MonoBehaviour:
   - trigger: 1
     action: 11
     parameters:
-      primary: 1.5
+      primary: 1
       secondary: 2
       tertiary: 6
+  injectedEffectsStack2:
+  - trigger: 1
+    action: 11
+    parameters:
+      primary: 1
+      secondary: 6
+      tertiary: 9

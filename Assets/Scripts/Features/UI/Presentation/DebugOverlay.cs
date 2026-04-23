@@ -8,6 +8,9 @@ using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Essence.Adapter;
+using SwDreams.Features.Weapon.Adapter;
+using SwDreams.Features.Weapon.Adapter.Data;
+using SwDreams.Features.Weapon.Domain;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.Interfaces;
 
@@ -47,6 +50,7 @@ namespace SwDreams.Features.UI.Presentation
         private IDamageable localDamageable;
         private Transform localPlayer;
         private PlayerEssenceInventory localEssenceInventory;
+        private PlayerWeaponInventory localWeaponInventory;
 
         // 상태
         private bool isVisible = true;
@@ -155,6 +159,7 @@ namespace SwDreams.Features.UI.Presentation
                     localSkillManager = p.GetComponentInChildren<SkillManager>();
                     localDamageable = p.GetComponent<IDamageable>();
                     localEssenceInventory = p.GetComponentInChildren<PlayerEssenceInventory>();
+                    localWeaponInventory = p.GetComponentInChildren<PlayerWeaponInventory>();
                     return;
                 }
             }
@@ -213,10 +218,10 @@ namespace SwDreams.Features.UI.Presentation
 
                     string maxTag = s.IsMaxLevel ? " MAX" : "";
 
-                    // Trigger 효과 수 (base + runtime) + OnHit 발화 누적 횟수 — 정수 주입/발동 확인용
+                    // Trigger 효과 수 (base + runtime) — 정수/무기 주입 확인용
                     var trig = s.GetComponent<SkillTriggerSystem>();
                     string trigTag = trig != null
-                        ? $"  T:{trig.BaseEffectCount}+{trig.RuntimeEffectCount} H:{trig.OnHitFireCount}"
+                        ? $"  T:{trig.BaseEffectCount}+{trig.RuntimeEffectCount}"
                         : "  T:-";
 
                     sb.AppendLine($"  [{typeTag}] {s.Data.skillName} Lv.{s.Level}{maxTag}{trigTag}");
@@ -256,6 +261,44 @@ namespace SwDreams.Features.UI.Presentation
             else
             {
                 sb.AppendLine("Essence: No Inventory");
+            }
+
+            sb.AppendLine();
+
+            // 무기(Weapon) 상태 — 각 슬롯의 데이터/스탯/트리거 엔트리까지 전개.
+            if (localWeaponInventory != null)
+            {
+                var weapons = localWeaponInventory.Equipped;
+                sb.AppendLine($"Weapons ({weapons.Count}/{PlayerWeaponInventory.MaxSlots})");
+                for (int i = 0; i < weapons.Count; i++)
+                {
+                    var w = weapons[i];
+                    if (w == null)
+                    {
+                        sb.AppendLine($"  [{i}] (null)");
+                        continue;
+                    }
+                    string displayId = !string.IsNullOrEmpty(w.displayName) ? w.displayName : w.weaponId;
+                    sb.AppendLine($"  [{i}] {displayId} ({w.rarity})");
+
+                    // Stat 엔트리
+                    if (w.statEntries != null)
+                    {
+                        for (int j = 0; j < w.statEntries.Length; j++)
+                            sb.AppendLine($"       s: {w.statEntries[j]}");
+                    }
+
+                    // Trigger 엔트리
+                    if (w.triggerEntries != null)
+                    {
+                        for (int j = 0; j < w.triggerEntries.Length; j++)
+                            sb.AppendLine($"       t: {w.triggerEntries[j]}");
+                    }
+                }
+            }
+            else
+            {
+                sb.AppendLine("Weapons: No Inventory");
             }
 
             sb.AppendLine();

@@ -35,9 +35,14 @@
 
 ## 진행 상태 스냅샷 (2026-04-23 세션 종료 시점)
 
-- **완료**: P0.1, P0.2, Phase 0, Phase 1, Phase 2, Phase 3 (정수 시스템 + 중첩/시너지 + 상호작용 UX + OnHit/OnKill 트리거 전 스킬 일관화) → 커밋 `a723d9f79`
-- **다음 진입**: **Phase 4 — 무기 시스템**. 상호작용 UX(PromptExtraInfo 조합 프리뷰 훅) + RequiresInteraction 기반 인프라 이미 Phase 3 에서 준비됨. 무기 쪽은 Essence 패턴 복사 + StatModifier 연동 + 조합 엔진 추가가 핵심.
+- **완료**: P0.1, P0.2, Phase 0, Phase 1, Phase 2, Phase 3 (정수), Phase 4 (무기 — W2 포트 추출 + Data SO + Pickup + Inventory + DropSpawner 연동)
+- **다음 진입**: **Phase 5 — 능력치(StatBoost)**. W2 포트는 이미 추출돼 있어 별도 선행 작업 없음.
 - **미진행**: Phase 5 (StatBoost), Phase 6 (Quest), Phase 7 (혼돈 등급)
+
+### 다음 세션 진입 시 반드시 확인
+
+1. 유저 Unity 작업이 아직 완료 안 됐을 수 있음 — WeaponData SO 5~8 종 생성 / WeaponDatabase SO 생성 + `GameManager.weaponDatabase` 에 할당 / `Weapon.prefab` (WeaponPickup + Collider2D + Rigidbody2D + SpriteRenderer) 작성 + `DropSpawner.weaponPrefab` 할당 / `PlayerWeaponInventory` 컴포넌트를 Player 프리팹 자식에 부착 (자체 PhotonView 필요). 셋업 완료 여부를 먼저 유저에게 확인.
+2. 플레이 테스트: 적 처치 → 무기 드랍 → Space 로 획득 → HUD 는 아직 없으므로 DebugOverlay 로 modifier 수 / runtime effect 수 증가 확인. 4 슬롯 가득 찬 상태에서 조합 레시피 매칭되는 무기 픽업 시 조합 성립 검증.
 
 ### Phase 3 구현 후 결정된 규약 (Phase 4+ 참조)
 
@@ -51,10 +56,25 @@
 
 ### Phase 3 에서 남은 기술 부채 (별도 티켓)
 
-- **W2**: `IRuntimeEffectSink` 포트 추출 — Essence/Weapon 모두 Skill Adapter 직접 참조 중. Phase 4 착수 시 같은 문제 재발하므로 **Phase 4 직전에 처리 권장**.
+- **W2**: ✅ 완료 (Phase 4 착수 시점 선행 처리) — `IRuntimeEffectSink` 포트를 `Shared/Domain/Interfaces/` 에 추출. `SkillTriggerSystem` 이 구현 선언, `PlayerEssenceInventory` / `PlayerWeaponInventory` 는 포트만 의존.
 - **W3**: 시너지 로직 테이블화 — `EssenceResolver.Resolve(equipped, db) → (source→effects)[]` 순수 함수로 분리. 3스택/조합 확장 대비.
 - **I1**: `"__legacy__"` 상수 Shared 승격 — ApplyDoTHandler/ApplySlowHandler/EnemyMovement 3곳 중복.
 - **설계 문서 동기화**: `docs/game-design/essence.md § 3.2` 의 "번개 → Chain" 표기를 실제 구현인 "DamageNearby" 로 정정 필요 + 중첩/시너지 규약 추가.
+- **W4 (신규 Phase 4 부채)**: `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 — Inventory 가 Character.Adapter.PlayerStats / Skill.Adapter.SkillManager 를 직접 참조 중. Phase 5 착수 전 처리 권장. architecture-guardian 감사 결과 참조.
+
+### Phase 4 리팩터 (추가 라운드) — 2026-04-23
+
+1. **3-op ModifierOp 전환** — `ModifierOp.Multiply` 를 `Multiplicative` 로 리네임 + `PercentBonus` 추가. 공식 변경:
+   ```
+   Final = (Base + ΣAdd) × (1 + ΣPercentBonus) × ΠMultiplicative
+   ```
+   의도: 무기/패시브의 "+10%" 같은 값이 가산 스택하는 직관적 동작(`PercentBonus`), 혼돈 유리대포의 "HP ×0.5" 같은 "언제나 n 배" 의도 보존(`Multiplicative`) 을 분리. 모든 기존 혼돈 호출처는 `Multiplicative` 로 매핑 (`chaos_attack` / `chaos_cdr` / `chaos_maxhp`).
+2. **Per-entry isUnique** — `WeaponStatEntry.isUnique` + 신규 `WeaponTriggerEntry { SkillTriggerEffect effect; bool isUnique }`. WeaponData.triggerEffects 를 triggerEntries 로 교체.
+3. **Source 네이밍 확장** —
+   - unique: `weapon_{id}_u_e{entryIdx}` (슬롯 무관, 중복 장착해도 1회분)
+   - non-unique: `weapon_{id}_s{slotUid}_e{entryIdx}` (슬롯별 독립)
+4. **slotUid 결정성** — 호스트가 할당 후 RPC (`RPC_EquipWeapon(id, slotUid)`, `RPC_CombineWeapon(consumed, result, resultSlotUid)`) 에 실어 전달. 모든 클라가 동일 값 사용. 기존 static counter 방식에서 호스트 마이그레이션 후 클라 간 어긋남 발생 가능성을 차단.
+5. **RPC 이름 변경** — `RPC_Equip` → `RPC_EquipWeapon`, `RPC_Combine` → `RPC_CombineWeapon`. Essence 의 `RPC_Equip(int)` 와 이름 충돌 리스크 사전 차단 (같은 PhotonView 공유 설정으로 이행 시에도 안전).
 
 ---
 
@@ -205,12 +225,17 @@
 
 ---
 
-## Phase 4 — 무기(Weapon) 시스템 🟡 착수 예정 (다음 세션 진입점)
+## Phase 4 — 무기(Weapon) 시스템 ✅ 코드 구현 완료 (유저 Unity 배선 대기)
 
-- [ ] WeaponData SO / WeaponDatabase / WeaponCombineRecipe
-- [ ] WeaponPickup / PlayerWeaponInventory (4슬롯)
-- [ ] StatModifier + TriggerEffect 주입/해제
-- [ ] WeaponSlotsUI / 조합 프리뷰
+- [x] **W2 포트 추출**: `IRuntimeEffectSink` (Shared/Domain/Interfaces). `SkillTriggerSystem` 가 구현. `PlayerEssenceInventory` 도 포트 의존으로 전환 (SkillTriggerSystem 직접 참조 제거).
+- [x] `WeaponStatEntry` / `WeaponCombineRecipe` VO (Features/Weapon/Domain, 순수 C#)
+- [x] `WeaponData` SO + `WeaponDatabase` SO (Features/Weapon/Adapter/Data)
+- [x] `WeaponPickup` (PickupItemBase 상속, RequiresInteraction + PromptExtraInfo 조합 프리뷰)
+- [x] `PlayerWeaponInventory` (4슬롯, AllBuffered `RPC_Equip`/`RPC_Combine`, 조합 매처)
+- [x] `DropSpawner` Weapon 분기 — `WeaponDatabase.All` 인덱스를 `dataIdHash` 로 전송
+- [x] `GameManager.WeaponDB` 노출
+- [ ] **WeaponSlotsUI / 조합 프리뷰 HUD — Phase 5 와 병행 착수 예정** (현재는 `DebugOverlay` 로 modifier/runtime effect 수 관찰)
+- [ ] **유저 Unity 배선** (아래 체크리스트)
 
 ### 세션 진입점 체크리스트 (다음 세션 시작 시 반드시 확인)
 
@@ -243,13 +268,20 @@
 
 Phase 4 구현 전에 `IRuntimeEffectSink { AddRuntimeEffect, RemoveRuntimeEffects, RemoveByPrefix }` 포트를 `Shared/Domain/Interfaces/` 에 만들고 SkillTriggerSystem 이 구현 선언. Essence/Weapon 둘 다 포트만 의존하도록. Phase 4 가 같은 결합 문제를 재발하기 전에 정리하는 게 비용 대비 효과 큼. 설계 문서 없이 코드 수정만 30분 예상.
 
-### 유저 Unity 작업 (Phase 4 구현 후)
+### 유저 Unity 작업 (Phase 4 구현 후) — 아래 순서로 진행
 
-- WeaponData SO 5~8종 생성 (설계서 § 9 "무기 종류 5~8종 초안" 기획 확정 후)
-- WeaponDatabase SO 연결 + GameManager.Inspector 에 할당
-- Weapon.prefab (Pickup 프리팹, 등급별 색상은 SO 가 런타임 틴트)
-- EnemyDropTable SO 에 weaponChance 값 조정
-- 조합 레시피 정의 (inputs → output 매트릭스)
+1. **WeaponData SO 5~8종 생성**: `Assets → Create → SwDreams/Data/WeaponData`. 각 SO 에 `weaponId` (고유), `rarity`, `statEntries` (StatType/ModifierOp/value), `triggerEffects` (optional, OnHit/OnKill 등), `combineRecipe` (optional — 결과 무기 SO 가 "나를 만들려면 이 재료들"로 기입).
+2. **WeaponDatabase SO 생성**: `Assets → Create → SwDreams/Data/WeaponDatabase`. `weapons` 리스트에 위 1의 SO 전부 등록. 리스트 순서가 네트워크 인덱스 기반이라 빌드 간 일관 유지.
+3. **GameManager Inspector** 에 `weaponDatabase` 할당.
+4. **Weapon.prefab 작성**: `WeaponPickup` 스크립트 + Collider2D(isTrigger) + Rigidbody2D(Kinematic) + SpriteRenderer.
+5. **DropSpawner Inspector** 에 `weaponPrefab` 할당. `EnemyDropTable.weaponChance` 를 적 SO 별로 0.01~0.05 수준 조정.
+6. **Player 프리팹에 PlayerWeaponInventory 부착**: 자식 GameObject 로 배치 + 자체 PhotonView 컴포넌트 필수 (Essence 와 동일 패턴). Observed Components 비움 (RPC 전용).
+7. **Player 프리팹에 PlayerPickupInteractor** 가 이미 있는지 확인 — 없으면 Essence 때 같이 붙였어야 함. 무기도 같은 interactor 재사용.
+
+### 네트워크 알려진 제약
+
+- **Host-migration ownership**: 새 호스트가 타 플레이어의 `PlayerWeaponInventory.photonView` 를 통해 `AllBuffered` RPC 를 쏠 때 Owner 가 아니라 master 자격으로 송신. PUN 2 기본 정책에서 허용되지만, OwnershipOption 을 Fixed 가 아닌 값으로 바꾸면 권한 이슈 가능 — 현재는 Essence 와 동일 패턴이라 재현 사례 없음. 검증 시나리오는 `drop-system-roadmap.md` Phase 4 audit 결과 참조.
+- **AllBuffered 재생 순서**: 무기 RPC 가 스킬 획득 RPC 보다 먼저 도착하면 `InjectTriggers` 시점에 스킬이 비어 있을 수 있음 — 이 케이스는 `PlayerWeaponInventory.HandleSkillAdded` 가 나중 스킬 추가 시 기존 장착 무기의 triggerEffects 를 재주입하므로 자동 복구.
 
 **목표**: 4슬롯 장비 + 등급 + 조합 + LoL 아이템식 스탯/트리거 부여.
 

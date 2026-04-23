@@ -23,3 +23,10 @@ MonoBehaviour:
       primary: 4
       secondary: 3
       tertiary: 1
+  injectedEffectsStack2:
+  - trigger: 1
+    action: 3
+    parameters:
+      primary: 10
+      secondary: 3
+      tertiary: 1

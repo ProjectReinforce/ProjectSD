@@ -20,10 +20,10 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
         /// <summary>영향을 주는 스탯 종류.</summary>
         public readonly StatType StatType;
 
-        /// <summary>연산 타입 (Add / Multiply).</summary>
+        /// <summary>연산 타입 (Add / PercentBonus / Multiplicative).</summary>
         public readonly ModifierOp Operation;
 
-        /// <summary>수치. Add면 가산값, Multiply면 곱연산 배율 (1.0 = 변동 없음).</summary>
+        /// <summary>수치. Add=플랫 가산, PercentBonus=가산 % (0=기본), Multiplicative=원 배율 (1.0=기본).</summary>
         public readonly float Value;
 
         public StatModifier(string source, StatType statType, ModifierOp operation, float value)
@@ -36,8 +36,18 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
 
         public override string ToString()
         {
-            string op = Operation == ModifierOp.Add ? "+" : "×";
-            return $"[{Source}] {StatType} {op}{Value}";
+            switch (Operation)
+            {
+                case ModifierOp.Add:
+                    return $"[{Source}] {StatType} +{Value}";
+                case ModifierOp.PercentBonus:
+                    // Value 0.1 = +10%. 부호는 값에서 파생.
+                    return $"[{Source}] {StatType} {(Value >= 0 ? "+" : "")}{Value * 100f:0.##}%";
+                case ModifierOp.Multiplicative:
+                    return $"[{Source}] {StatType} ×{Value}";
+                default:
+                    return $"[{Source}] {StatType} ?{Value}";
+            }
         }
     }
 }

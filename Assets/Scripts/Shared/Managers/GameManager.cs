@@ -4,6 +4,7 @@ using SwDreams.Features.Progression.Domain.Formulas;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Essence.Adapter.Data;
+using SwDreams.Features.Weapon.Adapter.Data;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Shared.Managers;
@@ -47,6 +48,9 @@ namespace SwDreams.Shared.Managers
         // 정수 데이터베이스. Inspector에서 연결. DropSpawner/PlayerEssenceInventory 공용 SSOT.
         [SerializeField] private EssenceDatabase essenceDatabase;
 
+        // 무기 데이터베이스. Inspector에서 연결. DropSpawner/PlayerWeaponInventory 공용 SSOT.
+        [SerializeField] private WeaponDatabase weaponDatabase;
+
         /// <summary>
         /// 게임플레이 설정 SO. 읽기 전용 접근.
         /// null 체크 후 사용 권장:
@@ -65,6 +69,12 @@ namespace SwDreams.Shared.Managers
         /// PlayerEssenceInventory (장착 시 injectedEffects 주입) 공용 진입점.
         /// </summary>
         public EssenceDatabase EssenceDB => essenceDatabase;
+
+        /// <summary>
+        /// 무기 데이터베이스. DropSpawner (등급별 무기 샘플링),
+        /// PlayerWeaponInventory (조합 결과 해결) 공용 진입점.
+        /// </summary>
+        public WeaponDatabase WeaponDB => weaponDatabase;
 
         // Application 서비스
         private ExperienceService expService = new ExperienceService();

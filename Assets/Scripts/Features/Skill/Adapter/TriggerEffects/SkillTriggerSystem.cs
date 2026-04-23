@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Shared.Domain.Interfaces;
 using UnityEngine;
 
 namespace SwDreams.Features.Skill.Adapter.TriggerEffects
@@ -21,7 +22,7 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
     ///
     /// [Phase 7 리팩토링] Step 3-3
     /// </summary>
-    public class SkillTriggerSystem : MonoBehaviour
+    public class SkillTriggerSystem : MonoBehaviour, IRuntimeEffectSink
     {
         // SO에서 로드된 기본 효과 (불변)
         private List<SkillTriggerEffect> baseEffects = new List<SkillTriggerEffect>();

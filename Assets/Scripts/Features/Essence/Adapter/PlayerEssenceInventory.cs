@@ -5,8 +5,8 @@ using Photon.Pun;
 using SwDreams.Features.Essence.Adapter.Data;
 using SwDreams.Features.Essence.Domain;
 using SwDreams.Features.Skill.Adapter;
-using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Skill.Domain.ValueObjects;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Essence.Adapter
@@ -112,7 +112,7 @@ namespace SwDreams.Features.Essence.Adapter
             var skills = skillManager.EquippedSkills;
             for (int i = 0; i < skills.Count; i++)
             {
-                var trigger = skills[i].GetComponent<SkillTriggerSystem>();
+                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
                 if (trigger == null) continue;
                 for (int j = 0; j < effects.Length; j++)
                     trigger.AddRuntimeEffect(source, effects[j]);
@@ -129,7 +129,7 @@ namespace SwDreams.Features.Essence.Adapter
             var skills = skillManager.EquippedSkills;
             for (int i = 0; i < skills.Count; i++)
             {
-                var trigger = skills[i].GetComponent<SkillTriggerSystem>();
+                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
                 if (trigger == null) continue;
                 trigger.RemoveRuntimeEffects(source);
             }
@@ -162,7 +162,7 @@ namespace SwDreams.Features.Essence.Adapter
             var skills = skillManager.EquippedSkills;
             for (int i = 0; i < skills.Count; i++)
             {
-                var trigger = skills[i].GetComponent<SkillTriggerSystem>();
+                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
                 if (trigger == null) continue;
                 for (int j = 0; j < stack2.Length; j++)
                     trigger.AddRuntimeEffect(source0, stack2[j]);
@@ -177,7 +177,7 @@ namespace SwDreams.Features.Essence.Adapter
         private void HandleSkillAdded(SwDreams.Features.Skill.Adapter.Skill newSkill)
         {
             if (newSkill == null) return;
-            var trigger = newSkill.GetComponent<SkillTriggerSystem>();
+            var trigger = newSkill.GetComponent<IRuntimeEffectSink>();
             if (trigger == null) return;
 
             bool synergyActive = equipped.Count == 2 && equipped[0] == equipped[1]

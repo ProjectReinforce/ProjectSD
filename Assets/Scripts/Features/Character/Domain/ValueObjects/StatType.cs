@@ -27,14 +27,27 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
 
     /// <summary>
     /// Modifier 연산 타입.
-    /// 계산 순서: (Base + 모든 Add) × 모든 Multiply
+    ///
+    /// 계산 공식:
+    ///   Final = (Base + ΣAdd) × (1 + ΣPercentBonus) × ΠMultiplicative
+    ///
+    /// - Add: 기본값에 플랫 가산 (예: 공격력 +10).
+    /// - PercentBonus: 가산적 % 스택 (예: 여러 무기의 "+10%" 가 선형 누적 → +20%).
+    ///   Value=0 이 기본값(기여 없음). 음수도 허용(감산 %).
+    /// - Multiplicative: 원 배율을 곱함. 유리대포처럼 "무조건 n 배" 의도를 보존하고자 할 때.
+    ///   Value=1 이 기본값(변동 없음).
     /// </summary>
     public enum ModifierOp
     {
-        /// <summary>기본값에 가산. 패시브 보너스, 캐릭터 보정 등.</summary>
+        /// <summary>기본값에 플랫 가산. 패시브 보너스, 캐릭터 보정 등.</summary>
         Add,
 
-        /// <summary>최종값에 곱연산. 혼돈 스킬 배율 등. 기본값 1.0.</summary>
-        Multiply
+        /// <summary>가산적 % 기여. 여러 소스가 있으면 값이 합산된 뒤 (1 + Σ) 로 적용.
+        /// 예) 무기 A +0.1, 무기 B +0.1 → (1 + 0.2) = ×1.2.</summary>
+        PercentBonus,
+
+        /// <summary>원 배율 곱 스택. 기본값 1.0.
+        /// 예) 혼돈 유리대포 ×0.5 HP — 다른 %HP 아이템 영향 없이 항상 원값의 절반.</summary>
+        Multiplicative
     }
 }

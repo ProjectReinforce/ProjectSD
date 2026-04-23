@@ -13,7 +13,7 @@ namespace SwDreams.Features.Character.Adapter
     /// 플레이어 스탯 관리. StatModifierCollection 기반.
     ///
     /// 구조: Base (인스펙터/CharacterData) + Modifier (패시브/혼돈/진화/무기 등) = Final
-    /// 계산: (Base + 모든 Add) × 모든 Multiply, 이후 Clamp 적용
+    /// 계산: (Base + ΣAdd) × (1 + ΣPercentBonus) × ΠMultiplicative, 이후 Clamp 적용
     ///
     /// 외부에서 modifier 등록/해제 → Recalculate() 호출 → OnStatsChanged 이벤트.
     ///
@@ -337,7 +337,7 @@ namespace SwDreams.Features.Character.Adapter
         public float GetEffectiveCooldown(float baseCooldown)
         {
             float cdr = CooldownReduction;
-            float cooldownMul = modifiers.GetMultiplyTotal(StatType.CooldownReduction);
+            float cooldownMul = modifiers.GetMultiplicativeTotal(StatType.CooldownReduction);
             return baseCooldown * (1f - cdr) * cooldownMul;
         }
 
