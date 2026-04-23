@@ -8,9 +8,10 @@
 |---|---|
 | 시스템 ID | `essence` |
 | 분류 | 게임플레이 / 빌드 |
-| 의존 레이어 | Adapter (`Features/Skill/Adapter/TriggerEffects/`), Data (EnemyData) |
-| `source` prefix | `essence_*` (정수 속성) — [trigger-effects.md § 5](../systems/trigger-effects.md) |
-| 최종 업데이트 | 2026-04-19 |
+| 의존 레이어 | Features/Essence/{Domain,Adapter}, Features/Skill/Adapter/TriggerEffects/, Features/Character/Adapter (PlayerStats) |
+| `source` prefix | `essence_{type}_{slotIndex}` (슬롯별 구분) — [trigger-effects.md § 5](../systems/trigger-effects.md) |
+| 구현 상태 | ✅ Phase 3 완료 (커밋 `a723d9f79`) |
+| 최종 업데이트 | 2026-04-23 |
 
 ## 2. 컨셉
 
@@ -27,21 +28,34 @@
 
 ### 3.2 속성 종류
 
-| 속성 | 효과 | 핸들러 매핑 안 |
+| 속성 | 효과 | 핸들러 매핑 (Phase 3 구현 확정) |
 |---|---|---|
-| **얼음** | 적 슬로우 | `OnHit → ApplyDoT` (이속 디버프 변형) 또는 신규 `ApplySlow` 핸들러 안 |
-| **불** | 화상 — 도트 데미지 | `OnHit → ApplyDoT` (기존 [trigger-effects.md](../systems/trigger-effects.md) 의 `ApplyDoTHandler` 그대로 사용) |
-| **번개** | 데미지 입은 적에게서 주변 적에게 데미지 약간 전이 | `OnHit → Chain` (기존 `ChainHandler`, `chainCount=1`, `chainDamageRatio<1.0` 안) |
+| **얼음** | 적 슬로우 | `OnHit → ApplySlow` (`primary=배율 0~1`, `secondary=지속초`) — EnemyMovement.slowStack 곱셈 중첩 지원 |
+| **불** | 화상 — 도트 데미지 | `OnHit → ApplyDoT` (`primary=틱 데미지`, `secondary=지속초`, `tertiary=틱 간격`) — DoTEffect 다중 인스턴스 (source 별 공존) |
+| **번개** | 적중 주변 N마리에 고정 데미지 | `OnHit → DamageNearby` (`primary=반경`, `secondary=대상 수`, `tertiary=데미지`) — **신규 핸들러**. Chain 과 다름 — 선형 전이 아니라 방사형 동시 타격 |
 
-### 3.3 조합 효과
+### 3.3 중첩 / 시너지 (Phase 3 구현 확정)
 
-2개의 정수를 보유하면 두 속성이 동시에 발현된다. **특정 조합**에서는 히든 효과 발동.
+같은 속성 2개 장착 시 동작:
+- **Stack2 시너지 미정의 (EssenceData.injectedEffectsStack2 비어있음)**: 슬롯 0/1 효과가 **각각 독립 발동** → 자연 합산 (ApplyDoT/ApplySlow/DamageNearby 모두 source 별 독립 인스턴스).
+- **Stack2 시너지 정의**: 슬롯 1 효과는 등록 안 함 + 슬롯 0 의 1스택 효과를 Stack2 파라미터로 교체. 총 효과 = Stack2 1회분 (비선형 시너지).
+
+**현재 적용 시너지 수치 (Inspector 조정 가능):**
+| 속성 | 1스택 → 2스택 시너지 |
+|---|---|
+| 불 | DoT 틱당 데미지 4 → **10** (총 데미지 2.5배) |
+| 얼음 | 슬로우 지속 1.5s → **2.25s** (지속 1.5배) |
+| 번개 | 3마리 × 6dmg → **6마리 × 9dmg** (대상 2배 + 데미지 1.5배) |
+
+### 3.4 조합 효과 (서로 다른 속성, TBD)
+
+2개의 서로 다른 속성을 보유하면 두 속성이 동시에 발현된다. **특정 조합**에서는 히든 효과 발동 (구현 예정).
 
 | 조합 | 기본 동시 발현 | 히든 효과 안 |
 |---|---|---|
-| 얼음 + 번개 | 슬로우 + 전이 | 슬로우 걸린 적에게 번개 전이는 **치명타** 처리 |
+| 얼음 + 번개 | 슬로우 + 방사 | 슬로우 걸린 적에게 번개는 **치명타** 처리 |
 | 얼음 + 불 | _상충 처리 미정_ | TBD (기획) |
-| 불 + 번개 | 화상 + 전이 | TBD (기획) |
+| 불 + 번개 | 화상 + 방사 | TBD (기획) |
 
 ## 4. 수치
 

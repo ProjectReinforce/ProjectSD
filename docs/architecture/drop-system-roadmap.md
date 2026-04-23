@@ -33,13 +33,38 @@
 
 ---
 
+## 진행 상태 스냅샷 (2026-04-23 세션 종료 시점)
+
+- **완료**: P0.1, P0.2, Phase 0, Phase 1, Phase 2, Phase 3 (정수 시스템 + 중첩/시너지 + 상호작용 UX + OnHit/OnKill 트리거 전 스킬 일관화) → 커밋 `a723d9f79`
+- **다음 진입**: **Phase 4 — 무기 시스템**. 상호작용 UX(PromptExtraInfo 조합 프리뷰 훅) + RequiresInteraction 기반 인프라 이미 Phase 3 에서 준비됨. 무기 쪽은 Essence 패턴 복사 + StatModifier 연동 + 조합 엔진 추가가 핵심.
+- **미진행**: Phase 5 (StatBoost), Phase 6 (Quest), Phase 7 (혼돈 등급)
+
+### Phase 3 구현 후 결정된 규약 (Phase 4+ 참조)
+
+- **source 슬롯 네이밍**: `essence_{type}_{slotIndex}` — SkillTriggerSystem.AddRuntimeEffect 덮어쓰기 회피. 무기도 동일 패턴 `weapon_{id}` 또는 `weapon_{id}_{slot}` 권장.
+- **Stack2 시너지 필드**: EssenceData.injectedEffectsStack2 선택 필드 → 무기도 중복 장착 허용 시 동일 패턴 적용 고려.
+- **TriggerContext.source**: FireTrigger 시 runtime 효과별 source 주입. 핸들러가 "같은 source 갱신 / 다른 source 공존" 분기에 사용.
+- **ApplyDoTHandler / ApplySlowHandler 중첩 지원 완료**: DoTEffect 다중 인스턴스, EnemyMovement.slowStack 곱셈 스택.
+- **DamageNearbyHandler 신규**: 반경 내 N마리 고정 데미지. `primary=반경, secondary=수, tertiary=데미지`.
+- **SkillTriggerSystem 모든 스킬에 무조건 부착**: SkillManager.CreateSkillSlot 에서 triggerEffects 유무와 무관하게 AddComponent.
+- **OnHit/OnKill 전 스킬 일관화**: Projectile/AreaZone/PlacedTurret/OrbitalObject 모두 로컬 소유자 경로에서 FireTrigger 호출. OnExpire/OnInterval/OnPlayerHit 는 미구현 (용도 확정 시 추가 예정).
+
+### Phase 3 에서 남은 기술 부채 (별도 티켓)
+
+- **W2**: `IRuntimeEffectSink` 포트 추출 — Essence/Weapon 모두 Skill Adapter 직접 참조 중. Phase 4 착수 시 같은 문제 재발하므로 **Phase 4 직전에 처리 권장**.
+- **W3**: 시너지 로직 테이블화 — `EssenceResolver.Resolve(equipped, db) → (source→effects)[]` 순수 함수로 분리. 3스택/조합 확장 대비.
+- **I1**: `"__legacy__"` 상수 Shared 승격 — ApplyDoTHandler/ApplySlowHandler/EnemyMovement 3곳 중복.
+- **설계 문서 동기화**: `docs/game-design/essence.md § 3.2` 의 "번개 → Chain" 표기를 실제 구현인 "DamageNearby" 로 정정 필요 + 중첩/시너지 규약 추가.
+
+---
+
 ## Priority 0 — 선행 버그픽스 (드랍 시스템 착수 전 반드시 해결)
 
-### P0.1 — 게임 시작 시 경험치 UI 이미 차있는 현상 (최우선)
+### P0.1 — 게임 시작 시 경험치 UI 이미 차있는 현상 (최우선) ✅ 완료
 
-- [ ] 원인 식별
-- [ ] 수정
-- [ ] 회귀 테스트
+- [x] 원인 식별
+- [x] 수정
+- [x] 회귀 테스트
 
 **현상**: 런 시작 직후 HUD 경험치 바가 0이 아닌 값으로 표시됨.
 
@@ -51,11 +76,11 @@
 
 **조치**: 원인 식별 후 수정. 드랍 시스템 어떤 Phase보다 먼저.
 
-### P0.2 — 경험치 오브 동시 존재 수량 제한
+### P0.2 — 경험치 오브 동시 존재 수량 제한 ✅ 완료
 
-- [ ] `GameplayConfig.maxActiveExpOrbs` 추가
-- [ ] 상한 도달 시 병합 로직
-- [ ] 부하 테스트
+- [x] `GameplayConfig.maxActiveExpOrbs` 추가
+- [x] 상한 도달 시 정책 (**드랍 생략** 으로 결정 — 병합 아님)
+- [x] SpawnManager.activeOrbs FIFO 추적 + OnExpOrbReturned 알림
 
 **현상**: 적을 대량으로 죽여 오브가 누적되면 프레임 드랍.
 
@@ -70,13 +95,13 @@
 
 ---
 
-## Phase 0 — 공통 인프라 (가장 먼저, 절대 건너뛰지 말 것)
+## Phase 0 — 공통 인프라 ✅ 완료
 
-- [ ] Rarity / RarityWeightedRoller / RarityPoolChoiceGenerator
-- [ ] IPickup / PickupType / PickupItemBase
-- [ ] EnemyDropTable SO + DropSpawner
-- [ ] EventCode_DropSpawnBatch
-- [ ] GameplayConfig / EnemyData 필드 연결
+- [x] Rarity / RarityWeightedRoller / RarityPoolChoiceGenerator
+- [x] IPickup / PickupType / PickupItemBase
+- [x] EnemyDropTable SO (Shared/Data 승격) + DropSpawner
+- [x] EventCode_DropSpawnBatch (= 13)
+- [x] GameplayConfig / EnemyData 필드 연결
 
 **목표**: 모든 후속 Phase가 공유할 타입/베이스/네트워크 채널을 하나로 통일.
 
@@ -99,11 +124,11 @@
 
 ---
 
-## Phase 1 — 기존 ExperienceOrb 리팩터링
+## Phase 1 — 기존 ExperienceOrb 리팩터링 ✅ 완료
 
-- [ ] ExperienceOrb → PickupItemBase 상속 전환
-- [ ] SpawnManager.SpawnExpOrb 경로 정리
-- [ ] 회귀 테스트(XP 획득 / 레벨업)
+- [x] ExperienceOrb → PickupItemBase 상속 전환
+- [x] SpawnManager.SpawnExpOrb 경로 유지 (XP orb 는 100% 드랍이라 DropSpawner 경로 불필요 — SpawnManager 전담 유지)
+- [x] 회귀 테스트(XP 획득 / 레벨업) 통과
 
 **목표**: 공통 PickupItemBase에 기존 오브 이식 후 다른 픽업도 같은 베이스로 만들 수 있는지 증명.
 
@@ -117,12 +142,17 @@
 
 ---
 
-## Phase 2 — 자석(Magnet) / 물약(Potion) 아이템
+## Phase 2 — 자석(Magnet) / 물약(Potion) 아이템 ✅ 완료
 
-- [ ] MagnetPickup / PotionPickup / PickupItemData SO
-- [ ] 프리팹 2종
-- [ ] SpawnManager.OnEnemyDied → DropSpawner 연동
-- [ ] EventCode_DropSpawnBatch 송수신
+- [x] MagnetPickup / PotionPickup (PickupItemData SO 는 생략 — SerializeField 로 충분)
+- [x] 프리팹 2종 (Magnet.prefab / Potion.prefab)
+- [x] SpawnManager.OnEnemyDied → DropSpawner.TrySpawnDrops 연동 + 기존 essenceDropChance 로그 제거
+- [x] EventCode_DropSpawnBatch 송수신
+- [x] IHealable 포트 추가 (Pickup → Character 경계)
+- [x] 자석 RPC 1프레임 지연으로 RPC/RaiseEvent 채널 순서 보장
+- [x] HostMigrationHandler 에 DropSpawner.ResetForMigration 연동
+- [x] 자석이 ExpOrb 만 끌어오도록 필터 (연쇄 방지)
+- [x] 드랍 위치 scatter (GameplayConfig.dropScatterRadius)
 
 **목표**: 가장 단순한 드랍 2종으로 DropSpawner → 배치 RPC → 픽업 전체 파이프라인 검증.
 
@@ -142,13 +172,18 @@
 
 ---
 
-## Phase 3 — 정수(Essence) 시스템
+## Phase 3 — 정수(Essence) 시스템 ✅ 대부분 완료
 
-- [ ] EssenceType / EssenceCombo / EssenceData SO
-- [ ] EssencePickup + PlayerEssenceInventory (최대 2슬롯)
-- [ ] AddRuntimeEffect 주입/해제
-- [ ] EssenceSlotsUI HUD
-- [ ] 조합 히든 효과
+- [x] EssenceType (Ice/Fire/Lightning, Domain enum)
+- [x] EssenceData SO + EssenceDatabase SO (GameManager.EssenceDB 단일 소유)
+- [x] EssencePickup + PlayerEssenceInventory (최대 2슬롯, AllBuffered RPC)
+- [x] AddRuntimeEffect 주입 (source 슬롯 네이밍 + Stack2 시너지)
+- [x] 상호작용 기반 획득 UX (Space 키 + CanBePickedUpBy 2슬롯 가득 시 차단)
+- [x] OnHit/OnKill 트리거 전 스킬 일관화 (Projectile/AreaZone/PlacedTurret/OrbitalObject)
+- [x] DamageNearbyHandler (번개 정수용 신규 action type)
+- [x] DebugOverlay — Essence + T:{base}+{runtime} H:{onHit} 표시
+- [ ] EssenceSlotsUI HUD (향후 작업 — Phase 4 와 병행 or 후속)
+- [ ] EssenceCombo VO (조합 히든 효과 — 설계서 TBD 상태, 수치 확정 후 착수)
 
 **목표**: 엘리트 드랍 + 속성 효과(불/얼음/번개) 주입 + 2개 슬롯 + 조합 히든 효과.
 
@@ -170,12 +205,51 @@
 
 ---
 
-## Phase 4 — 무기(Weapon) 시스템
+## Phase 4 — 무기(Weapon) 시스템 🟡 착수 예정 (다음 세션 진입점)
 
 - [ ] WeaponData SO / WeaponDatabase / WeaponCombineRecipe
 - [ ] WeaponPickup / PlayerWeaponInventory (4슬롯)
 - [ ] StatModifier + TriggerEffect 주입/해제
 - [ ] WeaponSlotsUI / 조합 프리뷰
+
+### 세션 진입점 체크리스트 (다음 세션 시작 시 반드시 확인)
+
+**Phase 3 완료 상태라 다음 세션은 Phase 4 구현 착수가 최우선.** 이전 세션에서 설계 확인 + 기존 인프라 점검까지 끝낸 상태.
+
+1. 최근 커밋 확인: `git log --oneline -5` — 최상단 `a723d9f79 feat: 드랍 시스템 Phase 3` 가 있으면 정상.
+2. 이 문서의 "Phase 3 구현 후 결정된 규약" 섹션을 먼저 숙지 — 무기도 동일 규약 따름.
+3. 설계서: [docs/game-design/weapon.md](../game-design/weapon.md) § 5 참조. StatModifier 편집 가능한 Serializable 구조 필요.
+
+### 확인된 사실 (이전 세션 탐색 결과)
+
+- **StatType enum** 에 `CritChance`, `LifeSteal` 이미 정의됨 (StatType.cs). 무기/정수 시스템용 예약. 재정의 금지.
+- **StatModifier** 는 `readonly struct` — Inspector 편집 불가. WeaponData SO 에 별도 Serializable 구조(`WeaponStatEntry { StatType, ModifierOp, float }`) 도입 필요. 런타임에 `new StatModifier("weapon_{id}", ...)` 로 변환.
+- **PlayerStats.AddModifier(StatModifier)** / **RemoveModifiersBySource(string)** / **RemoveModifiersByPrefix("weapon_")** 모두 기존 API 존재. 그대로 사용.
+- **SkillTriggerSystem.AddRuntimeEffect / RemoveByPrefix("weapon_")** 도 그대로 사용.
+- **PickupItemBase.PromptExtraInfo** virtual 훅이 Phase 3 에서 이미 준비됨 — WeaponPickup.PromptExtraInfo 에 조합 결과명 반환하면 InteractionPromptUI 가 자동 표시.
+
+### Phase 4 구현 단계 (권장 순서)
+
+1. **WeaponCombineRecipe VO** (Features/Weapon/Domain, 순수 C#) — `WeaponData[] inputs, WeaponData output` Serializable 구조
+2. **WeaponData SO** (Features/Weapon/Adapter/Data) — weaponId, displayName, sprite, rarity, statEntries[], triggerEffects[], combineRecipe, skillTypeAffinity
+3. **WeaponDatabase SO** (Features/Weapon/Adapter/Data) — weaponId → WeaponData lookup. GameManager.WeaponDB 로 SSOT 노출
+4. **WeaponPickup** (Features/Weapon/Adapter) — PickupItemBase 상속. RequiresInteraction=true. PromptActionLabel="무기 획득"/"조합". PromptExtraInfo=조합 결과명
+5. **PlayerWeaponInventory** (Features/Weapon/Adapter) — MonoBehaviourPun 4슬롯. `TryAddOrCombine(WeaponData)`, RPC_EquipWeapon / RPC_CombineWeapon (AllBuffered)
+6. **DropSpawner Weapon 분기** — SpawnPickupLocal 에 Essence 분기와 유사하게 WeaponPickup.InitializeWeapon 호출. dataIdHash 자리에 weaponId hash 전달
+7. **WeaponDropTable 필드** — 기존 EnemyDropTable.weaponChance + rarity 가중치는 Phase 0 에서 준비됨
+8. **감사**: architecture-guardian (W2 포트 추출 여부) + photon-sync-auditor (조합 RPC 경로)
+
+### W2 포트 추출 (선행 권고)
+
+Phase 4 구현 전에 `IRuntimeEffectSink { AddRuntimeEffect, RemoveRuntimeEffects, RemoveByPrefix }` 포트를 `Shared/Domain/Interfaces/` 에 만들고 SkillTriggerSystem 이 구현 선언. Essence/Weapon 둘 다 포트만 의존하도록. Phase 4 가 같은 결합 문제를 재발하기 전에 정리하는 게 비용 대비 효과 큼. 설계 문서 없이 코드 수정만 30분 예상.
+
+### 유저 Unity 작업 (Phase 4 구현 후)
+
+- WeaponData SO 5~8종 생성 (설계서 § 9 "무기 종류 5~8종 초안" 기획 확정 후)
+- WeaponDatabase SO 연결 + GameManager.Inspector 에 할당
+- Weapon.prefab (Pickup 프리팹, 등급별 색상은 SO 가 런타임 틴트)
+- EnemyDropTable SO 에 weaponChance 값 조정
+- 조합 레시피 정의 (inputs → output 매트릭스)
 
 **목표**: 4슬롯 장비 + 등급 + 조합 + LoL 아이템식 스탯/트리거 부여.
 
