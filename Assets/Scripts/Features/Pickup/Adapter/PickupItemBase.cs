@@ -68,6 +68,11 @@ namespace SwDreams.Features.Pickup.Adapter
         {
             if (isCollected) return;
 
+            // 상호작용 픽업(Essence/Weapon)은 자석 흡수 대상 아님 — Space 로만 획득.
+            // (단, 외부에서 ForceAttractTo 로 강제 흡수 발동 시에는 동작 — 자석 아이템용.
+            //  자석은 현재 ExpOrb 만 타겟팅하므로 정수/무기가 끌려올 일 없음.)
+            if (RequiresInteraction && !isAttracted) return;
+
             // 일시정지/비전투 상태에서 이동/흡수 중단
             var state = GameManager.Instance?.CurrentState;
             if (state != GameManager.GameState.Playing &&
@@ -95,19 +100,83 @@ namespace SwDreams.Features.Pickup.Adapter
             }
         }
 
+        /// <summary>
+        /// true 면 접촉 즉시 획득하지 않고, 플레이어가 직접 상호작용 키(Space)를 눌러야 획득.
+        /// Essence/Weapon 등 전략적 획득이 필요한 픽업은 override 로 true 반환.
+        /// PlayerPickupInteractor 가 트리거 Enter/Exit 를 감지해 상호작용 프롬프트를 관리.
+        /// </summary>
+        public virtual bool RequiresInteraction => false;
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (isCollected) return;
             if (!other.CompareTag("Player")) return;
 
+            if (RequiresInteraction)
+            {
+                // 상호작용 방식: 즉시 획득 대신 InteractionPrompt 등록.
+                var interactor = other.GetComponentInChildren<PlayerPickupInteractor>();
+                interactor?.RegisterNearby(this);
+                return;
+            }
+
+            // 기존 즉시 획득 경로 (ExpOrb/Magnet/Potion)
+            if (!CanBePickedUpBy(other.gameObject)) return;
+
             isCollected = true;
 
-            // 호스트 권위 픽업 판정. 파생 클래스 훅에서 필요 시 RPC 로 전파.
             if (PhotonNetwork.IsMasterClient)
                 OnPickedUpByPlayer(other.gameObject);
 
             PoolManager.Instance?.Return(gameObject);
         }
+
+        private void OnTriggerExit2D(Collider2D other)
+        {
+            if (!RequiresInteraction) return;
+            if (!other.CompareTag("Player")) return;
+
+            var interactor = other.GetComponentInChildren<PlayerPickupInteractor>();
+            interactor?.UnregisterNearby(this);
+        }
+
+        /// <summary>
+        /// 상호작용 키 입력으로 호출되는 획득 시도. PlayerPickupInteractor 가 호출.
+        /// 2슬롯 꽉 참 등의 이유로 차단되면 false 반환 (월드에 그대로 남음).
+        /// 성공 시 즉시 획득 경로와 동일하게 호스트 권위 훅 + 풀 반환.
+        /// </summary>
+        public bool TryInteract(GameObject playerObj)
+        {
+            if (isCollected) return false;
+            if (!RequiresInteraction) return false;
+            if (!CanBePickedUpBy(playerObj)) return false;
+
+            isCollected = true;
+
+            if (PhotonNetwork.IsMasterClient)
+                OnPickedUpByPlayer(playerObj);
+
+            PoolManager.Instance?.Return(gameObject);
+            return true;
+        }
+
+        /// <summary>
+        /// 실제 획득 가능 여부. false 반환 시 접촉해도 풀 반환되지 않고 월드에 남는다.
+        /// 기본 true. 예: EssencePickup 이 2슬롯 꽉 찬 경우 false 반환.
+        /// RequiresInteraction 픽업에서는 프롬프트 회색 상태 결정에도 사용.
+        /// </summary>
+        public virtual bool CanBePickedUpBy(GameObject playerObj) => true;
+
+        /// <summary>
+        /// 상호작용 프롬프트에 표시할 액션 라벨. 기본 "획득".
+        /// Weapon 등이 "조합" 같은 다른 라벨을 쓸 때 override.
+        /// </summary>
+        public virtual string PromptActionLabel => "획득";
+
+        /// <summary>
+        /// 상호작용 프롬프트 부가 정보 (예: 무기 조합 결과). 기본 null.
+        /// </summary>
+        public virtual string PromptExtraInfo => null;
 
         /// <summary>
         /// 호스트에서만 호출. 파생 클래스가 실제 획득 로직 구현.

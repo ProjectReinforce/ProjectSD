@@ -12,12 +12,17 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
     /// tertiary = 틱 간격 (초, 0이면 기본 0.5초)
     ///
     /// 대상에 DoTEffect 컴포넌트를 동적 추가.
-    /// 이미 같은 소스의 DoT가 있으면 갱신.
+    /// 같은 source 가 이미 있으면 갱신 (Refresh), 다른 source 면 별도 컴포넌트로 추가.
+    /// context.source 가 null/빈 문자열이면 "legacy" 단일 인스턴스로 취급 (기존 동작 호환).
     ///
-    /// 사용 예: 뇌전역(OnHit → ApplyDoT), 불 정수(OnHit → ApplyDoT)
+    /// 사용 예:
+    /// - 뇌전역(OnHit → ApplyDoT, 단일 스킬 효과, source=null)
+    /// - 불 정수(OnHit → ApplyDoT, source="essence_fire_0" or "essence_fire_1" 로 중첩 가능)
     /// </summary>
     public class ApplyDoTHandler : IEffectActionHandler
     {
+        private const string LegacySource = "__legacy__";
+
         public void Execute(EffectParams parameters, TriggerContext context)
         {
             if (!PhotonNetwork.IsMasterClient) return;
@@ -29,8 +34,10 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
             if (tickDamage <= 0 || duration <= 0f) return;
 
-            // 기존 DoT가 있으면 갱신, 없으면 추가
-            var existing = context.target.GetComponent<DoTEffect>();
+            string source = string.IsNullOrEmpty(context.source) ? LegacySource : context.source;
+
+            // 같은 source 의 기존 DoT 있으면 Refresh, 없으면 새 컴포넌트 추가.
+            var existing = FindDoTBySource(context.target.gameObject, source);
             if (existing != null)
             {
                 existing.Refresh(tickDamage, duration, tickInterval);
@@ -38,24 +45,39 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
             }
 
             var dot = context.target.gameObject.AddComponent<DoTEffect>();
-            dot.Initialize(tickDamage, duration, tickInterval);
+            dot.Initialize(source, tickDamage, duration, tickInterval);
+        }
+
+        private static DoTEffect FindDoTBySource(GameObject go, string source)
+        {
+            var all = go.GetComponents<DoTEffect>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i].Source == source) return all[i];
+            }
+            return null;
         }
     }
 
     /// <summary>
     /// 지속 피해 컴포넌트. 적에 동적 부착.
     /// 틱 간격마다 데미지를 주고, 지속시간 만료 시 자동 제거.
+    /// 하나의 적에 여러 DoTEffect 가 source 로 구분되어 공존 가능.
     /// </summary>
     public class DoTEffect : MonoBehaviour
     {
+        private string source;
         private int tickDamage;
         private float duration;
         private float tickInterval;
         private float tickTimer;
         private float aliveTime;
 
-        public void Initialize(int tickDamage, float duration, float tickInterval)
+        public string Source => source;
+
+        public void Initialize(string source, int tickDamage, float duration, float tickInterval)
         {
+            this.source = source;
             this.tickDamage = tickDamage;
             this.duration = duration;
             this.tickInterval = tickInterval;

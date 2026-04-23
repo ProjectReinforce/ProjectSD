@@ -6,6 +6,8 @@ using TMPro;
 using Photon.Pun;
 using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Features.Essence.Adapter;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.Interfaces;
 
@@ -44,6 +46,7 @@ namespace SwDreams.Features.UI.Presentation
         private SkillManager localSkillManager;
         private IDamageable localDamageable;
         private Transform localPlayer;
+        private PlayerEssenceInventory localEssenceInventory;
 
         // 상태
         private bool isVisible = true;
@@ -151,6 +154,7 @@ namespace SwDreams.Features.UI.Presentation
                     localPlayer = p.transform;
                     localSkillManager = p.GetComponentInChildren<SkillManager>();
                     localDamageable = p.GetComponent<IDamageable>();
+                    localEssenceInventory = p.GetComponentInChildren<PlayerEssenceInventory>();
                     return;
                 }
             }
@@ -189,7 +193,7 @@ namespace SwDreams.Features.UI.Presentation
 
             sb.AppendLine();
 
-            // 스킬 목록
+            // 스킬 목록 + 주입된 런타임 효과 수
             if (localSkillManager != null)
             {
                 sb.AppendLine($"Skills ({localSkillManager.SlotCount}/{localSkillManager.MaxSlots})");
@@ -208,7 +212,14 @@ namespace SwDreams.Features.UI.Presentation
                     }
 
                     string maxTag = s.IsMaxLevel ? " MAX" : "";
-                    sb.AppendLine($"  [{typeTag}] {s.Data.skillName} Lv.{s.Level}{maxTag}");
+
+                    // Trigger 효과 수 (base + runtime) + OnHit 발화 누적 횟수 — 정수 주입/발동 확인용
+                    var trig = s.GetComponent<SkillTriggerSystem>();
+                    string trigTag = trig != null
+                        ? $"  T:{trig.BaseEffectCount}+{trig.RuntimeEffectCount} H:{trig.OnHitFireCount}"
+                        : "  T:-";
+
+                    sb.AppendLine($"  [{typeTag}] {s.Data.skillName} Lv.{s.Level}{maxTag}{trigTag}");
                 }
 
                 // 진화 대기
@@ -222,6 +233,29 @@ namespace SwDreams.Features.UI.Presentation
             else
             {
                 sb.AppendLine("Skills: No Player");
+            }
+
+            sb.AppendLine();
+
+            // 정수(Essence) 상태
+            if (localEssenceInventory != null)
+            {
+                var equipped = localEssenceInventory.Equipped;
+                sb.AppendLine($"Essence ({equipped.Count}/{PlayerEssenceInventory.MaxSlots})");
+                for (int i = 0; i < equipped.Count; i++)
+                    sb.AppendLine($"  [{i}] {equipped[i]}");
+
+                // 시너지 진단: 같은 속성 2개일 때
+                if (equipped.Count == 2 && equipped[0] == equipped[1])
+                    sb.AppendLine("  (Synergy candidate)");
+
+                // skillManager 연결 실패 감지
+                if (localEssenceInventory.DebugSkillManager == null)
+                    sb.AppendLine("  ! SkillManager ref MISSING");
+            }
+            else
+            {
+                sb.AppendLine("Essence: No Inventory");
             }
 
             sb.AppendLine();

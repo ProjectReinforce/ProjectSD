@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Features.Skill.Domain.ValueObjects;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Shared.Domain.Interfaces;
@@ -50,6 +52,10 @@ namespace SwDreams.Features.Skill.Adapter
         private bool isLocalPlayerOwned;
         private int ownerActorNumber = -1;
 
+        // 트리거 시스템 (로컬 소유자 — 정수/무기 등 runtime 효과 실행)
+        private SkillTriggerSystem triggerSystem;
+        private Transform ownerTransformRef;
+
         // 이미 맞은 적 추적 (1회전 동안 중복 방지)
         private readonly HashSet<int> hitEnemyIds = new HashSet<int>();
 
@@ -71,7 +77,8 @@ namespace SwDreams.Features.Skill.Adapter
         /// </summary>
         public void Initialize(int damage, float knockbackForce, float duration,
             Transform playerTransform, float baseAngle, float orbitRadius, float rotationSpeed,
-            Transform ownerTransform, bool fireOnOneRotation = false)
+            Transform ownerTransform, bool fireOnOneRotation = false,
+            SkillTriggerSystem triggerSystem = null)
         {
             this.damage = damage;
             this.knockbackForce = knockbackForce;
@@ -80,6 +87,8 @@ namespace SwDreams.Features.Skill.Adapter
             this.baseAngle = baseAngle;
             this.orbitRadius = orbitRadius;
             this.rotationSpeed = rotationSpeed;
+            this.triggerSystem = triggerSystem;
+            this.ownerTransformRef = ownerTransform;
 
             // 소유자 판별
             isLocalPlayerOwned = false;
@@ -170,6 +179,7 @@ namespace SwDreams.Features.Skill.Adapter
                         damageable.TakeDamage(damage);
                         if (knockbackForce > 0f && enemy != null)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
+                        FireHitTriggers(hit.transform, damageable, damage);
                     }
                     else if (enemy != null)
                     {
@@ -181,18 +191,23 @@ namespace SwDreams.Features.Skill.Adapter
                         if (knockbackForce > 0f)
                             SwDreams.Shared.Managers.SpawnManager.Instance?.RequestKnockback(
                                 enemy.EnemyId, transform.position, knockbackForce);
+                        FireHitTriggers(hit.transform, damageable, damage);
                     }
                     else
                     {
                         // Boss: PhotonView RPC로 직접 데미지 요청
                         var boss = hit.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                         if (boss != null)
+                        {
                             boss.RequestDamageFromClient(damage);
+                            FireHitTriggers(hit.transform, damageable, damage);
+                        }
                     }
                 }
                 else
                 {
-                    // 남의 궤도 무기 (호스트에서만 여기 도달): 직접 데미지
+                    // 남의 궤도 무기 (호스트에서만 여기 도달): 직접 데미지.
+                    // triggerSystem 은 null (원격 플레이어의 것은 로컬에 없음) → FireTrigger 생략.
                     if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                     damageable.TakeDamage(damage);
                     if (knockbackForce > 0f && enemy != null)
@@ -263,8 +278,30 @@ namespace SwDreams.Features.Skill.Adapter
             ownerActorNumber = -1;
             onComplete = null;
             playerTransform = null;
+            triggerSystem = null;
+            ownerTransformRef = null;
             hitEnemyIds.Clear();
             gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// OnHit/OnKill 트리거 발화. 로컬 소유자 triggerSystem 에만 실행.
+        /// </summary>
+        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg)
+        {
+            if (triggerSystem == null || target == null) return;
+
+            var ctx = new TriggerContext
+            {
+                target = target,
+                position = target.position,
+                damage = dmg,
+                owner = ownerTransformRef,
+            };
+            triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
+
+            if (damageable != null && !damageable.IsAlive)
+                triggerSystem.FireTrigger(TriggerType.OnKill, ctx);
         }
     }
 }

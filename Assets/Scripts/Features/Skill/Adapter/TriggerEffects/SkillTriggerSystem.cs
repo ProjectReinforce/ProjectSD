@@ -116,19 +116,25 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
             var registry = GetRegistry();
             if (registry == null) return;
 
-            // 기본 효과 실행
+            if (type == TriggerType.OnHit) OnHitFireCount++;
+
+            // 기본 효과 실행 — source 는 비워둠 (핸들러 측에서 null/빈 문자열로 "legacy" 처리).
+            context.source = null;
             for (int i = 0; i < baseEffects.Count; i++)
             {
                 if (baseEffects[i].trigger == type)
                     registry.Execute(baseEffects[i].action, baseEffects[i].parameters, context);
             }
 
-            // 런타임 효과 실행
+            // 런타임 효과 실행 — 각 효과의 source 를 context 에 주입해 핸들러가 중첩 제어 가능.
             for (int i = 0; i < runtimeEffects.Count; i++)
             {
                 if (runtimeEffects[i].effect.trigger == type)
+                {
+                    context.source = runtimeEffects[i].source;
                     registry.Execute(runtimeEffects[i].effect.action,
                                      runtimeEffects[i].effect.parameters, context);
+                }
             }
         }
 
@@ -175,6 +181,15 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
         /// <summary>등록된 전체 효과 수.</summary>
         public int TotalEffectCount => baseEffects.Count + runtimeEffects.Count;
+
+        /// <summary>베이스 효과 수 (SO 정의).</summary>
+        public int BaseEffectCount => baseEffects.Count;
+
+        /// <summary>런타임 효과 수 (정수/무기/혼돈 등 주입). 디버그용.</summary>
+        public int RuntimeEffectCount => runtimeEffects.Count;
+
+        /// <summary>OnHit 트리거 누적 발화 횟수. 디버그용 — "이 스킬이 실제로 OnHit 을 쏘는가" 확인.</summary>
+        public int OnHitFireCount { get; private set; }
 
         public string GetDebugString()
         {

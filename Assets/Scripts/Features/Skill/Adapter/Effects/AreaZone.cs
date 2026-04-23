@@ -205,16 +205,22 @@ namespace SwDreams.Features.Skill.Adapter
                     damageable.TakeDamage(damage);
                 }
 
-                // OnHit 트리거 발동
-                if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnHit))
+                // OnHit / OnKill 트리거 발동
+                if (triggerSystem != null)
                 {
-                    triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
+                    var ctx = new TriggerContext
                     {
                         position = hit.transform.position,
                         target = hit.transform,
                         damage = damage,
                         owner = ownerTransform
-                    });
+                    };
+
+                    if (triggerSystem.HasTrigger(TriggerType.OnHit))
+                        triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
+
+                    if (!damageable.IsAlive && triggerSystem.HasTrigger(TriggerType.OnKill))
+                        triggerSystem.FireTrigger(TriggerType.OnKill, ctx);
                 }
             }
         }

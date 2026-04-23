@@ -40,6 +40,11 @@ namespace SwDreams.Features.Skill.Domain.ValueObjects
         HealSelf,
 
         /// <summary>HP 비율 이하 즉사 (보스 제외). primary=임계값(0.15=15%), secondary=범위(0=단일).</summary>
-        Execute
+        Execute,
+
+        /// <summary>적중 위치 주변에서 가까운 N마리에게 고정 데미지.
+        /// primary=반경, secondary=최대 대상 수, tertiary=각 대상당 데미지.
+        /// 원본 타겟은 제외 (이미 스킬 본체 데미지를 받음).</summary>
+        DamageNearby
     }
 }

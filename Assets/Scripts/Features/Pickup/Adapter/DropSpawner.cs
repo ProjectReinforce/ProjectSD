@@ -5,6 +5,9 @@ using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 using ExitGames.Client.Photon;
+using SwDreams.Features.Essence.Adapter;
+using SwDreams.Features.Essence.Adapter.Data;
+using SwDreams.Features.Essence.Domain;
 using SwDreams.Features.Pickup.Domain;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.ValueObjects;
@@ -230,7 +233,17 @@ namespace SwDreams.Features.Pickup.Adapter
                 return;
             }
 
-            pickup.Initialize(pos);
+            // Essence 는 dataIdHash 를 속성(EssenceType) 으로 해석해 전용 초기화 경로 사용.
+            // EssenceDatabase 는 GameManager 가 단일 소유 (SSOT).
+            if (type == PickupType.Essence && pickup is EssencePickup essence)
+            {
+                var db = GameManager.Instance?.EssenceDB;
+                essence.InitializeEssence(pos, (EssenceType)dataIdHash, db);
+            }
+            else
+            {
+                pickup.Initialize(pos);
+            }
         }
 
         private GameObject GetPrefab(PickupType type)

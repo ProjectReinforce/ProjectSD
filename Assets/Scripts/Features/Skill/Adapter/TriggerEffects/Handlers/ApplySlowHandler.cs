@@ -10,7 +10,10 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
     /// primary = 슬로우 배율 (0.5 = 50% 감속)
     /// secondary = 지속시간 (초)
     ///
-    /// 사용 예: 뇌전역 진화 (OnHit → ApplySlow), 빙결 정수 등.
+    /// 사용 예: 뇌전역 진화 (OnHit → ApplySlow), 얼음 정수 등.
+    ///
+    /// context.source 가 있으면 EnemyMovement.slowStack 에서 source 별 독립 관리되어 중첩 가능.
+    /// null/빈 문자열이면 "__legacy__" 단일 슬롯으로 통합 (기존 동작 호환).
     /// </summary>
     public class ApplySlowHandler : IEffectActionHandler
     {
@@ -31,10 +34,12 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 return;
             }
 
+            string source = context.source;
+
             if (context.target != null)
             {
                 // 단일 대상
-                ApplyToTarget(context.target, multiplier, duration);
+                ApplyToTarget(context.target, source, multiplier, duration);
             }
             else
             {
@@ -46,17 +51,17 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                     foreach (var hit in hits)
                     {
                         if (!hit.CompareTag("Enemy")) continue;
-                        ApplyToTarget(hit.transform, multiplier, duration);
+                        ApplyToTarget(hit.transform, source, multiplier, duration);
                     }
                 }
             }
         }
 
-        private void ApplyToTarget(Transform target, float multiplier, float duration)
+        private void ApplyToTarget(Transform target, string source, float multiplier, float duration)
         {
             var movement = target.GetComponent<EnemyMovement>();
             if (movement != null)
-                movement.ApplySlowTemporary(multiplier, duration);
+                movement.ApplySlowTemporary(source, multiplier, duration);
         }
     }
 }

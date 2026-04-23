@@ -1,6 +1,8 @@
 using UnityEngine;
 using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Features.Skill.Domain.ValueObjects;
 using System.Collections;
 using Photon.Pun;
 using SwDreams.Shared.Domain.Interfaces;
@@ -54,6 +56,10 @@ namespace SwDreams.Features.Skill.Adapter
         private bool isLocalPlayerOwned;
         private int ownerActorNumber = -1;
 
+        // 트리거 시스템 (로컬 소유자의 SkillTriggerSystem — 정수/무기 등 runtime 효과 실행)
+        private SkillTriggerSystem triggerSystem;
+        private Transform ownerTransformRef;
+
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -84,7 +90,8 @@ namespace SwDreams.Features.Skill.Adapter
         /// </summary>
         public void Initialize(Vector2 position, int damage, float attackRange,
             float attackCooldown, float duration, bool alwaysCritical,
-            float critDamageMultiplier, Transform ownerTransform)
+            float critDamageMultiplier, Transform ownerTransform,
+            SkillTriggerSystem triggerSystem = null)
         {
             transform.position = position;
             this.damage = damage;
@@ -93,6 +100,8 @@ namespace SwDreams.Features.Skill.Adapter
             this.duration = duration;
             this.alwaysCritical = alwaysCritical;
             this.critDamageMultiplier = critDamageMultiplier;
+            this.triggerSystem = triggerSystem;
+            this.ownerTransformRef = ownerTransform;
 
             // 소유자 판별
             isLocalPlayerOwned = false;
@@ -172,11 +181,14 @@ namespace SwDreams.Features.Skill.Adapter
                     {
                         if (PhotonNetwork.IsMasterClient)
                         {
-                            // 호스트의 자기 터렛: 직접 데미지
+                            // 호스트의 자기 터렛: 직접 데미지 + 트리거 발화
                             if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                             var damageable = currentTarget.GetComponent<IDamageable>();
                             if (damageable != null && damageable.IsAlive)
+                            {
                                 damageable.TakeDamage(finalDamage);
+                                FireHitTriggers(currentTarget, damageable, finalDamage);
+                            }
                         }
                         else
                         {
@@ -186,19 +198,27 @@ namespace SwDreams.Features.Skill.Adapter
                                 enemy.ShowHitVisuals(finalDamage);
                                 SpawnManager.Instance?.RequestDamage(
                                     enemy.EnemyId, finalDamage, ownerActorNumber);
+                                // 로컬 소유자 기준 트리거 발화 — 정수 효과(OnHit)가 로컬에서 동작
+                                var damageable = currentTarget.GetComponent<IDamageable>();
+                                FireHitTriggers(currentTarget, damageable, finalDamage);
                             }
                             else
                             {
                                 // Boss: PhotonView RPC로 직접 데미지 요청
                                 var boss = currentTarget.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                                 if (boss != null)
+                                {
                                     boss.RequestDamageFromClient(finalDamage);
+                                    var damageable = currentTarget.GetComponent<IDamageable>();
+                                    FireHitTriggers(currentTarget, damageable, finalDamage);
+                                }
                             }
                         }
                     }
                     else if (PhotonNetwork.IsMasterClient)
                     {
                         // 남의 터렛 (호스트에서만): 직접 데미지
+                        // triggerSystem 은 null (원격 플레이어의 것은 로컬에 없음) → FireTrigger 생략.
                         if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                         var damageable = currentTarget.GetComponent<IDamageable>();
                         if (damageable != null && damageable.IsAlive)
@@ -206,6 +226,27 @@ namespace SwDreams.Features.Skill.Adapter
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// OnHit/OnKill 트리거 발화. 로컬 소유자 triggerSystem 에만 실행.
+        /// 정수/무기 등 runtime 효과(OnHit), 처치 보상(OnKill) 실행 지점.
+        /// </summary>
+        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg)
+        {
+            if (triggerSystem == null || target == null) return;
+
+            var ctx = new TriggerContext
+            {
+                target = target,
+                position = target.position,
+                damage = dmg,
+                owner = ownerTransformRef,
+            };
+            triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
+
+            if (damageable != null && !damageable.IsAlive)
+                triggerSystem.FireTrigger(TriggerType.OnKill, ctx);
         }
 
         /// <summary>

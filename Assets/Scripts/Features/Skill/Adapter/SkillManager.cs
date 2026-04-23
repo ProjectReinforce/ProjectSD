@@ -673,14 +673,14 @@ namespace SwDreams.Features.Skill.Adapter
 
             skill.Activate(skillData, spawner, executorPrefab, phase2Spawner);
 
-            // [Step 3-4] SkillTriggerSystem 초기화 (triggerEffects가 있는 경우)
-            if (skillData.triggerEffects != null && skillData.triggerEffects.Count > 0)
-            {
-                var triggerSystem = slotObj.GetComponent<SkillTriggerSystem>();
-                if (triggerSystem == null)
-                    triggerSystem = slotObj.AddComponent<SkillTriggerSystem>();
-                triggerSystem.Initialize(skillData.triggerEffects);
-            }
+            // [Step 3-4] SkillTriggerSystem 항상 부착.
+            // 런타임 효과(정수/무기/혼돈) 주입 대상이 되어야 하므로,
+            // baseEffects 가 비어있어도 컴포넌트는 상시 존재해야 함.
+            // (이전에는 triggerEffects 가 있을 때만 부착 → 정수 주입 불가였음.)
+            var triggerSystem = slotObj.GetComponent<SkillTriggerSystem>();
+            if (triggerSystem == null)
+                triggerSystem = slotObj.AddComponent<SkillTriggerSystem>();
+            triggerSystem.Initialize(skillData.triggerEffects);
 
             return skill;
         }

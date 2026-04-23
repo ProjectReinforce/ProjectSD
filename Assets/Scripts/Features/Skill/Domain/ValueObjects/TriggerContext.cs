@@ -38,5 +38,12 @@ namespace SwDreams.Features.Skill.Domain.ValueObjects
 
         /// <summary>서브 투사체 프리팹. SpawnProjectileHandler에서 사용. null 가능.</summary>
         public GameObject subProjectilePrefab;
+
+        /// <summary>
+        /// 런타임 효과 식별자. SkillTriggerSystem.FireTrigger 가 runtime 효과 실행 시 주입.
+        /// baseEffect 실행 시 null/빈 문자열.
+        /// 핸들러가 "같은 source 기존 인스턴스 갱신" 같은 중첩 제어에 사용 (예: ApplyDoT/ApplySlow).
+        /// </summary>
+        public string source;
     }
 }

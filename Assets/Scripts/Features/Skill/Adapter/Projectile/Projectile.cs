@@ -201,7 +201,7 @@ namespace SwDreams.Features.Skill.Adapter
                     damageable.TakeDamage(damage);
                     if (knockbackForce > 0f && enemy != null)
                         enemy.ApplyKnockback(transform.position, knockbackForce);
-                    FireOnHit(other.transform);
+                    FireOnHit(other.transform, damageable);
                 }
             }
             else if (isLocalPlayerOwned)
@@ -213,7 +213,7 @@ namespace SwDreams.Features.Skill.Adapter
                     damageable.TakeDamage(damage);
                     if (knockbackForce > 0f && enemy != null)
                         enemy.ApplyKnockback(transform.position, knockbackForce);
-                    FireOnHit(other.transform);
+                    FireOnHit(other.transform, damageable);
                 }
                 else
                 {
@@ -228,6 +228,8 @@ namespace SwDreams.Features.Skill.Adapter
                         if (knockbackForce > 0f)
                             SpawnManager.Instance?.RequestKnockback(
                                 enemy.EnemyId, transform.position, knockbackForce);
+                        // 로컬 소유자 기준 트리거 발화 — 정수 효과(OnHit)가 로컬에서 동작
+                        FireOnHit(other.transform, damageable);
                     }
                     else
                     {
@@ -238,6 +240,7 @@ namespace SwDreams.Features.Skill.Adapter
                             DamagePopup.Spawn(other.transform.position, damage);
                             HitEffect.Spawn(other.transform.position);
                             boss.RequestDamageFromClient(damage);
+                            FireOnHit(other.transform, damageable);
                         }
                     }
                 }
@@ -325,13 +328,16 @@ namespace SwDreams.Features.Skill.Adapter
 
         // ===== [Step 3-5] 트리거 헬퍼 =====
 
-        /// <summary>적 적중 시 OnHit 트리거 발동. 호스트에서만 호출됨.</summary>
-        protected void FireOnHit(Transform target)
+        /// <summary>
+        /// 적 적중 시 OnHit 트리거 발동. 로컬 소유자 기준.
+        /// damageable 이 전달되면 사망 판정 후 OnKill 도 이어서 발화.
+        /// 호스트 자기 투사체는 직접 TakeDamage 후 호출, 클라 자기 투사체는 RequestDamage 후 호출(로컬 효과용).
+        /// </summary>
+        protected void FireOnHit(Transform target, IDamageable damageable = null)
         {
             if (triggerSystem == null) return;
-            if (!triggerSystem.HasTrigger(TriggerType.OnHit)) return;
 
-            triggerSystem.FireTrigger(TriggerType.OnHit, new TriggerContext
+            var ctx = new TriggerContext
             {
                 position = transform.position,
                 direction = direction,
@@ -339,7 +345,15 @@ namespace SwDreams.Features.Skill.Adapter
                 damage = damage,
                 owner = ownerTransform,
                 subProjectilePrefab = subProjectilePrefab
-            });
+            };
+
+            if (triggerSystem.HasTrigger(TriggerType.OnHit))
+                triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
+
+            // 이 데미지로 처치됐으면 OnKill 도 이어서 발화.
+            if (damageable != null && !damageable.IsAlive
+                && triggerSystem.HasTrigger(TriggerType.OnKill))
+                triggerSystem.FireTrigger(TriggerType.OnKill, ctx);
         }
 
         /// <summary>투사체 소멸 시 OnExpire 트리거 발동.</summary>

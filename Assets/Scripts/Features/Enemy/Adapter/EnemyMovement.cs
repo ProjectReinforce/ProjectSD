@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Features.Enemy.Adapter.Data;
 using SwDreams.Features.Enemy.Adapter;
@@ -32,9 +33,17 @@ namespace SwDreams.Features.Enemy.Adapter
         private float aliveTimer;
         private bool hasLifetime;
 
-        // [Phase 5 진화: 뇌전역] 슬로우
-        private float slowTimer;
-        private float slowMul = 1f;
+        // [Phase 5 진화: 뇌전역] / 정수(얼음) 슬로우 스택
+        // source 별로 독립 관리 → 정수 중첩 시 곱셈 스택 동작.
+        // 기존 ApplySlowTemporary(mul, duration) 오버로드는 "legacy" source 로 통합.
+        private struct SlowEntry
+        {
+            public float multiplier;
+            public float remaining;
+        }
+        private readonly Dictionary<string, SlowEntry> slowStack = new Dictionary<string, SlowEntry>();
+        private readonly List<string> slowExpireBuffer = new List<string>(4);
+        private const string SlowLegacySource = "__legacy__";
 
         // 넉백 상태
         private Vector2 knockbackVelocity;
@@ -89,6 +98,7 @@ namespace SwDreams.Features.Enemy.Adapter
             hasNetworkTarget = false;
             isFirstNetworkPos = true;
             knockbackVelocity = Vector2.zero;
+            slowStack.Clear();
 
             // SO에서 겹침 해소 여부 반영 (Swarm 등은 false).
             resolveEnemyOverlap = enemyRef.ResolveOverlap;
@@ -138,13 +148,9 @@ namespace SwDreams.Features.Enemy.Adapter
                 }
             }
 
-            // ===== 슬로우 타이머 (호스트 + 클라이언트 공통) =====
-            if (slowTimer > 0f)
-            {
-                slowTimer -= Time.deltaTime;
-                if (slowTimer <= 0f)
-                    slowMul = 1f;
-            }
+            // ===== 슬로우 스택 (호스트 + 클라이언트 공통) =====
+            // 각 source 의 배율을 곱해 최종 배율 산출. 만료된 엔트리 제거.
+            float slowMul = TickSlowStack(Time.deltaTime);
 
             float moveSpeed = enemy.MoveSpeed * slowMul;
             Transform target = FindClosestPlayer();
@@ -217,12 +223,55 @@ namespace SwDreams.Features.Enemy.Adapter
         }
 
         /// <summary>
-        /// 일시적 이동속도 감소. AreaZone에서 호출.
+        /// 일시적 이동속도 감소 (source 별 스택). 정수 중첩 시 곱셈 스택 동작.
+        /// 같은 source 재호출 시 파라미터 갱신(최신 값 사용, 지속시간 리셋).
+        /// source 가 null/빈 문자열이면 "__legacy__" 단일 슬롯으로 통합 (기존 호출부 호환).
+        /// </summary>
+        public void ApplySlowTemporary(string source, float multiplier, float duration)
+        {
+            if (multiplier <= 0f || duration <= 0f) return;
+            string key = string.IsNullOrEmpty(source) ? SlowLegacySource : source;
+            slowStack[key] = new SlowEntry { multiplier = multiplier, remaining = duration };
+        }
+
+        /// <summary>
+        /// 하위 호환 오버로드. 기존 AreaZone 등의 호출부(source 정보 없음) 유지용.
+        /// 내부적으로 "__legacy__" source 로 위임.
         /// </summary>
         public void ApplySlowTemporary(float multiplier, float duration)
+            => ApplySlowTemporary(null, multiplier, duration);
+
+        /// <summary>
+        /// 매 프레임 스택 타이머 감소 + 최종 배율 계산.
+        /// 빈 스택이면 1f (감속 없음).
+        /// </summary>
+        private float TickSlowStack(float deltaTime)
         {
-            slowMul = multiplier;
-            slowTimer = duration;
+            if (slowStack.Count == 0) return 1f;
+
+            // foreach 중 Dictionary 수정 금지 → 키 목록으로 순회.
+            slowExpireBuffer.Clear();
+            var keys = new string[slowStack.Count];
+            slowStack.Keys.CopyTo(keys, 0);
+
+            float result = 1f;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                var key = keys[i];
+                var entry = slowStack[key];
+                entry.remaining -= deltaTime;
+                if (entry.remaining <= 0f)
+                {
+                    slowExpireBuffer.Add(key);
+                    continue;
+                }
+                slowStack[key] = entry;
+                result *= entry.multiplier;
+            }
+            for (int i = 0; i < slowExpireBuffer.Count; i++)
+                slowStack.Remove(slowExpireBuffer[i]);
+
+            return result;
         }
 
         /// <summary>

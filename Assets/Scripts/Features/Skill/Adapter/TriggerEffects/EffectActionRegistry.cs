@@ -88,6 +88,7 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
             Register(EffectActionType.SpawnProjectile, new SpawnProjectileHandler());
             Register(EffectActionType.ApplyVulnerability, new ApplyVulnerabilityHandler());
             Register(EffectActionType.HealSelf, new HealSelfHandler());
+            Register(EffectActionType.DamageNearby, new DamageNearbyHandler());
 
             // TODO: [Phase 5+] 메아리 스킬 구현 시 등록
             // Register(EffectActionType.Refire, new RefireHandler());

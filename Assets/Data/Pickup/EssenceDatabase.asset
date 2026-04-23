@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c6f07293919a844598046649885746a, type: 3}
+  m_Name: EssenceDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Essence.Adapter.Data.EssenceDatabase
+  ice: {fileID: 11400000, guid: 719eb114334e4b247811da2527d7fff6, type: 2}
+  fire: {fileID: 11400000, guid: 71dfa63c9fd82cb43b09f7156434c606, type: 2}
+  lightning: {fileID: 11400000, guid: 510eaaa9032e08443b6866ae16d601a2, type: 2}

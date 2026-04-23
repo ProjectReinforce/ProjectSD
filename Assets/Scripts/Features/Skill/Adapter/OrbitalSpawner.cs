@@ -80,7 +80,8 @@ namespace SwDreams.Features.Skill.Adapter
                 orbitRadius: radius,
                 rotationSpeed: data.rotationSpeed,
                 ownerTransform: ctx.playerTransform,
-                fireOnOneRotation: fireOnOneRotation
+                fireOnOneRotation: fireOnOneRotation,
+                triggerSystem: ctx.triggerSystem
             );
 
             // TwoPhase: Phase1 완료 콜백 연결 (각 orbital이 자기 위치/방향 전달)

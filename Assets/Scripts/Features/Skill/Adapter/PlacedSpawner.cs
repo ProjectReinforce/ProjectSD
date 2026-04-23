@@ -76,7 +76,8 @@ namespace SwDreams.Features.Skill.Adapter
                 duration: duration,
                 alwaysCritical: data.alwaysCritical,
                 critDamageMultiplier: ctx.critDamageMultiplier,
-                ownerTransform: ctx.playerTransform
+                ownerTransform: ctx.playerTransform,
+                triggerSystem: ctx.triggerSystem
             );
 
             activeTurrets.Add(turretObj);

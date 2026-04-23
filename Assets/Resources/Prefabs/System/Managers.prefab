@@ -436,7 +436,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Pickup.Adapter.DropSpawner
   magnetPrefab: {fileID: 3059849364639593112, guid: e805d93ae0b3b4549a25fb6355e68a92, type: 3}
   potionPrefab: {fileID: 3059849364639593112, guid: 4c2764791194ef3459e1cd565063f8ba, type: 3}
-  essencePrefab: {fileID: 0}
+  essencePrefab: {fileID: 3059849364639593112, guid: 321e3c3185ccb4446a0e317036f6f023, type: 3}
   weaponPrefab: {fileID: 0}
   prewarmPerType: 16
 --- !u!1 &4912550727001042363
@@ -946,6 +946,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Manager.GameManager
   config: {fileID: 11400000, guid: 0f8c10ac535dff1459a70970d9619d55, type: 2}
   characterDatabase: {fileID: 11400000, guid: 7e9c656564fa07a44848e42fb3552c71, type: 2}
+  essenceDatabase: {fileID: 11400000, guid: 3914eecbaf073d84d9775e2d0a00203c, type: 2}
 --- !u!114 &4439880617327635830
 MonoBehaviour:
   m_ObjectHideFlags: 0
