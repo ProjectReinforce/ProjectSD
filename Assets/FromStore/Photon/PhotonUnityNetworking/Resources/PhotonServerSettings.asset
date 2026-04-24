@@ -84,6 +84,9 @@ MonoBehaviour:
   - RPC_Combine
   - RPC_CombineWeapon
   - RPC_EquipWeapon
+  - RPC_ForceBoostChoice
+  - RPC_PlayerBoostSelected
+  - RPC_SyncBoostAcquisition
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

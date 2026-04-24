@@ -268,18 +268,15 @@ namespace SwDreams.Features.Skill.Adapter
             ctx.totalCount = totalCount;
             ctx.triggerSystem = triggerSystem;
 
-            // ── 데미지 (필터 적용) ──
+            // ── 데미지 (3-op + 필터 적용) ──
+            // 공식: (skillBase + ΣAdd + skillBase × ΣPercentBonus) × ΠMultiplicative × baseAttackMultiplier
+            // applicableStats 필터는 ApplyAttackTo 내부에서 처리.
             int baseDamage = sourceSkill.CurrentDamage;
             ctx.rawDamage = baseDamage;
             if (playerStats != null)
-            {
-                float atkMul = playerStats.GetFilteredAttackMultiplier(data);
-                ctx.damage = Mathf.RoundToInt(baseDamage * atkMul);
-            }
+                ctx.damage = Mathf.RoundToInt(playerStats.ApplyAttackTo(baseDamage, data));
             else
-            {
                 ctx.damage = baseDamage;
-            }
 
             // ── 투사체 속도 (필터 적용) ──
             if (playerStats != null)

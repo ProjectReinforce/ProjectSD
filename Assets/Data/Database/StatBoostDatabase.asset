@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 516d6ebe5b88acf4eba2dbcee91be556, type: 3}
+  m_Name: StatBoostDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.StatBoost.Adapter.Data.StatBoostDatabase
+  boosts:
+  - {fileID: 11400000, guid: f942bca35d10b234b8b43abee3166608, type: 2}
+  - {fileID: 11400000, guid: 9ae503f60c1e17941a37af1e9b7e11e2, type: 2}
+  - {fileID: 11400000, guid: 2722cc3ea1617784f9dfe0eae6baffb3, type: 2}
+  - {fileID: 11400000, guid: f5788f29e09d5764ea765dc79020054a, type: 2}
+  - {fileID: 11400000, guid: 4b88356227e86d34788af970987191b1, type: 2}

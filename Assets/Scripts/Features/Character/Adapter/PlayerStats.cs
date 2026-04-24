@@ -6,6 +6,7 @@ using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
 using UnityEngine;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.Interfaces;
 
 namespace SwDreams.Features.Character.Adapter
 {
@@ -22,7 +23,7 @@ namespace SwDreams.Features.Character.Adapter
     /// - RecalculateAll()은 하위 호환을 위해 유지 (패시브 순회 → modifier 재등록)
     /// - ChaosSkillManager 헬퍼는 Step 1-4에서 modifier로 통합 예정
     /// </summary>
-    public class PlayerStats : MonoBehaviour
+    public class PlayerStats : MonoBehaviour, IPlayerStatsMutator
     {
         // ===== Base 스탯 (인스펙터 설정 / CharacterData로 덮어쓰기) =====
         [Header("Base Stats")]
@@ -48,6 +49,11 @@ namespace SwDreams.Features.Character.Adapter
 
         // ===== Final 스탯 (외부 읽기 전용) =====
 
+        /// <summary>
+        /// 공격력의 "대표 배율 값". 데미지 계산 경로는 <see cref="ApplyAttackTo"/> 사용 — 새 공식은 skillBase 에 의존하므로
+        /// 단일 배율로 환산되지 않음. 이 프로퍼티는 디버그/HUD 표시, 조건부 로직(예: BerserkMode 임계값) 전용.
+        /// 값 = `(base + ΣAdd) × (1+ΣPercentBonus) × ΠMultiplicative` (참고용 스냅샷).
+        /// </summary>
         public float AttackMultiplier =>
             ClampStat(StatType.AttackMultiplier,
                 modifiers.Calculate(StatType.AttackMultiplier, baseAttackMultiplier));
@@ -245,10 +251,18 @@ namespace SwDreams.Features.Character.Adapter
             float value = data.bonusPerLevel * level;
             string source = $"passive_{data.skillId}";
 
+            // AttackMultiplier 는 데미지 공식 `(skillBase + Σ% × skillBase) × ...` 경로라
+            // 패시브 "공격력 +X" 의도를 유지하려면 PercentBonus 로 등록해야 함.
+            // (Add 로 등록 시 "+0.2 플랫 데미지" 가 돼 무의미해짐.)
+            // 다른 스탯(MoveSpeed/MaxHP/...) 은 기존 `.Calculate()` 경로라 Add 가 의도한 플랫 가산.
+            ModifierOp op = (statType.Value == StatType.AttackMultiplier)
+                ? ModifierOp.PercentBonus
+                : ModifierOp.Add;
+
             modifiers.AddOrReplace(new StatModifier(
                 source,
                 statType.Value,
-                ModifierOp.Add,
+                op,
                 value
             ));
         }
@@ -382,12 +396,37 @@ namespace SwDreams.Features.Character.Adapter
             return baseSpeed;
         }
 
-        /// <summary>공격력 배율 (필터 적용).</summary>
+        /// <summary>공격력 배율 (필터 적용). 데미지 경로는 <see cref="ApplyAttackTo"/> 사용 권장 — 이 프로퍼티는
+        /// 디버그/HUD 표시나 조건부 로직용. 새 데미지 공식이 skillBase 에 의존하므로 단일 "배율" 은 정확한 수치가 아님.</summary>
         public float GetFilteredAttackMultiplier(SkillData skillData)
         {
             if (skillData == null || skillData.IsStatApplicable(StatType.AttackMultiplier))
                 return AttackMultiplier;
             return baseAttackMultiplier;
+        }
+
+        /// <summary>
+        /// 스킬 데미지 공식. SkillExecutor.BuildContext 에서 ctx.damage 산출 시 호출.
+        ///
+        /// 공식:
+        ///   final = (skillBase + ΣAdd + skillBase × ΣPercentBonus) × ΠMultiplicative × baseAttackMultiplier
+        ///
+        /// - ΣAdd            — 플랫 데미지 가산. 관례: 무기 엔트리 op=Add 만 여기로.
+        /// - ΣPercentBonus   — 스킬 기본의 % 가산. 관례: 무기 엔트리 op=PercentBonus + 패시브 AttackMultiplier.
+        /// - ΠMultiplicative — 최종 수치 조정. 관례: 혼돈 chaos_attack. 향후 무기도 편입 가능.
+        ///
+        /// applicableStats 필터: 스킬이 AttackMultiplier 를 받지 않도록 선언됐으면 skillBase 그대로 반환.
+        /// </summary>
+        public float ApplyAttackTo(float skillBase, SkillData skillData)
+        {
+            if (skillData != null && !skillData.IsStatApplicable(StatType.AttackMultiplier))
+                return skillBase;
+
+            float adds    = modifiers.GetAddTotal(StatType.AttackMultiplier);
+            float percent = modifiers.GetPercentBonusTotal(StatType.AttackMultiplier);
+            float mult    = modifiers.GetMultiplicativeTotal(StatType.AttackMultiplier);
+
+            return (skillBase + adds + skillBase * percent) * mult * baseAttackMultiplier;
         }
 
         /// <summary>스킬 범위 보너스 (필터 적용).</summary>
@@ -460,5 +499,19 @@ namespace SwDreams.Features.Character.Adapter
 
         /// <summary>현재 modifier 수.</summary>
         public int ModifierCount => modifiers.Count;
+
+        /// <summary>
+        /// AttackMultiplier 의 3-op 분해값. 디버그 표시용.
+        /// ApplyAttackTo(skillBase) 가 어떻게 합쳐지는지 눈으로 확인.
+        /// </summary>
+        public void GetAttackBreakdown(out float flatAdd, out float percentBonusSum, out float multiplicative)
+        {
+            flatAdd         = modifiers.GetAddTotal(StatType.AttackMultiplier);
+            percentBonusSum = modifiers.GetPercentBonusTotal(StatType.AttackMultiplier);
+            multiplicative  = modifiers.GetMultiplicativeTotal(StatType.AttackMultiplier);
+        }
+
+        /// <summary>캐릭터 고유 공격 배율 (baseAttackMultiplier). 디버그 표시용.</summary>
+        public float BaseAttackMultiplierForDebug => baseAttackMultiplier;
     }
 }

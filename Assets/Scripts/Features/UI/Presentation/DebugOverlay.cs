@@ -7,7 +7,9 @@ using Photon.Pun;
 using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Essence.Adapter;
+using SwDreams.Features.StatBoost.Adapter;
 using SwDreams.Features.Weapon.Adapter;
 using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Features.Weapon.Domain;
@@ -51,6 +53,8 @@ namespace SwDreams.Features.UI.Presentation
         private Transform localPlayer;
         private PlayerEssenceInventory localEssenceInventory;
         private PlayerWeaponInventory localWeaponInventory;
+        private StatBoostManager localStatBoostManager;
+        private PlayerStats localStats;
 
         // 상태
         private bool isVisible = true;
@@ -160,6 +164,8 @@ namespace SwDreams.Features.UI.Presentation
                     localDamageable = p.GetComponent<IDamageable>();
                     localEssenceInventory = p.GetComponentInChildren<PlayerEssenceInventory>();
                     localWeaponInventory = p.GetComponentInChildren<PlayerWeaponInventory>();
+                    localStatBoostManager = p.GetComponentInChildren<StatBoostManager>();
+                    localStats = p.GetComponentInChildren<PlayerStats>();
                     return;
                 }
             }
@@ -194,6 +200,15 @@ namespace SwDreams.Features.UI.Presentation
             else
             {
                 sb.AppendLine("HP: --");
+            }
+
+            // ATK 분해 (새 데미지 공식 진단용)
+            // final = (skillBase + ΣAdd + skillBase × Σ%) × Πmult × base
+            if (localStats != null)
+            {
+                localStats.GetAttackBreakdown(out float atkAdd, out float atkPct, out float atkMul);
+                float atkBase = localStats.BaseAttackMultiplierForDebug;
+                sb.AppendLine($"ATK: +{atkAdd:0.#} flat, +{atkPct * 100f:0.#}%, ×{atkMul:0.##}, base×{atkBase:0.##}");
             }
 
             sb.AppendLine();
@@ -255,8 +270,8 @@ namespace SwDreams.Features.UI.Presentation
                     sb.AppendLine("  (Synergy candidate)");
 
                 // skillManager 연결 실패 감지
-                if (localEssenceInventory.DebugSkillManager == null)
-                    sb.AppendLine("  ! SkillManager ref MISSING");
+                if (!localEssenceInventory.IsSkillRegistryConnected)
+                    sb.AppendLine("  ! SkillRegistry port MISSING");
             }
             else
             {
@@ -302,6 +317,20 @@ namespace SwDreams.Features.UI.Presentation
             }
 
             sb.AppendLine();
+
+            // 능력치 부스트 (만렙 레벨업 / 퀘스트 보상 누적 이력)
+            if (localStatBoostManager != null && localStatBoostManager.AppliedCount > 0)
+            {
+                sb.AppendLine($"StatBoosts ({localStatBoostManager.AppliedCount})");
+                var applied = localStatBoostManager.Applied;
+                for (int i = 0; i < applied.Count; i++)
+                {
+                    var b = applied[i];
+                    if (b == null) continue;
+                    sb.AppendLine($"  [{i}] {b.displayName} ({b.rarity}) — {b.statType} {b.op} {b.value}");
+                }
+                sb.AppendLine();
+            }
 
             // 혼돈 스킬
             if (localPlayer != null)

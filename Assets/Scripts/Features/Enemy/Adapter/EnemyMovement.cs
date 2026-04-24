@@ -4,6 +4,7 @@ using SwDreams.Features.Enemy.Adapter.Data;
 using SwDreams.Features.Enemy.Adapter;
 using Photon.Pun;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.ValueObjects;
 
 namespace SwDreams.Features.Enemy.Adapter
 {
@@ -43,7 +44,6 @@ namespace SwDreams.Features.Enemy.Adapter
         }
         private readonly Dictionary<string, SlowEntry> slowStack = new Dictionary<string, SlowEntry>();
         private readonly List<string> slowExpireBuffer = new List<string>(4);
-        private const string SlowLegacySource = "__legacy__";
 
         // 넉백 상태
         private Vector2 knockbackVelocity;
@@ -230,7 +230,7 @@ namespace SwDreams.Features.Enemy.Adapter
         public void ApplySlowTemporary(string source, float multiplier, float duration)
         {
             if (multiplier <= 0f || duration <= 0f) return;
-            string key = string.IsNullOrEmpty(source) ? SlowLegacySource : source;
+            string key = string.IsNullOrEmpty(source) ? RuntimeSources.Legacy : source;
             slowStack[key] = new SlowEntry { multiplier = multiplier, remaining = duration };
         }
 

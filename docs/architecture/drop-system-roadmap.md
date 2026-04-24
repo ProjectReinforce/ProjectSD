@@ -80,7 +80,35 @@
 - **W3**: 시너지 로직 테이블화 — `EssenceResolver.Resolve(equipped, db) → (source→effects)[]` 순수 함수로 분리. 3스택/조합 확장 대비.
 - **I1**: `"__legacy__"` 상수 Shared 승격 — ApplyDoTHandler/ApplySlowHandler/EnemyMovement 3곳 중복.
 - **설계 문서 동기화**: `docs/game-design/essence.md § 3.2` 의 "번개 → Chain" 표기를 실제 구현인 "DamageNearby" 로 정정 필요 + 중첩/시너지 규약 추가.
-- **W4 (신규 Phase 4 부채)**: `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 — Inventory 가 Character.Adapter.PlayerStats / Skill.Adapter.SkillManager 를 직접 참조 중. Phase 5 착수 전 처리 권장. architecture-guardian 감사 결과 참조.
+- **W4**: ✅ 완료 — `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 (`Shared/Domain/Interfaces/`). PlayerStats/SkillManager 가 각 포트 구현 선언. Essence/Weapon Inventory 는 Character.Adapter / Skill.Adapter 직접 참조 완전 제거. 관련 변경:
+  - `ISkillRegistry.EffectSinks` (IReadOnlyList&lt;IRuntimeEffectSink&gt;) + `OnSinkAdded(IRuntimeEffectSink)` 이벤트.
+  - SkillManager 에 `cachedSinks` + `RefreshSinkCache()` — AcquireSkill/RemoveSkill/Evolution 3 경로에서 호출.
+  - PlayerEssenceInventory: `SkillManager skillManager` → `ISkillRegistry skillRegistry`. HandleSkillAdded(Skill) → HandleSinkAdded(IRuntimeEffectSink). DebugSkillManager → IsSkillRegistryConnected.
+  - PlayerWeaponInventory: `PlayerStats stats` → `IPlayerStatsMutator stats`. 동일 패턴.
+  - DebugOverlay 는 개발자 진단 허브 예외로 구상 타입 참조 유지 (릴리스 빌드 가드 추가는 추후).
+
+### Phase 4 데미지 공식 재설계 — 2026-04-24
+
+AttackMultiplier 스탯이 기존에 "단일 배율" 로 해석돼 Add 를 쓰면 폭발적으로 과장되던 문제 해결.
+
+**새 공식**:
+```
+finalDamage = (skillBase + ΣAdd + skillBase × ΣPercentBonus) × ΠMultiplicative × baseAttackMultiplier
+```
+
+**컨벤션**:
+- `Add`           — 무기 엔트리 `op=Add` 만 사용. "플랫 +N 데미지" 의도.
+- `PercentBonus`  — 무기 엔트리 `op=PercentBonus` + AttackMultiplier 패시브 자동 등록. "+N%" 가산.
+- `Multiplicative` — 혼돈 스킬 (`chaos_attack`). 향후 무기도 편입 가능 (저주/고유 효과 설계 여지).
+
+**변경 파일**:
+- `PlayerStats.ApplyAttackTo(skillBase, skillData)` 신규 — SkillExecutor 의 데미지 산출 진입점.
+- `PlayerStats.RegisterPassive` — `StatType.AttackMultiplier` 인 패시브는 `Op=PercentBonus` 로 자동 등록. 기존 SO 의 `bonusPerLevel` 값 변경 불필요 (0.2 → "+20%" 로 그대로 해석).
+- `PlayerStats.AttackMultiplier` 프로퍼티 — 유지하되 "디버그/HUD 표시 전용" 주석. 데미지 경로는 더 이상 참조 안 함.
+- `SkillExecutor.BuildContext` — `ApplyAttackTo` 호출로 2 줄 교체.
+- `DebugOverlay` — ATK 분해 표시 (`+flat, +%, ×mult, base×`) 추가.
+
+**Phase 7 혼돈 등급 설계 시 참고**: `Multiplicative` op 의 의미 보존. 혼돈 `chaos_attack` 은 현재도 Multiplicative 등록이라 영향 없음.
 
 ### Phase 4 리팩터 (추가 라운드) — 2026-04-23
 
@@ -322,12 +350,33 @@ Phase 4 구현 전에 `IRuntimeEffectSink { AddRuntimeEffect, RemoveRuntimeEffec
 
 ---
 
-## Phase 5 — 능력치(Stat Boost) 시스템
+## Phase 5 — 능력치(Stat Boost) 시스템 ✅ 코드 구현 완료 (유저 Unity 배선 대기)
 
-- [ ] StatBoostData SO / StatBoostDatabase / StatBoostManager
-- [ ] StatBoostChoiceService (공통 선정기 재사용)
-- [ ] LevelUpManager 만렙 분기 + LevelUpPanel panelKind 확장
-- [ ] StatBoostCardUI
+- [x] StatBoostData SO / StatBoostDatabase SO (Features/StatBoost/Adapter/Data)
+- [x] StatBoostManager (IPlayerStatsMutator 포트 경유 주입, Character.Adapter 직접 참조 없음)
+- [x] StatBoostChoiceService (Phase 0 RarityPoolChoiceGenerator 재사용)
+- [x] LevelUpManager — **"만렙" = 스킬 풀 고갈** 감지 시 SendStatBoostChoices 분기. RPC_ReceiveChoices 시그니처 `bool isChaos` → `int panelKindInt` 확장 (`ChoicePanelKind { Skill, Chaos, StatBoost }` enum).
+- [x] RPC 경로 3종 추가: `RPC_PlayerBoostSelected` / `RPC_SyncBoostAcquisition` / `RPC_ForceBoostChoice` (타임아웃 랜덤 선택 분기 포함).
+- [x] UIManager.ShowLevelUpStatBoost / LevelUpPanel.SetupStatBoost / SkillCardUI.SetupAsStatBoost — 카드 프리팹 재사용, 제목·라벨·등급 색만 분기.
+- [x] GameManager.StatBoostDB SSOT 노출.
+- [x] DebugOverlay 에 StatBoosts 섹션 (획득 이력 누적 표시).
+
+### "만렙" 정의
+`SkillManager.GenerateChoices(normalPool, 3).Length == 0` → 스킬 풀 고갈 = 만렙. `GameplayConfig.maxPlayerLevel` 같은 상수 필요 없음. 런타임 상태 기반.
+
+### 중복 장착 누적
+source = `stat_{boostId}_{localCounter}` — 같은 boostId 를 여러 번 선택하면 각 획득이 독립 modifier 로 등록돼 자연 누적. counter 는 StatBoostManager 의 로컬 시퀀스 (클라 간 source 이름 차이는 Calculate 결과에 영향 없음).
+
+### 유저 Unity 배선
+1. **StatBoostData SO 생성** (`Assets → Create → SwDreams/Data/StatBoostData`) — 수종. `boostId` 고유 int 필수.
+2. **StatBoostDatabase SO 생성** — boosts 리스트에 위 SO 등록.
+3. **GameManager Inspector** `statBoostDatabase` 슬롯에 할당.
+4. **Player 프리팹 자식**에 `StatBoostManager` 컴포넌트 부착.
+5. 테스트: 스킬 풀 전부 만렙으로 채운 뒤 레벨업 → StatBoost 패널 등장 확인.
+
+### 부채
+- `ChoicePanelKind` 를 Shared 로 승격할지는 다른 Feature 가 이 enum 으로 타입 식별하기 시작할 때 재검토.
+- UI 의 `ICardDisplay` 추상화 여지 있음 — 카드 종류 4 개 (Skill/Chaos/StatBoost + 향후 Quest?) 될 때 도입 권장.
 
 **중요**: StatBoost 는 **월드 드랍 아님**. 진입구는 두 개뿐:
 1. **만렙 후 레벨업** — 현재 Lv = Max 상태에서 XP 게이지가 다시 차 레벨업 이벤트 발생 시, 스킬 선택지 대신 StatBoost 선택지.

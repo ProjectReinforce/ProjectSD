@@ -4,7 +4,6 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Features.Essence.Adapter.Data;
 using SwDreams.Features.Essence.Domain;
-using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Managers;
@@ -39,29 +38,29 @@ namespace SwDreams.Features.Essence.Adapter
         private EssenceDatabase Database => GameManager.Instance?.EssenceDB;
 
         private readonly List<EssenceType> equipped = new List<EssenceType>();
-        private SkillManager skillManager;
+        private ISkillRegistry skillRegistry;
 
         public IReadOnlyList<EssenceType> Equipped => equipped;
         public bool CanEquip => equipped.Count < MaxSlots;
 
-        /// <summary>디버그용: 현재 연결된 SkillManager (null 이면 주입 실패).</summary>
-        public SkillManager DebugSkillManager => skillManager;
+        /// <summary>디버그용: 포트 연결 여부. false 이면 주입 실패.</summary>
+        public bool IsSkillRegistryConnected => skillRegistry != null;
 
         /// <summary>장착 변경 시 발생 (HUD 바인딩용).</summary>
         public event Action OnEquippedChanged;
 
         private void Start()
         {
-            EnsureSkillManager();
+            EnsureSkillRegistry();
 
-            if (skillManager != null)
-                skillManager.OnSkillAdded += HandleSkillAdded;
+            if (skillRegistry != null)
+                skillRegistry.OnSinkAdded += HandleSinkAdded;
         }
 
         private void OnDestroy()
         {
-            if (skillManager != null)
-                skillManager.OnSkillAdded -= HandleSkillAdded;
+            if (skillRegistry != null)
+                skillRegistry.OnSinkAdded -= HandleSinkAdded;
         }
 
         /// <summary>
@@ -99,8 +98,12 @@ namespace SwDreams.Features.Essence.Adapter
         /// </summary>
         private void InjectSlot(EssenceType type, int slotIndex)
         {
-            EnsureSkillManager();
-            if (skillManager == null) return;
+            EnsureSkillRegistry();
+            if (skillRegistry == null)
+            {
+                Debug.LogWarning($"[PlayerEssenceInventory] InjectSlot({type}) 실패 — skillRegistry 포트 미연결.");
+                return;
+            }
 
             var data = Database?.GetByType(type);
             if (data == null) return;
@@ -109,13 +112,12 @@ namespace SwDreams.Features.Essence.Adapter
             if (effects == null || effects.Length == 0) return;
 
             string source = MakeSource(type, slotIndex);
-            var skills = skillManager.EquippedSkills;
-            for (int i = 0; i < skills.Count; i++)
+            var sinks = skillRegistry.EffectSinks;
+            for (int i = 0; i < sinks.Count; i++)
             {
-                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
-                if (trigger == null) continue;
+                var sink = sinks[i];
                 for (int j = 0; j < effects.Length; j++)
-                    trigger.AddRuntimeEffect(source, effects[j]);
+                    sink.AddRuntimeEffect(source, effects[j]);
             }
         }
 
@@ -124,15 +126,11 @@ namespace SwDreams.Features.Essence.Adapter
         /// </summary>
         private void RemoveSlot(EssenceType type, int slotIndex)
         {
-            if (skillManager == null) return;
+            if (skillRegistry == null) return;
             string source = MakeSource(type, slotIndex);
-            var skills = skillManager.EquippedSkills;
-            for (int i = 0; i < skills.Count; i++)
-            {
-                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
-                if (trigger == null) continue;
-                trigger.RemoveRuntimeEffects(source);
-            }
+            var sinks = skillRegistry.EffectSinks;
+            for (int i = 0; i < sinks.Count; i++)
+                sinks[i].RemoveRuntimeEffects(source);
         }
 
         /// <summary>
@@ -150,8 +148,8 @@ namespace SwDreams.Features.Essence.Adapter
             var stack2 = data?.injectedEffectsStack2;
             if (stack2 == null || stack2.Length == 0) return;
 
-            EnsureSkillManager();
-            if (skillManager == null) return;
+            EnsureSkillRegistry();
+            if (skillRegistry == null) return;
 
             // 슬롯 1 효과 제거 (기본 1스택은 더 이상 독립 발동하지 않음)
             RemoveSlot(addedType, 1);
@@ -159,26 +157,21 @@ namespace SwDreams.Features.Essence.Adapter
             // 슬롯 0 의 기본 효과 제거 후 Stack2 효과로 재주입
             RemoveSlot(addedType, 0);
             string source0 = MakeSource(addedType, 0);
-            var skills = skillManager.EquippedSkills;
-            for (int i = 0; i < skills.Count; i++)
+            var sinks = skillRegistry.EffectSinks;
+            for (int i = 0; i < sinks.Count; i++)
             {
-                var trigger = skills[i].GetComponent<IRuntimeEffectSink>();
-                if (trigger == null) continue;
                 for (int j = 0; j < stack2.Length; j++)
-                    trigger.AddRuntimeEffect(source0, stack2[j]);
+                    sinks[i].AddRuntimeEffect(source0, stack2[j]);
             }
         }
 
         /// <summary>
-        /// 새 스킬 획득 시, 이미 장착된 모든 정수 효과를 그 스킬에도 주입.
+        /// 새 스킬 획득 시 포트가 그 스킬의 sink 를 넘겨줌. 이미 장착된 정수 효과를 그 sink 에만 재주입.
         /// Stack2 시너지 상태도 고려.
-        /// "Skill" 이 네임스페이스이기도 해서 풀 경로로 지정.
         /// </summary>
-        private void HandleSkillAdded(SwDreams.Features.Skill.Adapter.Skill newSkill)
+        private void HandleSinkAdded(IRuntimeEffectSink sink)
         {
-            if (newSkill == null) return;
-            var trigger = newSkill.GetComponent<IRuntimeEffectSink>();
-            if (trigger == null) return;
+            if (sink == null) return;
 
             bool synergyActive = equipped.Count == 2 && equipped[0] == equipped[1]
                                  && HasStack2(equipped[0]);
@@ -189,7 +182,7 @@ namespace SwDreams.Features.Essence.Adapter
                 var stack2 = Database.GetByType(equipped[0]).injectedEffectsStack2;
                 string source0 = MakeSource(equipped[0], 0);
                 for (int j = 0; j < stack2.Length; j++)
-                    trigger.AddRuntimeEffect(source0, stack2[j]);
+                    sink.AddRuntimeEffect(source0, stack2[j]);
             }
             else
             {
@@ -202,7 +195,7 @@ namespace SwDreams.Features.Essence.Adapter
 
                     string source = MakeSource(equipped[slot], slot);
                     for (int j = 0; j < effects.Length; j++)
-                        trigger.AddRuntimeEffect(source, effects[j]);
+                        sink.AddRuntimeEffect(source, effects[j]);
                 }
             }
         }
@@ -218,14 +211,11 @@ namespace SwDreams.Features.Essence.Adapter
         private static string MakeSource(EssenceType type, int slotIndex)
             => $"{SourcePrefix}{type.ToString().ToLower()}_{slotIndex}";
 
-        private void EnsureSkillManager()
+        private void EnsureSkillRegistry()
         {
-            if (skillManager != null) return;
+            if (skillRegistry != null) return;
 
-            // Player 본체 탐색: Tag="Player" 달린 조상(자기 포함). 기존 FindClosestPlayer 등이
-            // 이미 의존하는 규약이라 프리팹 루트에 반드시 설정돼 있음.
-            // PlayerEssenceInventory 가 [RequireComponent(PhotonView)] 라 자기 GO 에 별도 PhotonView 가
-            // 붙는 경우가 있어 photonView.gameObject 에 의존하면 SkillManager 를 놓칠 수 있음.
+            // Player 루트 탐색 — 포트 구현체(SkillManager) 를 interface 로 찾음.
             Transform cur = transform;
             Transform playerRoot = null;
             while (cur != null)
@@ -239,13 +229,12 @@ namespace SwDreams.Features.Essence.Adapter
             }
 
             if (playerRoot != null)
-                skillManager = playerRoot.GetComponentInChildren<SkillManager>();
+                skillRegistry = playerRoot.GetComponentInChildren<ISkillRegistry>();
 
-            // fallback: 단독 테스트용 또는 태그 누락 케이스
-            if (skillManager == null)
-                skillManager = GetComponentInParent<SkillManager>();
-            if (skillManager == null)
-                skillManager = GetComponentInChildren<SkillManager>();
+            if (skillRegistry == null)
+                skillRegistry = GetComponentInParent<ISkillRegistry>();
+            if (skillRegistry == null)
+                skillRegistry = GetComponentInChildren<ISkillRegistry>();
         }
     }
 }

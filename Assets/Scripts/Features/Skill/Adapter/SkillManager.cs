@@ -7,6 +7,7 @@ using SwDreams.Features.Skill.Adapter;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 
@@ -26,7 +27,7 @@ namespace SwDreams.Features.Skill.Adapter
     /// [Step 4-6] SkillSpawnerFactory 도입. SkillEffect 레이어 제거.
     /// Skill.Fire() → Executor → Spawner 직통 구조.
     /// </summary>
-    public class SkillManager : MonoBehaviour
+    public class SkillManager : MonoBehaviour, ISkillRegistry
     {
         /// <summary>
         /// 진화 대기 정보. 어떤 2개 스킬이 어떤 진화 스킬로 변할 수 있는지.
@@ -73,6 +74,25 @@ namespace SwDreams.Features.Skill.Adapter
         public int SlotCount => equippedSkills.Count;
         public int EmptySlots => MaxSlots - equippedSkills.Count;
         public bool HasEmptySlot => equippedSkills.Count < MaxSlots;
+
+        // ===== ISkillRegistry 구현 =====
+        // 무기/정수 인벤토리가 Skill 타입을 직접 알 필요 없게 sink 관점으로만 노출.
+        private readonly List<IRuntimeEffectSink> cachedSinks = new List<IRuntimeEffectSink>();
+        public IReadOnlyList<IRuntimeEffectSink> EffectSinks => cachedSinks;
+        public event Action<IRuntimeEffectSink> OnSinkAdded;
+
+        /// <summary>equippedSkills 추가/제거 직후 호출. cachedSinks 를 재구성.</summary>
+        private void RefreshSinkCache()
+        {
+            cachedSinks.Clear();
+            for (int i = 0; i < equippedSkills.Count; i++)
+            {
+                var s = equippedSkills[i];
+                if (s == null) continue;
+                var sink = s.GetComponent<IRuntimeEffectSink>();
+                if (sink != null) cachedSinks.Add(sink);
+            }
+        }
 
         // ===== 이벤트 =====
         /// <summary>스킬 추가 시 발생. UI 갱신용.</summary>
@@ -225,7 +245,12 @@ namespace SwDreams.Features.Skill.Adapter
             if (newSkill == null) return false;
 
             equippedSkills.Add(newSkill);
+            RefreshSinkCache();
             OnSkillAdded?.Invoke(newSkill);
+
+            // ISkillRegistry 포트 경로: sink 단독 노출 (Essence/Weapon 인벤토리용)
+            var newSink = newSkill.GetComponent<IRuntimeEffectSink>();
+            if (newSink != null) OnSinkAdded?.Invoke(newSink);
 
             // [Step 1-3] 패시브면 PlayerStats에 modifier 직접 등록
             if (skillData.skillType == SkillType.Passive)
@@ -310,6 +335,7 @@ namespace SwDreams.Features.Skill.Adapter
                     equippedSkills.RemoveAt(i);
                     skill.Deactivate();
                     Destroy(skill.gameObject);
+                    RefreshSinkCache();
                     OnSkillRemoved?.Invoke(skillId);
                     return true;
                 }
@@ -429,7 +455,13 @@ namespace SwDreams.Features.Skill.Adapter
             // 진화 스킬 생성 + 리스트에 추가
             Skill evolvedSkill = CreateSkillSlot(evo.evolvedSkillData);
             if (evolvedSkill != null)
+            {
                 equippedSkills.Add(evolvedSkill);
+                RefreshSinkCache();
+
+                var evoSink = evolvedSkill.GetComponent<IRuntimeEffectSink>();
+                if (evoSink != null) OnSinkAdded?.Invoke(evoSink);
+            }
 
             // 대기열에서 제거
             pendingEvolutions.RemoveAt(targetIndex);

@@ -2,9 +2,12 @@ using System.Collections.Generic;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Application;
 using SwDreams.Features.Progression.Adapter;
+using SwDreams.Features.Progression.Domain;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.StatBoost.Adapter;
+using SwDreams.Features.StatBoost.Adapter.Data;
 using SwDreams.Shared.Managers;
 using UnityEngine;
 using Photon.Pun;
@@ -66,11 +69,18 @@ namespace SwDreams.Features.Progression.Adapter
         private Dictionary<int, bool> playerSelections = new Dictionary<int, bool>();
 
         // 호스트 전용: 각 플레이어에게 보낸 선택지 (타임아웃 시 랜덤 선택용)
-        // key = ActorNumber, value = 선택지 스킬 ID 배열
+        // key = ActorNumber, value = 선택지 ID 배열 (스킬 ID 또는 boost ID)
         private Dictionary<int, int[]> playerChoices = new Dictionary<int, int[]>();
+
+        // 호스트 전용: 각 플레이어에게 어떤 kind 의 선택지를 보냈는지 추적.
+        // 타임아웃 랜덤 처리 시 ApplyChoice(skill) vs StatBoostManager.ApplyChoice(boost) 분기.
+        private Dictionary<int, ChoicePanelKind> playerPanelKinds = new Dictionary<int, ChoicePanelKind>();
 
         // 클라이언트: 내가 받은 선택지
         private SkillData[] myChoices;
+
+        // 클라이언트: 내가 받은 StatBoost 선택지 (kind == StatBoost 일 때만)
+        private StatBoostData[] myBoostChoices;
 
         // // ===== 이벤트 (UI 연결용) =====
         // /// <summary>선택지 수신 시 발생. LevelUpPanel이 구독.</summary>
@@ -175,6 +185,7 @@ namespace SwDreams.Features.Progression.Adapter
             timeoutTimer = selectionTimeout;
             playerSelections.Clear();
             playerChoices.Clear();
+            playerPanelKinds.Clear();
 
             // 현재 상태 저장 (Playing 또는 BossFight)
             if (GameManager.Instance.CurrentState != GameManager.GameState.Paused)
@@ -224,6 +235,14 @@ namespace SwDreams.Features.Progression.Adapter
             SkillData[] normalPool = skillDatabase.GetNormalPool();
             SkillData[] choices = sm.GenerateChoices(normalPool, 3);
 
+            // "만렙" 정의: 스킬 풀 고갈 (더 이상 등장할 스킬 없음) → StatBoost 선택지로 대체.
+            if (choices.Length == 0)
+            {
+                Debug.Log($"[LevelUpManager] Player {player.ActorNumber} 스킬 풀 고갈 — StatBoost 분기로 전환.");
+                SendStatBoostChoices(player);
+                return;
+            }
+
             // 스킬 ID 배열로 변환 (RPC는 SO를 직접 못 보내므로)
             int[] choiceIds = new int[choices.Length];
             for (int i = 0; i < choices.Length; i++)
@@ -231,12 +250,49 @@ namespace SwDreams.Features.Progression.Adapter
 
             // 저장 (타임아웃 시 랜덤 선택용)
             playerChoices[player.ActorNumber] = choiceIds;
+            playerPanelKinds[player.ActorNumber] = ChoicePanelKind.Skill;
 
             Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} 선택지: " +
                     string.Join(", ", System.Array.ConvertAll(choices, s => s.skillName)));
 
             // 해당 플레이어에게만 RPC 전송
-            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, false);
+            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, (int)ChoicePanelKind.Skill);
+        }
+
+        /// <summary>
+        /// 능력치 부스트 선택지 생성 + 전송. SendNormalChoices 의 "만렙" 분기.
+        /// Phase 6 퀘스트 보상에서도 동일 경로로 트리거 가능.
+        /// </summary>
+        private void SendStatBoostChoices(Photon.Realtime.Player player)
+        {
+            var db = GameManager.Instance?.StatBoostDB;
+            if (db == null || db.All == null || db.All.Count == 0)
+            {
+                Debug.LogWarning($"[LevelUpManager] StatBoostDB 미연결 또는 비어있음 — 플레이어 {player.ActorNumber} 스킵.");
+                playerSelections[player.ActorNumber] = true;
+                return;
+            }
+
+            var rng = new System.Random();
+            var choices = StatBoostChoiceService.GenerateChoices(db, 3, rng);
+            if (choices.Length == 0)
+            {
+                Debug.LogWarning($"[LevelUpManager] StatBoost 선택지 생성 실패 — 플레이어 {player.ActorNumber} 스킵.");
+                playerSelections[player.ActorNumber] = true;
+                return;
+            }
+
+            int[] boostIds = new int[choices.Length];
+            for (int i = 0; i < choices.Length; i++)
+                boostIds[i] = choices[i].boostId;
+
+            playerChoices[player.ActorNumber] = boostIds;
+            playerPanelKinds[player.ActorNumber] = ChoicePanelKind.StatBoost;
+
+            Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} StatBoost 선택지: " +
+                      string.Join(", ", System.Array.ConvertAll(choices, b => $"{b.displayName}({b.rarity})")));
+
+            photonView.RPC(nameof(RPC_ReceiveChoices), player, boostIds, (int)ChoicePanelKind.StatBoost);
         }
 
         private void SendChaosChoices(Photon.Realtime.Player player)
@@ -255,15 +311,40 @@ namespace SwDreams.Features.Progression.Adapter
                 choiceIds[i] = choices[i].skillId;
 
             playerChoices[player.ActorNumber] = choiceIds;
-            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, true);
+            playerPanelKinds[player.ActorNumber] = ChoicePanelKind.Chaos;
+            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, (int)ChoicePanelKind.Chaos);
         }
 
         // ===== 클라이언트: 선택지 수신 =====
 
         [PunRPC]
-        private void RPC_ReceiveChoices(int[] choiceIds, bool isChaos)
+        private void RPC_ReceiveChoices(int[] choiceIds, int panelKindInt)
         {
-            // 스킬 ID → SkillData 변환
+            ChoicePanelKind kind = (ChoicePanelKind)panelKindInt;
+
+            if (kind == ChoicePanelKind.StatBoost)
+            {
+                // StatBoost 경로: GameManager.StatBoostDB 로 해결.
+                var db = GameManager.Instance?.StatBoostDB;
+                myBoostChoices = new StatBoostData[choiceIds.Length];
+                for (int i = 0; i < choiceIds.Length; i++)
+                {
+                    myBoostChoices[i] = db?.GetById(choiceIds[i]);
+                    if (myBoostChoices[i] == null)
+                        Debug.LogError($"[LevelUpManager] StatBoost ID {choiceIds[i]} 변환 실패!");
+                }
+
+                Debug.Log("[LevelUpManager] StatBoost 선택지 수신: " +
+                          string.Join(", ", System.Array.ConvertAll(myBoostChoices, b => b?.displayName ?? "null")));
+
+                if (UIManager.Instance != null)
+                    UIManager.Instance.ShowLevelUpStatBoost(myBoostChoices);
+                else
+                    Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
+                return;
+            }
+
+            // Skill / Chaos 경로: 기존 동작 유지.
             myChoices = new SkillData[choiceIds.Length];
             for (int i = 0; i < choiceIds.Length; i++)
             {
@@ -272,18 +353,14 @@ namespace SwDreams.Features.Progression.Adapter
                     Debug.LogError($"[LevelUpManager] 스킬 ID {choiceIds[i]} 변환 실패!");
             }
 
+            bool isChaos = kind == ChoicePanelKind.Chaos;
             Debug.Log($"[LevelUpManager] 선택지 수신 ({(isChaos ? "혼돈" : "일반")}): " +
                       string.Join(", ", System.Array.ConvertAll(myChoices, s => s?.skillName ?? "null")));
 
-            // UI 이벤트 발행
             if (UIManager.Instance != null)
                 UIManager.Instance.ShowLevelUp(myChoices, isChaos);
             else
                 Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
-            // if (isChaos)
-            //     OnChaosChoicesReceived?.Invoke(myChoices);
-            // else
-            //     OnChoicesReceived?.Invoke(myChoices);
         }
 
         [PunRPC]
@@ -316,6 +393,23 @@ namespace SwDreams.Features.Progression.Adapter
             // 호스트에 알림
             photonView.RPC(nameof(RPC_PlayerSelected), RpcTarget.MasterClient,
                 PhotonNetwork.LocalPlayer.ActorNumber, skillId);
+        }
+
+        /// <summary>
+        /// LevelUpPanel 에서 StatBoost 카드 클릭 시 호출.
+        /// 선택한 boost ID를 호스트에 전송.
+        /// </summary>
+        public void SubmitBoostChoice(int boostId)
+        {
+            if (!isLevelUpActive) return;
+
+            Debug.Log($"[LevelUpManager] StatBoost 선택 제출: ID {boostId}");
+
+            // 로컬에서 즉시 적용 (반응성 우선).
+            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId);
+
+            photonView.RPC(nameof(RPC_PlayerBoostSelected), RpcTarget.MasterClient,
+                PhotonNetwork.LocalPlayer.ActorNumber, boostId);
         }
 
         // ===== 호스트: 선택 결과 수신 =====
@@ -399,11 +493,35 @@ namespace SwDreams.Features.Progression.Adapter
             {
                 int actorNumber = unselected[i];
 
-                if (playerChoices.TryGetValue(actorNumber, out int[] choices) && choices.Length > 0)
+                if (!playerChoices.TryGetValue(actorNumber, out int[] choices) || choices.Length == 0)
                 {
-                    int randomId = choices[Random.Range(0, choices.Length)];
-                    Debug.Log($"[LevelUpManager] 플레이어 {actorNumber} 랜덤 선택: ID {randomId}");
+                    playerSelections[actorNumber] = true;
+                    continue;
+                }
 
+                int randomId = choices[Random.Range(0, choices.Length)];
+                ChoicePanelKind kind = playerPanelKinds.TryGetValue(actorNumber, out var k)
+                    ? k : ChoicePanelKind.Skill;
+
+                Debug.Log($"[LevelUpManager] 플레이어 {actorNumber} 랜덤 선택({kind}): ID {randomId}");
+
+                if (kind == ChoicePanelKind.StatBoost)
+                {
+                    // StatBoost 분기: 호스트 쪽에서 로컬 적용 + 다른 클라에 sync.
+                    ApplyBoostLocally(actorNumber, randomId);
+
+                    if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
+                    {
+                        var targetPlayer = FindPhotonPlayer(actorNumber);
+                        if (targetPlayer != null)
+                            photonView.RPC(nameof(RPC_ForceBoostChoice), targetPlayer, randomId);
+                    }
+
+                    photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others, actorNumber, randomId);
+                }
+                else
+                {
+                    // Skill / Chaos 분기: 기존 경로.
                     SkillManager sm = FindSkillManagerForPlayer(actorNumber);
                     if (sm != null)
                     {
@@ -412,18 +530,13 @@ namespace SwDreams.Features.Progression.Adapter
                             sm.ApplyChoice(chosen);
                     }
 
-                    // 원격 플레이어에게만 ForceChoice 전송
-                    // 호스트 자신은 위에서 sm.ApplyChoice로 이미 적용됨 → 중복 방지
                     if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                     {
-                        Photon.Realtime.Player targetPlayer = FindPhotonPlayer(actorNumber);
+                        var targetPlayer = FindPhotonPlayer(actorNumber);
                         if (targetPlayer != null)
-                        {
                             photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId);
-                        }
                     }
 
-                    // [Phase 5] 다른 클라이언트에도 동기화
                     photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others, actorNumber, randomId);
                 }
 
@@ -466,6 +579,7 @@ namespace SwDreams.Features.Progression.Adapter
 
             playerSelections.Clear();
             playerChoices.Clear();
+            playerPanelKinds.Clear();
 
             // 대기 중인 레벨업이 있으면 바로 다음 시퀀스 시작
             if (pendingLevelUps.Count > 0)
@@ -514,6 +628,7 @@ namespace SwDreams.Features.Progression.Adapter
             isLevelUpActive = true;
             playerSelections.Clear();
             playerChoices.Clear();
+            playerPanelKinds.Clear();
 
             // 레벨업 완료 후 복원할 상태 (Playing으로 복원 → 이후 비상 보스전이 BossFight로 전환)
             stateBeforeLevelUp = GameManager.GameState.Playing;
@@ -556,6 +671,82 @@ namespace SwDreams.Features.Progression.Adapter
                 if (chosen != null)
                     localSkillManager.ApplyChoice(chosen);
             }
+        }
+
+        // ===== StatBoost 경로 (호스트) =====
+
+        [PunRPC]
+        private void RPC_PlayerBoostSelected(int actorNumber, int boostId)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (!isLevelUpActive) return;
+
+            if (playerSelections.ContainsKey(actorNumber) && playerSelections[actorNumber])
+                return;
+
+            playerSelections[actorNumber] = true;
+
+            var data = GameManager.Instance?.StatBoostDB?.GetById(boostId);
+            string name = data?.displayName ?? "Unknown";
+            Debug.Log($"[LevelUpManager] Player {actorNumber} StatBoost 선택 완료: {name}");
+
+            // 호스트 자신은 SubmitBoostChoice 에서 이미 로컬 적용됨 → 원격 플레이어만 적용.
+            if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
+                ApplyBoostLocally(actorNumber, boostId);
+
+            // 다른 클라이언트에도 동기화 (본인 클라는 SubmitBoostChoice 에서 이미 적용했으므로 Others).
+            photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others, actorNumber, boostId);
+
+            CheckAllSelected();
+        }
+
+        [PunRPC]
+        private void RPC_SyncBoostAcquisition(int actorNumber, int boostId)
+        {
+            // 본인은 SubmitBoostChoice 에서 이미 적용 — 스킵.
+            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber) return;
+            ApplyBoostLocally(actorNumber, boostId);
+        }
+
+        [PunRPC]
+        private void RPC_ForceBoostChoice(int boostId)
+        {
+            Debug.Log($"[LevelUpManager] 타임아웃 → StatBoost 랜덤 선택됨: ID {boostId}");
+            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId);
+        }
+
+        /// <summary>
+        /// 지정 ActorNumber 의 StatBoostManager 에 boost 적용 (로컬 경로).
+        /// Submit/Sync/ForceChoice 공통 호출.
+        /// </summary>
+        private void ApplyBoostLocally(int actorNumber, int boostId)
+        {
+            var data = GameManager.Instance?.StatBoostDB?.GetById(boostId);
+            if (data == null)
+            {
+                Debug.LogError($"[LevelUpManager] StatBoost ID {boostId} 해결 실패.");
+                return;
+            }
+
+            var mgr = FindStatBoostManagerForPlayer(actorNumber);
+            if (mgr == null)
+            {
+                Debug.LogWarning($"[LevelUpManager] Actor {actorNumber} StatBoostManager 미발견.");
+                return;
+            }
+            mgr.ApplyChoice(data);
+        }
+
+        private StatBoostManager FindStatBoostManagerForPlayer(int actorNumber)
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var playerObj in players)
+            {
+                PhotonView pv = playerObj.GetComponent<PhotonView>();
+                if (pv != null && pv.Owner != null && pv.Owner.ActorNumber == actorNumber)
+                    return playerObj.GetComponentInChildren<StatBoostManager>();
+            }
+            return null;
         }
 
         // ===== 스킬 동기화 (Phase 5) =====

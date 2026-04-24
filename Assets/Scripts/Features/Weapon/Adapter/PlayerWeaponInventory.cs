@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
-using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Character.Domain.ValueObjects;
-using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Features.Weapon.Domain;
 using SwDreams.Shared.Domain.Interfaces;
@@ -52,8 +50,8 @@ namespace SwDreams.Features.Weapon.Adapter
         /// <summary>호스트만 allocate. 클라는 RPC 파라미터로 전달받은 값을 그대로 사용.</summary>
         private int nextSlotUid = 1;
 
-        private PlayerStats stats;
-        private SkillManager skillManager;
+        private IPlayerStatsMutator stats;
+        private ISkillRegistry skillRegistry;
 
         /// <summary>장착 개수 (비할당 접근).</summary>
         public int EquippedCount => equipped.Count;
@@ -79,14 +77,14 @@ namespace SwDreams.Features.Weapon.Adapter
         {
             EnsureReferences();
 
-            if (skillManager != null)
-                skillManager.OnSkillAdded += HandleSkillAdded;
+            if (skillRegistry != null)
+                skillRegistry.OnSinkAdded += HandleSinkAdded;
         }
 
         private void OnDestroy()
         {
-            if (skillManager != null)
-                skillManager.OnSkillAdded -= HandleSkillAdded;
+            if (skillRegistry != null)
+                skillRegistry.OnSinkAdded -= HandleSinkAdded;
         }
 
         // ===== 픽업 측 진입점 =====
@@ -231,13 +229,12 @@ namespace SwDreams.Features.Weapon.Adapter
         private void InjectTriggers(WeaponData data, int slotUid)
         {
             EnsureReferences();
-            if (skillManager == null || data?.triggerEntries == null) return;
+            if (skillRegistry == null || data?.triggerEntries == null) return;
 
-            var skills = skillManager.EquippedSkills;
-            for (int s = 0; s < skills.Count; s++)
+            var sinks = skillRegistry.EffectSinks;
+            for (int s = 0; s < sinks.Count; s++)
             {
-                var sink = skills[s].GetComponent<IRuntimeEffectSink>();
-                if (sink == null) continue;
+                var sink = sinks[s];
                 for (int i = 0; i < data.triggerEntries.Length; i++)
                 {
                     var t = data.triggerEntries[i];
@@ -249,20 +246,15 @@ namespace SwDreams.Features.Weapon.Adapter
 
         private void RemoveTriggersByPrefix(string prefix)
         {
-            if (skillManager == null) return;
-            var skills = skillManager.EquippedSkills;
-            for (int i = 0; i < skills.Count; i++)
-            {
-                var sink = skills[i].GetComponent<IRuntimeEffectSink>();
-                sink?.RemoveByPrefix(prefix);
-            }
+            if (skillRegistry == null) return;
+            var sinks = skillRegistry.EffectSinks;
+            for (int i = 0; i < sinks.Count; i++)
+                sinks[i].RemoveByPrefix(prefix);
         }
 
-        /// <summary>신규 스킬 획득 시 기존 장착 무기의 트리거 효과를 그 스킬에도 주입.</summary>
-        private void HandleSkillAdded(SwDreams.Features.Skill.Adapter.Skill newSkill)
+        /// <summary>신규 스킬 획득 시 포트가 그 sink 를 전달. 기존 장착 무기의 트리거 효과를 재주입.</summary>
+        private void HandleSinkAdded(IRuntimeEffectSink sink)
         {
-            if (newSkill == null) return;
-            var sink = newSkill.GetComponent<IRuntimeEffectSink>();
             if (sink == null) return;
 
             // 유니크 엔트리는 id 당 1 번만 주입되도록 추적.
@@ -394,7 +386,7 @@ namespace SwDreams.Features.Weapon.Adapter
 
         private void EnsureReferences()
         {
-            if (stats != null && skillManager != null) return;
+            if (stats != null && skillRegistry != null) return;
 
             Transform cur = transform;
             Transform playerRoot = null;
@@ -406,14 +398,14 @@ namespace SwDreams.Features.Weapon.Adapter
 
             if (playerRoot != null)
             {
-                if (stats == null)        stats = playerRoot.GetComponentInChildren<PlayerStats>();
-                if (skillManager == null) skillManager = playerRoot.GetComponentInChildren<SkillManager>();
+                if (stats == null)          stats          = playerRoot.GetComponentInChildren<IPlayerStatsMutator>();
+                if (skillRegistry == null)  skillRegistry  = playerRoot.GetComponentInChildren<ISkillRegistry>();
             }
 
-            if (stats == null)        stats = GetComponentInParent<PlayerStats>();
-            if (skillManager == null) skillManager = GetComponentInParent<SkillManager>();
-            if (stats == null)        stats = GetComponentInChildren<PlayerStats>();
-            if (skillManager == null) skillManager = GetComponentInChildren<SkillManager>();
+            if (stats == null)          stats          = GetComponentInParent<IPlayerStatsMutator>();
+            if (skillRegistry == null)  skillRegistry  = GetComponentInParent<ISkillRegistry>();
+            if (stats == null)          stats          = GetComponentInChildren<IPlayerStatsMutator>();
+            if (skillRegistry == null)  skillRegistry  = GetComponentInChildren<ISkillRegistry>();
         }
     }
 }

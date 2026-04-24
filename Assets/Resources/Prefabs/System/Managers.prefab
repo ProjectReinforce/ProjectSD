@@ -948,6 +948,7 @@ MonoBehaviour:
   characterDatabase: {fileID: 11400000, guid: 7e9c656564fa07a44848e42fb3552c71, type: 2}
   essenceDatabase: {fileID: 11400000, guid: 3914eecbaf073d84d9775e2d0a00203c, type: 2}
   weaponDatabase: {fileID: 11400000, guid: dce164d4f6031da4893b9a37b74ffcc6, type: 2}
+  statBoostDatabase: {fileID: 11400000, guid: 906a29618a80b744b8d0f1f93c1179cf, type: 2}
 --- !u!114 &4439880617327635830
 MonoBehaviour:
   m_ObjectHideFlags: 0

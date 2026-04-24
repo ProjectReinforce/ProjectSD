@@ -1,6 +1,9 @@
 using System;
 using SwDreams.Features.UI.Presentation;
+using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.StatBoost.Adapter.Data;
+using SwDreams.Shared.Domain.ValueObjects;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -43,13 +46,19 @@ namespace SwDreams.Features.UI.Presentation
         [SerializeField] private Color newBadgeColor = new Color(1f, 0.8f, 0.2f, 1f);
         [SerializeField] private Color levelUpBadgeColor = new Color(0.4f, 0.7f, 1f, 1f);
 
+        [Header("능력치 부스트 색상")]
+        [SerializeField] private Color statBoostColor = new Color(0.9f, 0.7f, 0.2f, 1f);
+
         private Button button;
         private CanvasGroup canvasGroup;
         private SkillData currentSkillData;
+        private StatBoostData currentStatBoostData;
         private Action<SkillData> onClickCallback;
+        private Action<StatBoostData> onBoostClickCallback;
         private Color defaultCardColor;
 
         public SkillData CurrentSkillData => currentSkillData;
+        public StatBoostData CurrentStatBoostData => currentStatBoostData;
 
         private void Awake()
         {
@@ -75,9 +84,9 @@ namespace SwDreams.Features.UI.Presentation
 
             currentSkillData = skillData;
             onClickCallback = onClick;
-
-            currentSkillData = skillData;
-            onClickCallback = onClick;
+            // 반대 모드 클리어 (이전에 boost 로 세팅된 경우 대비).
+            currentStatBoostData = null;
+            onBoostClickCallback = null;
 
             if (nameText != null)
                 nameText.text = skillData.skillName;
@@ -186,7 +195,82 @@ namespace SwDreams.Features.UI.Presentation
 
         private void OnClick()
         {
-            onClickCallback?.Invoke(currentSkillData);
+            // Skill 모드 우선, 아니면 StatBoost 모드.
+            if (onClickCallback != null && currentSkillData != null)
+                onClickCallback.Invoke(currentSkillData);
+            else if (onBoostClickCallback != null && currentStatBoostData != null)
+                onBoostClickCallback.Invoke(currentStatBoostData);
+        }
+
+        /// <summary>
+        /// StatBoost 모드로 카드 구성. Skill 모드와 상호 배타적.
+        /// Rarity 색상을 타입 배지에 적용, "능력치" 라벨 고정.
+        /// </summary>
+        public void SetupAsStatBoost(StatBoostData data, Action<StatBoostData> onClick)
+        {
+            DOTween.Kill(transform);
+            DOTween.Kill(canvasGroup);
+            if (cardBackground != null) DOTween.Kill(cardBackground);
+
+            // 상호 배타: 반대 모드 상태 클리어.
+            currentSkillData = null;
+            onClickCallback = null;
+
+            currentStatBoostData = data;
+            onBoostClickCallback = onClick;
+
+            if (nameText != null)
+                nameText.text = data.displayName;
+
+            if (descText != null)
+                descText.text = string.IsNullOrEmpty(data.description)
+                    ? BuildAutoBoostDescription(data)
+                    : data.description;
+
+            if (iconImage != null && data.icon != null)
+                iconImage.sprite = data.icon;
+
+            if (levelText != null)
+            {
+                levelText.text = data.rarity.ToString();
+                levelText.color = GetRarityColor(data.rarity);
+            }
+
+            if (typeText != null) typeText.text = "능력치";
+            if (typeBadge != null) typeBadge.color = statBoostColor;
+
+            canvasGroup.alpha = 1f;
+            button.interactable = true;
+            transform.localScale = Vector3.one;
+
+            if (cardBackground != null)
+                cardBackground.color = defaultCardColor;
+        }
+
+        private static string BuildAutoBoostDescription(StatBoostData data)
+        {
+            // value 표기는 StatModifier.ToString 규칙과 동일하게.
+            switch (data.op)
+            {
+                case ModifierOp.PercentBonus:
+                    return $"{data.statType} {(data.value >= 0 ? "+" : "")}{data.value * 100f:0.##}%";
+                case ModifierOp.Multiplicative:
+                    return $"{data.statType} ×{data.value}";
+                default:
+                    return $"{data.statType} +{data.value}";
+            }
+        }
+
+        private static Color GetRarityColor(Rarity r)
+        {
+            switch (r)
+            {
+                case Rarity.Common:    return Color.white;
+                case Rarity.Rare:      return new Color(0.4f, 0.7f, 1f, 1f);
+                case Rarity.Epic:      return new Color(0.8f, 0.4f, 1f, 1f);
+                case Rarity.Legendary: return new Color(1f, 0.7f, 0.2f, 1f);
+                default:               return Color.gray;
+            }
         }
 
         // ===== 연출 (LevelUpPanel에서 호출) =====

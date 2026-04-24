@@ -1,6 +1,7 @@
 using UnityEngine;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Shared.Domain.ValueObjects;
 using Photon.Pun;
 
 namespace SwDreams.Features.Skill.Adapter.TriggerEffects
@@ -21,8 +22,6 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
     /// </summary>
     public class ApplyDoTHandler : IEffectActionHandler
     {
-        private const string LegacySource = "__legacy__";
-
         public void Execute(EffectParams parameters, TriggerContext context)
         {
             if (!PhotonNetwork.IsMasterClient) return;
@@ -34,7 +33,7 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
             if (tickDamage <= 0 || duration <= 0f) return;
 
-            string source = string.IsNullOrEmpty(context.source) ? LegacySource : context.source;
+            string source = string.IsNullOrEmpty(context.source) ? RuntimeSources.Legacy : context.source;
 
             // 같은 source 의 기존 DoT 있으면 Refresh, 없으면 새 컴포넌트 추가.
             var existing = FindDoTBySource(context.target.gameObject, source);

@@ -2,6 +2,7 @@ using UnityEngine;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.StatBoost.Adapter.Data;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
@@ -98,6 +99,39 @@ namespace SwDreams.Features.UI.Presentation
         }
 
         /// <summary>
+        /// StatBoost 선택지 패널 구성. 기존 SkillCardUI 카드를 재사용하되 boost 모드로 전환.
+        /// UIManager.ShowLevelUpStatBoost()에서 호출.
+        /// </summary>
+        public void SetupStatBoost(StatBoostData[] choices)
+        {
+            hasSelected = false;
+
+            if (titleText != null)
+                titleText.text = "능력치를 선택하세요";
+
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (i < choices.Length && choices[i] != null)
+                {
+                    skillCards[i].gameObject.SetActive(true);
+                    skillCards[i].SetupAsStatBoost(choices[i], OnBoostCardClicked);
+                }
+                else
+                {
+                    skillCards[i].gameObject.SetActive(false);
+                }
+            }
+
+            if (timerBarFill != null)
+            {
+                timerBarFill.fillAmount = 1f;
+                timerBarFill.color = Color.white;
+            }
+
+            PlayShowAnimation();
+        }
+
+        /// <summary>
         /// UIManager.HideLevelUp()에서 호출.
         /// </summary>
         public void Hide()
@@ -147,6 +181,29 @@ namespace SwDreams.Features.UI.Presentation
 
             if (LevelUpManager.Instance != null)
                 LevelUpManager.Instance.SubmitChoice(selectedSkill.skillId);
+
+            canvasGroup.interactable = false;
+        }
+
+        private void OnBoostCardClicked(StatBoostData selectedBoost)
+        {
+            if (hasSelected) return;
+            hasSelected = true;
+
+            Debug.Log($"[LevelUpPanel] StatBoost 카드 선택: {selectedBoost.displayName}");
+
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (!skillCards[i].gameObject.activeSelf) continue;
+
+                if (skillCards[i].CurrentStatBoostData == selectedBoost)
+                    skillCards[i].PlaySelectedAnimation();
+                else
+                    skillCards[i].PlayDimAnimation();
+            }
+
+            if (LevelUpManager.Instance != null)
+                LevelUpManager.Instance.SubmitBoostChoice(selectedBoost.boostId);
 
             canvasGroup.interactable = false;
         }

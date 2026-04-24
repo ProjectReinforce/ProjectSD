@@ -78,6 +78,22 @@ namespace SwDreams.Features.UI.Presentation
             levelUpPanel.Setup(choices, isChaos);
         }
 
+        /// <summary>
+        /// StatBoost 선택지 패널 오픈. 스킬 풀 고갈(만렙) 시 레벨업 또는 퀘스트 보상에서 호출.
+        /// </summary>
+        public void ShowLevelUpStatBoost(SwDreams.Features.StatBoost.Adapter.Data.StatBoostData[] choices)
+        {
+            if (levelUpPanel == null)
+            {
+                Debug.LogError("[UIManager] LevelUpPanel 참조 없음!");
+                return;
+            }
+
+            Debug.Log("[UIManager] ShowLevelUpStatBoost 호출");
+            levelUpPanel.gameObject.SetActive(true);
+            levelUpPanel.SetupStatBoost(choices);
+        }
+
         public void HideLevelUp()
         {
             if (levelUpPanel != null)

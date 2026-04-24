@@ -452,6 +452,7 @@ GameObject:
   - component: {fileID: 8723160286747431291}
   - component: {fileID: 1124899101422158438}
   - component: {fileID: 8593987351426206606}
+  - component: {fileID: 2576710473928925516}
   m_Layer: 10
   m_Name: Skills
   m_TagString: Untagged
@@ -505,3 +506,15 @@ MonoBehaviour:
   maxChainPerFrame: 5
   explosionEffectPrefab: {fileID: 7576172759247056744, guid: 169f073e8f65fcd4dbe09d021af37c21, type: 3}
   unityCheckRadius: 5
+--- !u!114 &2576710473928925516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5449631014595424917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cca1a90c6f05134283aebf38a65461a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.StatBoost.Adapter.StatBoostManager
