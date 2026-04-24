@@ -3,10 +3,12 @@ using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
+using SwDreams.Features.Skill.Domain.ValueObjects;
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Skill.Adapter
@@ -18,11 +20,13 @@ namespace SwDreams.Features.Skill.Adapter
     /// [Step 1-4] 수치 효과는 PlayerStats의 StatModifier로 통합.
     /// 비수치 효과(연쇄 폭발, 도박꾼)만 이 클래스에서 관리.
     ///
-    /// modifier source 규칙:
-    ///   "chaos_attack"    — 공격력 배율 (유리대포 + 가속엔진 + 단결)
-    ///   "chaos_maxhp"     — 최대 HP 배율 (유리대포)
-    ///   "chaos_cdr"       — 쿨다운 배율 (폭주모드). Multiply on CooldownReduction.
-    ///   "chaos_movespeed" — 이동속도 가산 (폭주모드 + 가속엔진)
+    /// [Phase 8-A 리팩터] modifier source 네이밍 — 혼돈별 독립 + op 별:
+    ///   "chaos_gc_atk"          — GlassCannon ATK 배율 (Multiplicative)
+    ///   "chaos_gc_hp"           — GlassCannon HP 배율 (Multiplicative)
+    ///   "chaos_accel_{StatType}" — AccelEngine 모든 스탯 +% (PercentBonus)
+    ///   "chaos_berserk_cdr"     — Berserk CDR 배율 (Multiplicative, 비활성 시 1.0)
+    ///   "chaos_berserk_spd"     — Berserk 이속 배율 (Multiplicative, 비활성 시 1.0)
+    ///   "chaos_unity_atk"       — Unity 데미지 증폭 (PercentBonus, 근접 0 명 시 제거)
     /// </summary>
     public class ChaosSkillManager : MonoBehaviour
     {
@@ -35,12 +39,27 @@ namespace SwDreams.Features.Skill.Adapter
         private bool hasGambler;
 
         // ===== 연쇄 폭발 설정 =====
-        [Header("연쇄 폭발")]
+        [Header("연쇄 폭발 — fallback 기본값 (SO 의 paramsByRarity 미설정 시 사용)")]
         [SerializeField] private float explosionRadius = 2f;
         [SerializeField] private int explosionDamage = 20;
         [SerializeField] private int maxChainPerFrame = 5;
         [SerializeField] private GameObject explosionEffectPrefab;
         private int chainCountThisFrame;
+
+        /// <summary>
+        /// Chain Explosion params 해석 (primary=damage, secondary=radius).
+        /// tertiary (프레임당 최대 연쇄) 는 설계 파라미터 아님 — 성능 무한 루프 가드이므로
+        /// SerializeField <see cref="maxChainPerFrame"/> 만 사용.
+        /// damage/radius 도 SO 미설정 시 SerializeField 로 fallback.
+        /// </summary>
+        private (int damage, float radius, int maxChain) GetChainExplosionConfig()
+        {
+            var p = GetParams(ChaosEffectType.ChainExplosion,
+                new EffectParams(explosionDamage, explosionRadius, 0f));
+            int dmg = p.primary > 0f ? Mathf.RoundToInt(p.primary) : explosionDamage;
+            float r = p.secondary > 0f ? p.secondary : explosionRadius;
+            return (dmg, r, maxChainPerFrame);
+        }
 
         // ===== 단결 설정 =====
         [Header("단결")]
@@ -50,10 +69,9 @@ namespace SwDreams.Features.Skill.Adapter
         private int nearbyPlayerCount;
 
         // ===== 변경 감지용 캐시 (매 프레임 비교) =====
-        private float cachedAttackMul = 1f;
-        private float cachedCdMul = 1f;
-        private float cachedMoveBonus = 0f;
-        private float cachedHpMul = 1f;
+        // 각 혼돈 효과별로 "현재 상태가 바뀌었는지" 추적. 새 구조(혼돈별 독립 modifier) 에 맞춰 세분화.
+        private bool cachedBerserkActive;      // Berserk HP 임계 통과 여부
+        private float cachedAccelBonus = -1f;  // Accel 의 현재 bonus 값 (0~p.primary). -1 = 아직 초기화 안 됨.
 
         // ===== 비수치 효과 프로퍼티 =====
 
@@ -63,6 +81,24 @@ namespace SwDreams.Features.Skill.Adapter
         /// <summary>보유 중인 혼돈 스킬 목록 (디버그 오버레이, 보스 시스템용).</summary>
         private List<ChaosEffectType> activeChaosEffects = new List<ChaosEffectType>();
         public IReadOnlyList<ChaosEffectType> ActiveEffects => activeChaosEffects;
+
+        /// <summary>
+        /// 타입별 ChaosSkillData 참조 — paramsByRarity 해석에 사용.
+        /// </summary>
+        private readonly Dictionary<ChaosEffectType, ChaosSkillData> activeData =
+            new Dictionary<ChaosEffectType, ChaosSkillData>();
+
+        /// <summary>
+        /// 타입별 rolledRarity — 장착 시점에 LevelUpManager 가 전달한 값.
+        /// activeData 의 params 를 인덱싱할 때 사용.
+        /// </summary>
+        private readonly Dictionary<ChaosEffectType, Rarity> activeRarities =
+            new Dictionary<ChaosEffectType, Rarity>();
+
+        /// <summary>
+        /// fallback 경고를 타입당 1회만 출력하기 위한 중복 방지 세트.
+        /// </summary>
+        private readonly HashSet<ChaosEffectType> warnedFallbackTypes = new HashSet<ChaosEffectType>();
 
         // ===== 캐시 =====
         private IDamageable playerDamageable;
@@ -87,8 +123,9 @@ namespace SwDreams.Features.Skill.Adapter
 
         /// <summary>
         /// SkillManager.ApplyChoice()에서 호출.
+        /// rolledRarity 는 해당 선택지가 뽑혔을 때의 등급 (paramsByRarity 인덱스).
         /// </summary>
-        public void ApplyChaos(SkillData data)
+        public void ApplyChaos(SkillData data, Rarity rolledRarity)
         {
             // 참조 캐싱 (Start보다 먼저 호출될 수 있으므로)
             if (playerDamageable == null)
@@ -109,6 +146,11 @@ namespace SwDreams.Features.Skill.Adapter
             }
 
             activeChaosEffects.Add(data.chaosEffectType);
+
+            // 데이터 + 등급 참조 저장 — paramsByRarity 해석용.
+            if (data is ChaosSkillData chaosData)
+                activeData[data.chaosEffectType] = chaosData;
+            activeRarities[data.chaosEffectType] = rolledRarity;
 
             switch (data.chaosEffectType)
             {
@@ -175,6 +217,37 @@ namespace SwDreams.Features.Skill.Adapter
             Debug.Log("[ChaosSkillManager] 도박꾼 활성 — 다음 레벨업부터 선택지 1개 등급 상승");
         }
 
+        // ===== SO 파라미터 조회 (Phase 8-A) =====
+
+        /// <summary>
+        /// 지정 혼돈 효과의 SO 파라미터를 저장된 rolledRarity 기반으로 조회. SO / params 미설정이면 fallback.
+        /// fallback 은 Common 등급 수치 (최약) — 개발자 실수로 플레이어 어드밴티지 주지 않음. 타입당 1 회 경고.
+        /// </summary>
+        private EffectParams GetParams(ChaosEffectType type, EffectParams fallback)
+        {
+            if (!activeData.TryGetValue(type, out var data) || data == null)
+            {
+                WarnFallbackOnce(type, "ChaosSkillData SO 참조 없음");
+                return fallback;
+            }
+            Rarity r = activeRarities.TryGetValue(type, out var rr) ? rr : Rarity.Common;
+            var p = data.GetParams(r);
+            if (p.primary == 0f && p.secondary == 0f && p.tertiary == 0f)
+            {
+                WarnFallbackOnce(type, $"paramsByRarity[{r}] 전부 0");
+                return fallback;
+            }
+            return p;
+        }
+
+        private void WarnFallbackOnce(ChaosEffectType type, string reason)
+        {
+            if (warnedFallbackTypes.Contains(type)) return;
+            warnedFallbackTypes.Add(type);
+            Debug.LogWarning($"[ChaosSkillManager] {type} — {reason}. Common 등급 fallback 사용. " +
+                             "SO Inspector 의 paramsByRarity 를 채워주세요.");
+        }
+
         // ===== Update: 조건부 효과 갱신 =====
 
         private void Update()
@@ -205,28 +278,32 @@ namespace SwDreams.Features.Skill.Adapter
         {
             if (playerDamageable == null) return false;
 
-            bool isBerserk = playerDamageable.CurrentHP <= playerDamageable.MaxHP * 0.3f;
-            float newCDR = isBerserk ? 0.5f : 1f;
-            float newSpd = isBerserk ? baseMoveSpeed * 0.5f : 0f;
-
-            if (Mathf.Abs(cachedCdMul - newCDR) > 0.01f ||
-                Mathf.Abs(cachedMoveBonus - newSpd) > 0.01f)
+            // Berserk 활성 여부가 바뀌었는지만 체크. 값 자체는 Recalculate 가 SO 에서 다시 읽음.
+            var p = GetParams(ChaosEffectType.BerserkMode,
+                new EffectParams(0.9f, 0.3f, 1.1f));
+            bool nowActive = playerDamageable.CurrentHP <= playerDamageable.MaxHP * p.secondary;
+            if (nowActive != cachedBerserkActive)
+            {
+                cachedBerserkActive = nowActive;
                 return true;
-
+            }
             return false;
         }
 
         private bool CheckAccelChanged()
         {
-            float gameTime = GameManager.Instance.GameTime;
-            float bonus = Mathf.Lerp(0f, 0.5f, gameTime / 600f);
-            float newMul = 1f + bonus;
-            if (hasGlassCannon)
-                newMul += 1f;
+            // Accel bonus 는 시간에 따라 연속 변동. 임계값 이상 변하면 재계산.
+            var p = GetParams(ChaosEffectType.AccelEngine,
+                new EffectParams(0.1f, 600f, 0f));
+            float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
+            float rampDur = p.secondary > 0f ? p.secondary : 600f;
+            float bonus = Mathf.Lerp(0f, p.primary, gameTime / rampDur);
 
-            if (Mathf.Abs(cachedAttackMul - newMul) > 0.01f)
+            if (Mathf.Abs(bonus - cachedAccelBonus) > 0.001f)
+            {
+                cachedAccelBonus = bonus;
                 return true;
-
+            }
             return false;
         }
 
@@ -236,15 +313,20 @@ namespace SwDreams.Features.Skill.Adapter
             if (unityCheckTimer < UNITY_CHECK_INTERVAL) return false;
             unityCheckTimer = 0f;
 
+            // Unity params: primary=기본 보너스, secondary=아군 당 추가, tertiary=감지 반경(0 이면 인스펙터값 사용)
+            var p = GetParams(ChaosEffectType.Unity,
+                new EffectParams(0.1f, 0.1f, 0f));
+            float radius = p.tertiary > 0f ? p.tertiary : unityCheckRadius;
+
             int count = 0;
             var players = GameObject.FindGameObjectsWithTag("Player");
-            foreach (var p in players)
+            foreach (var pl in players)
             {
-                if (p == transform.root.gameObject) continue;
-                if (!p.activeInHierarchy) continue;
+                if (pl == transform.root.gameObject) continue;
+                if (!pl.activeInHierarchy) continue;
 
-                float dist = Vector2.Distance(transform.root.position, p.transform.position);
-                if (dist <= unityCheckRadius)
+                float dist = Vector2.Distance(transform.root.position, pl.transform.position);
+                if (dist <= radius)
                     count++;
             }
 
@@ -259,8 +341,16 @@ namespace SwDreams.Features.Skill.Adapter
         // ===== Modifier 등록 =====
 
         /// <summary>
-        /// 모든 chaos 수치 효과를 계산하여 PlayerStats에 modifier로 등록.
-        /// 값이 변경된 경우에만 호출됨 (Update의 변경 감지 후).
+        /// 모든 chaos 수치 효과를 각 혼돈별 독립 modifier 로 PlayerStats 에 등록.
+        ///
+        /// 설계 철학:
+        /// - Glass Cannon : HP/ATK 둘 다 "언제나 n 배" → Multiplicative.
+        /// - Accel Engine : 시간 경과 → 모든 스탯 +N% → PercentBonus 로 여러 StatType 에 각각.
+        /// - Berserk      : HP 임계 이하 발동 → CDR/이속 "배율" → Multiplicative (활성 외 1.0 = 영향 없음).
+        /// - Unity        : 근접 아군 수 → 데미지 증폭 → PercentBonus.
+        ///
+        /// 변경 감지(CheckXxxChanged) 후 호출. Berserk 상태 토글 / Accel 램프 갱신 / Unity 카운트 변화 시 재실행.
+        /// AddModifier 는 source+StatType 동일 시 replace — idempotent. 제거 경로는 Unity 0 명 케이스만.
         /// </summary>
         private void RecalculateChaosModifiers()
         {
@@ -270,66 +360,73 @@ namespace SwDreams.Features.Skill.Adapter
                 if (playerStats == null) return;
             }
 
-            float attackMul = 1f;
-            float cdMul = 1f;
-            float moveBonus = 0f;
-            float hpMul = 1f;
-
-            // 유리대포
+            // 1) Glass Cannon — HP, ATK 모두 Multiplicative (독립 곱)
             if (hasGlassCannon)
             {
-                hpMul = 0.5f;
-                attackMul *= 2f;
+                var p = GetParams(ChaosEffectType.GlassCannon,
+                    new EffectParams(1.1f, 0.5f, 0f));
+                playerStats.AddModifier(new StatModifier(
+                    "chaos_gc_atk", StatType.AttackMultiplier, ModifierOp.Multiplicative, p.primary));
+                playerStats.AddModifier(new StatModifier(
+                    "chaos_gc_hp", StatType.MaxHP, ModifierOp.Multiplicative, p.secondary));
             }
 
-            // 가속 엔진
+            // 2) Accel Engine — 시간 경과 → 모든 주요 스탯 PercentBonus
             if (hasAccelEngine)
             {
+                var p = GetParams(ChaosEffectType.AccelEngine,
+                    new EffectParams(0.1f, 600f, 0f));
                 float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
-                float bonus = Mathf.Lerp(0f, 0.5f, gameTime / 600f);
-                attackMul += bonus;
-                moveBonus += baseMoveSpeed * bonus;
+                float rampDur = p.secondary > 0f ? p.secondary : 600f;
+                float bonus = Mathf.Lerp(0f, p.primary, gameTime / rampDur);
+                AddAccelBonus(StatType.AttackMultiplier, bonus);
+                AddAccelBonus(StatType.MoveSpeed, bonus);
+                AddAccelBonus(StatType.SkillRange, bonus);
+                AddAccelBonus(StatType.CooldownReduction, bonus);
+                AddAccelBonus(StatType.CritDamage, bonus);
+                AddAccelBonus(StatType.ProjectileSpeed, bonus);
             }
 
-            // 폭주 모드
+            // 3) Berserk — HP 임계 이하 시 발동. Multiplicative 로 "최종 이속/CDR 배율"
             if (hasBerserkMode && playerDamageable != null)
             {
-                bool isBerserk = playerDamageable.CurrentHP <= playerDamageable.MaxHP * 0.3f;
-                if (isBerserk)
+                var p = GetParams(ChaosEffectType.BerserkMode,
+                    new EffectParams(0.9f, 0.3f, 1.1f));
+                bool isBerserk = playerDamageable.CurrentHP <= playerDamageable.MaxHP * p.secondary;
+                // 비활성 상태는 value=1 (Multiplicative 항등원). AddOrReplace 로 매번 덮어씀.
+                float cdrMul = isBerserk ? p.primary   : 1f;
+                float spdMul = isBerserk ? p.tertiary  : 1f;
+                playerStats.AddModifier(new StatModifier(
+                    "chaos_berserk_cdr", StatType.CooldownReduction, ModifierOp.Multiplicative, cdrMul));
+                playerStats.AddModifier(new StatModifier(
+                    "chaos_berserk_spd", StatType.MoveSpeed, ModifierOp.Multiplicative, spdMul));
+            }
+
+            // 4) Unity — 근접 아군 수 기반 PercentBonus 데미지 증폭
+            // 공식: primary + (nearby - 1) * secondary. 혼자(nearby=0)면 modifier 제거 (bonus 0).
+            if (hasUnity)
+            {
+                if (nearbyPlayerCount > 0)
                 {
-                    cdMul = 0.5f;
-                    moveBonus += baseMoveSpeed * 0.5f;
+                    var p = GetParams(ChaosEffectType.Unity,
+                        new EffectParams(0.03f, 0.02f, 0f));
+                    float unityBonus = p.primary + (nearbyPlayerCount - 1) * p.secondary;
+                    playerStats.AddModifier(new StatModifier(
+                        "chaos_unity_atk", StatType.AttackMultiplier, ModifierOp.PercentBonus, unityBonus));
+                }
+                else
+                {
+                    playerStats.RemoveModifiersBySource("chaos_unity_atk");
                 }
             }
 
-            // 단결
-            if (hasUnity && nearbyPlayerCount > 0)
-            {
-                float unityBonus = nearbyPlayerCount * 0.1f + 0.1f;
-                attackMul += unityBonus;
-            }
-
-            // 캐시 갱신
-            cachedAttackMul = attackMul;
-            cachedCdMul = cdMul;
-            cachedMoveBonus = moveBonus;
-            cachedHpMul = hpMul;
-
-            // PlayerStats에 modifier 등록.
-            // 혼돈 스킬은 "언제나 n배" 의미라 Multiplicative (곱 스택). 다른 % 아이템 영향 없이 독립 보존.
-            playerStats.AddModifier(new StatModifier(
-                "chaos_attack", StatType.AttackMultiplier, ModifierOp.Multiplicative, attackMul));
-
-            playerStats.AddModifier(new StatModifier(
-                "chaos_cdr", StatType.CooldownReduction, ModifierOp.Multiplicative, cdMul));
-
-            playerStats.AddModifier(new StatModifier(
-                "chaos_movespeed", StatType.MoveSpeed, ModifierOp.Add, moveBonus));
-
-            playerStats.AddModifier(new StatModifier(
-                "chaos_maxhp", StatType.MaxHP, ModifierOp.Multiplicative, hpMul));
-
             playerStats.Recalculate();
+        }
+
+        private void AddAccelBonus(StatType st, float bonus)
+        {
+            playerStats.AddModifier(new StatModifier(
+                $"chaos_accel_{st}", st, ModifierOp.PercentBonus, bonus));
         }
 
         // ===== 연쇄 폭발 =====
@@ -343,7 +440,9 @@ namespace SwDreams.Features.Skill.Adapter
         {
             if (!hasChainExplosion) return;
             if (!PhotonNetwork.IsMasterClient) return;
-            if (chainCountThisFrame >= maxChainPerFrame) return;
+
+            var cfg = GetChainExplosionConfig();
+            if (chainCountThisFrame >= cfg.maxChain) return;
 
             chainCountThisFrame++;
 
@@ -365,19 +464,21 @@ namespace SwDreams.Features.Skill.Adapter
         {
             if (!hasChainExplosion) return;
             if (!IsLocalPlayer()) return; // 자기 캐릭터 것만
-            if (chainCountThisFrame >= maxChainPerFrame) return;
+
+            var cfg = GetChainExplosionConfig();
+            if (chainCountThisFrame >= cfg.maxChain) return;
 
             chainCountThisFrame++;
             SpawnExplosionVisual(position);
 
             // 폭발 범위 내 적에게 비주얼 피드백 (데미지 팝업)
-            var hits = Physics2D.OverlapCircleAll(position, explosionRadius);
+            var hits = Physics2D.OverlapCircleAll(position, cfg.radius);
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Enemy")) continue;
                 var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
                 if (enemy != null && enemy.IsAlive)
-                    enemy.ShowHitVisuals(explosionDamage);
+                    enemy.ShowHitVisuals(cfg.damage);
             }
         }
 
@@ -402,14 +503,15 @@ namespace SwDreams.Features.Skill.Adapter
 
         private void TriggerExplosionDamage(Vector2 position)
         {
-            var hits = Physics2D.OverlapCircleAll(position, explosionRadius);
+            var cfg = GetChainExplosionConfig();
+            var hits = Physics2D.OverlapCircleAll(position, cfg.radius);
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Enemy")) continue;
 
                 var damageable = hit.GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
-                    damageable.TakeDamage(explosionDamage);
+                    damageable.TakeDamage(cfg.damage);
             }
         }
 

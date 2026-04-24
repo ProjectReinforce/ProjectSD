@@ -3,7 +3,6 @@ using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Skill.Adapter.Data;
-using SwDreams.Shared.Domain.ValueObjects;
 using UnityEngine;
 
 namespace SwDreams.Features.Skill.Adapter.Data
@@ -67,11 +66,10 @@ namespace SwDreams.Features.Skill.Adapter.Data
         public SkillEffectType effectType;
         public ChaosEffectType chaosEffectType;
 
-        [Header("등급 (Phase 7 — 혼돈 스킬 등급 적용)")]
-        [Tooltip("혼돈 스킬은 이 등급을 가중치 기반 선정기에 사용 (카드 3장 모두 동일 등급).\n" +
-                 "Active/Passive 는 일반 선택지 경로에서 참조하지 않음 — 기본값 Common 유지 가능.")]
-        public Rarity rarity = Rarity.Common;
-        
+        // Phase 8-A 리팩터 (2026-04-24): 혼돈 스킬은 ChaosSkillData.paramsByRarity[4] 에서
+        // 등급별 값을 들고 있고, 런타임에 rolledRarity 로 인덱싱한다. 개별 SO 의 rarity 필드는
+        // 무의미 → 제거. (Weapon/StatBoost 는 다른 구조 — 각자 자체 등급 필드 유지.)
+
         [Header("UI 표시용")]
         public Sprite icon;
         [TextArea] public string description;

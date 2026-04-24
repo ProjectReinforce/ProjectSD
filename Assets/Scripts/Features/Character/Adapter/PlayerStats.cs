@@ -413,7 +413,7 @@ namespace SwDreams.Features.Character.Adapter
         ///
         /// - ΣAdd            — 플랫 데미지 가산. 관례: 무기 엔트리 op=Add 만 여기로.
         /// - ΣPercentBonus   — 스킬 기본의 % 가산. 관례: 무기 엔트리 op=PercentBonus + 패시브 AttackMultiplier.
-        /// - ΠMultiplicative — 최종 수치 조정. 관례: 혼돈 chaos_attack. 향후 무기도 편입 가능.
+        /// - ΠMultiplicative — 최종 수치 조정. 관례: 혼돈 chaos_gc_atk / chaos_berserk_* 등. 향후 무기도 편입 가능.
         ///
         /// applicableStats 필터: 스킬이 AttackMultiplier 를 받지 않도록 선언됐으면 skillBase 그대로 반환.
         /// </summary>

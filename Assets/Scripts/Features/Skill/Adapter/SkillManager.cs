@@ -586,13 +586,19 @@ namespace SwDreams.Features.Skill.Adapter
         /// <summary>
         /// 혼돈 스킬 선택지 생성 (Lv.5, 10, 15 전용).
         ///
-        /// [Phase 7] 4등급 공용 선정기(<see cref="RarityPoolChoiceGenerator"/>) 로 전환:
-        /// 카드 3 장이 항상 같은 등급이 되도록 강제. 먼저 Rarity 롤 → 해당 등급 풀에서 샘플.
-        /// 등급 가중치는 GameplayConfig.defaultRarityWeights 공용 (StatBoost 와 동일 기본값).
+        /// [Phase 8-A 리팩터] 통합 등급 SO 방식 — SO 하나가 paramsByRarity[4] 로 모든 등급 값을 보유.
+        /// 선정:
+        /// 1. 등급 롤 (weights 기반)
+        /// 2. 보유하지 않은 혼돈 SO 전체가 후보 → count 장 무작위 샘플
+        /// 3. 카드 3 장은 rolledRarity 공유 (apply 시 동일 등급의 params 해석)
+        ///
+        /// StatBoostChoiceService 와 동일 패턴. 등급 가중치는 GameplayConfig.defaultRarityWeights.
+        /// 반환: (choices, rolledRarity). 후보 없으면 (빈 배열, Common).
         /// </summary>
         /// <param name="chaosSkills">혼돈 스킬 풀</param>
         /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
-        public SkillData[] GenerateChaosChoices(SkillData[] chaosSkills, int count = 3)
+        public (SkillData[] choices, Rarity rolledRarity) GenerateChaosChoices(
+            SkillData[] chaosSkills, int count = 3)
         {
             var cfg = GetConfig();
             if (cfg != null)
@@ -614,26 +620,35 @@ namespace SwDreams.Features.Skill.Adapter
                     candidates.Add(skill);
                 }
             }
-            if (candidates.Count == 0) return System.Array.Empty<SkillData>();
+            if (candidates.Count == 0)
+                return (System.Array.Empty<SkillData>(), Rarity.Common);
 
             float[] weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
                 ? cfg.defaultRarityWeights
                 : new float[] { 60f, 25f, 12f, 3f };
 
             var rng = new System.Random();
-            return RarityPoolChoiceGenerator.PickChoices(
-                candidates,
-                s => s.rarity,
-                weights,
-                count,
-                rng);
+            Rarity rolled = RarityWeightedRoller.Roll(weights, rng);
+
+            // 후보 풀에서 count 장 무작위 샘플 (Fisher-Yates 부분 셔플).
+            int take = System.Math.Min(count, candidates.Count);
+            for (int i = 0; i < take; i++)
+            {
+                int j = i + rng.Next(candidates.Count - i);
+                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+            }
+
+            var result = new SkillData[take];
+            for (int i = 0; i < take; i++) result[i] = candidates[i];
+            return (result, rolled);
         }
 
         /// <summary>
         /// 선택지에서 플레이어가 고른 스킬을 적용.
         /// 호스트가 결과를 받아 각 플레이어에서 호출.
+        /// 혼돈 스킬의 경우 <paramref name="rolledRarity"/> 가 paramsByRarity 인덱스 — LevelUpManager 가 전달.
         /// </summary>
-        public void ApplyChoice(SkillData chosenSkill)
+        public void ApplyChoice(SkillData chosenSkill, Rarity rolledRarity = Rarity.Common)
         {
             // [Phase 5] 혼돈 스킬이면 ChaosSkillManager에 위임 (슬롯 미사용)
             if (chosenSkill.skillType == SkillType.Chaos)
@@ -643,7 +658,7 @@ namespace SwDreams.Features.Skill.Adapter
                     chaosManager = GetComponentInParent<ChaosSkillManager>();
 
                 if (chaosManager != null)
-                    chaosManager.ApplyChaos(chosenSkill);
+                    chaosManager.ApplyChaos(chosenSkill, rolledRarity);
                 else
                     Debug.LogWarning("[SkillManager] ChaosSkillManager 없음 — 혼돈 스킬 적용 실패");
                 return;

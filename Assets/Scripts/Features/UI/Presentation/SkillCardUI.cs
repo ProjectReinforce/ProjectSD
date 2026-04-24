@@ -75,7 +75,7 @@ namespace SwDreams.Features.UI.Presentation
             button.onClick.RemoveListener(OnClick);
         }
 
-        public void Setup(SkillData skillData, Action<SkillData> onClick)
+        public void Setup(SkillData skillData, Action<SkillData> onClick, Rarity chaosRarity = Rarity.Common)
         {
             DOTween.Kill(transform);
             DOTween.Kill(canvasGroup);
@@ -98,7 +98,7 @@ namespace SwDreams.Features.UI.Presentation
                 iconImage.sprite = skillData.icon;
 
             SetupLevelBadge(skillData);
-            SetupTypeBadge(skillData);
+            SetupTypeBadge(skillData, chaosRarity);
 
             canvasGroup.alpha = 1f;
             button.interactable = true;
@@ -144,7 +144,7 @@ namespace SwDreams.Features.UI.Presentation
             }
         }
 
-        private void SetupTypeBadge(SkillData skillData)
+        private void SetupTypeBadge(SkillData skillData, Rarity chaosRarity)
         {
             Color badgeColor;
             string typeStr;
@@ -160,9 +160,9 @@ namespace SwDreams.Features.UI.Presentation
                     typeStr = "패시브";
                     break;
                 case SkillType.Chaos:
-                    // Phase 7: 혼돈 스킬은 등급별 색으로 덮어써 카드 3장이 동일 등급임을 시각화.
-                    badgeColor = GetRarityColor(skillData.rarity);
-                    typeStr = $"혼돈 · {skillData.rarity}";
+                    // [Phase 8-A] 혼돈 카드 3 장은 rolledRarity 공유 — LevelUpPanel 이 외부 주입.
+                    badgeColor = GetRarityColor(chaosRarity);
+                    typeStr = $"혼돈 · {chaosRarity}";
                     break;
                 default:
                     badgeColor = Color.gray;

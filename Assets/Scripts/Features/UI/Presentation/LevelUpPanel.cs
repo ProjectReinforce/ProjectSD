@@ -69,20 +69,22 @@ namespace SwDreams.Features.UI.Presentation
         /// <summary>
         /// UIManager.ShowLevelUp()에서 호출.
         /// SetActive(true) 이후에 호출됨.
+        /// 혼돈 스킬일 때는 chaosRarity 를 받아 카드 3 장에 같은 등급 표시.
         /// </summary>
-        public void Setup(SkillData[] choices, bool isChaos)
+        public void Setup(SkillData[] choices, bool isChaos, Rarity chaosRarity = Rarity.Common)
         {
             hasSelected = false;
 
             if (titleText != null)
-                titleText.text = isChaos ? "혼돈 스킬을 선택하세요" : "스킬을 선택하세요";
+                titleText.text = isChaos ? $"혼돈 선택 · {chaosRarity}" : "스킬을 선택하세요";
 
             for (int i = 0; i < skillCards.Length; i++)
             {
                 if (i < choices.Length && choices[i] != null)
                 {
                     skillCards[i].gameObject.SetActive(true);
-                    skillCards[i].Setup(choices[i], OnCardClicked);
+                    // Chaos 면 rolledRarity 주입, 일반 스킬이면 기본값(Common).
+                    skillCards[i].Setup(choices[i], OnCardClicked, chaosRarity);
                 }
                 else
                 {

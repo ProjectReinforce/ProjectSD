@@ -90,6 +90,9 @@ namespace SwDreams.Features.Progression.Adapter
         // 클라이언트: StatBoost 패널에 함께 수신한 rolledRarity (apply + 카드 표시용).
         private Rarity myBoostRarity = Rarity.Common;
 
+        // 클라이언트: 혼돈 패널에 함께 수신한 rolledRarity (SubmitChoice 시 함께 전송).
+        private Rarity myChaosRarity = Rarity.Common;
+
         // // ===== 이벤트 (UI 연결용) =====
         // /// <summary>선택지 수신 시 발생. LevelUpPanel이 구독.</summary>
         // public event System.Action<SkillData[]> OnChoicesReceived;
@@ -264,8 +267,9 @@ namespace SwDreams.Features.Progression.Adapter
             Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} 선택지: " +
                     string.Join(", ", System.Array.ConvertAll(choices, s => s.skillName)));
 
-            // 해당 플레이어에게만 RPC 전송
-            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, (int)ChoicePanelKind.Skill);
+            // 해당 플레이어에게만 RPC 전송 (Skill 은 등급 무관 → rarityInt=0)
+            photonView.RPC(nameof(RPC_ReceiveChoices), player,
+                choiceIds, (int)ChoicePanelKind.Skill, 0);
         }
 
         /// <summary>
@@ -317,7 +321,7 @@ namespace SwDreams.Features.Progression.Adapter
                 return;
             }
 
-            SkillData[] choices = sm.GenerateChaosChoices(skillDatabase.chaosSkills, 3);
+            var (choices, rolledRarity) = sm.GenerateChaosChoices(skillDatabase.chaosSkills, 3);
 
             int[] choiceIds = new int[choices.Length];
             for (int i = 0; i < choices.Length; i++)
@@ -325,13 +329,16 @@ namespace SwDreams.Features.Progression.Adapter
 
             playerChoices[player.ActorNumber] = choiceIds;
             playerPanelKinds[player.ActorNumber] = ChoicePanelKind.Chaos;
-            photonView.RPC(nameof(RPC_ReceiveChoices), player, choiceIds, (int)ChoicePanelKind.Chaos);
+            playerRolledRarities[player.ActorNumber] = rolledRarity;
+
+            photonView.RPC(nameof(RPC_ReceiveChoices), player,
+                choiceIds, (int)ChoicePanelKind.Chaos, (int)rolledRarity);
         }
 
         // ===== 클라이언트: 선택지 수신 =====
 
         [PunRPC]
-        private void RPC_ReceiveChoices(int[] choiceIds, int panelKindInt)
+        private void RPC_ReceiveChoices(int[] choiceIds, int panelKindInt, int rarityInt)
         {
             ChoicePanelKind kind = (ChoicePanelKind)panelKindInt;
 
@@ -345,11 +352,13 @@ namespace SwDreams.Features.Progression.Adapter
             }
 
             bool isChaos = kind == ChoicePanelKind.Chaos;
-            Debug.Log($"[LevelUpManager] 선택지 수신 ({(isChaos ? "혼돈" : "일반")}): " +
+            myChaosRarity = isChaos ? (Rarity)rarityInt : Rarity.Common;
+
+            Debug.Log($"[LevelUpManager] 선택지 수신 ({(isChaos ? $"혼돈/{myChaosRarity}" : "일반")}): " +
                       string.Join(", ", System.Array.ConvertAll(myChoices, s => s?.skillName ?? "null")));
 
             if (UIManager.Instance != null)
-                UIManager.Instance.ShowLevelUp(myChoices, isChaos);
+                UIManager.Instance.ShowLevelUp(myChoices, isChaos, myChaosRarity);
             else
                 Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
         }
@@ -398,19 +407,21 @@ namespace SwDreams.Features.Progression.Adapter
         {
             if (!isLevelUpActive) return;
 
-            Debug.Log($"[LevelUpManager] 선택 제출: 스킬 ID {skillId}");
+            int rarityInt = (int)myChaosRarity;
+            Debug.Log($"[LevelUpManager] 선택 제출: 스킬 ID {skillId} (chaosRarity={myChaosRarity})");
 
-            // 로컬에서 즉시 적용 (호스트 확인 전 — 반응성 우선)
+            // 로컬에서 즉시 적용 (호스트 확인 전 — 반응성 우선).
+            // Skill 일 때 myChaosRarity 는 Common(기본) 으로 SkillManager.ApplyChoice 에서 무시됨.
             if (localSkillManager != null)
             {
                 SkillData chosen = skillDatabase.GetSkillById(skillId);
                 if (chosen != null)
-                    localSkillManager.ApplyChoice(chosen);
+                    localSkillManager.ApplyChoice(chosen, myChaosRarity);
             }
 
-            // 호스트에 알림
+            // 호스트에 알림 (rarityInt 는 혼돈일 때만 유효, 그 외 0).
             photonView.RPC(nameof(RPC_PlayerSelected), RpcTarget.MasterClient,
-                PhotonNetwork.LocalPlayer.ActorNumber, skillId);
+                PhotonNetwork.LocalPlayer.ActorNumber, skillId, rarityInt);
         }
 
         /// <summary>
@@ -434,7 +445,7 @@ namespace SwDreams.Features.Progression.Adapter
         // ===== 호스트: 선택 결과 수신 =====
 
         [PunRPC]
-        private void RPC_PlayerSelected(int actorNumber, int skillId)
+        private void RPC_PlayerSelected(int actorNumber, int skillId, int rarityInt)
         {
             if (!PhotonNetwork.IsMasterClient) return;
             if (!isLevelUpActive) return;
@@ -445,8 +456,9 @@ namespace SwDreams.Features.Progression.Adapter
 
             playerSelections[actorNumber] = true;
 
+            Rarity rolledRarity = (Rarity)rarityInt;
             string skillName = skillDatabase.GetSkillById(skillId)?.skillName ?? "Unknown";
-            Debug.Log($"[LevelUpManager] 플레이어 {actorNumber} 선택 완료: {skillName}");
+            Debug.Log($"[LevelUpManager] 플레이어 {actorNumber} 선택 완료: {skillName} rarity={rolledRarity}");
 
             // 호스트 자신이 아닌 원격 플레이어의 스킬 적용
             // (호스트는 SubmitChoice에서 이미 로컬 적용됨)
@@ -457,13 +469,13 @@ namespace SwDreams.Features.Progression.Adapter
                 {
                     SkillData chosen = skillDatabase.GetSkillById(skillId);
                     if (chosen != null)
-                        sm.ApplyChoice(chosen);
+                        sm.ApplyChoice(chosen, rolledRarity);
                 }
             }
 
-            // [Phase 5] 다른 클라이언트에도 동기화
-            // → 선택한 본인(SubmitChoice에서 적용 완료)은 RPC_SyncSkillAcquisition에서 스킵
-            photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others, actorNumber, skillId);
+            // [Phase 5] 다른 클라이언트에도 동기화 — rarityInt 포함.
+            photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others,
+                actorNumber, skillId, rarityInt);
 
             // 전원 선택 완료 체크
             CheckAllSelected();
@@ -545,23 +557,28 @@ namespace SwDreams.Features.Progression.Adapter
                 }
                 else
                 {
-                    // Skill / Chaos 분기: 기존 경로.
+                    // Skill / Chaos 분기. Chaos 면 저장된 rolledRarity 로 apply.
+                    Rarity rarity = playerRolledRarities.TryGetValue(actorNumber, out var rr)
+                        ? rr : Rarity.Common;
+                    int rarityInt = (int)rarity;
+
                     SkillManager sm = FindSkillManagerForPlayer(actorNumber);
                     if (sm != null)
                     {
                         SkillData chosen = skillDatabase.GetSkillById(randomId);
                         if (chosen != null)
-                            sm.ApplyChoice(chosen);
+                            sm.ApplyChoice(chosen, rarity);
                     }
 
                     if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                     {
                         var targetPlayer = FindPhotonPlayer(actorNumber);
                         if (targetPlayer != null)
-                            photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId);
+                            photonView.RPC(nameof(RPC_ForceChoice), targetPlayer, randomId, rarityInt);
                     }
 
-                    photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others, actorNumber, randomId);
+                    photonView.RPC(nameof(RPC_SyncSkillAcquisition), RpcTarget.Others,
+                        actorNumber, randomId, rarityInt);
                 }
 
                 playerSelections[actorNumber] = true;
@@ -686,16 +703,17 @@ namespace SwDreams.Features.Progression.Adapter
         /// 타임아웃 시 호스트가 강제 선택한 결과를 클라이언트에 알림.
         /// </summary>
         [PunRPC]
-        private void RPC_ForceChoice(int skillId)
+        private void RPC_ForceChoice(int skillId, int rarityInt)
         {
-            Debug.Log($"[LevelUpManager] 타임아웃 → 랜덤 선택됨: ID {skillId}");
+            Rarity r = (Rarity)rarityInt;
+            Debug.Log($"[LevelUpManager] 타임아웃 → 랜덤 선택됨: ID {skillId} rarity={r}");
 
-            // 로컬 적용
+            // 로컬 적용 — 혼돈이면 rarity 반영.
             if (localSkillManager != null)
             {
                 SkillData chosen = skillDatabase.GetSkillById(skillId);
                 if (chosen != null)
-                    localSkillManager.ApplyChoice(chosen);
+                    localSkillManager.ApplyChoice(chosen, r);
             }
         }
 
@@ -786,7 +804,7 @@ namespace SwDreams.Features.Progression.Adapter
         /// → 모든 클라이언트가 모든 플레이어의 스킬 이펙트를 로컬 실행.
         /// </summary>
         [PunRPC]
-        private void RPC_SyncSkillAcquisition(int actorNumber, int skillId)
+        private void RPC_SyncSkillAcquisition(int actorNumber, int skillId, int rarityInt)
         {
             // 자기 자신은 SubmitChoice에서 이미 적용했으므로 스킵
             if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
@@ -802,7 +820,7 @@ namespace SwDreams.Features.Progression.Adapter
             SkillData chosen = skillDatabase.GetSkillById(skillId);
             if (chosen != null)
             {
-                sm.ApplyChoice(chosen);
+                sm.ApplyChoice(chosen, (Rarity)rarityInt);
                 Debug.Log($"[LevelUpManager] Sync 완료 — Actor {actorNumber}: {chosen.skillName}");
             }
         }

@@ -37,8 +37,28 @@ namespace SwDreams.Editor
             {
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("chaosEffectType"));
 
-                // [Phase 7] 혼돈 스킬 등급 — 카드 3장 동일 등급 선정에 사용.
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("rarity"));
+                // [Phase 8-A] ChaosSkillData 전용: 등급별 파라미터 (primary/secondary/tertiary).
+                // 하나의 SO 가 4 등급 값을 모두 보유 → 런타임 rolledRarity 로 인덱싱.
+                // ChaosSkillData 서브클래스의 필드이므로 해당 SO 일 때만 property 존재.
+                var paramsProp = serializedObject.FindProperty("paramsByRarity");
+                if (paramsProp != null)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("혼돈 파라미터 (등급별)", EditorStyles.boldLabel);
+                    EditorGUILayout.HelpBox(
+                        "길이 4 (Common / Rare / Epic / Legendary).\n" +
+                        "(primary, secondary, tertiary) 의미는 chaosEffectType 별로 다름.\n" +
+                        "전부 0 이면 ChaosSkillManager 의 fallback 기본값을 사용.\n\n" +
+                        "매핑:\n" +
+                        "  GlassCannon    : primary=ATK 배율, secondary=HP 비율, tertiary=미사용\n" +
+                        "  ChainExplosion : primary=폭발 데미지, secondary=반경, tertiary=미사용\n" +
+                        "  BerserkMode    : primary=CDR 배율, secondary=HP 임계, tertiary=이속 배율\n" +
+                        "  AccelEngine    : primary=최대 증폭, secondary=램프 시간, tertiary=미사용\n" +
+                        "  Unity          : primary=1명 근접 시 보너스, secondary=추가 인당 증가, tertiary=감지 반경(0=기본값)\n" +
+                        "  Gambler        : 파라미터 미사용",
+                        MessageType.Info);
+                    EditorGUILayout.PropertyField(paramsProp, true);
+                }
             }
 
             // ===== UI 표시용 (항상) =====

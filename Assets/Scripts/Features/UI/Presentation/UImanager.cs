@@ -65,7 +65,10 @@ namespace SwDreams.Features.UI.Presentation
 
         // ===== LevelUpManager에서 직접 호출 =====
 
-        public void ShowLevelUp(SwDreams.Features.Skill.Adapter.Data.SkillData[] choices, bool isChaos)
+        public void ShowLevelUp(
+            SwDreams.Features.Skill.Adapter.Data.SkillData[] choices,
+            bool isChaos,
+            SwDreams.Shared.Domain.ValueObjects.Rarity chaosRarity = SwDreams.Shared.Domain.ValueObjects.Rarity.Common)
         {
             if (levelUpPanel == null)
             {
@@ -73,9 +76,9 @@ namespace SwDreams.Features.UI.Presentation
                 return;
             }
 
-            Debug.Log("[UIManager] ShowLevelUp 호출");
+            Debug.Log($"[UIManager] ShowLevelUp 호출 (isChaos={isChaos}, rarity={chaosRarity})");
             levelUpPanel.gameObject.SetActive(true);
-            levelUpPanel.Setup(choices, isChaos);
+            levelUpPanel.Setup(choices, isChaos, chaosRarity);
         }
 
         /// <summary>
