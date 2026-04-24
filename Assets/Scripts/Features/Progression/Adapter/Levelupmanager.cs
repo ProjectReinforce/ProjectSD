@@ -8,6 +8,7 @@ using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.StatBoost.Adapter;
 using SwDreams.Features.StatBoost.Adapter.Data;
+using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 using UnityEngine;
 using Photon.Pun;
@@ -76,11 +77,18 @@ namespace SwDreams.Features.Progression.Adapter
         // 타임아웃 랜덤 처리 시 ApplyChoice(skill) vs StatBoostManager.ApplyChoice(boost) 분기.
         private Dictionary<int, ChoicePanelKind> playerPanelKinds = new Dictionary<int, ChoicePanelKind>();
 
+        // 호스트 전용: StatBoost 패널일 때 각 플레이어에게 전달된 rolledRarity.
+        // ApplyBoostLocally 에서 value 해석 시 사용.
+        private Dictionary<int, Rarity> playerRolledRarities = new Dictionary<int, Rarity>();
+
         // 클라이언트: 내가 받은 선택지
         private SkillData[] myChoices;
 
         // 클라이언트: 내가 받은 StatBoost 선택지 (kind == StatBoost 일 때만)
         private StatBoostData[] myBoostChoices;
+
+        // 클라이언트: StatBoost 패널에 함께 수신한 rolledRarity (apply + 카드 표시용).
+        private Rarity myBoostRarity = Rarity.Common;
 
         // // ===== 이벤트 (UI 연결용) =====
         // /// <summary>선택지 수신 시 발생. LevelUpPanel이 구독.</summary>
@@ -186,6 +194,7 @@ namespace SwDreams.Features.Progression.Adapter
             playerSelections.Clear();
             playerChoices.Clear();
             playerPanelKinds.Clear();
+            playerRolledRarities.Clear();
 
             // 현재 상태 저장 (Playing 또는 BossFight)
             if (GameManager.Instance.CurrentState != GameManager.GameState.Paused)
@@ -262,6 +271,9 @@ namespace SwDreams.Features.Progression.Adapter
         /// <summary>
         /// 능력치 부스트 선택지 생성 + 전송. SendNormalChoices 의 "만렙" 분기.
         /// Phase 6 퀘스트 보상에서도 동일 경로로 트리거 가능.
+        ///
+        /// 통합 등급 SO 방식: SO 하나가 모든 등급 값을 들고 있음. rolledRarity 를 함께 전송해
+        /// 클라는 카드 value 표시, 호스트는 apply 시 같은 rarity 로 해석.
         /// </summary>
         private void SendStatBoostChoices(Photon.Realtime.Player player)
         {
@@ -274,7 +286,7 @@ namespace SwDreams.Features.Progression.Adapter
             }
 
             var rng = new System.Random();
-            var choices = StatBoostChoiceService.GenerateChoices(db, 3, rng);
+            var (choices, rolledRarity) = StatBoostChoiceService.GenerateChoices(db, 3, rng);
             if (choices.Length == 0)
             {
                 Debug.LogWarning($"[LevelUpManager] StatBoost 선택지 생성 실패 — 플레이어 {player.ActorNumber} 스킵.");
@@ -288,11 +300,12 @@ namespace SwDreams.Features.Progression.Adapter
 
             playerChoices[player.ActorNumber] = boostIds;
             playerPanelKinds[player.ActorNumber] = ChoicePanelKind.StatBoost;
+            playerRolledRarities[player.ActorNumber] = rolledRarity;
 
-            Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} StatBoost 선택지: " +
-                      string.Join(", ", System.Array.ConvertAll(choices, b => $"{b.displayName}({b.rarity})")));
+            Debug.Log($"[LevelUpManager] → Player {player.ActorNumber} StatBoost 선택지({rolledRarity}): " +
+                      string.Join(", ", System.Array.ConvertAll(choices, b => b.displayName)));
 
-            photonView.RPC(nameof(RPC_ReceiveChoices), player, boostIds, (int)ChoicePanelKind.StatBoost);
+            photonView.RPC(nameof(RPC_ReceiveStatBoostChoices), player, boostIds, (int)rolledRarity);
         }
 
         private void SendChaosChoices(Photon.Realtime.Player player)
@@ -322,29 +335,7 @@ namespace SwDreams.Features.Progression.Adapter
         {
             ChoicePanelKind kind = (ChoicePanelKind)panelKindInt;
 
-            if (kind == ChoicePanelKind.StatBoost)
-            {
-                // StatBoost 경로: GameManager.StatBoostDB 로 해결.
-                var db = GameManager.Instance?.StatBoostDB;
-                myBoostChoices = new StatBoostData[choiceIds.Length];
-                for (int i = 0; i < choiceIds.Length; i++)
-                {
-                    myBoostChoices[i] = db?.GetById(choiceIds[i]);
-                    if (myBoostChoices[i] == null)
-                        Debug.LogError($"[LevelUpManager] StatBoost ID {choiceIds[i]} 변환 실패!");
-                }
-
-                Debug.Log("[LevelUpManager] StatBoost 선택지 수신: " +
-                          string.Join(", ", System.Array.ConvertAll(myBoostChoices, b => b?.displayName ?? "null")));
-
-                if (UIManager.Instance != null)
-                    UIManager.Instance.ShowLevelUpStatBoost(myBoostChoices);
-                else
-                    Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
-                return;
-            }
-
-            // Skill / Chaos 경로: 기존 동작 유지.
+            // Skill / Chaos 경로 전용. StatBoost 는 RPC_ReceiveStatBoostChoices 로 분리됨.
             myChoices = new SkillData[choiceIds.Length];
             for (int i = 0; i < choiceIds.Length; i++)
             {
@@ -359,6 +350,33 @@ namespace SwDreams.Features.Progression.Adapter
 
             if (UIManager.Instance != null)
                 UIManager.Instance.ShowLevelUp(myChoices, isChaos);
+            else
+                Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
+        }
+
+        /// <summary>
+        /// StatBoost 전용 수신 RPC. rolledRarity 를 함께 받아 카드 value 표시 + apply 경로 공용.
+        /// </summary>
+        [PunRPC]
+        private void RPC_ReceiveStatBoostChoices(int[] boostIds, int rolledRarityInt)
+        {
+            Rarity rolled = (Rarity)rolledRarityInt;
+            myBoostRarity = rolled;
+
+            var db = GameManager.Instance?.StatBoostDB;
+            myBoostChoices = new StatBoostData[boostIds.Length];
+            for (int i = 0; i < boostIds.Length; i++)
+            {
+                myBoostChoices[i] = db?.GetById(boostIds[i]);
+                if (myBoostChoices[i] == null)
+                    Debug.LogError($"[LevelUpManager] StatBoost ID {boostIds[i]} 변환 실패!");
+            }
+
+            Debug.Log($"[LevelUpManager] StatBoost 선택지 수신({rolled}): " +
+                      string.Join(", ", System.Array.ConvertAll(myBoostChoices, b => b?.displayName ?? "null")));
+
+            if (UIManager.Instance != null)
+                UIManager.Instance.ShowLevelUpStatBoost(myBoostChoices, rolled);
             else
                 Debug.LogError("[LevelUpManager] UIManager.Instance 없음!");
         }
@@ -397,19 +415,20 @@ namespace SwDreams.Features.Progression.Adapter
 
         /// <summary>
         /// LevelUpPanel 에서 StatBoost 카드 클릭 시 호출.
-        /// 선택한 boost ID를 호스트에 전송.
+        /// 선택한 boost ID를 호스트에 전송 (현재 패널의 rolledRarity 포함).
         /// </summary>
         public void SubmitBoostChoice(int boostId)
         {
             if (!isLevelUpActive) return;
 
-            Debug.Log($"[LevelUpManager] StatBoost 선택 제출: ID {boostId}");
+            int rarityInt = (int)myBoostRarity;
+            Debug.Log($"[LevelUpManager] StatBoost 선택 제출: ID {boostId} rarity={myBoostRarity}");
 
             // 로컬에서 즉시 적용 (반응성 우선).
-            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId);
+            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId, myBoostRarity);
 
             photonView.RPC(nameof(RPC_PlayerBoostSelected), RpcTarget.MasterClient,
-                PhotonNetwork.LocalPlayer.ActorNumber, boostId);
+                PhotonNetwork.LocalPlayer.ActorNumber, boostId, rarityInt);
         }
 
         // ===== 호스트: 선택 결과 수신 =====
@@ -507,17 +526,22 @@ namespace SwDreams.Features.Progression.Adapter
 
                 if (kind == ChoicePanelKind.StatBoost)
                 {
-                    // StatBoost 분기: 호스트 쪽에서 로컬 적용 + 다른 클라에 sync.
-                    ApplyBoostLocally(actorNumber, randomId);
+                    // StatBoost 분기: 저장된 rolledRarity 로 value 해석. 호스트 로컬 적용 + sync.
+                    Rarity rarity = playerRolledRarities.TryGetValue(actorNumber, out var rr)
+                        ? rr : Rarity.Common;
+                    int rarityInt = (int)rarity;
+
+                    ApplyBoostLocally(actorNumber, randomId, rarity);
 
                     if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                     {
                         var targetPlayer = FindPhotonPlayer(actorNumber);
                         if (targetPlayer != null)
-                            photonView.RPC(nameof(RPC_ForceBoostChoice), targetPlayer, randomId);
+                            photonView.RPC(nameof(RPC_ForceBoostChoice), targetPlayer, randomId, rarityInt);
                     }
 
-                    photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others, actorNumber, randomId);
+                    photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others,
+                        actorNumber, randomId, rarityInt);
                 }
                 else
                 {
@@ -580,6 +604,7 @@ namespace SwDreams.Features.Progression.Adapter
             playerSelections.Clear();
             playerChoices.Clear();
             playerPanelKinds.Clear();
+            playerRolledRarities.Clear();
 
             // 대기 중인 레벨업이 있으면 바로 다음 시퀀스 시작
             if (pendingLevelUps.Count > 0)
@@ -629,6 +654,7 @@ namespace SwDreams.Features.Progression.Adapter
             playerSelections.Clear();
             playerChoices.Clear();
             playerPanelKinds.Clear();
+            playerRolledRarities.Clear();
 
             // 레벨업 완료 후 복원할 상태 (Playing으로 복원 → 이후 비상 보스전이 BossFight로 전환)
             stateBeforeLevelUp = GameManager.GameState.Playing;
@@ -676,7 +702,7 @@ namespace SwDreams.Features.Progression.Adapter
         // ===== StatBoost 경로 (호스트) =====
 
         [PunRPC]
-        private void RPC_PlayerBoostSelected(int actorNumber, int boostId)
+        private void RPC_PlayerBoostSelected(int actorNumber, int boostId, int rarityInt)
         {
             if (!PhotonNetwork.IsMasterClient) return;
             if (!isLevelUpActive) return;
@@ -686,40 +712,43 @@ namespace SwDreams.Features.Progression.Adapter
 
             playerSelections[actorNumber] = true;
 
+            Rarity rarity = (Rarity)rarityInt;
             var data = GameManager.Instance?.StatBoostDB?.GetById(boostId);
             string name = data?.displayName ?? "Unknown";
-            Debug.Log($"[LevelUpManager] Player {actorNumber} StatBoost 선택 완료: {name}");
+            Debug.Log($"[LevelUpManager] Player {actorNumber} StatBoost 선택 완료: {name}({rarity})");
 
             // 호스트 자신은 SubmitBoostChoice 에서 이미 로컬 적용됨 → 원격 플레이어만 적용.
             if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
-                ApplyBoostLocally(actorNumber, boostId);
+                ApplyBoostLocally(actorNumber, boostId, rarity);
 
             // 다른 클라이언트에도 동기화 (본인 클라는 SubmitBoostChoice 에서 이미 적용했으므로 Others).
-            photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others, actorNumber, boostId);
+            photonView.RPC(nameof(RPC_SyncBoostAcquisition), RpcTarget.Others,
+                actorNumber, boostId, rarityInt);
 
             CheckAllSelected();
         }
 
         [PunRPC]
-        private void RPC_SyncBoostAcquisition(int actorNumber, int boostId)
+        private void RPC_SyncBoostAcquisition(int actorNumber, int boostId, int rarityInt)
         {
             // 본인은 SubmitBoostChoice 에서 이미 적용 — 스킵.
             if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber) return;
-            ApplyBoostLocally(actorNumber, boostId);
+            ApplyBoostLocally(actorNumber, boostId, (Rarity)rarityInt);
         }
 
         [PunRPC]
-        private void RPC_ForceBoostChoice(int boostId)
+        private void RPC_ForceBoostChoice(int boostId, int rarityInt)
         {
-            Debug.Log($"[LevelUpManager] 타임아웃 → StatBoost 랜덤 선택됨: ID {boostId}");
-            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId);
+            Rarity rarity = (Rarity)rarityInt;
+            Debug.Log($"[LevelUpManager] 타임아웃 → StatBoost 랜덤 선택됨: ID {boostId} ({rarity})");
+            ApplyBoostLocally(PhotonNetwork.LocalPlayer.ActorNumber, boostId, rarity);
         }
 
         /// <summary>
         /// 지정 ActorNumber 의 StatBoostManager 에 boost 적용 (로컬 경로).
-        /// Submit/Sync/ForceChoice 공통 호출.
+        /// Submit/Sync/ForceChoice 공통 호출. rarity 는 value 해석용.
         /// </summary>
-        private void ApplyBoostLocally(int actorNumber, int boostId)
+        private void ApplyBoostLocally(int actorNumber, int boostId, Rarity rarity)
         {
             var data = GameManager.Instance?.StatBoostDB?.GetById(boostId);
             if (data == null)
@@ -734,7 +763,7 @@ namespace SwDreams.Features.Progression.Adapter
                 Debug.LogWarning($"[LevelUpManager] Actor {actorNumber} StatBoostManager 미발견.");
                 return;
             }
-            mgr.ApplyChoice(data);
+            mgr.ApplyChoice(data, rarity);
         }
 
         private StatBoostManager FindStatBoostManagerForPlayer(int actorNumber)

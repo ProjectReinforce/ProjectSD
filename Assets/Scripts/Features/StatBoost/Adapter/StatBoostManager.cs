@@ -3,17 +3,18 @@ using UnityEngine;
 using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.StatBoost.Adapter.Data;
 using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Shared.Domain.ValueObjects;
 
 namespace SwDreams.Features.StatBoost.Adapter
 {
     /// <summary>
     /// 플레이어의 능력치 부스트 기록. Player 프리팹 자식에 부착.
     ///
+    /// ApplyChoice(data, rarity) 로 적용 — SO 는 등급 무관, rarity 가 value 선택자.
     /// 동일 boostId 를 여러 번 획득해도 각 획득이 독립 modifier 로 등록돼 누적된다.
-    /// source 네이밍: "stat_{boostId}_{localCounter}" — counter 는 본 매니저의 로컬 시퀀스.
+    /// source 네이밍: "stat_{boostId}_{rarity}_{localCounter}" — counter 는 로컬 시퀀스.
     ///
-    /// 네트워크: 적용은 로컬 전용 (LevelUpManager 가 각 클라에 sync 해주는 기존 패턴 따름).
-    /// 중도 참가자 동기화는 LevelUpManager 경로에 의존 — 별도 AllBuffered 안 씀.
+    /// 네트워크: 적용은 로컬 전용 (LevelUpManager 가 각 클라에 sync 해주는 기존 패턴).
     /// </summary>
     public class StatBoostManager : MonoBehaviour
     {
@@ -22,9 +23,16 @@ namespace SwDreams.Features.StatBoost.Adapter
         private IPlayerStatsMutator stats;
         private int counter;
 
-        // 디버그/HUD 표시용 — 획득 순서대로 기록.
-        private readonly List<StatBoostData> applied = new List<StatBoostData>();
-        public IReadOnlyList<StatBoostData> Applied => applied;
+        // 디버그/HUD 표시용 — 획득 이력 (data + 해석된 rarity + value) 기록.
+        public struct AppliedEntry
+        {
+            public StatBoostData data;
+            public Rarity rarity;
+            public float appliedValue;
+        }
+
+        private readonly List<AppliedEntry> applied = new List<AppliedEntry>();
+        public IReadOnlyList<AppliedEntry> Applied => applied;
         public int AppliedCount => applied.Count;
 
         private void Awake()
@@ -33,10 +41,9 @@ namespace SwDreams.Features.StatBoost.Adapter
         }
 
         /// <summary>
-        /// 선택된 StatBoost 를 적용. 로컬 호출 경로 전용
-        /// (LevelUpManager.SubmitChoice → ApplyChoice + 원격 sync RPC 로 위임).
+        /// 선택된 StatBoost 를 등급과 함께 적용. LevelUpManager.SubmitChoice 경로 전용.
         /// </summary>
-        public void ApplyChoice(StatBoostData data)
+        public void ApplyChoice(StatBoostData data, Rarity rarity)
         {
             if (data == null) return;
             EnsureStatsRef();
@@ -46,12 +53,18 @@ namespace SwDreams.Features.StatBoost.Adapter
                 return;
             }
 
+            float value = data.GetValue(rarity);
+            if (value == 0f)
+            {
+                Debug.LogWarning($"[StatBoostManager] {data.displayName} 의 {rarity} 등급 value 가 0 — SO 점검.");
+            }
+
             counter++;
-            string source = $"{SourcePrefix}{data.boostId}_{counter}";
-            stats.AddModifier(new StatModifier(source, data.statType, data.op, data.value));
+            string source = $"{SourcePrefix}{data.boostId}_{rarity.ToString().ToLower()}_{counter}";
+            stats.AddModifier(new StatModifier(source, data.statType, data.op, value));
             stats.Recalculate();
 
-            applied.Add(data);
+            applied.Add(new AppliedEntry { data = data, rarity = rarity, appliedValue = value });
         }
 
         private void EnsureStatsRef()

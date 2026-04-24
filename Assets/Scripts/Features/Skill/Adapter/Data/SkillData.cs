@@ -3,6 +3,7 @@ using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Shared.Domain.ValueObjects;
 using UnityEngine;
 
 namespace SwDreams.Features.Skill.Adapter.Data
@@ -65,6 +66,11 @@ namespace SwDreams.Features.Skill.Adapter.Data
         public SkillType skillType;
         public SkillEffectType effectType;
         public ChaosEffectType chaosEffectType;
+
+        [Header("등급 (Phase 7 — 혼돈 스킬 등급 적용)")]
+        [Tooltip("혼돈 스킬은 이 등급을 가중치 기반 선정기에 사용 (카드 3장 모두 동일 등급).\n" +
+                 "Active/Passive 는 일반 선택지 경로에서 참조하지 않음 — 기본값 Common 유지 가능.")]
+        public Rarity rarity = Rarity.Common;
         
         [Header("UI 표시용")]
         public Sprite icon;

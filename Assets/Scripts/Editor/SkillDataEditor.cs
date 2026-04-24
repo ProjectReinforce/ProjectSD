@@ -34,7 +34,12 @@ namespace SwDreams.Editor
 
             // chaosEffectType: 혼돈만
             if (skillType == SkillType.Chaos)
+            {
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("chaosEffectType"));
+
+                // [Phase 7] 혼돈 스킬 등급 — 카드 3장 동일 등급 선정에 사용.
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("rarity"));
+            }
 
             // ===== UI 표시용 (항상) =====
             EditorGUILayout.Space();

@@ -80,8 +80,11 @@ namespace SwDreams.Features.UI.Presentation
 
         /// <summary>
         /// StatBoost 선택지 패널 오픈. 스킬 풀 고갈(만렙) 시 레벨업 또는 퀘스트 보상에서 호출.
+        /// rolledRarity 는 카드 3 장이 공유하는 등급 — 각 SO 에서 등급별 value 를 꺼내 표시.
         /// </summary>
-        public void ShowLevelUpStatBoost(SwDreams.Features.StatBoost.Adapter.Data.StatBoostData[] choices)
+        public void ShowLevelUpStatBoost(
+            SwDreams.Features.StatBoost.Adapter.Data.StatBoostData[] choices,
+            SwDreams.Shared.Domain.ValueObjects.Rarity rolledRarity)
         {
             if (levelUpPanel == null)
             {
@@ -89,9 +92,9 @@ namespace SwDreams.Features.UI.Presentation
                 return;
             }
 
-            Debug.Log("[UIManager] ShowLevelUpStatBoost 호출");
+            Debug.Log($"[UIManager] ShowLevelUpStatBoost 호출 ({rolledRarity})");
             levelUpPanel.gameObject.SetActive(true);
-            levelUpPanel.SetupStatBoost(choices);
+            levelUpPanel.SetupStatBoost(choices, rolledRarity);
         }
 
         public void HideLevelUp()

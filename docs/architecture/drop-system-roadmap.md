@@ -80,6 +80,9 @@
 - **W3**: 시너지 로직 테이블화 — `EssenceResolver.Resolve(equipped, db) → (source→effects)[]` 순수 함수로 분리. 3스택/조합 확장 대비.
 - **I1**: `"__legacy__"` 상수 Shared 승격 — ApplyDoTHandler/ApplySlowHandler/EnemyMovement 3곳 중복.
 - **설계 문서 동기화**: `docs/game-design/essence.md § 3.2` 의 "번개 → Chain" 표기를 실제 구현인 "DamageNearby" 로 정정 필요 + 중첩/시너지 규약 추가.
+- **W5 (신규)**: 혼돈 스킬 효과 하드코딩 제거 — ChaosSkillManager 의 수치(유리대포 HP×0.5 / ATK×2, AccelEngine 0.5 over 600s, BerserkMode HP≤30%, Unity 0.1*N+0.1 등)가 로직에 직박힘. 2 단계 개선 권장:
+  1. ChaosSkillData SO 에 `parameters` 필드 추가 → 매니저가 SO 값 읽음. 로직은 유지. 혼돈 등급(Phase 7) 과 시너지 (등급별 param 다르게 가능).
+  2. IChaosEffectHandler registry — SkillTriggerSystem 패턴 복제. Switch 제거. 효과 추가 시 handler 하나 + enum 하나만. 현재 6종 고정이라 2 단계는 후순위.
 - **W4**: ✅ 완료 — `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 (`Shared/Domain/Interfaces/`). PlayerStats/SkillManager 가 각 포트 구현 선언. Essence/Weapon Inventory 는 Character.Adapter / Skill.Adapter 직접 참조 완전 제거. 관련 변경:
   - `ISkillRegistry.EffectSinks` (IReadOnlyList&lt;IRuntimeEffectSink&gt;) + `OnSinkAdded(IRuntimeEffectSink)` 이벤트.
   - SkillManager 에 `cachedSinks` + `RefreshSinkCache()` — AcquireSkill/RemoveSkill/Evolution 3 경로에서 호출.
@@ -365,7 +368,13 @@ Phase 4 구현 전에 `IRuntimeEffectSink { AddRuntimeEffect, RemoveRuntimeEffec
 `SkillManager.GenerateChoices(normalPool, 3).Length == 0` → 스킬 풀 고갈 = 만렙. `GameplayConfig.maxPlayerLevel` 같은 상수 필요 없음. 런타임 상태 기반.
 
 ### 중복 장착 누적
-source = `stat_{boostId}_{localCounter}` — 같은 boostId 를 여러 번 선택하면 각 획득이 독립 modifier 로 등록돼 자연 누적. counter 는 StatBoostManager 의 로컬 시퀀스 (클라 간 source 이름 차이는 Calculate 결과에 영향 없음).
+source = `stat_{boostId}_{rarity}_{localCounter}` — 같은 boostId 를 여러 번 선택하면 각 획득이 독립 modifier 로 등록돼 자연 누적. counter 는 StatBoostManager 의 로컬 시퀀스.
+
+### 통합 등급 SO 방식 (2026-04-24 리팩터)
+- `StatBoostData` 1 개가 모든 등급 value 를 배열로 보유: `valueByRarity[4]` (Common/Rare/Epic/Legendary).
+- 선정: `StatBoostChoiceService.GenerateChoices` 가 `(choices, rolledRarity)` 튜플 반환. 카드 3 장 공통 Rarity 로 각 SO 의 해당 인덱스 value 표시.
+- RPC: `RPC_ReceiveStatBoostChoices(boostIds, rolledRarityInt)` 전용 경로 분리. `RPC_PlayerBoostSelected/SyncBoostAcquisition/ForceBoostChoice` 모두 rarity int 함께 전달.
+- 장점: SO 수 1/4 감소, 등급 밸런싱이 한 SO 에서 가능, "한 스탯 여러 등급 난립" 방지.
 
 ### 유저 Unity 배선
 1. **StatBoostData SO 생성** (`Assets → Create → SwDreams/Data/StatBoostData`) — 수종. `boostId` 고유 int 필수.
@@ -429,12 +438,20 @@ source = `stat_{boostId}_{localCounter}` — 같은 boostId 를 여러 번 선�
 
 ---
 
-## Phase 7 — 혼돈 스킬 등급 적용
+## Phase 7 — 혼돈 스킬 등급 적용 ✅ 코드 구현 완료 (유저 Unity 수치 입력 대기)
 
-- [ ] SkillData.rarity 필드 + 혼돈 SO 19개 등급 지정
-- [ ] SkillManager.GenerateChaosChoices → RarityPoolChoiceGenerator 전환
-- [ ] SkillCardUI 등급 색상/테두리
-- [ ] BossChaosApplicator 등급 가중치(선택)
+- [x] `SkillData.rarity` 필드 추가 (기본 Common). Active/Passive 는 미사용 유지 가능.
+- [x] `SkillManager.GenerateChaosChoices` → `RarityPoolChoiceGenerator` 전환. Phase 5 StatBoost 와 **동일 공통기 사용** — 카드 3 장이 항상 같은 등급. 등급 가중치는 `GameplayConfig.defaultRarityWeights` 공용 (60/25/12/3 기본).
+- [x] `SkillCardUI.SetupTypeBadge` 혼돈 분기 — 타입 배지 색을 `Rarity` 기반으로 덮어씀 + 라벨 `혼돈 · {Rarity}` 로 변경. 동일 등급 3 장임을 시각화.
+- [ ] **BossChaosApplicator 등급 가중치** — 현재 `ChaosEffectType` enum 직접 사용, SkillData 참조 없음. 등급별 보스 강도 차등은 별도 기획 확정 후 추가 예정. 로드맵 상 선택 항목 — Phase 7 MVP 에서 제외.
+
+### 유저 Unity 작업
+- 혼돈 스킬 SO 19 종에 **등급 재지정**. 각 SO Inspector 의 `Rarity` 필드 설정.
+- 기본값 `Common` 이므로 그대로 두면 모든 혼돈이 Common 풀로 들어감 → 등급 선정기는 동작하지만 분포는 평탄. 밸런싱 의도에 맞춰 Rare/Epic/Legendary 를 적절히 분산.
+
+### 효과
+- StatBoost (Phase 5) 와 혼돈 스킬 (Phase 7) 이 같은 `RarityPoolChoiceGenerator` 경유 → "카드 3 장이 항상 같은 등급" 규칙이 한 곳에서만 관리됨 (SSOT).
+- UI 측 `SkillCardUI` 는 단일 컴포넌트로 Skill/Chaos/StatBoost 모두 렌더링 — 카드 프리팹 중복 방지.
 
 **목표**: 기존 혼돈 스킬 플로우에 `Rarity` 필드 추가 + Phase 0 공통 선정기로 전환해 카드 3장 동일 등급 유지.
 

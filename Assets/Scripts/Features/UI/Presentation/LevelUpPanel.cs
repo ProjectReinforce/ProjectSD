@@ -3,6 +3,7 @@ using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.StatBoost.Adapter.Data;
+using SwDreams.Shared.Domain.ValueObjects;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
@@ -100,21 +101,22 @@ namespace SwDreams.Features.UI.Presentation
 
         /// <summary>
         /// StatBoost 선택지 패널 구성. 기존 SkillCardUI 카드를 재사용하되 boost 모드로 전환.
+        /// rolledRarity 는 카드 3 장이 공유 — 각 SO 의 valueByRarity[rolled] 를 표시.
         /// UIManager.ShowLevelUpStatBoost()에서 호출.
         /// </summary>
-        public void SetupStatBoost(StatBoostData[] choices)
+        public void SetupStatBoost(StatBoostData[] choices, Rarity rolledRarity)
         {
             hasSelected = false;
 
             if (titleText != null)
-                titleText.text = "능력치를 선택하세요";
+                titleText.text = $"능력치 선택 · {rolledRarity}";
 
             for (int i = 0; i < skillCards.Length; i++)
             {
                 if (i < choices.Length && choices[i] != null)
                 {
                     skillCards[i].gameObject.SetActive(true);
-                    skillCards[i].SetupAsStatBoost(choices[i], OnBoostCardClicked);
+                    skillCards[i].SetupAsStatBoost(choices[i], rolledRarity, OnBoostCardClicked);
                 }
                 else
                 {

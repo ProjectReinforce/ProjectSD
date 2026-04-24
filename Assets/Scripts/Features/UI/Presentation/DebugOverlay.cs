@@ -325,9 +325,9 @@ namespace SwDreams.Features.UI.Presentation
                 var applied = localStatBoostManager.Applied;
                 for (int i = 0; i < applied.Count; i++)
                 {
-                    var b = applied[i];
-                    if (b == null) continue;
-                    sb.AppendLine($"  [{i}] {b.displayName} ({b.rarity}) — {b.statType} {b.op} {b.value}");
+                    var e = applied[i];
+                    if (e.data == null) continue;
+                    sb.AppendLine($"  [{i}] {e.data.displayName} ({e.rarity}) — {e.data.statType} {e.data.op} {e.appliedValue}");
                 }
                 sb.AppendLine();
             }

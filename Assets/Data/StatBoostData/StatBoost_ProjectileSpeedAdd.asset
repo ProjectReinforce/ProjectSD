@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2fe403777e5b6744a9be43b328522a6e, type: 3}
-  m_Name: StatBoostData 3
+  m_Name: StatBoost_ProjectileSpeedAdd
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.StatBoost.Adapter.Data.StatBoostData
-  boostId: 3
-  displayName: d
+  boostId: 4
+  displayName: e
   description: 
   icon: {fileID: 0}
   rarity: 0
-  statType: 2
-  op: 0
-  value: 5
+  statType: 3
+  op: 1
+  value: 0.01

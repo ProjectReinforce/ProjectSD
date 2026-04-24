@@ -160,8 +160,9 @@ namespace SwDreams.Features.UI.Presentation
                     typeStr = "패시브";
                     break;
                 case SkillType.Chaos:
-                    badgeColor = chaosColor;
-                    typeStr = "혼돈";
+                    // Phase 7: 혼돈 스킬은 등급별 색으로 덮어써 카드 3장이 동일 등급임을 시각화.
+                    badgeColor = GetRarityColor(skillData.rarity);
+                    typeStr = $"혼돈 · {skillData.rarity}";
                     break;
                 default:
                     badgeColor = Color.gray;
@@ -204,9 +205,9 @@ namespace SwDreams.Features.UI.Presentation
 
         /// <summary>
         /// StatBoost 모드로 카드 구성. Skill 모드와 상호 배타적.
-        /// Rarity 색상을 타입 배지에 적용, "능력치" 라벨 고정.
+        /// rolledRarity 를 받아 해당 등급의 value 를 표시 + 등급 색상 적용.
         /// </summary>
-        public void SetupAsStatBoost(StatBoostData data, Action<StatBoostData> onClick)
+        public void SetupAsStatBoost(StatBoostData data, Rarity rolledRarity, Action<StatBoostData> onClick)
         {
             DOTween.Kill(transform);
             DOTween.Kill(canvasGroup);
@@ -219,12 +220,14 @@ namespace SwDreams.Features.UI.Presentation
             currentStatBoostData = data;
             onBoostClickCallback = onClick;
 
+            float value = data.GetValue(rolledRarity);
+
             if (nameText != null)
                 nameText.text = data.displayName;
 
             if (descText != null)
                 descText.text = string.IsNullOrEmpty(data.description)
-                    ? BuildAutoBoostDescription(data)
+                    ? BuildAutoBoostDescription(data, value)
                     : data.description;
 
             if (iconImage != null && data.icon != null)
@@ -232,12 +235,13 @@ namespace SwDreams.Features.UI.Presentation
 
             if (levelText != null)
             {
-                levelText.text = data.rarity.ToString();
-                levelText.color = GetRarityColor(data.rarity);
+                levelText.text = rolledRarity.ToString();
+                levelText.color = GetRarityColor(rolledRarity);
             }
 
             if (typeText != null) typeText.text = "능력치";
-            if (typeBadge != null) typeBadge.color = statBoostColor;
+            // 타입 배지도 등급 색으로 덮어써 3 장이 같은 등급임을 시각화.
+            if (typeBadge != null) typeBadge.color = GetRarityColor(rolledRarity);
 
             canvasGroup.alpha = 1f;
             button.interactable = true;
@@ -247,17 +251,17 @@ namespace SwDreams.Features.UI.Presentation
                 cardBackground.color = defaultCardColor;
         }
 
-        private static string BuildAutoBoostDescription(StatBoostData data)
+        private static string BuildAutoBoostDescription(StatBoostData data, float rolledValue)
         {
             // value 표기는 StatModifier.ToString 규칙과 동일하게.
             switch (data.op)
             {
                 case ModifierOp.PercentBonus:
-                    return $"{data.statType} {(data.value >= 0 ? "+" : "")}{data.value * 100f:0.##}%";
+                    return $"{data.statType} {(rolledValue >= 0 ? "+" : "")}{rolledValue * 100f:0.##}%";
                 case ModifierOp.Multiplicative:
-                    return $"{data.statType} ×{data.value}";
+                    return $"{data.statType} ×{rolledValue}";
                 default:
-                    return $"{data.statType} +{data.value}";
+                    return $"{data.statType} +{rolledValue}";
             }
         }
 

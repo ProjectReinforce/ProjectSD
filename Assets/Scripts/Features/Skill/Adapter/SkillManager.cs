@@ -7,7 +7,9 @@ using SwDreams.Features.Skill.Adapter;
 using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.ChoiceGeneration;
 using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 
@@ -583,6 +585,10 @@ namespace SwDreams.Features.Skill.Adapter
 
         /// <summary>
         /// 혼돈 스킬 선택지 생성 (Lv.5, 10, 15 전용).
+        ///
+        /// [Phase 7] 4등급 공용 선정기(<see cref="RarityPoolChoiceGenerator"/>) 로 전환:
+        /// 카드 3 장이 항상 같은 등급이 되도록 강제. 먼저 Rarity 롤 → 해당 등급 풀에서 샘플.
+        /// 등급 가중치는 GameplayConfig.defaultRarityWeights 공용 (StatBoost 와 동일 기본값).
         /// </summary>
         /// <param name="chaosSkills">혼돈 스킬 풀</param>
         /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
@@ -592,33 +598,35 @@ namespace SwDreams.Features.Skill.Adapter
             if (cfg != null)
                 count = cfg.choiceCount;
 
-            // [Phase 5] 이미 보유한 혼돈 스킬 제외
+            // 이미 보유한 혼돈 스킬 제외
             var chaosManager = GetComponent<ChaosSkillManager>();
             if (chaosManager == null)
                 chaosManager = GetComponentInParent<ChaosSkillManager>();
 
             List<SkillData> candidates = new List<SkillData>();
-            foreach (var skill in chaosSkills)
+            if (chaosSkills != null)
             {
-                if (skill == null) continue;
-                if (chaosManager != null && chaosManager.HasChaosEffect(skill.chaosEffectType))
-                    continue;
-                candidates.Add(skill);
+                foreach (var skill in chaosSkills)
+                {
+                    if (skill == null) continue;
+                    if (chaosManager != null && chaosManager.HasChaosEffect(skill.chaosEffectType))
+                        continue;
+                    candidates.Add(skill);
+                }
             }
+            if (candidates.Count == 0) return System.Array.Empty<SkillData>();
 
-            int resultCount = Mathf.Min(count, candidates.Count);
-            SkillData[] result = new SkillData[resultCount];
+            float[] weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
+                ? cfg.defaultRarityWeights
+                : new float[] { 60f, 25f, 12f, 3f };
 
-            for (int i = candidates.Count - 1; i > 0; i--)
-            {
-                int j = UnityEngine.Random.Range(0, i + 1);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-            }
-
-            for (int i = 0; i < resultCount; i++)
-                result[i] = candidates[i];
-
-            return result;
+            var rng = new System.Random();
+            return RarityPoolChoiceGenerator.PickChoices(
+                candidates,
+                s => s.rarity,
+                weights,
+                count,
+                rng);
         }
 
         /// <summary>
