@@ -37,6 +37,45 @@
 
 ---
 
+## 다음 세션 진입점 (2026-04-25 세션 종료 시점)
+
+### 코드 작업 — 우선순위
+1. **Phase 8-B3**: Gambler handler 이전 — `IsGambler` 프로퍼티가 `SkillManager.GenerateChoices` 에서 직접 참조 중. handler 화하려면 `IChaosHookBus.LevelUpChoice` 훅 + "choice modifier" 추상화 or Gambler handler 가 ChaosSkillManager 경유 flag 노출 유지. 30~60분.
+2. **Phase 8-C**: StatWatcher 공용 컴포넌트 — Berserk(HP 임계)/Accel(Timer)/Unity(NearbyCount) 의 조건 감지 일반화. 2~3시간.
+3. **Phase 6**: 퀘스트 시스템 — 맵 거점 + 격리 몹 + 완료 시 StatBoost 선택지 보상 (Phase 5 재사용). 3~4시간.
+
+### 유저 Unity 배선 작업 (누적)
+| 대상 | 내용 |
+|---|---|
+| 혼돈 SO 19 종 | `paramsByRarity[4]` 수치 입력 (설계 문서 값, 아래 "Phase 8-A § paramsByRarity 치트시트" 참조) |
+| StatBoost SO 5 종 | `valueByRarity[4]` 수치 입력 (등급별 플랫/% 값) |
+| WeaponData SO 7+ | `statEntries` / `triggerEntries` / `combineRecipe` 입력 |
+| WeaponDatabase | weapons 리스트 등록 + GameManager Inspector 에 할당 |
+| StatBoostDatabase | 동일 |
+| Player 프리팹 | `PlayerWeaponInventory` / `StatBoostManager` 컴포넌트 자식 부착 확인 |
+| Managers 프리팹 | `DropSpawner.weaponPrefab` 할당 확인 |
+
+### Phase 8-A § paramsByRarity 치트시트
+| 혼돈 | (primary, secondary, tertiary) × 4등급 | 의미 |
+|---|---|---|
+| GlassCannon | (1.1, 0.5, 0) (1.2, 0.5, 0) (1.3, 0.5, 0) (1.5, 0.5, 0) | ATK 배율 / HP 비율 / - |
+| Berserk | (0.9, 0.3, 1.1) (0.8, 0.3, 1.2) (0.7, 0.3, 1.3) (0.5, 0.3, 1.5) | CDR 배율 / HP 임계 / 이속 배율 |
+| AccelEngine | (0.1, 600, 0) (0.2, 600, 0) (0.3, 600, 0) (0.5, 600, 0) | 최대 증폭 / 램프 초 / - |
+| Unity | (0.03, 0.02, 5) (0.05, 0.025, 5) (0.07, 0.04, 5) (0.10, 0.06, 5) | 1명 근접 보너스 / 추가 인당 / 감지 반경 |
+| ChainExplosion | (8, 2, 0) (10, 2, 0) (15, 2, 0) (20, 2, 0) | 폭발 데미지 / 반경 / - (연쇄수는 manager) |
+| Gambler | (0, 0, 0) × 4 | 파라미터 미사용 (boolean flag) |
+
+### 알려진 기술 부채 (별도 티켓, 우선순위 낮음)
+- W3: EssenceResolver 순수함수화
+- WeaponSlotsUI / EssenceSlotsUI / WeaponCombinePreview HUD (현재 DebugOverlay 로 대체)
+- DebugOverlay 에 `#if UNITY_EDITOR || DEVELOPMENT_BUILD` 가드 (릴리스 빌드 보호)
+- `ChoicePanelKind` enum Shared 승격 여부 (현재 Progression.Domain)
+- `SkillTriggerEffect` / `StatType` / `ModifierOp` 의 Shared/Domain/ValueObjects 승격 (3 개 이상 Feature 가 공유)
+- `IChaosHookBus` 의 UnityEngine.Vector2 의존 제거 (Position2D VO 로 분리)
+- W4 후속: `IPlayerTransform` 포트 — `ChaosHandlerContext.playerRoot` 가 구체 Transform
+
+---
+
 ## 재사용 가능한 기존 자산 (확정)
 
 | 대상 | 파일:라인 | 용도 |
@@ -80,9 +119,18 @@
 - **W3**: 시너지 로직 테이블화 — `EssenceResolver.Resolve(equipped, db) → (source→effects)[]` 순수 함수로 분리. 3스택/조합 확장 대비.
 - **I1**: `"__legacy__"` 상수 Shared 승격 — ApplyDoTHandler/ApplySlowHandler/EnemyMovement 3곳 중복.
 - **설계 문서 동기화**: `docs/game-design/essence.md § 3.2` 의 "번개 → Chain" 표기를 실제 구현인 "DamageNearby" 로 정정 필요 + 중첩/시너지 규약 추가.
-- **W5 (신규)**: 혼돈 스킬 효과 하드코딩 제거 — ChaosSkillManager 의 수치(유리대포 HP×0.5 / ATK×2, AccelEngine 0.5 over 600s, BerserkMode HP≤30%, Unity 0.1*N+0.1 등)가 로직에 직박힘. 2 단계 개선 권장:
-  1. ChaosSkillData SO 에 `parameters` 필드 추가 → 매니저가 SO 값 읽음. 로직은 유지. 혼돈 등급(Phase 7) 과 시너지 (등급별 param 다르게 가능).
-  2. IChaosEffectHandler registry — SkillTriggerSystem 패턴 복제. Switch 제거. 효과 추가 시 handler 하나 + enum 하나만. 현재 6종 고정이라 2 단계는 후순위.
+- **W5 (Phase 8-A ✅ / 8-B 인프라 ✅ / 8-B2 진행 예정)**: 혼돈 스킬 하드코딩 제거 단계:
+  1. ✅ 수치 SO 화 (Phase 8-A, 2026-04-24) — `ChaosSkillData.paramsByRarity[4]` + 혼돈별 독립 modifier + 올바른 op 전환.
+  2. ✅ Hook 인프라 (Phase 8-B 1 차, 2026-04-25) — `IChaosHookBus` / `IChaosEffectHandler` / `ChaosEffectRegistry` 신설. ChaosSkillManager 가 IChaosHookBus 구현. 점진 이전 분기 (handler 등록 시 우선, 아니면 기존 switch).
+  3. ✅ ChainExplosion handler 이전 (Phase 8-B, 2026-04-25) — `ChainExplosionHandler` 가 `EnemyKilled` 훅 구독 + 프레임 리셋 자체 관리 (`Time.frameCount` 비교). ChaosSkillManager 의 switch case / hasChainExplosion flag / GetChainExplosionConfig / TriggerExplosionDamage / SpawnExplosionVisual / IsLocalPlayer 제거. `OnEnemyKilled(VisualOnly)` 는 이벤트 발행만.
+  4. ⏳ Gambler/남은 handler 이전 (Phase 8-B3, 다음) — Gambler 는 `IsGambler` 프로퍼티가 SkillManager.GenerateChoices 에서 참조되므로 이전 시 조회 경로 재설계 필요.
+  5. ⏳ StatWatcher 공용 컴포넌트 (Phase 8-C) — Berserk/Accel/Unity 의 조건 감지 일반화.
+
+### Phase 8-B 1차 인프라 상세 (2026-04-25)
+- `Shared/Domain/Interfaces/IChaosHookBus.cs`: 이벤트 4종 (EnemyKilled/PlayerTakeDamage/PlayerDeath/LevelUpChoice). Vector2 의존은 실용적 예외 (Domain 순수성 WARN, 후속 Position2D VO 로 분리 가능).
+- `Features/Skill/Adapter/Chaos/IChaosEffectHandler.cs`: handler 인터페이스 + `ChaosHandlerContext` struct (playerRoot / stats / hookBus).
+- `Features/Skill/Adapter/Chaos/ChaosEffectRegistry.cs`: type → handler 매핑. `RegisterDefaults()` 현재 비어있음 (handler 이전 시 항목 추가).
+- ChaosSkillManager: IChaosHookBus 구현 + `effectRegistry` 필드 + ApplyChaos 에 handler 우선 분기 + OnEnemyKilled/VisualOnly 에서 EnemyKilled 이벤트 발행. 기존 switch 와 공존.
 - **W4**: ✅ 완료 — `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 (`Shared/Domain/Interfaces/`). PlayerStats/SkillManager 가 각 포트 구현 선언. Essence/Weapon Inventory 는 Character.Adapter / Skill.Adapter 직접 참조 완전 제거. 관련 변경:
   - `ISkillRegistry.EffectSinks` (IReadOnlyList&lt;IRuntimeEffectSink&gt;) + `OnSinkAdded(IRuntimeEffectSink)` 이벤트.
   - SkillManager 에 `cachedSinks` + `RefreshSinkCache()` — AcquireSkill/RemoveSkill/Evolution 3 경로에서 호출.

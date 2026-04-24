@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Character.Adapter;
+using SwDreams.Features.Skill.Adapter.Chaos;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Domain.ValueObjects;
@@ -27,39 +29,28 @@ namespace SwDreams.Features.Skill.Adapter
     ///   "chaos_berserk_cdr"     — Berserk CDR 배율 (Multiplicative, 비활성 시 1.0)
     ///   "chaos_berserk_spd"     — Berserk 이속 배율 (Multiplicative, 비활성 시 1.0)
     ///   "chaos_unity_atk"       — Unity 데미지 증폭 (PercentBonus, 근접 0 명 시 제거)
+    ///
+    /// [Phase 8-B 리팩터] IChaosHookBus 구현 — SpawnManager/PlayerHealth/LevelUpManager 등은
+    /// 구체 메서드 대신 이 포트로 이벤트 발행. 각 혼돈 효과가 핸들러화되면 switch 없이
+    /// 포트 구독만으로 반응. 현재는 기존 switch 와 병존 (점진 이전).
     /// </summary>
-    public class ChaosSkillManager : MonoBehaviour
+    public class ChaosSkillManager : MonoBehaviour, IChaosHookBus
     {
         // ===== 활성 혼돈 스킬 플래그 =====
+        // ChainExplosion 은 handler 경유 (Phase 8-B) — 플래그 불필요.
         private bool hasGlassCannon;
-        private bool hasChainExplosion;
         private bool hasBerserkMode;
         private bool hasAccelEngine;
         private bool hasUnity;
         private bool hasGambler;
 
-        // ===== 연쇄 폭발 설정 =====
-        [Header("연쇄 폭발 — fallback 기본값 (SO 의 paramsByRarity 미설정 시 사용)")]
+        // ===== 연쇄 폭발 설정 (ChainExplosionHandler 에 주입되는 fallback) =====
+        // Phase 8-B: 실 로직은 Chaos/Handlers/ChainExplosionHandler. 여기는 SO 미설정 시 fallback + prefab 참조만.
+        [Header("연쇄 폭발 — handler 에 주입되는 fallback")]
         [SerializeField] private float explosionRadius = 2f;
         [SerializeField] private int explosionDamage = 20;
         [SerializeField] private int maxChainPerFrame = 5;
         [SerializeField] private GameObject explosionEffectPrefab;
-        private int chainCountThisFrame;
-
-        /// <summary>
-        /// Chain Explosion params 해석 (primary=damage, secondary=radius).
-        /// tertiary (프레임당 최대 연쇄) 는 설계 파라미터 아님 — 성능 무한 루프 가드이므로
-        /// SerializeField <see cref="maxChainPerFrame"/> 만 사용.
-        /// damage/radius 도 SO 미설정 시 SerializeField 로 fallback.
-        /// </summary>
-        private (int damage, float radius, int maxChain) GetChainExplosionConfig()
-        {
-            var p = GetParams(ChaosEffectType.ChainExplosion,
-                new EffectParams(explosionDamage, explosionRadius, 0f));
-            int dmg = p.primary > 0f ? Mathf.RoundToInt(p.primary) : explosionDamage;
-            float r = p.secondary > 0f ? p.secondary : explosionRadius;
-            return (dmg, r, maxChainPerFrame);
-        }
 
         // ===== 단결 설정 =====
         [Header("단결")]
@@ -100,6 +91,20 @@ namespace SwDreams.Features.Skill.Adapter
         /// </summary>
         private readonly HashSet<ChaosEffectType> warnedFallbackTypes = new HashSet<ChaosEffectType>();
 
+        // ===== IChaosHookBus 구현 (Phase 8-B) =====
+        // 각 혼돈 효과가 switch 없이 구독할 수 있는 중앙 이벤트. 현재는 기존 switch 와 공존.
+        // 이벤트 이름은 "On" 접두 없음 — 기존 메서드(OnEnemyKilled 등)와 구분.
+        public event Action<Vector2, bool> EnemyKilled;
+        public event Action<int> PlayerTakeDamage;
+        public event Action PlayerDeath;
+        public event Action LevelUpChoice;
+
+        /// <summary>
+        /// 혼돈 효과 handler 등록소. 현재 등록된 handler 가 있으면 Apply 시 위임,
+        /// 없으면 기존 switch 경로 (ApplyGlassCannon 등) 사용.
+        /// </summary>
+        private ChaosEffectRegistry effectRegistry;
+
         // ===== 캐시 =====
         private IDamageable playerDamageable;
         private PlayerStats playerStats;
@@ -109,6 +114,15 @@ namespace SwDreams.Features.Skill.Adapter
         {
             playerDamageable = GetComponentInParent<IDamageable>();
             CachePlayerStats();
+
+            // Phase 8-B: handler registry 초기화 + SerializeField 주입이 필요한 handler 직접 등록.
+            effectRegistry = new ChaosEffectRegistry();
+            effectRegistry.RegisterDefaults();
+            effectRegistry.Register(new Chaos.Handlers.ChainExplosionHandler(
+                explosionEffectPrefab,
+                maxChainPerFrame,
+                explosionDamage,
+                explosionRadius));
         }
 
         private void CachePlayerStats()
@@ -152,14 +166,30 @@ namespace SwDreams.Features.Skill.Adapter
                 activeData[data.chaosEffectType] = chaosData;
             activeRarities[data.chaosEffectType] = rolledRarity;
 
+            // Phase 8-B: handler 가 등록된 타입이면 registry 경유 → switch 우회.
+            // 등록 안 된 타입은 기존 switch 경로 사용 (점진 이전).
+            // TODO Phase 8-B2: 모든 혼돈이 handler 로 이전되면 아래 switch + Apply{XXX} 메서드 전체 삭제.
+            if (effectRegistry != null &&
+                effectRegistry.TryGet(data.chaosEffectType, out var handler) &&
+                data is ChaosSkillData chaosDataForHandler)
+            {
+                var ctx = new ChaosHandlerContext
+                {
+                    playerRoot = transform.root,
+                    stats = playerStats,
+                    hookBus = this,
+                };
+                handler.Apply(chaosDataForHandler, rolledRarity, ctx);
+                Debug.Log($"[ChaosSkillManager] Handler 경로 적용: {data.skillName} ({data.chaosEffectType})");
+                return;
+            }
+
             switch (data.chaosEffectType)
             {
                 case ChaosEffectType.GlassCannon:
                     ApplyGlassCannon();
                     break;
-                case ChaosEffectType.ChainExplosion:
-                    ApplyChainExplosion();
-                    break;
+                // ChainExplosion — handler 로 이전 (Phase 8-B). registry 분기에서 처리.
                 case ChaosEffectType.BerserkMode:
                     ApplyBerserkMode();
                     break;
@@ -190,10 +220,8 @@ namespace SwDreams.Features.Skill.Adapter
             RecalculateChaosModifiers();
         }
 
-        private void ApplyChainExplosion()
-        {
-            hasChainExplosion = true;
-        }
+        // ApplyChainExplosion 제거 — ChainExplosionHandler 로 이전 (Phase 8-B).
+        // Registry 분기에서 handler 가 SO/rarity 와 hookBus 를 받아 EnemyKilled 이벤트 구독.
 
         private void ApplyBerserkMode()
         {
@@ -267,8 +295,7 @@ namespace SwDreams.Features.Skill.Adapter
             if (hasUnity)
                 needRecalc |= CheckUnityChanged();
 
-            if (hasChainExplosion)
-                chainCountThisFrame = 0;
+            // ChainExplosion: handler 로 이전 — 매니저에서 프레임 리셋 불필요.
 
             if (needRecalc)
                 RecalculateChaosModifiers();
@@ -429,90 +456,24 @@ namespace SwDreams.Features.Skill.Adapter
                 $"chaos_accel_{st}", st, ModifierOp.PercentBonus, bonus));
         }
 
-        // ===== 연쇄 폭발 =====
+        // ===== 연쇄 폭발 이벤트 발행 (Phase 8-B: handler 로 이전됨) =====
 
         /// <summary>
-        /// 적 사망 시 호출 (호스트만). SpawnManager.OnEnemyDied에서 전체 플레이어 순회.
-        /// 데미지: 호스트에서 모든 플레이어의 연쇄폭발 처리 (정상).
-        /// 비주얼: 자기 캐릭터의 연쇄폭발만 표시 (다른 플레이어 것은 클라이언트에서 표시).
+        /// SpawnManager.OnEnemyDied 가 호출. 호스트 권위 경로 — EnemyKilled 훅 발행.
+        /// ChainExplosionHandler 가 구독해 실제 데미지/비주얼 처리.
         /// </summary>
         public void OnEnemyKilled(Vector2 position)
         {
-            if (!hasChainExplosion) return;
-            if (!PhotonNetwork.IsMasterClient) return;
-
-            var cfg = GetChainExplosionConfig();
-            if (chainCountThisFrame >= cfg.maxChain) return;
-
-            chainCountThisFrame++;
-
-            // 데미지는 모든 플레이어의 연쇄폭발에 대해 처리
-            TriggerExplosionDamage(position);
-
-            // 비주얼은 자기(호스트) 캐릭터 것만 표시
-            // 클라이언트 플레이어의 비주얼은 OnReceiveDeathBatch → OnEnemyKilledVisualOnly에서 처리
-            if (IsLocalPlayer())
-                SpawnExplosionVisual(position);
+            EnemyKilled?.Invoke(position, false);
         }
 
         /// <summary>
-        /// 클라이언트용: 연쇄폭발 비주얼 + 데미지 팝업 재생.
-        /// SpawnManager.OnReceiveDeathBatch에서 호출.
-        /// 자기 캐릭터의 연쇄폭발만 표시.
+        /// 클라이언트용: EnemyKilled 훅 비주얼 전용 경로.
+        /// SpawnManager.OnReceiveDeathBatch 에서 호출.
         /// </summary>
         public void OnEnemyKilledVisualOnly(Vector2 position)
         {
-            if (!hasChainExplosion) return;
-            if (!IsLocalPlayer()) return; // 자기 캐릭터 것만
-
-            var cfg = GetChainExplosionConfig();
-            if (chainCountThisFrame >= cfg.maxChain) return;
-
-            chainCountThisFrame++;
-            SpawnExplosionVisual(position);
-
-            // 폭발 범위 내 적에게 비주얼 피드백 (데미지 팝업)
-            var hits = Physics2D.OverlapCircleAll(position, cfg.radius);
-            foreach (var hit in hits)
-            {
-                if (!hit.CompareTag("Enemy")) continue;
-                var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
-                if (enemy != null && enemy.IsAlive)
-                    enemy.ShowHitVisuals(cfg.damage);
-            }
-        }
-
-        /// <summary>
-        /// 이 ChaosSkillManager가 로컬 플레이어에 속하는지 확인.
-        /// </summary>
-        private bool IsLocalPlayer()
-        {
-            var pv = GetComponentInParent<PhotonView>();
-            return pv != null && pv.IsMine;
-        }
-
-        private void SpawnExplosionVisual(Vector2 position)
-        {
-            if (explosionEffectPrefab != null)
-            {
-                var fx = PoolManager.Instance?.Get(explosionEffectPrefab);
-                if (fx != null)
-                    fx.transform.position = position;
-            }
-        }
-
-        private void TriggerExplosionDamage(Vector2 position)
-        {
-            var cfg = GetChainExplosionConfig();
-            var hits = Physics2D.OverlapCircleAll(position, cfg.radius);
-            foreach (var hit in hits)
-            {
-                if (!hit.CompareTag("Enemy")) continue;
-
-                var damageable = hit.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
-                    damageable.TakeDamage(cfg.damage);
-            }
+            EnemyKilled?.Invoke(position, true);
         }
 
         // ===== 외부 접근 =====
