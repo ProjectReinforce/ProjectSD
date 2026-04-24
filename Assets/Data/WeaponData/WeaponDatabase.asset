@@ -12,4 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ab64a9bf6218154b82d8dc31e0701d3, type: 3}
   m_Name: WeaponDatabase
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Weapon.Adapter.Data.WeaponDatabase
-  weapons: []
+  weapons:
+  - {fileID: 11400000, guid: 17ec4d7491f352e46ac7ec1b92695931, type: 2}
+  - {fileID: 11400000, guid: dc54453613a169a4bb3882f777bd83df, type: 2}
+  - {fileID: 11400000, guid: 7afb7448c2363984bae6a1ac03c4d858, type: 2}
+  - {fileID: 11400000, guid: fdceb9031266b4d469d1e1194b71f858, type: 2}
+  - {fileID: 11400000, guid: 9dbd92cee69899f4dbf0b69d13bc56af, type: 2}
+  - {fileID: 11400000, guid: 3d3ab577595095642ac9c15f965e329b, type: 2}
+  - {fileID: 11400000, guid: 397dda2ddbc1f7743b2b846a08f7faf9, type: 2}

@@ -12,16 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34433a5c0b1c42c4eb769b8180a701eb, type: 3}
   m_Name: WeaponData 3
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Weapon.Adapter.Data.WeaponData
-  weaponId: 0
-  displayName: "\uAC00"
-  icon: {fileID: 21300000, guid: 8ffa59be6f5b048cab42ac44d2501330, type: 3}
+  weaponId: 3
+  displayName: "\uB77C"
+  icon: {fileID: 21300000, guid: 1c56f16fd68dc4fbdb499895f7236ece, type: 3}
   iconColor: {r: 1, g: 1, b: 1, a: 1}
-  rarity: 0
+  rarity: 1
   statEntries:
   - statType: 0
     op: 0
-    value: 10
-  triggerEffects: []
+    value: 20
+    isUnique: 0
+  triggerEntries: []
   combineRecipe:
-    inputWeaponIds: []
+    inputWeaponIds:
+    - 1
+    - 2
     outputWeaponId: 
