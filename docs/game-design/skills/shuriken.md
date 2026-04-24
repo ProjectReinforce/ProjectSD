@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_shuriken_01` |
+| 스킬 ID | 1 (`skillId`) |
 | 한국어 이름 | 표창 |
 | 영어 이름 | Shuriken |
 | 카테고리 | 액티브 |
-| 유형 | 투사체 |
+| 유형 | 투사체 (ProjectileSkillData) |
 | 진화 여부 | Yes (폭렬 표창) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/001_Shuriken.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,34 @@
 
 **동작 설명:** 부채꼴 모양으로 투사체 동시 발사. 각 투사체는 가장 가까운 적 방향을 중심으로 부채꼴로 퍼져 날아감.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/shuriken_01.asset` SO에서. 하드코딩 금지.*
+### 4.1 레벨별
 
-| 레벨 | 데미지 | 쿨다운 | 부채꼴 각도 | 기타 |
-|---|---|---|---|---|
-| 1 | — | — | — | *TBD (밸런싱)* |
+| 레벨 | 데미지 (`damagePerLevel`) | 쿨다운 (`cooldownPerLevel`) |
+|---|---|---|
+| 1 | **12** | **1.80s** |
+| 2 | **15** | 1.65s |
+| 3 | **18** | 1.50s |
+| 4 | **22** | 1.38s |
+| 5 | **26** | 1.28s |
+| 6 | **31** | 1.17s |
+| 7 | **38** | **1.08s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `projectileSpeed` | 5 |
+| `projectileCount` | 1 (투사체 수 스탯으로 확장) |
+| `projectileLifetime` | 3초 |
+| `penetrates` | false (적중 시 소멸) |
+| `trajectoryType` | Straight (0) |
+| `aimType` | 가장 가까운 적 방향 (0) |
+| `spreadPattern` | Spread (1, 부채꼴) |
+| `spreadAngle` | **30°** |
+| `knockbackForce` | 2 |
+| `maxInstances` | 3 |
 
 ## 5. TriggerEffect 매핑
 
@@ -59,8 +82,10 @@
 ## 7. 데이터 계약 (ScriptableObject)
 
 - **SO 타입:** `ProjectileSkillData`
-- **에셋 경로:** `Assets/Data/Skills/shuriken_01.asset`
-- **주요 필드:** firingMode=SimultaneousSpread, trajectoryType=Straight, applicableStats=[투사체 속도, 투사체 개수, 공격력, 치명타 확률/데미지]
+- **에셋 경로:** `Assets/Data/Skill/Active/001_Shuriken.asset`
+- **evolutionPair GUID** (진화 파트너 패시브): `ba7a877839522d64bafacee54b21442f`
+- **evolvedSkill GUID:** `50a6600abd685eb43a0b18812eeea29e` (201_EvolvedShuriken)
+- **주요 필드:** trajectoryType=Straight, aimType=Closest, spreadPattern=Spread, applicableStats=[투사체 속도, 투사체 개수, 공격력, 치명타 확률/데미지]
 
 ## 8. 네트워크 동기화
 
@@ -72,9 +97,9 @@
 
 ## 9. 구현 체크리스트
 
-- [ ] SO 생성
-- [ ] SpreadPatterns 부채꼴 적용 확인
-- [ ] 진화형 ExplodeHandler 연결
+- [x] SO 생성 (001_Shuriken.asset)
+- [x] SpreadPatterns 부채꼴 적용 확인
+- [ ] 진화형(201_EvolvedShuriken) ExplodeHandler 연결
 - [ ] `photon-sync-auditor`
 - [ ] 플레이테스트
 

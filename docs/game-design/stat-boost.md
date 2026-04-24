@@ -9,7 +9,9 @@
 | 시스템 ID | `stat_boost` |
 | 분류 | 게임플레이 / 성장 |
 | 의존 레이어 | Adapter (`Features/Progression/Adapter/Levelupmanager.cs`, `Features/Character/Adapter/PlayerStats.cs`), Domain (`StatType`, `StatModifier`) |
-| 최종 업데이트 | 2026-04-19 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 등급 가중치는 `Assets/Data/GameplayConfig.asset` (`defaultRarityWeights`)의 복제본이다.
 
 ## 2. 컨셉
 
@@ -59,16 +61,27 @@ ExpMultiplier, CritChance, LifeSteal
 
 ## 4. 수치
 
-> _TBD (밸런싱)_
+### 4.1 등급별 등장 확률 (현재 SO)
 
-| 등급 | 등장 확률 안 | 효과 강도 안 (예: AttackMultiplier) |
+`GameplayConfig.defaultRarityWeights = [60, 25, 12, 3]` — 4등급 체계 공용 (혼돈 스킬·능력치·무기).
+
+| 등급 | 가중치 | 정규화 비율 |
 |---|---|---|
-| 일반 | 60% | +5% |
-| 희귀 | 25% | +12% |
-| 영웅 | 12% | +25% |
-| 전설 | 3% | +50% |
+| 일반 (Common) | **60** | 60% |
+| 희귀 (Rare) | **25** | 25% |
+| 영웅 (Epic) | **12** | 12% |
+| 전설 (Legendary) | **3** | 3% |
 
-> 실제 값은 등급 표 + 스탯 종류별 카테고리 매트릭스로 분리될 가능성 (예: AttackMultiplier 는 곱연산, MoveSpeed 는 가산).
+### 4.2 효과 강도 (예시, 실제 StatBoostData SO 미구현)
+
+| 등급 | 효과 강도 안 (예: AttackMultiplier) |
+|---|---|
+| 일반 | +5% |
+| 희귀 | +12% |
+| 영웅 | +25% |
+| 전설 | +50% |
+
+> 실제 값은 등급 표 + 스탯 종류별 카테고리 매트릭스로 분리될 가능성 (예: AttackMultiplier 는 곱연산, MoveSpeed 는 가산). `StatBoostData` SO는 아직 미작성 — TBD.
 
 ## 5. 데이터 계약
 

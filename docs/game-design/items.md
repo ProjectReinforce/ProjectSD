@@ -10,7 +10,9 @@
 | 시스템 ID | `items_pickup` |
 | 분류 | 게임플레이 / 드랍 |
 | 의존 레이어 | Adapter (`Features/Progression/Adapter/ExperienceOrb.cs` 패턴 재사용) |
-| 최종 업데이트 | 2026-04-19 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/GameplayConfig.asset` 과 `Assets/Data/EnemyDropTable.asset` / `EliteDropTable.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -18,26 +20,28 @@
 
 ## 3. 게임 규칙
 
-| 아이템 | 효과 | 드랍 / 등장 |
-|---|---|---|
-| **경험치 오브** | 처치한 적의 경험치 부여. 자석 흡수 가능. | 모든 적 처치 시 드랍 (확정) |
-| **자석** | 맵에 남아 있는 경험치 조각을 **전부** 끌어와 획득 | TBD (낮은 확률) |
-| **물약** | 체력 소량 회복. **"체력 회복량 증가" 패시브와 시너지** (`StatType.HealMultiplier`) | TBD (낮은 확률) |
+| 아이템 | 효과 | 일반 적 드랍 | 엘리트 드랍 |
+|---|---|---|---|
+| **경험치 오브** | 처치한 적의 경험치 부여. 자석 흡수 가능. | 모든 적 처치 시 드랍 (확정) | 동일 |
+| **자석** | 맵에 남아 있는 경험치 조각을 **전부** 끌어와 획득 | `magnetChance = 0.01` (1%) | 0 (엘리트는 자석 안 드랍) |
+| **물약** | 체력 소량 회복. **"체력 회복량 증가" 패시브와 시너지** (`StatType.HealMultiplier`) | `potionChance = 0.01` (1%) | 0 |
 
-- **흡수 범위:** 경험치 오브는 플레이어 5m 이내 진입 시 자석처럼 끌려옴 ([rules.md § 2](rules.md))
-- **흡수 범위 확장:** 패시브 스킬로 확장 가능 (`StatType.SkillRange` 또는 별도 `StatType.PickupRange` 검토)
+- **흡수 범위:** 경험치 오브는 `GameplayConfig.magnetRange = 0.7` 이내 진입 시 자석처럼 끌려옴. 끌어당기는 속도는 `magnetSpeed = 2`.
+- **흡수 범위 확장:** 패시브 스킬로 확장 가능 (`StatType.SkillRange` 또는 별도 `StatType.PickupRange` 검토).
+- **경험치 오브 상한:** `maxActiveExpOrbs = 200` (동시 활성 개수 제한, 프리워밍 80).
 - **팀 공유:** 경험치는 팀 공유 ([rules.md § 2](rules.md)). 물약은 줍는 플레이어만 회복 (TBD).
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-> _TBD (밸런싱)_
-
-| 항목 | 값 안 |
-|---|---|
-| 경험치 오브 흡수 시작 거리 | 5m (확정) |
-| 자석 드랍 확률 | TBD |
-| 물약 드랍 확률 | TBD |
-| 물약 기본 회복량 | TBD (PlayerHealth.MaxHP 의 X% 안) |
+| 항목 | 값 | 출처 |
+|---|---|---|
+| 경험치 오브 흡수 시작 거리 | **0.7** | `GameplayConfig.magnetRange` |
+| 경험치 오브 흡수 속도 | **2** | `GameplayConfig.magnetSpeed` |
+| 경험치 오브 동시 상한 | **200** | `GameplayConfig.maxActiveExpOrbs` |
+| 경험치 오브 프리워밍 | **80** | `GameplayConfig.expOrbPrewarmCount` |
+| 자석 드랍 확률 (일반) | **0.01 (1%)** | `EnemyDropTable.magnetChance` |
+| 물약 드랍 확률 (일반) | **0.01 (1%)** | `EnemyDropTable.potionChance` |
+| 물약 기본 회복량 | TBD (PlayerHealth.MaxHP 의 X% 안) — 별도 PickupItemData SO 신설 필요 |
 | HealMultiplier 적용 | `회복량 = base × HealMultiplier` |
 
 ## 5. 데이터 계약
@@ -82,8 +86,8 @@ ScriptableObject 안:
 
 ## 9. 오픈 이슈
 
-- 자석 / 물약 드랍 확률 (밸런싱)
-- 물약 회복량의 기본값 (절대값 vs MaxHP 비율)
+- ~~자석 / 물약 드랍 확률~~ — SO에 0.01 기본값 입력됨 (밸런싱에서 재조정)
+- 물약 회복량의 기본값 (절대값 vs MaxHP 비율) — `PickupItemData` SO 설계 필요
 - 물약을 줍는 플레이어만 회복인지, 팀 공유 회복인지 (현재 안: 줍는 사람만)
 - 흡수 범위 확장이 `SkillRange` 와 별도 스탯이 필요한지 (현재 안: `SkillRange` 재활용)
 - 자석 / 물약 외 기타 아이템 추가 여부 (보물 상자 등 — 향후 확장)

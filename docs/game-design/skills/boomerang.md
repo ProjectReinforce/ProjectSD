@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_boomerang_01` |
+| 스킬 ID | 6 (`skillId`) |
 | 한국어 이름 | 부메랑 |
 | 영어 이름 | Boomerang |
 | 카테고리 | 액티브 |
 | 유형 | 투사체 (왕복) |
 | 진화 여부 | Yes (그래비톤 부메랑) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/006_Boomerang.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,33 @@
 
 **동작:** 플레이어 주변 n방향으로 부메랑 동시 발사. 전방 발사 후 되돌아옴. 갈 때/올 때 모두 데미지. 적을 관통.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/boomerang_01.asset`.*
+### 4.1 레벨별
 
-| 레벨 | 데미지 | 쿨다운 | 사거리 | 기타 |
-|---|---|---|---|---|
-| 1 | — | — | — | *TBD* |
+| 레벨 | 데미지 | 쿨다운 |
+|---|---|---|
+| 1 | **14** | **2.70s** |
+| 2 | 17 | 2.55s |
+| 3 | 21 | 2.33s |
+| 4 | 25 | 2.13s |
+| 5 | 30 | 1.95s |
+| 6 | 36 | 1.80s |
+| 7 | **44** | **1.65s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `projectileSpeed` | 3.5 |
+| `projectileLifetime` | 2초 |
+| `trajectoryType` | Boomerang (2) |
+| `aimType` | 1 (가장 가까운 적) |
+| `spreadPattern` | 2 (등분) |
+| `pullRadius` | 2 |
+| `pullForce` | 3 |
+| `hasPullOnReturn` | false (진화형에서 true) |
+| `maxInstances` | 2 |
 
 ## 5. TriggerEffect 매핑
 
@@ -55,8 +77,9 @@
 ## 7. 데이터 계약
 
 - **SO 타입:** `ProjectileSkillData`
-- **에셋 경로:** `Assets/Data/Skills/boomerang_01.asset`
-- **주요 필드:** firingMode=SimultaneousSpread, trajectoryType=Boomerang, hasPullOnReturn(진화형, SO)
+- **에셋 경로:** `Assets/Data/Skill/Active/006_Boomerang.asset`
+- **evolvedSkill:** `206_EvolvedBoomerang.asset`
+- **주요 필드:** trajectoryType=Boomerang, hasPullOnReturn(진화형, SO), pullRadius=2, pullForce=3
 
 ## 8. 네트워크
 

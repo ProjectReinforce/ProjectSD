@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_longsword_01` |
+| 스킬 ID | 3 (`skillId`) |
 | 한국어 이름 | 장검 |
 | 영어 이름 | Longsword |
 | 카테고리 | 액티브 |
 | 유형 | 근접 회전 |
 | 진화 여부 | Yes (검무) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/003_LongSword.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,34 @@
 
 **동작:** 플레이어 주변을 n개의 검이 1바퀴 회전 후 사라짐.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/longsword_01.asset`. 하드코딩 금지.*
+### 4.1 레벨별
 
-| 레벨 | 데미지 | 쿨다운 | 반경 | 회전 속도 | 기타 |
-|---|---|---|---|---|---|
-| 1 | — | — | — | — | *TBD* |
+| 레벨 | 데미지 | 쿨다운 |
+|---|---|---|
+| 1 | **18** | **1.50s** |
+| 2 | 22 | 1.40s |
+| 3 | 27 | 1.30s |
+| 4 | 33 | 1.20s |
+| 5 | 40 | 1.10s |
+| 6 | 48 | 1.00s |
+| 7 | **58** | **0.90s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `firingMode` | SimultaneousSpread (0) |
+| `burstDelay` | 0.1초 |
+| `areaRadius` | 2 |
+| `areaDuration` | **1초** (회전 지속 시간) |
+| `trajectoryType` | Homing (1) — Phase 2 발사용 |
+| `aimType` | 3 (회전 중심) |
+| `spreadPattern` | 2 (등분 배치) |
+| `knockbackForce` | 0.35 |
+| `maxInstances` | 10 |
+| `effectPrefab` | 타격 이펙트 연결됨 |
 
 ## 5. TriggerEffect 매핑
 
@@ -56,9 +79,10 @@
 
 ## 7. 데이터 계약
 
-- **SO 타입:** `ProjectileSkillData` (회전 + 발사 통합 타입)
-- **에셋 경로:** `Assets/Data/Skills/longsword_01.asset`
-- **주요 필드:** firingMode=TwoPhase, Phase1=Orbital(회전 속도/반경), Phase2=SimultaneousSpread(Straight)
+- **SO 타입:** `ProjectileSkillData`
+- **에셋 경로:** `Assets/Data/Skill/Active/003_LongSword.asset`
+- **evolvedSkill:** `203_EvolvedLongSword.asset`
+- **주요 필드:** firingMode=SimultaneousSpread, areaRadius/Duration 로 회전 판정, Phase2 발사는 진화형에서
 
 ## 8. 네트워크
 

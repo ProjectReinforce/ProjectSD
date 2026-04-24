@@ -1,6 +1,26 @@
 # 드랍 시스템 구현 로드맵 — 정수/무기/퀘스트/능력치/기타아이템/혼돈등급
 
 > 2026-04-21 승인본. 이 문서는 "월드에 뭔가를 떨구고, 주워서 효과를 받는" 시스템 6종을 Phase 단위로 구현하기 위한 공식 로드맵이다. 진행 상황은 각 Phase 의 체크박스를 업데이트한다.
+>
+> **수치 SSOT 참조 (2026-04-24 동기화):**
+> - 드랍 확률: `Assets/Data/EnemyDropTable.asset`, `Assets/Data/EliteDropTable.asset`
+> - 경험치 오브 상한·자석 범위·등급 가중치: `Assets/Data/GameplayConfig.asset`
+> - 정수 속성별 파라미터: `Assets/Data/Pickup/{Fire,Ice,Lightening}EssenceData.asset`
+
+## 현재 SO 입력 값 요약 (드랍 계열)
+
+| 항목 | 값 | 출처 |
+|---|---|---|
+| 일반 적 자석 드랍 | 1% | `EnemyDropTable.magnetChance = 0.01` |
+| 일반 적 물약 드랍 | 1% | `EnemyDropTable.potionChance = 0.01` |
+| 일반 적 무기 드랍 | 100% | `EnemyDropTable.weaponChance = 1` |
+| 일반 적 정수 드랍 | 0% | `EnemyDropTable.essenceChance = 0` |
+| 엘리트 정수 드랍 | 100% | `EliteDropTable.essenceChance = 1` |
+| 엘리트 무기 드랍 | 0.01% | `EliteDropTable.weaponChance = 0.0001` |
+| 무기 등급 가중치 | 60/25/12/3 | `weaponRarityWeights` (공용 4등급) |
+| 경험치 오브 동시 상한 | 200 | `GameplayConfig.maxActiveExpOrbs` |
+| 자석 범위 / 속도 | 0.7 / 2 | `GameplayConfig.magnetRange`, `magnetSpeed` |
+| 공용 4등급 가중치 | 60/25/12/3 | `GameplayConfig.defaultRarityWeights` |
 
 ## Context
 

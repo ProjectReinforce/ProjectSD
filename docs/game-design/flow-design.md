@@ -1,6 +1,9 @@
 # Flow Design — 화면 전환·UI·네트워크 이벤트
 
-최종 업데이트: 2026-04-18 (재정리)
+최종 업데이트: 2026-04-24
+
+> **SSOT:** 이 문서는 플로우를 설명하며, 모든 구체 수치는 `Assets/Data/GameplayConfig.asset` 의 복제본이다.
+> (예: 부활 10초 = `respawnDelay`, 부활 HP 50% = `respawnHPRatio`, 재연결 5초 = `reconnectWaitTime`, 선택 제한시간 15초 = `selectionTimeout`, 보스 경고 3초 = `bossWarningDuration`)
 
 타이틀 → 로비 → 대기실 → 인게임 → 결과. 전체 시각화는 [flow-diagram.mermaid](flow-diagram.mermaid).
 
@@ -114,9 +117,9 @@
 | 스킬 슬롯 | 좌측 | 장착 스킬 아이콘 (최대 6) + 레벨 |
 | 혼돈 스킬 아이콘 | 스킬 슬롯 하단 | 획득 혼돈 스킬 |
 | 팀원 상태 | 우측 | 팀원별 체력 + 사망/부활 |
-| 보스 혼돈 스킬 알림 | 중앙 | 보스 등장 시 3초간 표시 |
-| 보스 체력 바 | 상단 중앙 | 페이즈 구분선(60%, 30%) |
-| 부활 타이머 | 중앙 | 사망 시 10초 카운트다운 |
+| 보스 혼돈 스킬 알림 | 중앙 | 보스 등장 시 `bossWarningDuration = 3초`간 표시 |
+| 보스 체력 바 | 상단 중앙 | 페이즈 구분선 `phase2Threshold = 0.6`, `phase3Threshold = 0.3` |
+| 부활 타이머 | 중앙 | 사망 시 `respawnDelay = 10초` 카운트다운 |
 
 UI 프레임 시스템(FrameToast, Frame_PopUp)은 [systems/ui-frame.md](../systems/ui-frame.md) 참조.
 
@@ -137,7 +140,7 @@ UI 프레임 시스템(FrameToast, Frame_PopUp)은 [systems/ui-frame.md](../syst
 
 | 단계 | 설명 |
 |---|---|
-| 1 | 게임 타이머 도달 → 일반 적 스폰 중단 *(현재 15분 기준, 밸런싱에서 10분 단축 가능)* |
+| 1 | 게임 타이머 `bossSpawnTime = 900초 (15분)` 도달 → 일반 적 스폰 중단 |
 | 2 | 보스 등장 연출 (경고 UI + 혼돈 스킬 아이콘/이름 3초간) |
 | 3 | Phase 1 (100~60%): 기본 패턴 (추적 + 충격파) |
 | 4 | Phase 2 (60~30%): 강화 (속도 증가 + 원형 지대) |
@@ -148,7 +151,7 @@ UI 프레임 시스템(FrameToast, Frame_PopUp)은 [systems/ui-frame.md](../syst
 
 #### 2.4.4 사망/부활 플로우
 
-- 체력 0 → 사망 → 10초 부활 타이머 → 안전 지점 부활 (HP 50%)
+- 체력 0 → 사망 → `respawnDelay = 10초` 부활 타이머 → 안전 지점 부활 (`respawnHPRatio = 0.5`, 50% HP)
 - 전원 사망 → 게임 오버 → 결과 화면(실패)
 - 상세 규칙은 [rules.md § 3](rules.md).
 
@@ -165,8 +168,8 @@ UI 프레임 시스템(FrameToast, Frame_PopUp)은 [systems/ui-frame.md](../syst
 RPC 시그니처는 [systems/network-sync.md](../systems/network-sync.md).
 
 **에러/예외**
-- 플레이어 연결 끊김: 사망 처리 + 30초 재접속 대기 → 실패 시 영구 퇴장.
-- 호스트 이탈: 게임 일시정지 → 5초 재연결 대기 → 실패 시 새 호스트 전환 + 비상 보스전.
+- 플레이어 연결 끊김: 사망 처리 + 30초 재접속 대기 (구현 측 상수) → 실패 시 영구 퇴장.
+- 호스트 이탈: 게임 일시정지 → `reconnectWaitTime = 5초` 재연결 대기 → 실패 시 새 호스트 전환 + 비상 보스전 (`emergencyBossHPRatio = 0.7`).
 - 레벨업 타임아웃: 미선택자만 랜덤 자동 선택, 나머지는 정상 재개.
 - 동기화 오류: 호스트 데이터를 정답으로 간주. 200ms 초과 시 지연 경고 UI.
 

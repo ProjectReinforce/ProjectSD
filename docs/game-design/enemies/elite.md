@@ -1,5 +1,10 @@
 # 적 설계서: 엘리트형 (Elite)
 
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Enemy/Elite/*.asset` 및 `Assets/Data/EliteDropTable.asset` (SO)의 복제본이다.
+> 밸런싱 수정은 **SO에서 먼저** 하고 이 문서는 그 결과를 반영한다.
+> 참조 SO: `Assets/Data/Enemy/Elite/{EliteChaser, EliteRunner, EliteTank, EliteRangedTurretShot}.asset`, `Assets/Data/EliteDropTable.asset`
+> 최종 동기화: 2026-04-24
+
 ## 1. 메타
 
 | 항목 | 값 |
@@ -8,94 +13,106 @@
 | 한국어 이름 | 엘리트형 |
 | 영어 이름 | Elite |
 | 분류 | 엘리트 |
-| 등장 시점 | TBD (밸런싱) |
-| 등장 비율 | TBD (낮은 확률) |
-| 최종 업데이트 | 2026-04-18 |
+| 등장 시점 | SpawnManager 엘리트 타이머 (기본값 구현 코드 기준) |
+| 등장 비율 | 별도 스폰 경로 (정수 드랍 유일 소스) |
+| 최종 업데이트 | 2026-04-24 |
 
 ## 2. 컨셉
 
-일반 몬스터보다 뛰어난 스펙을 가진 강화 버전. 특별한 보상(정수)을 주기 때문에 플레이어가 우선 처치 타겟으로 삼게 만든다. 패턴은 기반 타입을 따르되 수치를 대폭 끌어올림.
+일반 몬스터보다 뛰어난 스펙을 가진 강화 버전. **정수(Essence)를 100% 드랍**하기 때문에 플레이어가 우선 처치 타겟으로 삼게 만든다. 패턴은 기반 타입을 따르되 수치를 대폭 끌어올림.
 
-## 3. 기반 타입과 조합
+## 3. 기반 타입과 조합 (현재 구현된 4종)
 
-엘리트는 **기반이 되는 일반 적 타입의 강화 버전**으로 구현. **무리형 (Swarm) 은 엘리트화 제외** (등장 수 많고 그룹 단위라 개별 강화 개념이 안 맞음).
-
-| 엘리트 ID | 기반 타입 | 설명 |
+| 엘리트 파일 | 기반 타입 | `isElite` |
 |---|---|---|
-| `enemy_elite_chaser` | [기본 추적형](basic.md) | 기본 추적의 강화판. 높은 체력·데미지로 정면 돌파 압박 |
-| `enemy_elite_runner` | [빠른형](fast.md) | 저체력 특징은 완화. 고속 + 버틸 수 있는 체력 |
-| `enemy_elite_tank` | [둔한형](tank.md) | 장벽 역할 극대화. 경로 완전 차단급 |
-| `enemy_elite_ranged` | [원거리형](ranged.md) | 4가지 행동×공격 조합 각각에 대해 엘리트 변형 가능 |
+| `EliteChaser.asset` | Chaser | 1 |
+| `EliteRunner.asset` | Runner | 1 |
+| `EliteTank.asset` | Tank | 1 |
+| `EliteRangedTurretShot.asset` | Ranged Turret Shot | 1 |
 
-*추후 추가되는 일반 타입에 대해서도 동일 규칙으로 엘리트 변형을 파생시킬 수 있다.*
+*무리형 (Swarm) 은 엘리트화 제외 — 그룹 단위 컨셉이라 개별 강화 개념이 안 맞음.*
 
-## 4. 스탯 배율 (기반 대비)
+## 4. 스탯 (현재 SO 값)
 
-실제 배율은 밸런싱 단계에서 조정. 초기 제안:
+| 엘리트 | HP | 데미지 | 이속 | EXP | `knockbackResistance` | `visualScaleMultiplier` |
+|---|---|---|---|---|---|---|
+| EliteChaser | **500** | **30** | 0.6 | **15** | **1** (완전 저항) | **1.5** |
+| EliteRunner | **250** | 15 | 0.75 | **9** | 1 | 1.5 |
+| EliteTank | **150** ⚠️ | 30 | 0.3 | 12 | 1 | 1.5 |
+| EliteRangedTurretShot | **300** | **15** (접촉) / **30** (공격) | 0.48 | 15 | 1 | 1.5 |
 
-| 스탯 | 배율 (기반 대비) | 비고 |
-|---|---|---|
-| HP | ×4 ~ ×6 | 처치에 의미 있는 시간 소요 |
-| 데미지 | ×1.5 ~ ×2.0 | 접촉 회피 강제 |
-| 이속 | ×1.0 ~ ×1.2 | 타입에 따라 조정 (탱크는 그대로) |
-| 점수(EXP) | ×3 ~ ×5 | 처치 보상 |
-| 특수 드랍 | - | 정수 드랍 여기서만 |
+### 기반 대비 배율
+
+| 엘리트 | HP 배율 | 데미지 배율 | EXP 배율 |
+|---|---|---|---|
+| EliteChaser | ×10 | ×1.5 | ×3 |
+| EliteRunner | ×10 | ×1.0 | ×3 |
+| EliteTank | **×1.0** ⚠️ (미조정) | ×1.0 | ×1.0 |
+| EliteRangedTurretShot | ×10 | ×1.5 | ×3 |
+
+⚠️ **EliteTank는 기반과 HP/데미지/EXP가 동일** — SO 값이 아직 튜닝되지 않은 상태로 보임. 밸런싱 조정 대상.
 
 ### 시간 경과 스케일링
-기반 적과 동일한 시간 체력 배율을 곱한다. 예: 후반(2.0x) × 엘리트(×5) = 기본 대비 10배.
+기반 적과 동일한 시간 체력 배율(`DifficultyData.hpCurve`, 0.8 → 15)을 곱한다.
 
 ## 5. 이동 / 공격 패턴
 
 **기반 타입의 패턴을 그대로 사용.** 수치만 끌어올린 "상위 호환".
-
-- 특수 패턴 추가는 **프로토타입 범위 밖**. 추후 확장 시 본 문서에 분기 섹션 추가.
-- 엘리트이기 때문에 **페이즈 / 광폭화 등은 없음** (그건 보스 영역).
+- 특수 패턴 추가는 **프로토타입 범위 밖**.
+- 엘리트에는 페이즈 / 광폭화 없음 (그건 보스 영역).
 
 ## 6. 보상 (핵심 차별점)
 
-- **정수 (Essence)** — 엘리트 처치 시 일정 확률로 드롭. 선착순, 최대 2개 보유. 상세는 [../essence.md](../essence.md).
-  - 드랍 확률은 밸런싱에서 확정.
-- **경험치:** 기반의 3~5배.
-- **무기 드랍:** 매우 낮은 확률로 [../weapon.md](../weapon.md) 의 무기 시스템과 동일 규칙.
+### 드랍 확률 (`EliteDropTable.asset`)
+
+| 드랍 | 확률 |
+|---|---|
+| `essenceChance` | **1.0 (100% 드랍)** |
+| `weaponChance` | 0.0001 |
+| `magnetChance` | 0 |
+| `potionChance` | 0 |
+
+- 정수 타입 가중치: `essenceTypeWeights = [1, 1, 1]` (Fire/Ice/Lightning 동등)
+- 무기 등급 가중치: `[60, 25, 12, 3]` (Common/Rare/Epic/Legendary)
+
+### 정수 (Essence)
+엘리트 처치 시 반드시 1종 드랍. 선착순, 최대 2개 보유. 상세 [../essence.md](../essence.md).
+
+### 경험치
+기반의 3배 (Tank 제외, EliteTank는 미조정).
 
 ## 7. 데이터 계약
 
-- **SO 타입:** `EnemyData` (기반과 동일, 필드값만 강화) 또는 `EliteEnemyData` 세분화 검토
-- **에셋 경로:** `Assets/Data/Enemies/elite/{variant}.asset`
-- **주요 필드:**
-  - `baseEnemyId` (기반 타입 참조, 시각적 연관성 유지용)
-  - 기본 EnemyData 필드 (HP/Speed/Damage/Score 를 강화 배율로)
-  - `essenceDropChance` (0.0~1.0)
-  - `essenceDropTable` (얼음/불/번개 등)
+- **SO 타입:** `EnemyData` (공통, `isElite = 1` 플래그만)
+- **에셋 경로:** `Assets/Data/Enemy/Elite/{variant}.asset`
+- **드랍 테이블:** `EliteDropTable.asset` 전용
 
 ## 8. 네트워크
-
-네트워크 기본 규약 [../../systems/network-sync.md](../../systems/network-sync.md).
 
 - 스폰/AI/드랍 판정 호스트.
 - 정수 드랍 결과는 호스트 결정 후 RPC 로 전파 (선착순 처리도 호스트).
 
 ## 9. 비주얼 / 식별
 
-- 엘리트임을 한눈에 알 수 있도록 **이펙트/색상 오라** 부여 (기반 타입 스프라이트 유지 + 발광/테두리).
-- 체력 바 표시 여부: 일반 적은 없지만 엘리트는 **표시 권장** (처치 진행도 체감).
+- 엘리트 비주얼: `visualScaleMultiplier = 1.5` (일반 적 대비 1.5배 크기).
+- 추가 이펙트/오라는 별건.
 
 ## 10. 구현 체크리스트
 
-- [x] `EnemyData.isElite` / `essenceDropChance` 필드 — 기존 SO 확장, 서브타입 미분화
-- [x] 독립 스폰 타이머 (`SpawnManager.eliteSpawnInterval` 기본 90s) + `RPC_SpawnElite` (호스트→전체, variantIdx 기반)
-- [x] 중도 참가 시 엘리트 variant 역인덱스 동기화
-- [x] 정수 드랍 **훅만** — `SpawnManager.OnEnemyDied` 에서 `isElite + essenceDropChance` 롤링 후 로그. 실제 Essence Pickup/System 은 별도 작업
-- [ ] 엘리트 변형 SO 4종 이상 생성 (에디터 작업)
+- [x] `EnemyData.isElite` / `dropTable` 필드 — 기존 SO 확장
+- [x] 독립 스폰 타이머 + `RPC_SpawnElite`
+- [x] 정수 드랍 **훅** (`SpawnManager.OnEnemyDied` 에서 `isElite + essenceChance` 롤링)
+- [x] 엘리트 변형 SO 4종 생성 (완료)
+- [ ] **EliteTank HP/데미지/EXP 배율 조정** (현재 기반과 동일)
 - [ ] 스탯 배율이 기반 타입 스케일링과 합리적으로 곱해지는지 검증
-- [ ] 체력 바 UI (일반 적과 구분) — **별건**
-- [ ] 엘리트 비주얼 식별 (발광/테두리 등) — **별건**
+- [ ] 체력 바 UI (일반 적과 구분) — 별건
+- [ ] 엘리트 비주얼 식별 (발광/테두리 등) — 별건
 - [ ] `photon-sync-auditor`
-- [ ] 플레이테스트 (엘리트 단독 처치 시간, 정수 체감 밸런스)
+- [ ] 플레이테스트
 
 ## 11. 오픈 이슈
 
-- 엘리트 등장 시점·빈도 (밸런싱)
-- 특수 패턴(돌진, 소환 등) 추가 여부 — 추후 확장
+- EliteTank 수치 튜닝 필요 (현재 TankData와 동일)
+- 나머지 Ranged 3 변형(Zone/Kite×2)의 엘리트판 존재 여부
+- 특수 패턴 추가 여부 — 추후 확장
 - 엘리트 처치 시 BGM·긴장도 연출 여부
-- 엘리트와 보스 Phase 전이의 시각적·구조적 구분

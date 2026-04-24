@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_turret_01` |
+| 스킬 ID | 8 (`skillId`) |
 | 한국어 이름 | 자동포탑 |
 | 영어 이름 | Auto Turret |
 | 카테고리 | 액티브 |
 | 유형 | 소환 (설치) |
 | 진화 여부 | Yes (미니건 포탑) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/008_AutoTurret.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,29 @@
 
 **동작:** 투사체 개수 스탯만큼 약간의 간격으로 포탑 생성. 각 포탑은 사거리 내 가장 가까운 적을 공격. **항상 치명타.**
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/turret_01.asset`.*
+### 4.1 레벨별
 
-| 레벨 | 포탑 공격력 | 쿨다운 | 포탑 공격속도 | 사거리 | 지속시간 |
-|---|---|---|---|---|---|
-| 1 | — | — | — | — | *TBD* |
+| 레벨 | 포탑 공격력 (`damagePerLevel`) | 설치 쿨다운 |
+|---|---|---|
+| 1 | **8** | **8.0s** |
+| 2 | 10 | 7.5s |
+| 3 | 12 | 7.0s |
+| 4 | 15 | 6.5s |
+| 5 | 18 | 6.0s |
+| 6 | 22 | 5.5s |
+| 7 | **27** | **5.0s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `firingMode` | DelayedBurst (1) |
+| `burstDelay` | 1.0초 (포탑 순차 설치 간격) |
+| `attackRange` | **1.5** (포탑 사거리) |
+| `attackCooldown` | **0.5초** (포탑 발사 간격) |
+| `maxInstances` | 2 (동시 존재 포탑 수) |
 
 ## 5. TriggerEffect 매핑
 
@@ -51,10 +69,11 @@
 
 ## 7. 데이터 계약
 
-- **SO 타입:** `PlacedSkillData`
-- **에셋 경로:** `Assets/Data/Skills/turret_01.asset`
-- **주요 필드:** firingMode=DelayedBurst, placedPrefab=Turret, applicableStats=[투사체 개수, 공격력, 치명타 데미지]
-- 관련 컴포넌트: `Assets/Scripts/Adapter/Skill/Effects/PlacedTurret.cs`
+- **SO 타입:** `ProjectileSkillData` (설치형 소환 모드)
+- **에셋 경로:** `Assets/Data/Skill/Active/008_AutoTurret.asset`
+- **evolvedSkill:** `208_EvolvedAutoTurret.asset`
+- **주요 필드:** firingMode=DelayedBurst, attackRange=1.5, attackCooldown=0.5, applicableStats=[투사체 개수, 공격력, 치명타 데미지]
+- 관련 컴포넌트: `Assets/Scripts/Features/Skill/Adapter/Spawners/PlacedSpawner.cs`
 
 ## 8. 네트워크
 

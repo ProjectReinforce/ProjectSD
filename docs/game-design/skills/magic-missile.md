@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_magic_missile_01` |
+| 스킬 ID | 2 (`skillId`) |
 | 한국어 이름 | 매직 미사일 |
 | 영어 이름 | Magic Missile |
 | 카테고리 | 액티브 |
 | 유형 | 투사체 (유도) |
 | 진화 여부 | Yes (체인 미사일) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/002_MagicMissile.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,33 @@
 
 **동작:** 플레이어 정면으로 발사되며, 발사 후 가장 가까운 적을 추적. 투사체 개수 스탯만큼 약간의 딜레이를 두고 연속 발사.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/magic_missile_01.asset`. 하드코딩 금지.*
+### 4.1 레벨별
 
-| 레벨 | 데미지 | 쿨다운 | 연발 간격 | 기타 |
-|---|---|---|---|---|
-| 1 | — | — | — | *TBD* |
+| 레벨 | 데미지 (`damagePerLevel`) | 쿨다운 (`cooldownPerLevel`) |
+|---|---|---|
+| 1 | **10** | **2.10s** |
+| 2 | 13 | 1.95s |
+| 3 | 16 | 1.80s |
+| 4 | 20 | 1.65s |
+| 5 | 24 | 1.50s |
+| 6 | 29 | 1.38s |
+| 7 | **35** | **1.28s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `firingMode` | DelayedBurst (1) |
+| `burstDelay` | **0.2초** |
+| `projectileSpeed` | 3.5 |
+| `projectileCount` | 1 |
+| `projectileLifetime` | 4초 |
+| `trajectoryType` | Homing (1) |
+| `homingRotateSpeed` | 200 |
+| `aimType` | 가장 가까운 적 (1) |
+| `maxInstances` | 3 |
 
 ## 5. TriggerEffect 매핑
 
@@ -61,7 +83,8 @@
 ## 7. 데이터 계약
 
 - **SO 타입:** `ProjectileSkillData`
-- **에셋 경로:** `Assets/Data/Skills/magic_missile_01.asset`
+- **에셋 경로:** `Assets/Data/Skill/Active/002_MagicMissile.asset`
+- **evolvedSkill:** `202_EvolvedMagicMissile.asset`
 - **주요 필드:** firingMode=DelayedBurst, trajectoryType=Homing, applicableStats=[투사체 속도, 투사체 개수, 공격력]
 
 ## 8. 네트워크

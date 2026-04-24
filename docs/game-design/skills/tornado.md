@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_tornado_01` |
+| 스킬 ID | 10 (`skillId`) |
 | 한국어 이름 | 회오리바람 |
 | 영어 이름 | Tornado |
 | 카테고리 | 액티브 |
 | 유형 | 투사체 (CC) |
 | 진화 여부 | Yes (대선풍) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/010_Tornado.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,32 @@
 
 **동작:** 플레이어 후방을 기준으로 n방향으로 회오리 동시 발사. 천천히 전진하며 적을 모으고 데미지. 적을 관통.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/tornado_01.asset`.*
+### 4.1 레벨별
 
-| 레벨 | 데미지 | 쿨다운 | 이동속도 | 지속시간 | CC 강도 |
-|---|---|---|---|---|---|
-| 1 | — | — | — | — | *TBD* |
+| 레벨 | 데미지 | 쿨다운 |
+|---|---|---|
+| 1 | **8** | **3.50s** |
+| 2 | 10 | 3.20s |
+| 3 | 12 | 2.90s |
+| 4 | 15 | 2.65s |
+| 5 | 18 | 2.40s |
+| 6 | 22 | 2.20s |
+| 7 | **27** | **2.00s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `projectileSpeed` | **1.5** (느린 전진) |
+| `projectileLifetime` | 3초 |
+| `trajectoryType` | Tornado (3) |
+| `aimType` | 2 (랜덤/후방) |
+| `spreadPattern` | 2 (360° 등분) |
+| `pullRadius` | **0.35** |
+| `pullForce` | **0.5** |
+| `maxInstances` | 2 |
 
 ## 5. TriggerEffect 매핑
 
@@ -57,8 +78,9 @@
 ## 7. 데이터 계약
 
 - **SO 타입:** `ProjectileSkillData`
-- **에셋 경로:** `Assets/Data/Skills/tornado_01.asset`
-- **주요 필드:** firingMode=SimultaneousSpread, trajectoryType=Straight(진화 후 Spiral), applicableStats=[스킬 범위, 공격력]
+- **에셋 경로:** `Assets/Data/Skill/Active/010_Tornado.asset`
+- **evolvedSkill:** `210_EvolvedTornado.asset`
+- **주요 필드:** trajectoryType=Tornado(3), pullRadius=0.35, pullForce=0.5, applicableStats=[스킬 범위, 공격력]
 
 ## 8. 네트워크
 

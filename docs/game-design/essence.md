@@ -11,7 +11,9 @@
 | 의존 레이어 | Features/Essence/{Domain,Adapter}, Features/Skill/Adapter/TriggerEffects/, Features/Character/Adapter (PlayerStats) |
 | `source` prefix | `essence_{type}_{slotIndex}` (슬롯별 구분) — [trigger-effects.md § 5](../systems/trigger-effects.md) |
 | 구현 상태 | ✅ Phase 3 완료 (커밋 `a723d9f79`) |
-| 최종 업데이트 | 2026-04-23 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Pickup/{Fire,Ice,Lightening}EssenceData.asset` 및 `Assets/Data/EliteDropTable.asset` / `EnemyDropTable.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -34,18 +36,21 @@
 | **불** | 화상 — 도트 데미지 | `OnHit → ApplyDoT` (`primary=틱 데미지`, `secondary=지속초`, `tertiary=틱 간격`) — DoTEffect 다중 인스턴스 (source 별 공존) |
 | **번개** | 적중 주변 N마리에 고정 데미지 | `OnHit → DamageNearby` (`primary=반경`, `secondary=대상 수`, `tertiary=데미지`) — **신규 핸들러**. Chain 과 다름 — 선형 전이 아니라 방사형 동시 타격 |
 
-### 3.3 중첩 / 시너지 (Phase 3 구현 확정)
+### 3.3 중첩 / 시너지 (Phase 3 구현 확정, 현재 SO 값)
 
 같은 속성 2개 장착 시 동작:
 - **Stack2 시너지 미정의 (EssenceData.injectedEffectsStack2 비어있음)**: 슬롯 0/1 효과가 **각각 독립 발동** → 자연 합산 (ApplyDoT/ApplySlow/DamageNearby 모두 source 별 독립 인스턴스).
 - **Stack2 시너지 정의**: 슬롯 1 효과는 등록 안 함 + 슬롯 0 의 1스택 효과를 Stack2 파라미터로 교체. 총 효과 = Stack2 1회분 (비선형 시너지).
 
-**현재 적용 시너지 수치 (Inspector 조정 가능):**
-| 속성 | 1스택 → 2스택 시너지 |
-|---|---|
-| 불 | DoT 틱당 데미지 4 → **10** (총 데미지 2.5배) |
-| 얼음 | 슬로우 지속 1.5s → **2.25s** (지속 1.5배) |
-| 번개 | 3마리 × 6dmg → **6마리 × 9dmg** (대상 2배 + 데미지 1.5배) |
+**현재 SO 파라미터 (`FireEssenceData` / `IceEssenceData` / `LighteningEssenceData`):**
+
+| 속성 | Trigger | Action | 1스택 (primary / secondary / tertiary) | 2스택 (Stack2) |
+|---|---|---|---|---|
+| 불 (`FireEssenceData`, type=1) | OnHit | ApplyDoT (3) | **4 / 3 / 1** (틱 데미지 4, 지속 3s, 틱간격 1s) | **10 / 3 / 1** (틱 데미지 10, 지속 3s, 틱간격 1s → 총 데미지 2.5배) |
+| 얼음 (`IceEssenceData`, type=0) | OnHit | ApplySlow (4) | **0.7 / 3 / 0** (이속 배율 0.7 = 30% 슬로우, 지속 3s) | **0.7 / 2.5 / 0** (지속 2.5s로 감소 — 현재 SO 값) |
+| 번개 (`LighteningEssenceData`, type=2) | OnHit | DamageNearby (11) | **1 / 2 / 6** (반경 1, 대상 2마리, 6 데미지) | **1 / 6 / 9** (반경 1, 대상 6마리, 9 데미지 → 총 3배 효과) |
+
+⚠️ 얼음 2스택의 `secondary` 가 3 → 2.5로 **감소**하고 있음 — 의도 재검토 필요(문서 3.3의 "지속 1.5배" 서술과 상반).
 
 ### 3.4 조합 효과 (서로 다른 속성, TBD)
 
@@ -57,31 +62,44 @@
 | 얼음 + 불 | _상충 처리 미정_ | TBD (기획) |
 | 불 + 번개 | 화상 + 방사 | TBD (기획) |
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-> _TBD (밸런싱)_
+### 4.1 드랍 확률
 
-| 항목 | 값 안 |
-|---|---|
-| 엘리트 정수 드랍 확률 | TBD |
-| 얼음 슬로우 비율 | TBD (예: 이속 -30%) |
-| 얼음 슬로우 지속 | TBD |
-| 불 DoT 데미지 | TBD (`ApplyDoTHandler` 의 (틱수, 간격, 데미지비율)) |
-| 번개 전이 거리 / 데미지 비율 | TBD (`ChainHandler` 의 `chainRange`, `chainDamageRatio`) |
+| 소스 | `essenceChance` | 타입 가중치 (`essenceTypeWeights`) |
+|---|---|---|
+| 일반 적 (`EnemyDropTable`) | **0** (드랍 없음) | — |
+| 엘리트 (`EliteDropTable`) | **1.0 (100% 드랍)** | `[1, 1, 1]` (Fire/Ice/Lightning 동등) |
+
+### 4.2 정수별 효과 파라미터
+
+§ 3.3 의 SO 값 테이블 참조.
+
+### 4.3 보유 한계
+
+- 한 플레이어 **최대 2개** (코드 측 상수).
 
 ## 5. 데이터 계약
 
-### 5.1 드랍 (EnemyData 확장)
+### 5.1 드랍 (실제 구현)
 
-[enemies/elite.md § 7](enemies/elite.md) 의 안:
+`EnemyDropTable` / `EliteDropTable` SO가 확률/가중치를 관리. `EnemyData.dropTable` 필드가 두 테이블 중 하나를 참조.
 
+```csharp
+// Shared/Data/EnemyDropTable.cs
+public float essenceChance;               // 0.0~1.0
+public float[] essenceTypeWeights;        // Ice(0)/Fire(1)/Lightning(2) 가중치
 ```
-EnemyData (또는 EliteEnemyData):
-  - essenceDropChance : float (0.0~1.0)
-  - essenceDropTable : EssenceType[] (얼음/불/번개 가중치 안)
 
-  enum EssenceType { Ice, Fire, Lightning }
+### 5.2 정수 SO (`EssenceData`)
+
+```csharp
+// Features/Essence/Adapter/Data/EssenceData.cs
+public EssenceType type;                                   // Ice=0, Fire=1, Lightning=2
+public SkillTriggerEffect[] injectedEffects;               // 1스택
+public SkillTriggerEffect[] injectedEffectsStack2;         // 2스택 (비어있으면 독립 합산)
 ```
+SO 파일: `Assets/Data/Pickup/{Fire,Ice,Lightening}EssenceData.asset`.
 
 ### 5.2 런타임 주입 (정수 장착 시)
 

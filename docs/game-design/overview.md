@@ -2,7 +2,10 @@
 
 *"Sweet Dream" + "Sweep" — 꿈의 세계에서 적을 쓸어버리는 언어의 유희*
 
-최종 업데이트: 2026-04-18 (재정리)
+최종 업데이트: 2026-04-24
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/GameplayConfig.asset` 등 SO의 복제본이다.
+> 개별 수치 상세는 [rules.md](rules.md)에서 관리. 이 문서는 전체 개요.
 
 ## 1. 프로젝트 개요
 
@@ -11,8 +14,9 @@
 | 프로젝트명 | Sweepin' Dreams |
 | 장르 | Survivors-like / 멀티플레이어 액션 |
 | 플레이 인원 | 1~4명 Co-op (솔로 공식 지원) |
-| 단일 게임 시간 | 보스전 제외 최대 15분 |
-| 대상 플랫폼 | PC (Steam Early Access) |
+| 단일 게임 시간 | **15분** (`GameplayConfig.totalGameTime = 900s`) |
+| 보스 등장 | 15분 (`bossSpawnTime = 900s`) |
+| 대상 플랫폼 | PC (Stove Indie → Steam) |
 | 엔진 | Unity 2D URP + Photon PUN 2 |
 | 개발 규모 | 개발자 2명 + UI 디자이너 1명 |
 
@@ -54,16 +58,17 @@ Vampire Survivors에서 영감을 받은 멀티플레이 Survivors-like. 1~4명�
 
 ## 4. 스킬 시스템 (개념)
 
-| 분류 | 개수 | 성격 |
-|---|---|---|
-| 액티브 스킬 | 24종 | 자동 발동 공격/유틸. 패시브 영향을 받음. |
-| 패시브 스킬 | 19종 | 수치 기반 영구 강화. |
-| 혼돈 스킬 | 19종 | 게임 규칙 자체를 바꾸는 스킬. 4등급 체계. |
+| 분류 | 설계 개수 | SO 구현 | 위치 |
+|---|---|---|---|
+| 액티브 스킬 | 24종 (설계서 기준) | **10종** | `Assets/Data/Skill/Active/` (001~010) |
+| 패시브 스킬 | 19종 | **13종** | `Assets/Data/Skill/Passive/` (101~113) |
+| 진화 스킬 | 10종 | **10종** | `Assets/Data/Skill/Evolved/` (201~210) |
+| 혼돈 스킬 | 19종 | **6종** | `Assets/Data/Skill/Chaos/` (301~306) |
 
-- **6슬롯 제한** — 액티브 + 패시브 합계 최대 6 (시작 패시브 포함, 설정에서 조정 가능). 모든 슬롯이 차고 만렙이면 능력치(스탯 부스트) 선택지로 전환.
-- **진화 시스템** — 특정 액티브 + 특정 패시브가 모두 최대 레벨일 때 진화. 2슬롯이 1슬롯으로 합쳐지며, 새 효과 발현.
-- **혼돈 스킬 선택 레벨** — **레벨 10 / 20 / 30 (확정, 2026-04-18).** 세부 수치는 밸런싱 단계.
-- **보스에게 적용되는 미선택 혼돈 스킬** — 혼돈 스킬 선택 시 미선택 중 랜덤 1개가 보스에게 적용. 현재 1개만 적용 (설정 가능).
+- **6슬롯 제한** — `GameplayConfig.maxSkillSlots = 6` (액티브 + 패시브 합계, 시작 패시브 포함). 모든 슬롯이 차고 만렙이면 능력치(스탯 부스트) 선택지로 전환.
+- **진화 시스템** — 특정 액티브 + 특정 패시브가 모두 최대 레벨일 때 진화. 2슬롯이 1슬롯으로 합쳐지며, 새 효과 발현. 진화 확률: `evolutionChance = 0.7`.
+- **혼돈 스킬 선택 레벨** — **레벨 10 / 20 / 30** (`GameplayConfig.chaosLevels`).
+- **보스에게 적용되는 미선택 혼돈 스킬** — 혼돈 스킬 선택 시 미선택 중 랜덤 1개가 보스에게 적용.
 
 개별 스킬 24종 상세는 [skills/INDEX.md](skills/INDEX.md) 및 하위 파일. 발사 메커니즘은 [systems/skill-executor.md](../systems/skill-executor.md), TriggerEffect 핸들러는 [systems/trigger-effects.md](../systems/trigger-effects.md).
 
@@ -75,11 +80,28 @@ Vampire Survivors에서 영감을 받은 멀티플레이 Survivors-like. 1~4명�
 
 세부 게임 규칙(사망/부활, 경험치, 6슬롯)은 [rules.md](rules.md).
 
+### 캐릭터 구현 현황
+
+`Assets/Data/Character/` 에 3종 SO 존재 (`AData.asset`, `BData.asset`, `CData.asset`).
+대표 기본 스탯 (A 캐릭터 기준):
+
+| 필드 | 값 |
+|---|---|
+| `maxHP` | 100 |
+| `moveSpeed` | 0.84 |
+| `attackMultiplier` | 1.0 |
+| `critDamage` | 1.5 (150%) |
+| `cooldownReduction` | 0 |
+| `knockback` | 1.0 |
+| `expMultiplier` | 1.0 |
+| `defenseMultiplier` | 1.0 |
+| `healMultiplier` | 1.0 |
+
 ## 6. 적과 보스
 
-- **적 종류:** 기본 추적형, 빠른형, 둔한형, 무리형, 원거리형, 엘리트형. 상세는 [enemies/INDEX.md](enemies/INDEX.md).
-- **난이도 스케일링:** 시간 경과 + 플레이 인원. 수식은 [systems/spawn-rules.md](../systems/spawn-rules.md).
-- **보스:** 보스전 제외 최대 15분 후 등장. 3페이즈 패턴 + 미선택 혼돈 스킬 1개 적용. 상세는 [enemies/boss.md](enemies/boss.md).
+- **적 종류:** 기본 추적형(Chaser), 빠른형(Runner), 둔한형(Tank), 무리형(Swarm), 원거리형(Ranged 4변형), 엘리트형(4변형). 상세는 [enemies/INDEX.md](enemies/INDEX.md).
+- **난이도 스케일링:** 시간 경과(`DifficultyData` AnimationCurve 기반) + 플레이 인원. 수식은 [systems/spawn-rules.md](../systems/spawn-rules.md).
+- **보스:** 15분 후 등장. baseHP 20000, 3페이즈 + 미선택 혼돈 스킬 1개 적용. 상세는 [enemies/boss.md](enemies/boss.md).
 
 ## 7. 정수 시스템
 
@@ -102,13 +124,14 @@ Vampire Survivors에서 영감을 받은 멀티플레이 Survivors-like. 1~4명�
 | 분류 | 항목 | 결정 시점 |
 |---|---|---|
 | 스킬 | 혼돈 스킬 등급별 세부 수치 | 밸런싱 |
-| 스킬 | 보스 등장 시점 — **현재 15분 기준, 10분으로 단축 가능성** | 밸런싱 |
 | 스킬 | 보스에게 부여된 혼돈 스킬을 선택지에서 빼는지 | 밸런싱 |
-| 스킬 | 혼돈 스킬 등급별 수치 (현재 일부만 채워짐) | 밸런싱 |
-| 스킬 | `?? (분기탄)` 정식 이름 | 기획 |
+| 스킬 | 혼돈 스킬 19종 중 나머지 13종 SO 구현 | 구현 |
+| 스킬 | 액티브 11~24번 SO 구현 (설계서만 존재) | 구현 |
 | 스킬 | 스킬 #11~24 진화 조합 | 기획 |
-| 적 | 엘리트형 등장 시점 | 밸런싱 |
-| 적 | 그래프 기반 난이도 곡선 세밀 조정 | 구현 & 밸런싱 |
+| 스킬 | 경험치 공식 `5 + 레벨×4` 가 테스트값인지 최종값인지 | 밸런싱 |
+| 적 | EliteTank 스탯 배율 (현재 기반 Tank와 동일) | 밸런싱 |
+| 적 | 엘리트형 스폰 간격 최종값 | 밸런싱 |
+| 적 | Ranged 비율과 일반 타입 비율의 관계 정리 | 기획 & 구현 |
 | 정수 | 조합표 상세 / 상충 조합 처리 | → [essence.md § 9](essence.md) |
 | 무기 | 종류·조합 레시피 / 분해 / 스킬유형 매핑 | → [weapon.md § 9](weapon.md) |
 | 퀘스트 | 거점 개수·트리거 수치·격리 몹 명세 | → [quest.md § 9](quest.md) |

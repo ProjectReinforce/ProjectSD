@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_curse_doll_01` |
+| 스킬 ID | 9 (`skillId`) |
 | 한국어 이름 | 저주인형 |
 | 영어 이름 | Curse Doll |
 | 카테고리 | 액티브 |
 | 유형 | 디버프 |
 | 진화 여부 | Yes (역병 인형) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/009_CurseDoll.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,28 @@
 
 **동작:** 랜덤 적 1마리에게 일정 시간 저주 부여. 저주 대상은 받는 데미지 증폭. 비주얼 표시(아이콘 or 색상 변경).
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/curse_doll_01.asset`.*
+### 4.1 레벨별
 
-| 레벨 | 피해 증폭 배율 | 쿨다운 | 지속시간 | 기타 |
-|---|---|---|---|---|
-| 1 | — | — | — | *TBD* |
+| 레벨 | 데미지 (OnTick) | 쿨다운 |
+|---|---|---|
+| 1 | **3** | **5.0s** |
+| 2 | 4 | 4.6s |
+| 3 | 5 | 4.2s |
+| 4 | 6 | 3.8s |
+| 5 | 8 | 3.5s |
+| 6 | 10 | 3.2s |
+| 7 | **12** | **2.8s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `debuffDuration` | **3초** |
+| `damageAmplify` | **1.3** (피격 데미지 30% 증폭) |
+| `targetCount` | **3** (동시 타겟 수) |
+| `maxInstances` | 2 |
 
 ## 5. TriggerEffect 매핑
 
@@ -56,10 +73,10 @@
 
 ## 7. 데이터 계약
 
-- **SO 타입:** `DebuffSkillData`
-- **에셋 경로:** `Assets/Data/Skills/curse_doll_01.asset`
-- **주요 필드:** firingMode=Single, applicableStats=[스킬 쿨타임 감소, 스킬 유지 시간]
-- 관련 컴포넌트: `Assets/Scripts/Adapter/Skill/Effects/DebuffMark.cs`
+- **SO 타입:** `ProjectileSkillData` (디버프 모드, effectType=5)
+- **에셋 경로:** `Assets/Data/Skill/Active/009_CurseDoll.asset`
+- **evolvedSkill:** `209_EvolvedCurseDoll.asset`
+- **주요 필드:** debuffDuration=3, damageAmplify=1.3, targetCount=3, applicableStats=[스킬 쿨타임 감소, 스킬 유지 시간]
 
 ## 8. 네트워크
 

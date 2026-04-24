@@ -4,13 +4,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 스킬 ID | `skill_ant_hell_01` |
+| 스킬 ID | 5 (`skillId`) |
 | 한국어 이름 | 개미지옥 |
 | 영어 이름 | Ant Hell |
 | 카테고리 | 액티브 |
 | 유형 | 장판 |
 | 진화 여부 | Yes (나락) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-24 |
+
+> **SSOT:** 이 문서의 수치는 `Assets/Data/Skill/Active/005_AntHell.asset` 의 복제본이다.
 
 ## 2. 컨셉
 
@@ -28,13 +30,31 @@
 
 **동작:** 랜덤 위치에 개미지옥 생성. 지나가는 적에게 지속 피해. 투사체 개수 스탯만큼 딜레이를 두고 연속 설치.
 
-## 4. 수치
+## 4. 수치 (현재 SO 값)
 
-*실제 값은 `Assets/Data/Skills/ant_hell_01.asset`.*
+### 4.1 레벨별
 
-| 레벨 | 틱 데미지 | 쿨다운 | 반경 | 지속시간 | 기타 |
-|---|---|---|---|---|---|
-| 1 | — | — | — | — | *TBD* |
+| 레벨 | 틱 데미지 | 쿨다운 |
+|---|---|---|
+| 1 | **8** | **5.00s** |
+| 2 | 10 | 4.60s |
+| 3 | 12 | 4.20s |
+| 4 | 15 | 3.80s |
+| 5 | 18 | 3.50s |
+| 6 | 22 | 3.20s |
+| 7 | **27** | **2.80s** |
+
+### 4.2 발사 파라미터
+
+| 필드 | 값 |
+|---|---|
+| `firingMode` | Single (3) |
+| `burstDelay` | 0.2초 |
+| `areaRadius` | **0.5** |
+| `areaDuration` | **3초** (장판 지속) |
+| `tickRate` | 0.5초 |
+| `randomSpawnRadius` | 0.8 |
+| `maxInstances` | 2 |
 
 ## 5. TriggerEffect 매핑
 
@@ -62,9 +82,10 @@
 
 ## 7. 데이터 계약
 
-- **SO 타입:** `AreaSkillData`
-- **에셋 경로:** `Assets/Data/Skills/ant_hell_01.asset`
-- **주요 필드:** firingMode=DelayedBurst, areaType=Circle, tickInterval, executeThreshold(진화형, SO)
+- **SO 타입:** `ProjectileSkillData` (장판형)
+- **에셋 경로:** `Assets/Data/Skill/Active/005_AntHell.asset`
+- **evolvedSkill:** `205_EvolvedAntHell.asset`
+- **주요 필드:** firingMode=Single, areaRadius=0.5, areaDuration=3, tickRate=0.5, executeThreshold(진화형, SO)
 
 ## 8. 네트워크
 
