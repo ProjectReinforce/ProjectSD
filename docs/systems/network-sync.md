@@ -9,7 +9,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | 시스템 ID | `network-sync` |
 | 분류 | 네트워크 |
 | 의존 레이어 | Adapter (Network, Entity, Skill) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-04-25 (§ 8.1 클라이언트 적 위치 수렴 정책 추가) |
 
 ## 2. 네트워크 구조
 
@@ -169,6 +169,43 @@ source 명명 규칙:
 - 적 이동: 마지막 속도 벡터로 예측, 호스트 데이터로 보간
 - 스킬 발동: 로컬 즉시 이펙트, 데미지만 호스트 확인
 - **Dead Reckoning** — 커밋 `b40a9e5d0` 참조 (멀티플레이어 동기화 2차 리팩토링).
+
+### 8.1 클라이언트 적 위치 수렴 (Convergence Damping)
+
+**문제:** 적이 뭉친 상태에서 클라이언트 측에서 적 위치가 떨림(rubber-banding). 호스트는 정상.
+
+**원인:** 클라이언트의 추적 + ResolveOverlap 결과가 호스트와 미세하게 발산 → 클라가 이동 방향으로 약간 앞서나감 → RPC 도착 시 Lerp 가 뒤로 끌어당김 → 다음 프레임 또 앞서감. 이 진동 사이클이 시각적 떨림으로 보임.
+
+**정책 (확정 — 2026-04-25):**
+
+기존 `ApplyNetworkCorrection` 의 대칭 Lerp **유지**. 그 위에 **이동축 수렴 가중치(Convergence Damping)** 를 추가하여 역할 분리.
+
+| 보정 경로 | 담당 | 비고 |
+|---|---|---|
+| `ApplyNetworkCorrection` (Lerp) | 직각 드리프트 + 큰 오차 시 스냅 | `CorrectionSpeed` 를 기존 5 → 2~3 으로 하향 (가중치와 역할 분리) |
+| **Convergence Damping (신규)** | **이동 방향으로 앞서나간 양만 역방향으로 끌어당김** | 뒤처진 경우는 추적 로직이 자동 보정하므로 미적용 |
+
+**수식:**
+```
+errorVec = networkTargetPos - clientPos
+aheadness = -Dot(errorVec, moveDir.normalized)   // > 0 이면 클라가 이동 방향으로 앞서있음
+
+if (aheadness > 0)
+    clientPos -= moveDir.normalized * aheadness * convergenceK * dt
+```
+
+- `moveDir` = 이번 프레임 추적 이동 벡터 (`IEnemyMovementStrategy.UpdateMovement` 반환값으로 전달)
+- `convergenceK` = 인스펙터 노출 튜닝 상수 (시작값 5~10)
+- 뒤처진 경우(`aheadness ≤ 0`)는 미적용 — 추적 로직이 같은 방향으로 계속 쫓아가서 자동 수렴
+
+**왜 비대칭인가:** "앞서있을 때만, 이동 반대로" 가 직관적으로 어색하지만 근거가 있음. 적의 추적 로직은 "앞으로 한 방향" 만 출력하므로 **뒤처진 적은 자동 수렴, 앞서간 적만 진동**. 비대칭 보정이 원인을 직접 잡음.
+
+**후속 작업 (가중치 도입 후 효과 봐서 분기 결정):**
+- 떨림이 남으면 → 호스트/클라 `ResolveOverlap` 발산이 진짜 원인. 별건 작업으로:
+  - (옵션 A) 클라 측 ResolveOverlap 비활성화 — 호스트 위치만 신뢰
+  - (옵션 B) 결정론적 ResolveOverlap — seed/순서 고정으로 양측 동일 결과
+
+**관련 코드:** [EnemyMovement.cs:182-330](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L182-L330), `IEnemyMovementStrategy.UpdateMovement` 반환 시그니처.
 
 ## 9. 실패 / 동기화 오류 처리
 

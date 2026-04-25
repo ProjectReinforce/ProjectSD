@@ -91,6 +91,10 @@ MonoBehaviour:
   - RPC_NotifySpawnReady
   - RPC_SyncState
   - RPC_SpawnQuestBarrier
+  - RPC_ReceiveRefreshChoices
+  - RPC_RequestRefresh
+  - RPC_SyncRefreshRemaining
+  - RPC_HostPickup
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -10,6 +10,7 @@ using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Managers;
+using SwDreams.Features.Pickup.Adapter;
 
 namespace SwDreams.Features.Character.Adapter
 {
@@ -127,6 +128,67 @@ namespace SwDreams.Features.Character.Adapter
         public void RemoveSlow()
         {
             playerMovement?.RemoveSlow();
+        }
+
+        // ===== 픽업 위임 (PickupItemBase 가 호출) =====
+
+        /// <summary>
+        /// 클라가 픽업 키 누른 시점에 호스트로 픽업 처리 위임.
+        /// PickupItemBase 자체엔 PhotonView 가 없어서 Player 메인 PV 의 RPC 사용.
+        /// 호스트는 자기 측 같은 itemId 의 가장 가까운 픽업 인스턴스를 찾아 ProcessPickupAsHost.
+        /// </summary>
+        public void RequestPickupFromClient(Vector3 worldPos, string itemId)
+        {
+            photonView.RPC(nameof(RPC_HostPickup), RpcTarget.MasterClient,
+                worldPos.x, worldPos.y, itemId);
+        }
+
+        [PunRPC]
+        private void RPC_HostPickup(float x, float y, string itemId)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            // 호스트 측에서 같은 itemId 의 가장 가까운 활성 PickupItemBase 인스턴스 찾기.
+            // 1m 이내 매칭 — 같은 itemId 가 동시에 매우 가까이 있는 경우는 거의 없음.
+            const float MAX_MATCH_SQR = 1f;
+            var pickups = FindObjectsByType<PickupItemBase>(FindObjectsSortMode.None);
+            PickupItemBase target = null;
+            float minSqr = MAX_MATCH_SQR;
+            Vector2 reqPos = new Vector2(x, y);
+
+            for (int i = 0; i < pickups.Length; i++)
+            {
+                var p = pickups[i];
+                if (p == null || !p.gameObject.activeInHierarchy) continue;
+                if (p.ItemId != itemId) continue;
+                float d = Vector2.SqrMagnitude((Vector2)p.transform.position - reqPos);
+                if (d < minSqr)
+                {
+                    minSqr = d;
+                    target = p;
+                }
+            }
+
+            if (target == null)
+            {
+                // 매칭 실패 진단 — 호스트 측 모든 활성 픽업 덤프해 위치/itemId 차이 확인.
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"[PlayerStub] RPC_HostPickup itemId={itemId} pos={reqPos} — 매칭 인스턴스 없음.");
+                sb.AppendLine($"호스트 측 활성 픽업 (총 {pickups.Length}):");
+                for (int i = 0; i < pickups.Length; i++)
+                {
+                    var p = pickups[i];
+                    if (p == null) continue;
+                    bool active = p.gameObject.activeInHierarchy;
+                    Vector2 pp = p.transform.position;
+                    float d = Vector2.Distance(pp, reqPos);
+                    sb.AppendLine($"  - itemId={p.ItemId} pos={pp} dist={d:F2} active={active}");
+                }
+                Debug.LogWarning(sb.ToString());
+                return;
+            }
+
+            target.ProcessPickupAsHost(gameObject);
         }
 
         // ===== 캐릭터 초기화 =====

@@ -220,21 +220,72 @@ namespace SwDreams.Features.Pickup.Adapter
 
         public void OnEvent(EventData photonEvent)
         {
-            if (photonEvent.Code != DropSpawnBatch.EventCode) return;
-            if (!(photonEvent.CustomData is float[] batch)) return;
-
-            int stride = DropSpawnBatch.Stride;
-            for (int i = 0; i + stride - 1 < batch.Length; i += stride)
+            if (photonEvent.Code == DropSpawnBatch.EventCode)
             {
-                int typeInt = (int)batch[i + DropSpawnBatch.IdxType];
-                Vector2 pos = new Vector2(
-                    batch[i + DropSpawnBatch.IdxPosX],
-                    batch[i + DropSpawnBatch.IdxPosY]);
-                int rarityInt = (int)batch[i + DropSpawnBatch.IdxRarity];
-                int dataIdHash = (int)batch[i + DropSpawnBatch.IdxDataIdHash];
+                if (!(photonEvent.CustomData is float[] batch)) return;
 
-                SpawnPickupLocal((PickupType)typeInt, pos, (Rarity)rarityInt, dataIdHash);
+                int stride = DropSpawnBatch.Stride;
+                for (int i = 0; i + stride - 1 < batch.Length; i += stride)
+                {
+                    int typeInt = (int)batch[i + DropSpawnBatch.IdxType];
+                    Vector2 pos = new Vector2(
+                        batch[i + DropSpawnBatch.IdxPosX],
+                        batch[i + DropSpawnBatch.IdxPosY]);
+                    int rarityInt = (int)batch[i + DropSpawnBatch.IdxRarity];
+                    int dataIdHash = (int)batch[i + DropSpawnBatch.IdxDataIdHash];
+
+                    SpawnPickupLocal((PickupType)typeInt, pos, (Rarity)rarityInt, dataIdHash);
+                }
+                return;
             }
+
+            if (photonEvent.Code == PickupCollectedEvent.EventCode)
+            {
+                if (!(photonEvent.CustomData is object[] data) || data.Length < 3) return;
+                float x = (float)data[0];
+                float y = (float)data[1];
+                string itemId = (string)data[2];
+                ApplyRemoteCollectedLocal(new Vector2(x, y), itemId);
+                return;
+            }
+        }
+
+        /// <summary>
+        /// 호스트 전용. PickupItemBase 의 호스트 처리 직후 호출 — 다른 클라들이 자기 측 인스턴스를
+        /// 풀 반환하도록 알림. payload = object[] { x, y, itemId }.
+        /// </summary>
+        public void NotifyPickupCollected(Vector2 pos, string itemId)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            PhotonNetwork.RaiseEvent(
+                PickupCollectedEvent.EventCode,
+                new object[] { pos.x, pos.y, itemId },
+                new RaiseEventOptions { Receivers = ReceiverGroup.Others },
+                SendOptions.SendReliable);
+        }
+
+        /// <summary>
+        /// 다른 클라가 받은 알림: 같은 itemId 의 가장 가까운 활성 픽업을 자기 측에서 풀 반환.
+        /// 호스트는 송신자라 받지 않음 (Receivers.Others).
+        /// </summary>
+        private void ApplyRemoteCollectedLocal(Vector2 reqPos, string itemId)
+        {
+            const float MAX_MATCH_SQR = 1f;
+            var pickups = FindObjectsByType<PickupItemBase>(FindObjectsSortMode.None);
+            PickupItemBase target = null;
+            float minSqr = MAX_MATCH_SQR;
+            for (int i = 0; i < pickups.Length; i++)
+            {
+                var p = pickups[i];
+                if (p == null || !p.gameObject.activeInHierarchy) continue;
+                if (p.ItemId != itemId) continue;
+                float d = Vector2.SqrMagnitude((Vector2)p.transform.position - reqPos);
+                if (d < minSqr) { minSqr = d; target = p; }
+            }
+            if (target != null)
+                PoolManager.Instance?.Return(target.gameObject);
+            else
+                Debug.LogWarning($"[DropSpawner] ApplyRemoteCollectedLocal itemId={itemId} pos={reqPos} — 클라 측 매칭 인스턴스 없음.");
         }
 
         private void SpawnPickupLocal(PickupType type, Vector2 pos, Rarity rarity, int dataIdHash)

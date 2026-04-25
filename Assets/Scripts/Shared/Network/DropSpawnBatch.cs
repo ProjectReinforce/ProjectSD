@@ -26,4 +26,13 @@ namespace SwDreams.Shared.Network
         public const int IdxRarity = 3;
         public const int IdxDataIdHash = 4;
     }
+
+    /// <summary>
+    /// 호스트 측 픽업 처리 후 다른 클라에 풀 반환 알림 — PickupItemBase 자체엔 PhotonView 가 없어
+    /// DropSpawner 의 RaiseEvent 인프라를 재사용. payload = object[] { float x, float y, string itemId }.
+    /// </summary>
+    public static class PickupCollectedEvent
+    {
+        public const byte EventCode = 14;
+    }
 }

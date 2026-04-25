@@ -2,7 +2,7 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.2 (2026-04-25) — § 6 작업 규칙에 "요구사항 검토 & 대안 제시" 추가.
+> **버전:** v2.3 (2026-04-25) — Localization 시스템(`Shared/Localization/`) 추가.
 
 ---
 
@@ -65,7 +65,8 @@ Assets/Scripts/
 │   ├── Domain/              ← 순수 C# (GameResult, PlayerBuildData, IDamageable, IPoolable)
 │   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
 │   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, TestManager
-│   └── Network/             ← NetworkAdapter
+│   ├── Network/             ← NetworkAdapter
+│   └── Localization/        ← Domain(ILocalizationService, Locale) + Adapter(LocalizationManager, LocalizationTable, LocaleFontMap, LocalizedText, Bootstrap) + Editor(SheetImporter). 설계만 — [docs/systems/localization.md](docs/systems/localization.md)
 ├── Editor/                  ← 에디터 전용 (SkillDataEditor 등)
 ├── Testing/                 ← 테스트 엔트리 (Phase2TestEntry 등)
 └── WFC/                     ← 맵 Wave Function Collapse
@@ -111,6 +112,9 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 
 **플랫폼 / 인프라**
 - **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
+- **Localization:** 다국어 텍스트 시스템. **1차 지원 4개:** KO/EN/JA/ZH-CN. Google Sheets 가 작업용 SSOT, 빌드타임에 `LocalizationTable.asset` 으로 임포트. Key 기반(`ui.menu.start_button` 형식) + 동기 API + `ILocalizationService` 추상화. 자체 구현 — Unity Localization Package 미사용. 상세 [docs/systems/localization.md](docs/systems/localization.md).
+- **Locale (enum):** `KO_KR / EN_US / JA_JP / ZH_CN`. 클라이언트 로컬 — 네트워크 동기화 안 함 (같은 룸에서 각자 다른 언어).
+- **LocalizationKey:** `{scope}.{subscope}.{name}` 점 구분 영문 키. `ui.*`, `skill.{id}.name`, `chaos.{id}.*`, `error.*` 등.
 
 **정수 / 무기 / 퀘스트 / 능력치 / 아이템**
 - **Essence (정수):** 엘리트 드랍, 속성 부여(얼음/불/번개). 최대 2개. 조합 히든 효과. 상세 [docs/game-design/essence.md](docs/game-design/essence.md).
@@ -136,7 +140,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**, **localization**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -147,6 +151,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **네트워크 변경 →** `docs/systems/network-sync.md` + `photon-sync-auditor` 서브에이전트
 - **보이스챗(마이크) 구현 →** [docs/systems/voice-chat.md](docs/systems/voice-chat.md) 만 보면 완결. Photon Voice 2 기반
 - **Steam/Stove SDK 통합 →** [docs/systems/platform-integration.md](docs/systems/platform-integration.md). Phase A(추상화) → B(Stove) → C(Steam) 순
+- **다국어/번역 →** [docs/systems/localization.md](docs/systems/localization.md). 1차 KO/EN/JA/ZH-CN. Google Sheets → 빌드타임 SO 임포트. Key 기반
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

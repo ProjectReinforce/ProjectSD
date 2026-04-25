@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.UI.Adapter.Menu;
@@ -305,9 +306,42 @@ namespace SwDreams.Shared.Managers
                 PhotonNetwork.CurrentRoom.IsVisible = true;
                 PhotonNetwork.CurrentRoom.IsOpen = true;
             }
-            
+
+            // [B8/N7/N10/N11] 다시하기 시 본인 PhotonView 정리 후 씬 전환.
+            // PhotonNetwork.Destroy 와 SceneManager.LoadScene 사이에 한 프레임 yield 가 필요 —
+            // 즉시 LoadScene 하면 Destroy 메시지가 dispatch 되기 전에 GameObject 가 제거되고
+            // PhotonView.OnDestroy 가 두번째 destroy 이벤트 송신 → 호스트에서 "Could not find PV" 에러.
+            // RemoveBufferedRPCs 는 LobbyPlayer Instantiate 까지 영향을 줄 위험이 있어 일단 제외.
+            StartCoroutine(RetryRoutine());
+        }
+
+        private IEnumerator RetryRoutine()
+        {
+            DestroyMyOwnedPhotonViews();
+            // PhotonNetwork.Destroy 메시지가 outgoing queue 로 빠지고 처리될 시간을 줌.
+            yield return null;
+            PhotonNetwork.SendAllOutgoingCommands();
+            yield return null;
+
             UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
             Debug.Log("[ResultManager] 다시 하기 → MenuScene (방 유지)");
+        }
+
+        /// <summary>
+        /// 본인이 owner 인 Player 태그 PhotonView 를 PhotonNetwork.Destroy 로 정리.
+        /// 다시하기 진입 직전에 호출 — 다음 라운드의 PhotonView ID 충돌·잔존 RPC 차단.
+        /// </summary>
+        private static void DestroyMyOwnedPhotonViews()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < players.Length; i++)
+            {
+                var go = players[i];
+                if (go == null) continue;
+                var pv = go.GetComponent<PhotonView>();
+                if (pv != null && pv.IsMine)
+                    PhotonNetwork.Destroy(go);
+            }
         }
 
         /// <summary>

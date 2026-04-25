@@ -79,11 +79,13 @@ namespace SwDreams.Features.Character.Adapter
 
         private void Update()
         {
-            // GameState 가드 — 일시정지/메뉴 중 자연회복·i-frame 정지.
+            // GameState 가드 — 일시정지/메뉴/씬 전환 중 자연회복·i-frame 정지.
+            // GameManager.Instance == null (씬 전환 직후·MenuScene) 케이스도 차단.
+            // 차단 안 하면 게임 종료 후 stale Player 에 RPC_Heal 송신 → "PhotonView missing" 에러 (N11).
             var gm = GameManager.Instance;
-            if (gm != null &&
-                gm.CurrentState != GameManager.GameState.Playing &&
-                gm.CurrentState != GameManager.GameState.BossFight)
+            if (gm == null ||
+                (gm.CurrentState != GameManager.GameState.Playing &&
+                 gm.CurrentState != GameManager.GameState.BossFight))
                 return;
 
             // R7 i-frame 카운트다운 (호스트만 실제 가드를 의미하므로 호스트 측 감소).

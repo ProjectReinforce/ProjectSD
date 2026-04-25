@@ -247,7 +247,7 @@ namespace SwDreams.Features.Skill.Adapter
             }
             else
             {
-                // 다른 플레이어의 투사체: 비주얼만 표시, 충돌 무시 (관통)
+                // 다른 플레이어의 투사체: 데미지/킬 판정은 owner 측이 처리, 자기 화면엔 비주얼만.
                 if (enemy != null)
                     enemy.ShowHitVisuals(damage);
                 else
@@ -255,7 +255,15 @@ namespace SwDreams.Features.Skill.Adapter
                     DamagePopup.Spawn(other.transform.position, damage);
                     HitEffect.Spawn(other.transform.position);
                 }
-                return; // OnHitEnemy 스킵 → ReturnToPool 안 됨 → 투사체 유지
+
+                // 비관통 + 체인 비행 아닌 경우엔 자기 화면에서도 첫 hit 시 destroy.
+                // 그러지 않으면 owner 측은 정상 소멸했는데 다른 클라 화면에선 라이프타임까지 비행 (관통 외관).
+                // 체인/관통 trajectory(부메랑/SinWave 등) 는 그대로 두어 비행 비주얼 유지.
+                bool penetrates = penetratesOverride
+                    ?? (trajectoryBehavior != null && trajectoryBehavior.Penetrates);
+                if (!penetrates && chainFlightCount == 0)
+                    ReturnToPool();
+                return;
             }
 
             OnHitEnemy(other);

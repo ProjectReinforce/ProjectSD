@@ -285,6 +285,20 @@ namespace SwDreams.Features.Progression.Adapter
             // 해당 플레이어에게만 RPC 전송 (Skill 은 등급 무관 → rarityInt=0)
             photonView.RPC(nameof(RPC_ReceiveChoices), player,
                 choiceIds, (int)ChoicePanelKind.Skill, 0);
+            // 클라 측 새로고침 카운트가 첫 레벨업까지 sentinel(-1) 로 남아 UI 에 노출되지 않도록
+            // 일반 스킬 패널 송신 시 같이 sync. (호스트 본인은 dict 직접 조회 → 스킵)
+            SyncRefreshRemainingTo(player);
+        }
+
+        /// <summary>
+        /// 다른 클라에게 호스트 권위의 잔여 새로고침 횟수를 push. 호스트 자신은 dict 직접 조회.
+        /// </summary>
+        private void SyncRefreshRemainingTo(Photon.Realtime.Player player)
+        {
+            if (player == null) return;
+            if (player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber) return;
+            int remaining = GetRefreshRemainingHostSide(player.ActorNumber);
+            photonView.RPC(nameof(RPC_SyncRefreshRemaining), player, remaining);
         }
 
         /// <summary>
@@ -496,12 +510,17 @@ namespace SwDreams.Features.Progression.Adapter
                 int actor = PhotonNetwork.LocalPlayer.ActorNumber;
                 if (PhotonNetwork.IsMasterClient)
                     return GetRefreshRemainingHostSide(actor);
-                // 클라 캐시 — 호스트가 보낸 값 (없으면 base default).
-                return clientRefreshRemainingCache;
+                // 클라 캐시 — 호스트가 RPC_SyncRefreshRemaining 으로 보낸 값.
+                // 첫 sync 이전(sentinel < 0)에는 BaseRefreshCharges 로 fallback —
+                // 호스트가 lazy init 으로 같은 값을 갖고 있으므로 표시·차감 모두 일관.
+                return clientRefreshRemainingCache < 0
+                    ? BaseRefreshCharges
+                    : clientRefreshRemainingCache;
             }
         }
 
-        // 클라이언트 측 캐시 — 호스트가 RPC_SyncRefreshRemaining 으로 갱신.
+        // 클라이언트 측 캐시. -1 = 아직 호스트로부터 sync 받기 전 (sentinel).
+        // getter 에서 BaseRefreshCharges 로 fallback 하므로 UI 에는 -1 노출되지 않음.
         private int clientRefreshRemainingCache = -1;
 
         /// <summary>현재 패널이 일반 스킬(Skill) 인지 — 새로고침 버튼은 이 경우에만 노출.</summary>

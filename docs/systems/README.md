@@ -16,6 +16,7 @@
 | [damage-formula.md](damage-formula.md) | 데미지 공식·크리티컬·소프트캡 방어·반사·DoT | 🟡 제안 (밸런싱 검토) |
 | [voice-chat.md](voice-chat.md) | Photon Voice 2 통합 가이드 (PTT/Open Mic, UI 후크) | ⬜ 설계만 (미구현) |
 | [platform-integration.md](platform-integration.md) | Stove/Steam SDK 추상화 (`IPlatformService`) + 출시 로드맵 | ⬜ 설계만 (미구현) |
+| [localization.md](localization.md) | 다국어 텍스트 (KO/EN/JA/ZH-CN) — Google Sheets → SO 임포트, Key 기반 | ⬜ 설계만 (미구현) |
 | save-format.md | 세이브 데이터 스키마 | ⬜ 필요 시 작성 (platform-integration 에 일부 포함) |
 
 ## 문서 특징

@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-25 (`docs/check/` 폴더 통합 — 잔여 항목 일괄 정리)
+최종 업데이트: 2026-04-25 (R10 클라이언트 적 위치 수렴 추가)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -20,7 +20,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
-| 8. 출시 인프라 (Voice / Platform SDK) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md). R3 마이크 필터 아이템 8-2 와 함께 |
+| 8. 출시 인프라 (Voice / Platform SDK / Localization) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md), [localization.md](../systems/localization.md). R3 마이크 필터 아이템 8-2 와 함께 |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
 최근 관련 커밋:
@@ -283,6 +283,81 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - `Skill.Update` 에 `SpawnManager.Instance.IsReady` 가드 추가 — false 면 발동 자체 차단.
 - 후입장 클라(중도 참가) 도 AllBuffered 덕에 자동 수신.
 
+### R9. 데미지 공식 — 치명타 확률·치명타 데미지 적용
+
+**현재 상태:** 인프라가 반쯤 깔려 있으나 **일반 스킬 적중에서 미적용**. `PlacedTurret` 만 `alwaysCritical=true` 로 강제 치명타 처리 중. 명세는 [../systems/damage-formula.md § 4.3](../systems/damage-formula.md) 에 이미 정의됨 — 본 작업은 그 공식을 코드에 반영.
+
+**이미 있는 것:**
+- `StatType.CritDamage`/`CritChance` enum
+- `PlayerStats.baseCritDamage` + `CritDamageMultiplier` 프로퍼티 + `PassiveBonusType.CritDamage` 매핑
+- `CharacterData.critDamage` 필드
+- `SkillExecutor.BuildContext` → `ctx.critDamageMultiplier` 주입 ([SkillExecutor.cs:319-322](../../Assets/Scripts/Features/Skill/Adapter/SkillExecutor.cs#L319-L322))
+- `DamageResult.IsCritical`, `DamagePopup.Setup(isCrit)` (구조만)
+
+**잔여 작업:**
+- [ ] **데이터 스키마:**
+  - [ ] `CharacterData.critChance` 필드 추가 (기본 0.05~0.10, 밸런싱)
+  - [ ] `PlayerStats.baseCritChance` + `CritChanceProbability` 프로퍼티 — `CritDamageMultiplier` 동일 패턴(`modifiers.Calculate(StatType.CritChance, baseCritChance)`)
+  - [ ] `PassiveBonusType.CritChance` enum 추가 + `PlayerStats.RegisterPassive` switch 매핑 (현재 line 329 옆)
+- [ ] **컨텍스트 주입:**
+  - [ ] `TriggerContext.critChance` 필드 추가 (현재 `critDamageMultiplier` 만 있음)
+  - [ ] `SkillExecutor.BuildContext` 에 `data.IsStatApplicable(StatType.CritChance)` 가드로 `ctx.critChance` 주입 (line 319 옆 동일 패턴)
+- [ ] **판정 로직:**
+  - [ ] [DealDamageHandler.cs](../../Assets/Scripts/Features/Skill/Adapter/TriggerEffects/Handlers/DealDamageHandler.cs) 에 치명타 판정 — `Random.value < ctx.critChance` → `finalDamage *= ctx.critDamageMultiplier`, `isCrit=true` 마킹
+  - [ ] `ExplodeHandler` / `ChainHandler` / `ApplyDoTHandler` 등 데미지 발생 핸들러에도 동일 정책 적용
+  - [ ] `PlacedTurret.alwaysCritical` 분기를 `ctx.critChance=1f` 강제 설정으로 통일 (코드 경로 단일화) — [PlacedTurret.cs:172-173](../../Assets/Scripts/Features/Skill/Adapter/Effects/PlacedTurret.cs#L172-L173) 정리
+- [ ] **네트워크 동기화 (호스트 권위):**
+  - [ ] 호스트 판정 `isCrit` 결과를 데미지 RPC payload 에 포함 → 각 클라 `DamagePopup.Spawn(..., isCrit)` 동일 색상·크기 표시
+  - [ ] `photon-sync-auditor` 호출 (RPC 시그니처 변경)
+- [ ] **튜닝 상수:**
+  - [ ] `GameplayConfig` 에 `CRIT_MULT_BASE` (1.5), `CRIT_CHANCE_BASE` (0.05) 노출 (현재 하드코딩) — [damage-formula.md § 10](../systems/damage-formula.md) 정렬
+- [ ] **UI:**
+  - [ ] `SkillCardDescriptionFormatter` 에 `PassiveBonusType.CritChance` 라벨 추가 (line 123, 143 옆)
+  - [ ] `SkillData.applicableStats` 인스펙터에 `CritChance` 항목 노출 — `SkillDataEditor` 동시 업데이트 (메모리: Custom Editor Sync)
+- [ ] **치명타 정책 (확정 — [damage-formula.md § 9](../systems/damage-formula.md) 준수):**
+  - [ ] **단일 적중 내 1회:** 동시 여러 치명타 소스가 있어도 `critMult` 1회만 적용
+  - [ ] **체인 / 연쇄폭발 노드별 재판정:** ChainHandler 다음 전이마다, 연쇄폭발 새 노드마다 `Random.value < critChance` 새로 굴림. `critMult` 도 노드별 독립
+  - [ ] **DoT 부착 시점 스냅샷:** ApplyDoTHandler 가 부착 1회 판정 후 결과를 인스턴스에 스냅샷, 모든 틱에 동일 적용 (틱마다 재판정 안 함)
+- [ ] **테스트:**
+  - [ ] 단위: `critChance=1.0` 일 때 항상 `final = base * critDamageMultiplier`
+  - [ ] 플레이 모드: 패시브 #15 (치명타 확률) 획득 후 데미지 팝업 색상이 호스트/클라 동일하게 표시되는지
+
+**관련:** [damage-formula.md § 4.3](../systems/damage-formula.md), [skill-executor.md](../systems/skill-executor.md) (applicableStats 필터)
+
+### R10. 클라이언트 적 위치 수렴 — Convergence Damping
+
+**증상:** 적이 뭉친 상태에서 **클라이언트 측에서만** 적 위치가 떨림 (rubber-banding). 호스트는 정상.
+
+**원인 가설:** 클라의 추적 + `ResolveEnemyOverlap` 결과가 호스트와 미세 발산 → 클라가 이동 방향으로 앞서나감 → RPC 도착 시 [ApplyNetworkCorrection](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L311-L330) 의 Lerp 가 뒤로 끌어당김 → 진동 사이클. 현재 Lerp 는 대칭이라 진동 자체를 못 잡음.
+
+**정책 (확정):** 기존 Lerp **유지** + 이동축 수렴 가중치 추가. 역할 분리. 상세 [../systems/network-sync.md § 8.1](../systems/network-sync.md).
+
+**잔여 작업:**
+- [ ] **Strategy 시그니처 변경 (옵션 i):**
+  - [ ] `IEnemyMovementStrategy.UpdateMovement(...)` 반환형 `void` → `Vector2` (이번 프레임 이동 델타)
+  - [ ] `ChaseMovement` / `SwarmMovement` / `StationaryMovement` / `KiteMovement` 4개 구현체 모두 반환값 채움
+- [ ] **EnemyMovement 가중치 적용:**
+  - [ ] `Update` 에서 Strategy 반환값을 `lastMovement` 에 캐싱
+  - [ ] 신규 메서드 `ApplyConvergenceDamping()` — `aheadness = -Dot(error, moveDir.normalized)`, 양수일 때만 `transform.position -= moveDir.normalized * aheadness * convergenceK * dt`
+  - [ ] `ApplyNetworkCorrection` 호출 직전(또는 직후) 에 끼워넣기. 클라이언트 + `hasNetworkTarget` 가드 동일
+  - [ ] `convergenceK` 인스펙터 노출 (`[SerializeField] float convergenceK = 7f;` 시작)
+- [ ] **기존 Lerp 약화:**
+  - [ ] [EnemyMovement.cs:61](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L61) `CorrectionSpeed = 5f` → `2~3f` 로 하향 (가중치와 역할 분리)
+- [ ] **검증:**
+  - [ ] `photon-sync-auditor` 호출 (네트워크 보정 로직 변경)
+  - [ ] ParrelSync 4 인스턴스 테스트:
+    - [ ] 적 50+ 마리 뭉친 상태에서 클라 측 떨림 사라지는지
+    - [ ] 직각 드리프트(예: 넉백 후)는 Lerp 가 잡는지 — 가중치만으로 부족할 수 있음
+    - [ ] 호스트 측 시각적 동작에 영향 없는지 (`!IsMasterClient` 가드 확인)
+    - [ ] `convergenceK` 튜닝 — 너무 높으면 추적이 끊겨 보임, 너무 낮으면 효과 없음
+
+**후속 (가중치 도입 후 효과 봐서 분기):**
+- 떨림이 잔존하면 → 호스트/클라 `ResolveEnemyOverlap` 발산이 진짜 원인. 별건 작업으로:
+  - 클라 측 ResolveOverlap 비활성화 (호스트 위치만 신뢰)
+  - 또는 결정론적 ResolveOverlap (seed/순서 고정)
+
+**관련:** [network-sync.md § 8.1](../systems/network-sync.md), [EnemyMovement.cs](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs)
+
 ---
 
 ## 메뉴 / UI 잔여 (U)
@@ -363,6 +438,45 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 **선결 조건:** 8-1 완료, 컨텐츠 안정화, Stove 등급 획득
 
+### 8-5. Localization — 다국어 텍스트 (KO/EN/JA/ZH-CN)
+
+자체 구현 (Unity Localization Package 미사용). Google Sheets 가 작업용 SSOT, 빌드타임에 SO 임포트. 상세 [../systems/localization.md](../systems/localization.md).
+
+**Phase A — 코어 시스템 + 임포터** (1.5~2일, 컨텐츠 독립 / 선행 가능)
+- [ ] `Assets/Scripts/Shared/Localization/{Domain,Adapter,Editor}/` 폴더 생성
+- [ ] `ILocalizationService` + `Locale` enum + (선택) `LocalizationKey` 상수 (Domain)
+- [ ] `LocalizationManager` (동기 API) + `LocalizationTable` (SO) + `LocaleFontMap` (SO) + `LocalizedText` (TMP 컴포넌트) + `LocalizationBootstrap` (싱글턴, DontDestroyOnLoad) (Adapter)
+- [ ] `LocalizationSheetImporter` 에디터 윈도우 — public CSV export URL 기반 (Service Account JSON 불필요)
+- [ ] 빈 `Assets/Data/Localization/LocalizationTable.asset` + `LocaleFontMap.asset` 생성
+- [ ] Google Sheet 템플릿 작성 (헤더: `key`, `ko_auto`, `en_auto`, `ja_auto`, `zh_auto`, `ko_final`, `en_final`, `ja_final`, `zh_final`, `note`)
+- [ ] 1~2개 키로 임포트 동작 확인
+- [ ] `architecture-guardian` 통과 (Domain 3 파일에 `UnityEngine`/`Photon`/`TMPro` import 없음)
+
+**Phase B — UI 키 매핑** (수일~1주, 점진적)
+- [ ] MenuScene UI(Title/RoomList/WaitingRoom/CharacterSelect)에 `LocalizedText` + 키 매핑
+- [ ] InGameHUD, LevelUpPanel, ResultPanel 의 한국어 라벨에 `LocalizedText`
+- [ ] `UImanager.ShowToast` → `ShowToastByKey(string key)` 시그니처 추가 (RPC 인자에 텍스트 직접 전송 금지, 키만 전달)
+- [ ] 옵션 패널에 언어 드롭다운 추가 → `LocalizationBootstrap.Service.SetLocale(...)` + `SaveLocalePref(...)`
+- [ ] 시트의 `ko_final` 컬럼을 기존 한국어 텍스트로 채우기
+
+**Phase C — SO 통합 (스킬/패시브/혼돈)** (1주)
+- [ ] `SkillData`/`PassiveSkillData`/`ChaosSkillData` 에 `nameKey`/`descKey` 필드 추가
+- [ ] `OnValidate` 에서 키 자동 채움 (`$"skill.{skillId}.name"` 규칙)
+- [ ] `SkillCardUI` 등 호출부 → `skill.GetName()` / `skill.GetDescription()` 으로 변경
+- [ ] **`SkillDataEditor` 동시 업데이트** (메모리 — Custom Editor Sync)
+- [ ] 시트에 스킬 24+패시브 19+혼돈 19 = 62개 행 추가 + 자동 번역 컬럼 적용
+
+**Phase D — 검수 & 폰트** (Steam 출시 전)
+- [ ] 시트 `*_final` 컬럼 검수 (도메인 용어 우선: 스킬 이름, "혼돈", "정수")
+- [ ] TMP_FontAsset 4종 셋업 (NotoSans 패밀리, SIL OFL 라이선스)
+- [ ] `LocaleFontMap.asset` 에 폰트 매핑
+- [ ] 4개 언어 전부 플레이 모드 검증 (UI 픽셀 폭 차이로 인한 레이아웃 깨짐 확인)
+- [ ] CJK 글리프 atlas 사이즈 / TMP 다이나믹 모드 hitch 측정
+
+**선결 조건:** 없음 (Phase A 는 컨텐츠와 병행 가능). Phase D 는 Stove 출시 직전.
+
+**비범위:** Pluralization, Gender, RTL, 시간/통화 로컬 포맷, 런타임 OTA 업데이트, RU/ES/PT-BR 등 1차 외 언어. 7개 언어 이상 + Pluralization 필요해진 시점에 Unity Localization Package 로 마이그레이션 검토.
+
 ---
 
 ## 확정된 주요 설계 (2026-04-18)
@@ -382,6 +496,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | Phase 5 | 혼돈 스킬 / applicableStats 필터 완성 | 나머지 스킬 (#11~24) + 진화 조합 |
 | Phase 6 | Boss 3페이즈 + 혼돈 적용 | 사망/부활 + 호스트 이탈 |
 | Phase 8 선행 | 8-1 Platform 추상화 (컨텐츠 독립) | 8-2 Photon Voice 2 통합 (Player 프리팹 접근만 필요) |
+| Phase 8 선행 추가 | 8-5 Localization Phase A (코어 + 임포터, 컨텐츠 독립) | 8-5 Localization Phase B (UI 키 매핑) — A 완료 후 |
 
 ## 주의사항
 

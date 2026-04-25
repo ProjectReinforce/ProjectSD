@@ -48,6 +48,21 @@ namespace SwDreams.Features.Character.Adapter
 
         private void SpawnLocalPlayer()
         {
+            // [B8/N7/N10/N11] 중복 스폰 가드 — 이전 라운드의 본인 Player PhotonView 가
+            // ResultManager.OnRetry 의 Destroy 보다 늦게 실제 GameObject 정리될 가능성 + 후입장 등
+            // 엣지케이스 모두 차단. 기존 PV 가 있으면 신규 spawn 스킵.
+            var existing = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < existing.Length; i++)
+            {
+                if (existing[i] == null) continue;
+                var pv = existing[i].GetComponent<PhotonView>();
+                if (pv != null && pv.IsMine)
+                {
+                    Debug.LogWarning("[GamePlayerSpawner] 본인 Player PV 가 이미 존재 — 신규 spawn 스킵.");
+                    return;
+                }
+            }
+
             int characterId = GetLocalCharacterId();
 
             var random2D = Random.insideUnitCircle * spawnRadius;

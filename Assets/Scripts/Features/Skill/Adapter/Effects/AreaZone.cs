@@ -227,6 +227,11 @@ namespace SwDreams.Features.Skill.Adapter
 
         private void ApplyHealTick()
         {
+            // 호스트 권위 — 데미지(C안)와 달리 회복은 RequestHeal 류 분기가 없어
+            // 호스트+클라 양쪽이 직접 RPC_Heal All 을 송신하면 2회 회복으로 누적됨.
+            // 자기 장판이라도 호스트 측 인스턴스가 회복 RPC 송신을 담당.
+            if (!PhotonNetwork.IsMasterClient) return;
+
             var hits = Physics2D.OverlapCircleAll(transform.position, radius);
 
             foreach (var hit in hits)

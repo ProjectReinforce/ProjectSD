@@ -54,7 +54,18 @@ namespace SwDreams.Features.Essence.Adapter
             EnsureSkillRegistry();
 
             if (skillRegistry != null)
+            {
                 skillRegistry.OnSinkAdded += HandleSinkAdded;
+                // AllBuffered RPC_Equip 가 Start 이전에 처리되어 equipped 는 채워졌으나
+                // 당시 sinks 가 비어있어 InjectSlot 이 효과를 놓친 경우 대비 (N6).
+                // AddRuntimeEffect 는 동일 source+trigger+action 조합 시 교체이므로 중복 호출 안전.
+                if (equipped.Count > 0)
+                {
+                    var sinks = skillRegistry.EffectSinks;
+                    for (int i = 0; i < sinks.Count; i++)
+                        HandleSinkAdded(sinks[i]);
+                }
+            }
         }
 
         private void OnDestroy()

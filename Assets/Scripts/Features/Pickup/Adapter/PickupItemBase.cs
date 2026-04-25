@@ -1,6 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
 using SwDreams.Features.Pickup.Domain;
+using SwDreams.Features.Character.Adapter;
 using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
@@ -143,7 +144,7 @@ namespace SwDreams.Features.Pickup.Adapter
         /// <summary>
         /// 상호작용 키 입력으로 호출되는 획득 시도. PlayerPickupInteractor 가 호출.
         /// 2슬롯 꽉 참 등의 이유로 차단되면 false 반환 (월드에 그대로 남음).
-        /// 성공 시 즉시 획득 경로와 동일하게 호스트 권위 훅 + 풀 반환.
+        /// 호스트 권위 — 클라는 호스트에 RPC 위임하고 호스트가 OnPickedUpByPlayer 처리.
         /// </summary>
         public bool TryInteract(GameObject playerObj)
         {
@@ -151,13 +152,45 @@ namespace SwDreams.Features.Pickup.Adapter
             if (!RequiresInteraction) return false;
             if (!CanBePickedUpBy(playerObj)) return false;
 
-            isCollected = true;
-
             if (PhotonNetwork.IsMasterClient)
-                OnPickedUpByPlayer(playerObj);
+            {
+                ProcessPickupAsHost(playerObj);
+            }
+            else
+            {
+                // 클라: 호스트에 위치+itemId 로 위임. 호스트가 자기 측 인스턴스 찾아 처리.
+                // playerObj 는 PlayerPickupInteractor 가 부착된 자식일 수 있어 부모까지 탐색.
+                var stub = playerObj.GetComponentInParent<PlayerStub>();
+                if (stub == null)
+                {
+                    Debug.LogWarning($"[PickupItemBase] PlayerStub 미발견 — playerObj='{playerObj.name}'. 픽업 위임 실패.");
+                    return false;
+                }
+                stub.RequestPickupFromClient(transform.position, itemId);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 호스트가 직접 호출하거나, 클라 RPC 위임을 받아 호스트가 호출.
+        /// isCollected 갱신 + OnPickedUpByPlayer + 풀 반환을 일괄 수행.
+        /// 다른 플레이어/풀이 동시에 처리하는 race 는 isCollected 가드로 방어.
+        /// </summary>
+        public void ProcessPickupAsHost(GameObject playerObj)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (isCollected) return;
+            if (!RequiresInteraction) return;
+            if (!CanBePickedUpBy(playerObj)) return;
+
+            isCollected = true;
+            OnPickedUpByPlayer(playerObj);
+
+            // 다른 클라들에 풀 반환 알림 — 호스트만 자기 풀 정리하면 클라 측에 stale 인스턴스가 남아
+            // 다음 클라 픽업 시도가 호스트에서 매칭 실패함.
+            DropSpawner.Instance?.NotifyPickupCollected((Vector2)transform.position, itemId);
 
             PoolManager.Instance?.Return(gameObject);
-            return true;
         }
 
         /// <summary>
