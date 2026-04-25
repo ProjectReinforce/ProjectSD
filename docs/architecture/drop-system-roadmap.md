@@ -40,9 +40,14 @@
 ## 다음 세션 진입점 (2026-04-25 세션 종료 시점)
 
 ### 코드 작업 — 우선순위
-1. **Phase 8-B3**: Gambler handler 이전 — `IsGambler` 프로퍼티가 `SkillManager.GenerateChoices` 에서 직접 참조 중. handler 화하려면 `IChaosHookBus.LevelUpChoice` 훅 + "choice modifier" 추상화 or Gambler handler 가 ChaosSkillManager 경유 flag 노출 유지. 30~60분.
+1. **Phase 8-B3**: ✅ 완료 (2026-04-25) — Gambler handler 이전. `GamblerHandler : IChaosEffectHandler` 신설, `ChaosEffectRegistry.RegisterDefaults()` 에 등록. `ChaosSkillManager` 의 `hasGambler` 필드 / `ApplyGambler()` / switch case 제거. `IsGambler` 프로퍼티는 registry 경유 `GamblerHandler.IsActive` 조회로 래핑. 현재 소비자 없음 (실제 rarity bump 로직은 LevelUpManager 소비자 추가 시 구현 — 파티 전체 순회 기반).
 2. **Phase 8-C**: StatWatcher 공용 컴포넌트 — Berserk(HP 임계)/Accel(Timer)/Unity(NearbyCount) 의 조건 감지 일반화. 2~3시간.
 3. **Phase 6**: 퀘스트 시스템 — 맵 거점 + 격리 몹 + 완료 시 StatBoost 선택지 보상 (Phase 5 재사용). 3~4시간.
+4. **Gambler rarity bump 소비자 추가** — LevelUpManager 의 `SendStatBoostChoices` / `SkillManager.GenerateChaosChoices` 가 `PhotonNetwork.PlayerList` 순회해 한 명이라도 `ChaosSkillManager.IsGambler` 활성이면 rolledRarity 에 확률 분포 bump 적용. 분포표는 `docs/game-design/skills/chaos/gambler.md`. 1~2시간.
+
+### 보류 작업 (설계 선행 필요)
+
+- **정수 데미지 스케일링** — 정수 OnHit 데미지가 현재 SO 수치를 그대로 사용. ATK / CritChance / 무기 영향 미반영. 5 가지 결정 항목은 [../game-design/essence.md § 10](../game-design/essence.md). 결정 후 1~1.5시간.
 
 ### 유저 Unity 배선 작업 (누적)
 | 대상 | 내용 |
@@ -123,13 +128,13 @@
   1. ✅ 수치 SO 화 (Phase 8-A, 2026-04-24) — `ChaosSkillData.paramsByRarity[4]` + 혼돈별 독립 modifier + 올바른 op 전환.
   2. ✅ Hook 인프라 (Phase 8-B 1 차, 2026-04-25) — `IChaosHookBus` / `IChaosEffectHandler` / `ChaosEffectRegistry` 신설. ChaosSkillManager 가 IChaosHookBus 구현. 점진 이전 분기 (handler 등록 시 우선, 아니면 기존 switch).
   3. ✅ ChainExplosion handler 이전 (Phase 8-B, 2026-04-25) — `ChainExplosionHandler` 가 `EnemyKilled` 훅 구독 + 프레임 리셋 자체 관리 (`Time.frameCount` 비교). ChaosSkillManager 의 switch case / hasChainExplosion flag / GetChainExplosionConfig / TriggerExplosionDamage / SpawnExplosionVisual / IsLocalPlayer 제거. `OnEnemyKilled(VisualOnly)` 는 이벤트 발행만.
-  4. ⏳ Gambler/남은 handler 이전 (Phase 8-B3, 다음) — Gambler 는 `IsGambler` 프로퍼티가 SkillManager.GenerateChoices 에서 참조되므로 이전 시 조회 경로 재설계 필요.
+  4. ✅ Gambler handler 이전 (Phase 8-B3, 2026-04-25) — `GamblerHandler` 가 `LevelUpChoice` 훅 구독 (현재 no-op, rarity bump 소비자 추가 시 로직 주입). `IsActive` 플래그 노출. `ChaosSkillManager.IsGambler` 는 registry 조회 래퍼로 재배선. 실 효과 (파티 전체 rarity bump) 는 LevelUpManager 소비자 추가 단계에서 구현.
   5. ⏳ StatWatcher 공용 컴포넌트 (Phase 8-C) — Berserk/Accel/Unity 의 조건 감지 일반화.
 
 ### Phase 8-B 1차 인프라 상세 (2026-04-25)
 - `Shared/Domain/Interfaces/IChaosHookBus.cs`: 이벤트 4종 (EnemyKilled/PlayerTakeDamage/PlayerDeath/LevelUpChoice). Vector2 의존은 실용적 예외 (Domain 순수성 WARN, 후속 Position2D VO 로 분리 가능).
 - `Features/Skill/Adapter/Chaos/IChaosEffectHandler.cs`: handler 인터페이스 + `ChaosHandlerContext` struct (playerRoot / stats / hookBus).
-- `Features/Skill/Adapter/Chaos/ChaosEffectRegistry.cs`: type → handler 매핑. `RegisterDefaults()` 현재 비어있음 (handler 이전 시 항목 추가).
+- `Features/Skill/Adapter/Chaos/ChaosEffectRegistry.cs`: type → handler 매핑. `RegisterDefaults()` 는 SerializeField 의존 없는 handler 기본 등록 (Phase 8-B3: `GamblerHandler`). SerializeField 필요한 handler (`ChainExplosionHandler` 등) 는 `ChaosSkillManager.Start` 에서 직접 Register.
 - ChaosSkillManager: IChaosHookBus 구현 + `effectRegistry` 필드 + ApplyChaos 에 handler 우선 분기 + OnEnemyKilled/VisualOnly 에서 EnemyKilled 이벤트 발행. 기존 switch 와 공존.
 - **W4**: ✅ 완료 — `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 (`Shared/Domain/Interfaces/`). PlayerStats/SkillManager 가 각 포트 구현 선언. Essence/Weapon Inventory 는 Character.Adapter / Skill.Adapter 직접 참조 완전 제거. 관련 변경:
   - `ISkillRegistry.EffectSinks` (IReadOnlyList&lt;IRuntimeEffectSink&gt;) + `OnSinkAdded(IRuntimeEffectSink)` 이벤트.

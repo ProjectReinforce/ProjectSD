@@ -33,16 +33,16 @@ namespace SwDreams.Features.Skill.Adapter
     /// [Phase 8-B 리팩터] IChaosHookBus 구현 — SpawnManager/PlayerHealth/LevelUpManager 등은
     /// 구체 메서드 대신 이 포트로 이벤트 발행. 각 혼돈 효과가 핸들러화되면 switch 없이
     /// 포트 구독만으로 반응. 현재는 기존 switch 와 병존 (점진 이전).
+    /// 이전 완료: ChainExplosion (8-B), Gambler (8-B3).
     /// </summary>
     public class ChaosSkillManager : MonoBehaviour, IChaosHookBus
     {
         // ===== 활성 혼돈 스킬 플래그 =====
-        // ChainExplosion 은 handler 경유 (Phase 8-B) — 플래그 불필요.
+        // ChainExplosion / Gambler 는 handler 경유 (Phase 8-B) — 플래그 불필요.
         private bool hasGlassCannon;
         private bool hasBerserkMode;
         private bool hasAccelEngine;
         private bool hasUnity;
-        private bool hasGambler;
 
         // ===== 연쇄 폭발 설정 (ChainExplosionHandler 에 주입되는 fallback) =====
         // Phase 8-B: 실 로직은 Chaos/Handlers/ChainExplosionHandler. 여기는 SO 미설정 시 fallback + prefab 참조만.
@@ -66,8 +66,21 @@ namespace SwDreams.Features.Skill.Adapter
 
         // ===== 비수치 효과 프로퍼티 =====
 
-        /// <summary>도박꾼 활성 여부. SkillManager.GenerateChoices()에서 참조.</summary>
-        public bool IsGambler => hasGambler;
+        /// <summary>
+        /// 도박꾼 활성 여부. LevelUpManager (호스트) 가 파티 전체 순회 시 참조 예정.
+        /// 실 상태는 <see cref="Chaos.Handlers.GamblerHandler.IsActive"/> 에 보관 — 여기는 래퍼.
+        /// </summary>
+        public bool IsGambler
+        {
+            get
+            {
+                if (effectRegistry != null &&
+                    effectRegistry.TryGet(ChaosEffectType.Gambler, out var h) &&
+                    h is Chaos.Handlers.GamblerHandler gh)
+                    return gh.IsActive;
+                return false;
+            }
+        }
 
         /// <summary>보유 중인 혼돈 스킬 목록 (디버그 오버레이, 보스 시스템용).</summary>
         private List<ChaosEffectType> activeChaosEffects = new List<ChaosEffectType>();
@@ -199,9 +212,7 @@ namespace SwDreams.Features.Skill.Adapter
                 case ChaosEffectType.Unity:
                     ApplyUnity();
                     break;
-                case ChaosEffectType.Gambler:
-                    ApplyGambler();
-                    break;
+                // Gambler — handler 로 이전 (Phase 8-B3). registry 분기에서 처리.
             }
 
             Debug.Log($"[ChaosSkillManager] 혼돈 스킬 적용: {data.skillName} ({data.chaosEffectType})");
@@ -239,11 +250,8 @@ namespace SwDreams.Features.Skill.Adapter
             nearbyPlayerCount = 0;
         }
 
-        private void ApplyGambler()
-        {
-            hasGambler = true;
-            Debug.Log("[ChaosSkillManager] 도박꾼 활성 — 다음 레벨업부터 선택지 1개 등급 상승");
-        }
+        // ApplyGambler 제거 — GamblerHandler 로 이전 (Phase 8-B3).
+        // Registry 분기에서 handler 가 hookBus 구독 + IsActive 토글.
 
         // ===== SO 파라미터 조회 (Phase 8-A) =====
 

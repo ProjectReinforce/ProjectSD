@@ -153,3 +153,31 @@ triggerSystem.AddRuntimeEffect("essence_combo_ice_lightning", ...);
 - 정수 드랍이 보스에서도 발생하는지 (현재 안: 엘리트만)
 - 조합 히든 효과 9개 중 6개 (얼음+불 / 불+번개 외) 의 구체 효과
 - 같은 정수 2개 (예: 불+불) 획득 가능 여부 — 현재 안: 가능, 효과 중첩 (TBD)
+
+## 10. 정수 데미지 스케일링 — 설계 TBD (보류)
+
+> **2026-04-25 기록:** 정수의 OnHit DoT/Slow/DamageNearby 데미지가 현재 SO `parameters.primary` 를 그대로 사용 — 플레이어 ATK/CritChance/장착 무기 영향 없음. 후반 스케일링이 안 되어 활용도가 급락하는 문제 있음. 구현 전 아래 결정 필요.
+
+### 결정 항목
+
+| # | 질문 | 옵션 | 영향 |
+|---|---|---|---|
+| 1 | 플레이어 ATK 가 정수 데미지에 곱해지나? | A: 항상 곱함 (PlayerStats.ApplyAttackTo 경유) / B: 정수 SO 의 `affectedByAtk` 플래그로 제어 / C: 곱 안 함 | A=후반 강력 / B=세밀 제어 / C=일관 데미지 |
+| 2 | CritChance / CritDamage 적용? | A: 적용 / B: 미적용 | 정수 시너지 — 무기 크리트 스탯이 정수 DoT 에도 작용하나 |
+| 3 | 무기 `WeaponStatEntry.AttackMultiplier` 가 정수 데미지에 영향? | A: 영향 / B: 무기는 무기 스킬에만, 정수는 별개 | LoL 식 빌드 다양성 vs 시스템 분리도 |
+| 4 | Triggering skill 의 `damagePerLevel` 도 반영? | A: 반영 (기본 데미지 + 정수 보너스) / B: 정수는 독립 데미지 | "큰 스킬 → 큰 정수 데미지" 직관 vs 정수 SO 수치의 명시성 |
+| 5 | 슬로우/넉백 등 비데미지 효과는? | A: 그대로 (수치 영향 없음) / B: 강도(%/거리) 도 ATK 비례 | 비데미지 효과까지 손대면 밸런싱 부담 |
+
+### 영향 범위 (구현 시 손댈 곳)
+
+- `Features/Skill/Adapter/TriggerEffects/Handlers/ApplyDoTHandler.cs:30` — `parameters.primary` 직접 사용 → 스탯 경유
+- `Features/Skill/Adapter/TriggerEffects/Handlers/ApplySlowHandler.cs` — 슬로우 강도 결정 시 (옵션 5)
+- `Features/Skill/Adapter/TriggerEffects/Handlers/DamageNearbyHandler.cs` — 동일 패턴
+- `Features/Skill/Adapter/TriggerEffects/TriggerContext.cs` — `PlayerStats` 참조 노출 (현재 source 만 보유)
+- `Features/Character/Adapter/PlayerStats.cs:ApplyAttackTo` — 진입점 활용 (이미 무기/혼돈/패시브 통합 경로)
+
+### 대기 조건
+
+- 위 5 결정이 합의되면 1~1.5 시간 분량 코드 작업.
+- 영향 회귀 범위: 정수 3 종 (불 DoT / 얼음 슬로우 / 번개 DamageNearby) 모두 재테스트 필요.
+- 관련 로드맵: [../architecture/drop-system-roadmap.md](../architecture/drop-system-roadmap.md) "보류 작업" 섹션.

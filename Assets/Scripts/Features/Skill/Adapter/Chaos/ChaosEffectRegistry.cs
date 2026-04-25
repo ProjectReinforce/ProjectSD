@@ -32,12 +32,14 @@ namespace SwDreams.Features.Skill.Adapter.Chaos
 
         /// <summary>
         /// 기본 handler 등록. 점진 이전에 따라 항목이 늘어난다.
-        /// Phase 8-B 1 단계: 인프라만. 2 단계 이후 각 혼돈을 handler 로 이전하며 등록 추가.
-        /// 현재 등록 대상 없음 — ChaosSkillManager 의 기존 switch 가 전 혼돈을 처리.
+        /// SerializeField 주입이 필요한 handler (ChainExplosion 등) 는 여기 대신
+        /// ChaosSkillManager.Start 에서 직접 Register.
+        ///
+        /// Phase 8-B3: Gambler 이전 (파라미터 없음 → RegisterDefaults 직접 등록).
         /// </summary>
         public void RegisterDefaults()
         {
-            // TODO Phase 8-B2: ChainExplosion / Gambler 등 Category C/D 혼돈 이전 시 여기에 등록.
+            Register(new Handlers.GamblerHandler());
         }
     }
 }
