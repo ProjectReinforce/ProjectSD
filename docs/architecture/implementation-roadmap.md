@@ -16,7 +16,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 1. 네트워크 + 메뉴 플로우 | ✅ 완료 | 메뉴/대기실/에러 처리 포함 |
 | 2. 기본 전투 | 🟡 거의 완료 | 스폰 위치 명세 미달성 (캐릭터 반경 → 맵 경계로 환원) |
 | 3. 적 AI + 스폰 고도화 | 🟡 진행 중 | 난이도 곡선 완료. 화면 밖 AI 간소화 잔여 |
-| 4. 레벨업 시스템 | ✅ 거의 완료 | 6슬롯/진화/패시브/수치 표시 모두 동작 |
+| 4. 레벨업 시스템 | ✅ 완료 | 6슬롯/진화/패시브/수치 표시/타임아웃/StatBoost 전환 모두 동작 (2026-04-25 검증) |
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
@@ -124,30 +124,30 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ---
 
-## Phase 4 — 레벨업 시스템 🟡 진행 중
+## Phase 4 — 레벨업 시스템 ✅ (2026-04-25 검증)
 
-### 4-1. 레벨업 UI 🟡
-- [x] **FrameToast / Frame_PopUp 프리팹 도입** (커밋 `84dfb3b3f`, `6d6112763`) → 알림/팝업 프레임 기반
+### 4-1. 레벨업 UI ✅
+- [x] FrameToast / Frame_PopUp 프리팹 도입 (커밋 `84dfb3b3f`, `6d6112763`)
 - [x] `LevelUpPanel`, `SkillCardUI`
-- [ ] 선택지 3장 RPC 전파 완성
-- [ ] 타임아웃 자동 선택
-- [ ] 전원 선택 완료 재개 동기화 검증
+- [x] 선택지 3장 RPC 전파 (`RPC_ReceiveChoices` / `RPC_ReceiveStatBoostChoices`)
+- [x] 타임아웃 자동 선택 (`HandleTimeout` 미선택 플레이어 랜덤 처리)
+- [x] 전원 선택 완료 재개 동기화 (`CheckAllSelected` → `EndLevelUpSequence`)
 
 > 원래 "카드 3장 UI"로 계획했으나, 실제로는 **FrameToast/Frame_PopUp 기반 UI 프레임**으로 재설계. [../systems/ui-frame.md](../systems/ui-frame.md) 참조.
 
-### 4-2. SkillManager 🟡
-- [ ] 6슬롯 제한 관리
-- [ ] 슬롯 풀일 때 기존 스킬 레벨업만
-- [ ] 만렙 시 능력치 선택지 전환
+### 4-2. SkillManager ✅
+- [x] 6슬롯 제한 (`MaxSlots=6` + `HasEmptySlot`/`EmptySlots` API)
+- [x] 슬롯 풀일 때 기존 스킬 레벨업만 (`AcquireSkill` → `LevelUpExisting` 분기)
+- [x] 만렙 시 능력치 선택지 전환 (스킬 풀 고갈 → `SendStatBoostChoices` 자동 분기)
 
-### 4-3. 진화 시스템 🟡
-- [ ] `EvolutionData` 테이블 참조
-- [ ] 액티브 + 패시브 최대 레벨 감지
-- [ ] 2슬롯 → 1슬롯 처리
-- [x] **장검 진화 Phase2 복구** (커밋 `1f225a555`)
+### 4-3. 진화 시스템 ✅
+- [x] EvolutionData 테이블 — `SkillData.evolutionPair`/`evolvedSkill` 필드로 SO 단위 관리
+- [x] 액티브 + 패시브 최대 레벨 감지 (`CheckEvolution` + 역방향 검사)
+- [x] 2슬롯 → 1슬롯 처리 (`PerformEvolution` + `PreservePassiveForEvolution`)
+- [x] 장검 진화 Phase2 복구 (커밋 `1f225a555`)
 
-### 4-4. 패시브 스킬 적용 🟡
-- [ ] 패시브 효과를 Player 스탯에 반영 (`applicableStats` 필터 경로)
+### 4-4. 패시브 스킬 적용 ✅
+- [x] `PlayerStats.RegisterPassive` + `applicableStats` 필터 경로 완성
 
 ---
 

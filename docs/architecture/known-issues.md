@@ -17,14 +17,6 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 
 ## N — 신규 추가
 
-### N1. 최초 대기실 입장 시 대기/준비 상태가 아님 → 대기 디폴트
-
-**증상**: 방 입장 직후 상태가 모호. 대기 상태가 디폴트가 되어야 함.
-
-**처리 방향**: `WaitingRoomPanelController` 의 입장 시 초기 상태를 명시적 "대기"로 set.
-
----
-
 ### N3. 플레이어 피격 후 빨간색에서 원래대로 안 돌아옴 — 수정 완료
 
 **증상**: 가끔 피격 후 플레이어 스프라이트가 빨간색으로 고착.
@@ -51,16 +43,6 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 ---
 
 ## B — 기존 미체크 버그
-
-### B1. 끌어당기는 스킬 — 스킬 범위 증가 시 영향 범위도 같이 늘어나야 함
-
-**증상**: 회오리/토네이도 등 끌어당김 효과의 영향 반경이 SkillRange 패시브에 반응하지 않음.
-
-**원인**: [PullTrajectories.cs:57-75](../../Assets/Scripts/Features/Skill/Adapter/Trajectories/PullTrajectories.cs#L57-L75) — `pullRadius` 가 ctor 고정값. `ctx.skillRangeBonus` 미반영.
-
-**처리 방향**: `pullRadius * (1 + ctx.skillRangeBonus)` 적용. 오브젝트 자체 시각 크기와 함께 영향 반경도 스케일.
-
----
 
 ### B2. 토네이도가 보스에 맞으면 프레임 600→100 드랍
 
@@ -93,26 +75,6 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 **증상**: 호스트와 클라이언트가 보는 토네이도 발사 방향이 다름.
 
 **처리 방향**: 발사 방향 결정 로직이 로컬 입력/위치에 의존하면 클라마다 다르게 결정됨. 호스트가 RPC 로 방향 전파하거나, 입력 시점 방향을 RaiseEvent 로 동기화.
-
----
-
-### B6. 의문사 — 레벨업 중 적이 근접한 경우 데미지 들어옴
-
-**증상**: 레벨업 패널 표시 중인데 가끔 플레이어가 데미지를 입음. 적이 근접해 있을 때 발생.
-
-**원인 추정**: `EnemyContact.OnTriggerStay2D` 가 `GameState.Paused` 를 가드하지 않음. Paused 상태에서도 `damageCooldown` 만료 시 데미지 적용.
-
-**처리 방향**: [EnemyContact](../../Assets/Scripts/Features/Enemy/Adapter/EnemyContact.cs) 의 데미지 트리거에 `GameManager.Instance.CurrentState != Playing/BossFight` 가드 추가.
-
----
-
-### B7. 레벨업 중에도 피격 파티클 재생됨
-
-**증상**: 게임 정지 중에도 HitEffect 파티클이 계속 재생.
-
-**원인**: [HitEffect.cs:95-105](../../Assets/Scripts/Features/Character/Adapter/HitEffect.cs#L95-L105) `Update()` 에 `GameState.Paused` 가드 없음.
-
-**처리 방향**: [TelegraphZone.cs:166-170](../../Assets/Scripts/Features/Enemy/Adapter/Attack/TelegraphZone.cs#L166-L170) 와 동일한 패턴. `Playing/BossFight` 가 아니면 `ps.Pause()` + timer 누적 건너뜀, 복귀 시 `ps.Play()`. `AnimatedEffectAutoReturn` 도 같은 가드 — 공통 `PausableEffect` 컴포넌트로 묶어 처리하는 방향 검토.
 
 ---
 
@@ -164,9 +126,8 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 - Architecture-guardian 경고. Quest 가 격리몹 SO 를 직접 의존하므로 Feature 격리 위반.
 - 처리 방향: `EnemyData` 를 `Shared/Data/` 로 승격 (Spawn/Quest/Boss 모두 소비하기 시작하면 우선순위 상승).
 
-### F7. 격리 몹이 KillTarget 카운트에 이중 잡힐 가능성
-- 격리 몹이 외부 데미지로 사망하면 `OnEnemyDied` → `QuestZone.NotifyEnemyKilledToAllActive()` 가 격리 몹 자신을 카운트.
-- 처리 방향: `OnEnemyDied` 에서 `enemy.Data` 가 `questBarrierVariants` 에 등록된 SO 인지 확인 후 통지 스킵, 또는 격리 몹 SO 에 `isQuestBarrier` 플래그.
+### F7. 격리 몹이 KillTarget 카운트에 이중 잡힐 가능성 ✅ (2026-04-25)
+- `OnEnemyDied` 에서 `questBarrierIds.Contains(enemy.EnemyId)` 가드 — 격리 몹은 NotifyEnemyKilledToAllActive 호출에서 제외.
 
 ### F8. QuestZone.activeZones 호스트 마이그레이션 stale
 - 정적 리스트가 마이그레이션 시 명시적 clear 없음. `ResetForMigration` 류 훅 신설 권장.

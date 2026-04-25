@@ -2,6 +2,7 @@ using UnityEngine;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Enemy.Adapter;
 using Photon.Pun;
+using SwDreams.Shared.Managers;
 using SwDreams.Testing;
 
 namespace SwDreams.Features.Enemy.Adapter
@@ -30,6 +31,14 @@ namespace SwDreams.Features.Enemy.Adapter
         {
             if (!PhotonNetwork.IsMasterClient) return;
             if (enemy == null || !enemy.IsAlive) return;
+
+            // B6: 레벨업/메뉴 등 일시정지 상태에선 접촉 데미지 발생 금지.
+            var gm = GameManager.Instance;
+            if (gm != null &&
+                gm.CurrentState != GameManager.GameState.Playing &&
+                gm.CurrentState != GameManager.GameState.BossFight)
+                return;
+
             if (Time.time - lastDamageTime < damageCooldown) return;
 
             if (other.CompareTag("Player"))

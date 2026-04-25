@@ -44,6 +44,9 @@ namespace SwDreams.Shared.Data
         [Tooltip("플레이어당 최대 스킬 슬롯 수 (액티브 + 패시브 합계)")]
         public int maxSkillSlots = 6;
 
+        [Tooltip("한 게임당 일반 스킬 선택지 새로고침 기본 횟수. 혼돈 스킬로 +N 가산 가능.")]
+        public int baseSkillRefreshCharges = 2;
+
         [Tooltip("다중 투사체 발사 시 탄 사이 각도 (도)")]
         public float projectileSpreadAngle = 15f;
 

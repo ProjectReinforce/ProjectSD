@@ -14,8 +14,11 @@ namespace SwDreams.Features.Skill.Adapter.Trajectories
     /// </summary>
     public static class TrajectoryFactory
     {
-        public static ITrajectoryBehavior Create(TrajectoryType type, SkillData data)
+        public static ITrajectoryBehavior Create(TrajectoryType type, SkillData data, float skillRangeBonus = 0f)
         {
+            // R6/B1: pullRadius 가 SkillRange 패시브에 반응하도록 다른 spawner 들과 동일한 + 패턴.
+            float effectivePullRadius = data.pullRadius + skillRangeBonus;
+
             switch (type)
             {
                 case TrajectoryType.Straight:
@@ -26,15 +29,15 @@ namespace SwDreams.Features.Skill.Adapter.Trajectories
 
                 case TrajectoryType.Boomerang:
                     return new BoomerangTrajectory(
-                        data.hasPullOnReturn, data.pullRadius, data.pullForce);
+                        data.hasPullOnReturn, effectivePullRadius, data.pullForce);
 
                 case TrajectoryType.Tornado:
                     return new TornadoTrajectory(
-                        data.pullRadius, data.pullForce);
+                        effectivePullRadius, data.pullForce);
 
                 case TrajectoryType.Spiral:
                     return new SpiralTrajectory(
-                        data.pullRadius, data.pullForce,
+                        effectivePullRadius, data.pullForce,
                         data.spiralExpandSpeed);
 
                 case TrajectoryType.Zigzag:

@@ -82,6 +82,16 @@ namespace SwDreams.Features.UI.Presentation
         }
 
         /// <summary>
+        /// 새로고침 응답 — 이미 표시된 패널의 카드만 교체. currentLevelRefreshConsumed 가드 유지.
+        /// </summary>
+        public void RefreshLevelUpCards(
+            SwDreams.Features.Skill.Adapter.Data.SkillData[] choices)
+        {
+            if (levelUpPanel == null) return;
+            levelUpPanel.RefreshCards(choices);
+        }
+
+        /// <summary>
         /// StatBoost 선택지 패널 오픈. 스킬 풀 고갈(만렙) 시 레벨업 또는 퀘스트 보상에서 호출.
         /// rolledRarity 는 카드 3 장이 공유하는 등급 — 각 SO 에서 등급별 value 를 꺼내 표시.
         /// </summary>

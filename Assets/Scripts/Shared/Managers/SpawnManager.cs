@@ -999,8 +999,9 @@ namespace SwDreams.Shared.Managers
 
             // Phase 6: 활성 QuestZone (InProgress) 에 적 처치 통지 — KillTarget/KillInTime 진행률 갱신.
             // 호스트만 호출 (SpawnManager 의 OnEnemyDied 자체가 호스트 핸들러).
-            // 격리 몹 자체는 ForceReturn 경로로 빠져나가므로 본 죽음에는 일반 적만 잡힘.
-            SwDreams.Features.Quest.Adapter.QuestZone.NotifyEnemyKilledToAllActive();
+            // F7: 격리 몹 자체가 죽으면 KillTarget 카운트에서 제외.
+            if (!questBarrierIds.Contains(enemy.EnemyId))
+                SwDreams.Features.Quest.Adapter.QuestZone.NotifyEnemyKilledToAllActive();
 
             // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
             deathQueue.Add((enemy.EnemyId, (Vector2)enemy.transform.position,

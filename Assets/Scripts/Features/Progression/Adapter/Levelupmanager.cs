@@ -70,6 +70,12 @@ namespace SwDreams.Features.Progression.Adapter
         // 보상이 손실되지 않도록 적재 후 EndLevelUpSequence 에서 처리.
         private Queue<float[]> pendingQuestRewards = new Queue<float[]>();
 
+        // 스킬 선택지 새로고침 — 카운트 기반 (기본 baseSkillRefreshCharges, 혼돈 스킬로 +N 가산).
+        // 일반 스킬 패널에서만 사용 가능 (혼돈/StatBoost 패널은 비활성).
+        // key = ActorNumber, value = 남은 횟수.
+        // dict 에 없으면 lazy init 으로 baseSkillRefreshCharges default.
+        private readonly Dictionary<int, int> playerRefreshRemaining = new Dictionary<int, int>();
+
         // 호스트 전용: 각 플레이어의 선택 완료 여부
         // key = Photon ActorNumber, value = 선택 완료 여부
         private Dictionary<int, bool> playerSelections = new Dictionary<int, bool>();
@@ -138,6 +144,10 @@ namespace SwDreams.Features.Progression.Adapter
             {
                 Debug.LogError("[LevelUpManager] Start() 시점에 GameManager 없음!");
             }
+
+            // 새로고침 카운트 — Start 시점에 초기화 (씬 재진입 안전장치).
+            // 실제 default 값 부여는 RPC 처리 시 lazy init 으로.
+            playerRefreshRemaining.Clear();
         }
 
         private void OnDestroy()
@@ -452,6 +462,170 @@ namespace SwDreams.Features.Progression.Adapter
         {
             timeoutTimer = duration;
             isLevelUpActive = true;
+        }
+
+        // ===== 새로고침 (카운트 기반, 일반 스킬 패널 한정) =====
+
+        /// <summary>GameplayConfig.baseSkillRefreshCharges 기본값 (없으면 2).</summary>
+        private int BaseRefreshCharges
+        {
+            get
+            {
+                var cfg = GameManager.Instance?.Config;
+                return cfg != null ? cfg.baseSkillRefreshCharges : 2;
+            }
+        }
+
+        /// <summary>호스트 측: actor 의 남은 새로고침 횟수 (lazy init = base default).</summary>
+        private int GetRefreshRemainingHostSide(int actorNumber)
+        {
+            if (!playerRefreshRemaining.TryGetValue(actorNumber, out int remaining))
+            {
+                remaining = BaseRefreshCharges;
+                playerRefreshRemaining[actorNumber] = remaining;
+            }
+            return remaining;
+        }
+
+        /// <summary>로컬 플레이어 남은 새로고침 횟수. UI 표시용.
+        /// 호스트는 직접 dict 조회, 클라는 호스트 권위 값을 RPC 로 받아 캐싱.</summary>
+        public int LocalPlayerRefreshRemaining
+        {
+            get
+            {
+                int actor = PhotonNetwork.LocalPlayer.ActorNumber;
+                if (PhotonNetwork.IsMasterClient)
+                    return GetRefreshRemainingHostSide(actor);
+                // 클라 캐시 — 호스트가 보낸 값 (없으면 base default).
+                return clientRefreshRemainingCache;
+            }
+        }
+
+        // 클라이언트 측 캐시 — 호스트가 RPC_SyncRefreshRemaining 으로 갱신.
+        private int clientRefreshRemainingCache = -1;
+
+        /// <summary>현재 패널이 일반 스킬(Skill) 인지 — 새로고침 버튼은 이 경우에만 노출.</summary>
+        public bool CanRefreshCurrentPanel =>
+            isLevelUpActive && myChoices != null && myBoostChoices == null;
+
+        /// <summary>
+        /// LevelUpPanel "새로고침" 버튼 클릭 시 호출. 호스트가 새 선택지 3장 재생성 후 본인에게 재송신.
+        /// 카운트 기반(기본 2회 + 혼돈 +N). 혼돈/StatBoost 패널에선 호출하지 않음 (UI 측 가드).
+        /// </summary>
+        public void RequestRefresh()
+        {
+            if (!isLevelUpActive) return;
+            if (!CanRefreshCurrentPanel) return;
+            if (LocalPlayerRefreshRemaining <= 0) return;
+
+            photonView.RPC(nameof(RPC_RequestRefresh), RpcTarget.MasterClient,
+                PhotonNetwork.LocalPlayer.ActorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_RequestRefresh(int actorNumber)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (!isLevelUpActive) return;
+
+            int remaining = GetRefreshRemainingHostSide(actorNumber);
+            if (remaining <= 0)
+            {
+                Debug.LogWarning($"[LevelUpManager] Player {actorNumber} 새로고침 잔여 0. 무시.");
+                return;
+            }
+
+            // 일반 스킬 패널인지 확인 (Chaos/StatBoost 는 새로고침 불가).
+            if (!playerPanelKinds.TryGetValue(actorNumber, out var kind) || kind != ChoicePanelKind.Skill)
+            {
+                Debug.LogWarning($"[LevelUpManager] Player {actorNumber} 현재 패널 {kind} — 새로고침 불가.");
+                return;
+            }
+
+            SkillManager sm = FindSkillManagerForPlayer(actorNumber);
+            if (sm == null)
+            {
+                Debug.LogWarning($"[LevelUpManager] Player {actorNumber} SkillManager 미발견 — 새로고침 실패.");
+                return;
+            }
+
+            SkillData[] normalPool = skillDatabase.GetNormalPool();
+            SkillData[] choices = sm.GenerateChoices(normalPool, 3);
+            if (choices.Length == 0)
+            {
+                Debug.LogWarning($"[LevelUpManager] Player {actorNumber} 풀 고갈 — 새로고침 결과 없음.");
+                return;
+            }
+
+            int[] choiceIds = new int[choices.Length];
+            for (int i = 0; i < choices.Length; i++) choiceIds[i] = choices[i].skillId;
+
+            // 호스트 측 저장값 갱신 (타임아웃 시 랜덤 선택 풀도 새 선택지 기준).
+            playerChoices[actorNumber] = choiceIds;
+            playerRefreshRemaining[actorNumber] = remaining - 1;
+
+            Debug.Log($"[LevelUpManager] Player {actorNumber} 새로고침 (남은:{remaining - 1}) — " +
+                      string.Join(", ", System.Array.ConvertAll(choices, s => s.skillName)));
+
+            var targetPlayer = FindPhotonPlayer(actorNumber);
+            if (targetPlayer != null)
+            {
+                // 새로고침은 Setup 대신 RefreshCards 경로 — 한 레벨업 1회 가드(currentLevelRefreshConsumed) 유지.
+                photonView.RPC(nameof(RPC_ReceiveRefreshChoices), targetPlayer, choiceIds);
+                // 본인에게 잔여 횟수 동기화 (UI 갱신용).
+                photonView.RPC(nameof(RPC_SyncRefreshRemaining), targetPlayer, remaining - 1);
+            }
+        }
+
+        /// <summary>새로고침 응답 — 이미 표시 중인 LevelUpPanel 의 카드만 교체.</summary>
+        [PunRPC]
+        private void RPC_ReceiveRefreshChoices(int[] choiceIds)
+        {
+            myChoices = new SkillData[choiceIds.Length];
+            for (int i = 0; i < choiceIds.Length; i++)
+            {
+                myChoices[i] = skillDatabase.GetSkillById(choiceIds[i]);
+                if (myChoices[i] == null)
+                    Debug.LogError($"[LevelUpManager] 새로고침 스킬 ID {choiceIds[i]} 변환 실패!");
+            }
+
+            Debug.Log($"[LevelUpManager] 새로고침 응답: " +
+                      string.Join(", ", System.Array.ConvertAll(myChoices, s => s?.skillName ?? "null")));
+
+            if (UIManager.Instance != null)
+                UIManager.Instance.RefreshLevelUpCards(myChoices);
+        }
+
+        /// <summary>호스트가 본인 클라에 잔여 새로고침 횟수 통지 (UI 갱신용).</summary>
+        [PunRPC]
+        private void RPC_SyncRefreshRemaining(int remaining)
+        {
+            clientRefreshRemainingCache = remaining;
+        }
+
+        /// <summary>
+        /// 혼돈 스킬 효과 진입점 — 모든 파티원의 새로고침 횟수에 +N 가산.
+        /// 호스트 전용 호출. 일반 등급 +1, 레전드리 +2 등 호출자가 amount 결정.
+        /// </summary>
+        public void AddRefreshChargesToAll(int amount)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (amount <= 0) return;
+
+            foreach (var p in PhotonNetwork.PlayerList)
+            {
+                int actor = p.ActorNumber;
+                int cur = GetRefreshRemainingHostSide(actor);
+                int next = cur + amount;
+                playerRefreshRemaining[actor] = next;
+
+                // 본인에게 갱신값 동기화 (호스트 자신 포함).
+                if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
+                    clientRefreshRemainingCache = next;
+                else
+                    photonView.RPC(nameof(RPC_SyncRefreshRemaining), p, next);
+            }
+            Debug.Log($"[LevelUpManager] 새로고침 +{amount} 전체 부여.");
         }
 
         // ===== 클라이언트: 선택 제출 =====

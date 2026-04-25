@@ -73,8 +73,9 @@ namespace SwDreams.Features.Skill.Adapter
             // ── TriggerSystem + 소유자 연결 (항상 호출 — 소유자 판별에 필요) ──
             projectile.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
 
-            // ── Trajectory 부착 ──
-            ITrajectoryBehavior trajectory = TrajectoryFactory.Create(data.trajectoryType, data);
+            // ── Trajectory 부착 (R6/B1: pullRadius 에 ctx.skillRangeBonus 반영) ──
+            ITrajectoryBehavior trajectory = TrajectoryFactory.Create(
+                data.trajectoryType, data, ctx.skillRangeBonus);
 
             if (trajectory is SpiralTrajectory spiral)
             {
@@ -83,7 +84,7 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     float startAngle = (360f / ctx.totalCount) * ctx.fireIndex;
                     trajectory = new SpiralTrajectory(
-                        data.pullRadius, data.pullForce,
+                        data.pullRadius + ctx.skillRangeBonus, data.pullForce,
                         data.spiralExpandSpeed, startAngle);
                     ((SpiralTrajectory)trajectory).SetOrigin(ctx.playerPosition);
                 }

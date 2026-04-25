@@ -82,6 +82,11 @@ namespace SwDreams.Features.UI.Adapter.Menu
             NetworkManager.Instance.SetLocalReady(false);
             isLoadingGameScene = false;
 
+            // N1: 입장 직후 토글이 inspector default 값으로 보이지 않도록 즉시 false 로 동기화.
+            // SetIsOnWithoutNotify 로 onValueChanged 핸들러 재발동 회피.
+            if (readyToggle != null)
+                readyToggle.SetIsOnWithoutNotify(false);
+
             // 디폴트 캐릭터(0) 보정: 방 최초 입장이면 characterId가 아직 없으므로 0으로 세팅.
             // 기존에 선택했던 값이 있으면 유지.
             if (PhotonNetwork.InRoom &&

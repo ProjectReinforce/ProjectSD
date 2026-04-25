@@ -113,6 +113,36 @@ namespace SwDreams.Features.Character.Adapter
         {
             if (!isActive) return;
 
+            // B7: 레벨업/메뉴 일시정지 중엔 ParticleSystem 도 정지 + returnTimer 도 정지.
+            //     복귀 시 자동 재개. (다른 비주얼 컴포넌트와 동일 패턴)
+            var gm = GameManager.Instance;
+            if (gm != null &&
+                gm.CurrentState != GameManager.GameState.Playing &&
+                gm.CurrentState != GameManager.GameState.BossFight)
+            {
+                if (allParticleSystems != null)
+                {
+                    for (int i = 0; i < allParticleSystems.Length; i++)
+                    {
+                        var p = allParticleSystems[i];
+                        if (p != null && p.isPlaying) p.Pause(true);
+                    }
+                }
+                return;
+            }
+            else
+            {
+                // 복귀 시 일시정지된 ps 재생.
+                if (allParticleSystems != null)
+                {
+                    for (int i = 0; i < allParticleSystems.Length; i++)
+                    {
+                        var p = allParticleSystems[i];
+                        if (p != null && p.isPaused) p.Play(true);
+                    }
+                }
+            }
+
             returnTimer -= Time.deltaTime;
             if (returnTimer <= 0f)
             {

@@ -26,6 +26,12 @@ ProjectSD(Sweepin' Dreams) 의 완료된 작업 회고/추적용 ledger.
 - N2 피격 이펙트 (0,0) 잔상 (2026-04-25) — 실제 원인은 사용자가 prefab 교체 시 root GameObject 에 HitEffect 스크립트 미부착. 코드 측은 견고화: `GetComponentsInChildren<ParticleSystem>(true)` 로 부모-자식 모든 ps 캐싱 + 명시 Play(true) + AudioSource 캐싱 + SetActive 를 Play(position) 안으로 이동(소리 위치 정확).
 - Phase 6 퀘스트 MVP 인프라 (2026-04-25) — QuestType/State/Data SO + QuestZone 상태 머신 + RewardDispatcher + LevelUpManager.RequestQuestReward
 - Phase 6 격리 몹 + 킬 카운트 연결 (2026-04-25) — `SpawnManager.SpawnQuestBarriers`/`DespawnEnemies` + `QuestZone.activeZones` 레지스트리 + `OnEnemyDied` 통지 경로 + F2 보상 큐잉
+- F7 격리 몹 KillTarget 이중 카운트 가드 (2026-04-25) — `questBarrierIds` 기반 1줄 가드
+- R6/B1 pullRadius 패시브 반응 (2026-04-25) — `TrajectoryFactory.Create` 에 `skillRangeBonus` 인자 추가, `effectivePullRadius = data.pullRadius + ctx.skillRangeBonus`
+- B6 EnemyContact Pause 가드 (2026-04-25) — Playing/BossFight 외 상태에서 접촉 데미지 발생 차단
+- B7 HitEffect Pause 가드 (2026-04-25) — Update 에서 ParticleSystem.Pause/Play + returnTimer 정지
+- N1 대기실 입장 대기 디폴트 (2026-04-25) — `readyToggle.SetIsOnWithoutNotify(false)` 즉시 동기화
+- 스킬 새로고침 시스템 (2026-04-25) — 일반 스킬 패널 한정, 카운트 기반(기본 `GameplayConfig.baseSkillRefreshCharges=2` + 혼돈 스킬 `LevelUpManager.AddRefreshChargesToAll(N)` 진입점). 호스트 권위 + 본인 클라 캐시 + RPC_SyncRefreshRemaining 으로 UI 동기화. LevelUpPanel 인스펙터에 refreshButton/refreshCountText 슬롯.
 
 ---
 

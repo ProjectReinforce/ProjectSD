@@ -38,6 +38,12 @@ namespace SwDreams.Features.UI.Presentation
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private Image timerBarFill;
 
+        [Header("새로고침 (일반 스킬 패널 전용)")]
+        [Tooltip("기본 GameplayConfig.baseSkillRefreshCharges 회 + 혼돈 스킬로 +N 가산. 혼돈/StatBoost 패널에선 자동 비활성.")]
+        [SerializeField] private UnityEngine.UI.Button refreshButton;
+        [Tooltip("(선택) 잔여 횟수 표시. 비워두면 표시 안 함.")]
+        [SerializeField] private TMP_Text refreshCountText;
+
         [Header("연출 설정")]
         [SerializeField] private float fadeDuration = 0.3f;
         [SerializeField] private float scaleDuration = 0.4f;
@@ -49,6 +55,9 @@ namespace SwDreams.Features.UI.Presentation
         private Sequence hideSequence;
         private bool isShowing = false;
         private bool hasSelected = false;
+        // 한 레벨업 내에서 새로고침 1회만 허용. Setup 진입 시 리셋, OnClickRefresh 시 true.
+        // 새로고침 응답은 RefreshCards 경로로 분리되어 이 플래그를 안 건드림.
+        private bool currentLevelRefreshConsumed = false;
 
         private void Awake()
         {
@@ -57,6 +66,12 @@ namespace SwDreams.Features.UI.Presentation
             canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
+
+            if (refreshButton != null)
+            {
+                refreshButton.onClick.RemoveAllListeners();
+                refreshButton.onClick.AddListener(OnClickRefresh);
+            }
         }
 
         private void OnDisable()
@@ -74,6 +89,7 @@ namespace SwDreams.Features.UI.Presentation
         public void Setup(SkillData[] choices, bool isChaos, Rarity chaosRarity = Rarity.Common)
         {
             hasSelected = false;
+            currentLevelRefreshConsumed = false;
 
             if (titleText != null)
                 titleText.text = isChaos ? $"혼돈 선택 · {chaosRarity}" : "스킬을 선택하세요";
@@ -98,6 +114,9 @@ namespace SwDreams.Features.UI.Presentation
                 timerBarFill.color = Color.white;
             }
 
+            // 새로고침 버튼: 일반 스킬 패널만 활성. 혼돈은 비활성.
+            UpdateRefreshButton(skillPanelActive: !isChaos);
+
             PlayShowAnimation();
         }
 
@@ -109,6 +128,7 @@ namespace SwDreams.Features.UI.Presentation
         public void SetupStatBoost(StatBoostData[] choices, Rarity rolledRarity)
         {
             hasSelected = false;
+            currentLevelRefreshConsumed = false;
 
             if (titleText != null)
                 titleText.text = $"능력치 선택 · {rolledRarity}";
@@ -132,7 +152,111 @@ namespace SwDreams.Features.UI.Presentation
                 timerBarFill.color = Color.white;
             }
 
+            // StatBoost 패널은 새로고침 비활성.
+            UpdateRefreshButton(skillPanelActive: false);
+
             PlayShowAnimation();
+        }
+
+        // ===== 새로고침 =====
+
+        private void UpdateRefreshButton(bool skillPanelActive)
+        {
+            if (refreshButton == null) return;
+
+            // 스킬 패널이 아니면 숨김.
+            if (!skillPanelActive)
+            {
+                refreshButton.gameObject.SetActive(false);
+                if (refreshCountText != null) refreshCountText.gameObject.SetActive(false);
+                return;
+            }
+
+            refreshButton.gameObject.SetActive(true);
+
+            int remaining = 0;
+            var mgr = SwDreams.Features.Progression.Adapter.LevelUpManager.Instance;
+            if (mgr != null)
+                remaining = mgr.LocalPlayerRefreshRemaining;
+
+            // 한 레벨업 내 1회 가드 + 잔여 0 가드 — 둘 다 통과해야 활성.
+            refreshButton.interactable = remaining > 0 && !currentLevelRefreshConsumed;
+
+            if (refreshCountText != null)
+            {
+                refreshCountText.gameObject.SetActive(true);
+                refreshCountText.text = remaining.ToString();
+            }
+        }
+
+        private void OnClickRefresh()
+        {
+            var mgr = SwDreams.Features.Progression.Adapter.LevelUpManager.Instance;
+            if (mgr == null) return;
+            if (currentLevelRefreshConsumed) return;
+
+            currentLevelRefreshConsumed = true;
+            mgr.RequestRefresh();
+            // 즉시 비활성 — RefreshCards 응답이 와도 consumed=true 라 다시 활성 안 됨.
+            if (refreshButton != null) refreshButton.interactable = false;
+        }
+
+        /// <summary>
+        /// 새로고침 응답으로 카드만 교체. Setup 과 달리 currentLevelRefreshConsumed 를 안 건드려서
+        /// 한 레벨업 1회 가드가 유지된다. 카드 fade out → 데이터 교체 → 슬라이드+fade in 애니메이션.
+        /// </summary>
+        public void RefreshCards(SkillData[] choices, Rarity chaosRarity = Rarity.Common)
+        {
+            KillTweens();
+            canvasGroup.interactable = false;
+
+            var refreshSeq = DOTween.Sequence();
+
+            // 1) 기존 카드 fade out (절반 시간)
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (!skillCards[i].gameObject.activeSelf) continue;
+                int idx = i;
+                refreshSeq.Join(skillCards[idx].DOFadeCard(0f, cardSlideDuration * 0.5f));
+            }
+
+            // 2) 데이터 교체 + 새 카드 시작 위치(아래) + alpha=0 으로 reset
+            refreshSeq.AppendCallback(() =>
+            {
+                for (int i = 0; i < skillCards.Length; i++)
+                {
+                    if (i < choices.Length && choices[i] != null)
+                    {
+                        skillCards[i].gameObject.SetActive(true);
+                        skillCards[i].Setup(choices[i], OnCardClicked, chaosRarity);
+                        var rt = skillCards[i].GetComponent<RectTransform>();
+                        rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -100f);
+                        skillCards[i].SetAlpha(0f);
+                    }
+                    else
+                    {
+                        skillCards[i].gameObject.SetActive(false);
+                    }
+                }
+                UpdateRefreshButton(skillPanelActive: true);
+            });
+
+            // 3) 새 카드 순차 슬라이드 + fade in (PlayShowAnimation 의 카드 부분과 동일)
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (i >= choices.Length || choices[i] == null) continue;
+                int idx = i;
+                var rt = skillCards[idx].GetComponent<RectTransform>();
+                refreshSeq.Append(rt.DOAnchorPosY(0f, cardSlideDuration).SetEase(Ease.OutBack));
+                refreshSeq.Join(skillCards[idx].DOFadeCard(1f, cardSlideDuration));
+                if (i < skillCards.Length - 1)
+                    refreshSeq.AppendInterval(cardDelay);
+            }
+
+            // 4) 입력 재활성화
+            refreshSeq.OnComplete(() => canvasGroup.interactable = true);
+            refreshSeq.SetUpdate(true);
+            showSequence = refreshSeq;
         }
 
         /// <summary>
