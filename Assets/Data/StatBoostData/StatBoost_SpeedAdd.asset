@@ -19,7 +19,7 @@ MonoBehaviour:
   statType: 1
   op: 0
   valueByRarity:
-  - 0
-  - 0
-  - 0
-  - 0
+  - 0.005
+  - 0.01
+  - 0.02
+  - 0.04

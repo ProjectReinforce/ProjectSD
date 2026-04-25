@@ -16,7 +16,10 @@ MonoBehaviour:
   displayName: e
   description: 
   icon: {fileID: 0}
-  rarity: 0
   statType: 3
-  op: 1
-  value: 0.01
+  op: 0
+  valueByRarity:
+  - 0.005
+  - 0.01
+  - 0.02
+  - 0.04

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dc991d65787dc646b1df13f6bf9e1b9, type: 3}
   m_Name: EliteDropTable
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Shared.Data.EnemyDropTable
-  essenceChance: 1
+  essenceChance: 0.1
   weaponChance: 0.0001
   magnetChance: 0
   potionChance: 0

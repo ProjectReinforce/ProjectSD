@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Shared.Data.EnemyDropTable
   essenceChance: 0
   weaponChance: 0.0001
-  magnetChance: 0.005
-  potionChance: 0.005
+  magnetChance: 0.001
+  potionChance: 0.001
   essenceTypeWeights:
   - 1
   - 1

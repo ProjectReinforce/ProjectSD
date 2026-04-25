@@ -15,11 +15,12 @@ MonoBehaviour:
   magnetRange: 0.7
   magnetSpeed: 2
   maxActiveExpOrbs: 200
+  dropScatterRadius: 0.5
   defaultRarityWeights:
-  - 60
+  - 65
   - 25
-  - 12
-  - 3
+  - 9
+  - 1
   maxSkillSlots: 6
   projectileSpreadAngle: 15
   baseKnockbackForce: 0.9
