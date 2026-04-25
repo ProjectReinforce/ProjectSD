@@ -40,10 +40,10 @@
 ## 다음 세션 진입점 (2026-04-25 세션 종료 시점)
 
 ### 코드 작업 — 우선순위
-1. **Phase 8-B3**: ✅ 완료 (2026-04-25) — Gambler handler 이전. `GamblerHandler : IChaosEffectHandler` 신설, `ChaosEffectRegistry.RegisterDefaults()` 에 등록. `ChaosSkillManager` 의 `hasGambler` 필드 / `ApplyGambler()` / switch case 제거. `IsGambler` 프로퍼티는 registry 경유 `GamblerHandler.IsActive` 조회로 래핑. 현재 소비자 없음 (실제 rarity bump 로직은 LevelUpManager 소비자 추가 시 구현 — 파티 전체 순회 기반).
-2. **Phase 8-C**: StatWatcher 공용 컴포넌트 — Berserk(HP 임계)/Accel(Timer)/Unity(NearbyCount) 의 조건 감지 일반화. 2~3시간.
-3. **Phase 6**: 퀘스트 시스템 — 맵 거점 + 격리 몹 + 완료 시 StatBoost 선택지 보상 (Phase 5 재사용). 3~4시간.
-4. **Gambler rarity bump 소비자 추가** — LevelUpManager 의 `SendStatBoostChoices` / `SkillManager.GenerateChaosChoices` 가 `PhotonNetwork.PlayerList` 순회해 한 명이라도 `ChaosSkillManager.IsGambler` 활성이면 rolledRarity 에 확률 분포 bump 적용. 분포표는 `docs/game-design/skills/chaos/gambler.md`. 1~2시간.
+1. **Phase 8-B3**: ✅ 완료 (2026-04-25) — Gambler handler 이전. `GamblerHandler : IChaosEffectHandler` 신설, `ChaosEffectRegistry.RegisterDefaults()` 에 등록. `ChaosSkillManager` 의 `hasGambler` 필드 / `ApplyGambler()` / switch case 제거. `IsGambler` 프로퍼티는 registry 경유 `GamblerHandler.IsActive` 조회로 래핑.
+2. **Phase 8-C**: ✅ 완료 (2026-04-25) — StatWatcher 공용 컴포넌트. `Features/Skill/Adapter/Chaos/StatWatchers/` 에 `StatWatcher` 추상 + `HpThresholdWatcher` (Berserk) / `TimerRampWatcher` (Accel) / `NearbyCountWatcher` (Unity) 3 종 신설. `ChaosSkillManager` 의 `Check*` 메서드 + 캐시 필드 전부 제거 → watcher 리스트 일괄 Tick. `RecalculateChaosModifiers` 가 watcher 상태 직접 조회.
+3. **Gambler rarity bump 소비자**: ✅ 완료 (2026-04-25) — `GamblerRarityBumper` 정적 클래스 + `LevelUpManager.ResolveGamblerOverride` / `IsAnyPartyGambler` 헬퍼. `StatBoostChoiceService.GenerateChoices` / `SkillManager.GenerateChaosChoices` 에 `overrideRarity` 옵션 파라미터 추가. 호스트가 파티 한 명이라도 도박꾼이면 baseline 롤 → 분포표 bump (Common 100% +1, Rare 90/10, Epic 80/20, Legendary 70/20/10) → 카드 송신. 분포표는 `docs/game-design/skills/chaos/gambler.md`.
+4. **Phase 6**: 퀘스트 시스템 — 맵 거점 + 격리 몹 + 완료 시 StatBoost 선택지 보상 (Phase 5 재사용). 3~4시간.
 
 ### 보류 작업 (설계 선행 필요)
 
@@ -128,8 +128,9 @@
   1. ✅ 수치 SO 화 (Phase 8-A, 2026-04-24) — `ChaosSkillData.paramsByRarity[4]` + 혼돈별 독립 modifier + 올바른 op 전환.
   2. ✅ Hook 인프라 (Phase 8-B 1 차, 2026-04-25) — `IChaosHookBus` / `IChaosEffectHandler` / `ChaosEffectRegistry` 신설. ChaosSkillManager 가 IChaosHookBus 구현. 점진 이전 분기 (handler 등록 시 우선, 아니면 기존 switch).
   3. ✅ ChainExplosion handler 이전 (Phase 8-B, 2026-04-25) — `ChainExplosionHandler` 가 `EnemyKilled` 훅 구독 + 프레임 리셋 자체 관리 (`Time.frameCount` 비교). ChaosSkillManager 의 switch case / hasChainExplosion flag / GetChainExplosionConfig / TriggerExplosionDamage / SpawnExplosionVisual / IsLocalPlayer 제거. `OnEnemyKilled(VisualOnly)` 는 이벤트 발행만.
-  4. ✅ Gambler handler 이전 (Phase 8-B3, 2026-04-25) — `GamblerHandler` 가 `LevelUpChoice` 훅 구독 (현재 no-op, rarity bump 소비자 추가 시 로직 주입). `IsActive` 플래그 노출. `ChaosSkillManager.IsGambler` 는 registry 조회 래퍼로 재배선. 실 효과 (파티 전체 rarity bump) 는 LevelUpManager 소비자 추가 단계에서 구현.
-  5. ⏳ StatWatcher 공용 컴포넌트 (Phase 8-C) — Berserk/Accel/Unity 의 조건 감지 일반화.
+  4. ✅ Gambler handler 이전 (Phase 8-B3, 2026-04-25) — `GamblerHandler` 가 `IsActive` 플래그만 노출 (LevelUpChoice 훅 구독 안 함 — bump 로직은 LevelUpManager 측). `ChaosSkillManager.IsGambler` 는 registry 조회 래퍼.
+  5. ✅ Gambler rarity bump 소비자 (2026-04-25) — `GamblerRarityBumper` + `LevelUpManager.ResolveGamblerOverride`. 호스트가 파티 전체 IsGambler 순회 → baseline 롤 → 분포표 bump → 카드 RPC 송신.
+  6. ✅ StatWatcher 공용 컴포넌트 (Phase 8-C, 2026-04-25) — `StatWatcher` 추상 + `HpThresholdWatcher` / `TimerRampWatcher` / `NearbyCountWatcher` 3 종. `ChaosSkillManager` 의 Check* 메서드 / 캐시 필드 전체 제거 → watcher 리스트 일괄 Tick.
 
 ### Phase 8-B 1차 인프라 상세 (2026-04-25)
 - `Shared/Domain/Interfaces/IChaosHookBus.cs`: 이벤트 4종 (EnemyKilled/PlayerTakeDamage/PlayerDeath/LevelUpChoice). Vector2 의존은 실용적 예외 (Domain 순수성 WARN, 후속 Position2D VO 로 분리 가능).

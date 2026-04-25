@@ -597,8 +597,9 @@ namespace SwDreams.Features.Skill.Adapter
         /// </summary>
         /// <param name="chaosSkills">혼돈 스킬 풀</param>
         /// <param name="count">선택지 수 (기본 3, Config 우선)</param>
+        /// <param name="overrideRarity">Gambler bump 등 외부 등급 강제. null 이면 weights 로 롤.</param>
         public (SkillData[] choices, Rarity rolledRarity) GenerateChaosChoices(
-            SkillData[] chaosSkills, int count = 3)
+            SkillData[] chaosSkills, int count = 3, Rarity? overrideRarity = null)
         {
             var cfg = GetConfig();
             if (cfg != null)
@@ -623,12 +624,20 @@ namespace SwDreams.Features.Skill.Adapter
             if (candidates.Count == 0)
                 return (System.Array.Empty<SkillData>(), Rarity.Common);
 
-            float[] weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
-                ? cfg.defaultRarityWeights
-                : new float[] { 60f, 25f, 12f, 3f };
-
+            // 등급 결정: override 우선, 없으면 weights 로 롤.
             var rng = new System.Random();
-            Rarity rolled = RarityWeightedRoller.Roll(weights, rng);
+            Rarity rolled;
+            if (overrideRarity.HasValue)
+            {
+                rolled = overrideRarity.Value;
+            }
+            else
+            {
+                float[] weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
+                    ? cfg.defaultRarityWeights
+                    : new float[] { 60f, 25f, 12f, 3f };
+                rolled = RarityWeightedRoller.Roll(weights, rng);
+            }
 
             // 후보 풀에서 count 장 무작위 샘플 (Fisher-Yates 부분 셔플).
             int take = System.Math.Min(count, candidates.Count);

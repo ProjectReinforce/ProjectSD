@@ -22,11 +22,16 @@ namespace SwDreams.Features.StatBoost.Adapter
     /// </summary>
     public static class StatBoostChoiceService
     {
+        /// <summary>
+        /// StatBoost 선택지 생성. <paramref name="overrideRarity"/> 가 null 이면 weights 로 롤,
+        /// 값이 있으면 해당 등급으로 강제 (Gambler bump 등 외부 modifier 적용 경로).
+        /// </summary>
         public static (StatBoostData[] choices, Rarity rolledRarity) GenerateChoices(
             StatBoostDatabase db,
             int count,
             Random rng,
-            float[] rarityWeights = null)
+            float[] rarityWeights = null,
+            Rarity? overrideRarity = null)
         {
             if (db == null || db.All == null || db.All.Count == 0)
                 return (Array.Empty<StatBoostData>(), Rarity.Common);
@@ -34,16 +39,24 @@ namespace SwDreams.Features.StatBoost.Adapter
             if (count <= 0)
                 return (Array.Empty<StatBoostData>(), Rarity.Common);
 
-            // 등급 롤 (기본 가중치는 GameplayConfig 공용).
-            float[] weights = rarityWeights;
-            if (weights == null || weights.Length == 0)
+            // 등급 결정: override 우선, 없으면 weights 로 롤.
+            Rarity rolled;
+            if (overrideRarity.HasValue)
             {
-                var cfg = GameManager.Instance?.Config;
-                weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
-                    ? cfg.defaultRarityWeights
-                    : new float[] { 60f, 25f, 12f, 3f };
+                rolled = overrideRarity.Value;
             }
-            Rarity rolled = RarityWeightedRoller.Roll(weights, rng);
+            else
+            {
+                float[] weights = rarityWeights;
+                if (weights == null || weights.Length == 0)
+                {
+                    var cfg = GameManager.Instance?.Config;
+                    weights = (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
+                        ? cfg.defaultRarityWeights
+                        : new float[] { 60f, 25f, 12f, 3f };
+                }
+                rolled = RarityWeightedRoller.Roll(weights, rng);
+            }
 
             // 전체 DB 에서 count 장 중복 없이 샘플 — SO 가 모든 등급을 커버하므로 필터 불필요.
             List<StatBoostData> filtered = new List<StatBoostData>(db.All.Count);

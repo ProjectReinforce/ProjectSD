@@ -6,6 +6,7 @@ using SwDreams.Features.Progression.Domain;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Boss.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.Skill.Adapter.Chaos;
 using SwDreams.Features.StatBoost.Adapter;
 using SwDreams.Features.StatBoost.Adapter.Data;
 using SwDreams.Shared.Domain.ValueObjects;
@@ -290,7 +291,12 @@ namespace SwDreams.Features.Progression.Adapter
             }
 
             var rng = new System.Random();
-            var (choices, rolledRarity) = StatBoostChoiceService.GenerateChoices(db, 3, rng);
+
+            // Gambler bump (Phase 8-B3 소비자) — 파티 한 명이라도 도박꾼이면 base rolled 후 등급 상승.
+            Rarity? gamblerOverride = ResolveGamblerOverride(rng, GetRarityWeights());
+
+            var (choices, rolledRarity) = StatBoostChoiceService.GenerateChoices(
+                db, 3, rng, rarityWeights: null, overrideRarity: gamblerOverride);
             if (choices.Length == 0)
             {
                 Debug.LogWarning($"[LevelUpManager] StatBoost 선택지 생성 실패 — 플레이어 {player.ActorNumber} 스킵.");
@@ -321,7 +327,14 @@ namespace SwDreams.Features.Progression.Adapter
                 return;
             }
 
-            var (choices, rolledRarity) = sm.GenerateChaosChoices(skillDatabase.chaosSkills, 3);
+            // Gambler bump (Phase 8-B3 소비자) — 파티 한 명이라도 도박꾼이면 base rolled 후 등급 상승.
+            // 본 경로는 Lv.10/20/30 혼돈 선택지 — 자기 자신은 막 도박꾼을 처음 픽한 직후일 수 있어
+            // 첫 선택 시점에는 효과 미적용 (장착 직후 Apply → 다음 레벨업부터 활성).
+            var rng = new System.Random();
+            Rarity? gamblerOverride = ResolveGamblerOverride(rng, GetRarityWeights());
+
+            var (choices, rolledRarity) = sm.GenerateChaosChoices(
+                skillDatabase.chaosSkills, 3, gamblerOverride);
 
             int[] choiceIds = new int[choices.Length];
             for (int i = 0; i < choices.Length; i++)
@@ -333,6 +346,43 @@ namespace SwDreams.Features.Progression.Adapter
 
             photonView.RPC(nameof(RPC_ReceiveChoices), player,
                 choiceIds, (int)ChoicePanelKind.Chaos, (int)rolledRarity);
+        }
+
+        // ===== Gambler bump (Phase 8-B3 소비자) =====
+
+        /// <summary>
+        /// 파티 전체에서 한 명이라도 도박꾼이 활성이면 baseline rarity 롤 → bump 적용 후 반환.
+        /// 비활성이면 null 반환 → 호출부가 기본 weights 롤 사용.
+        /// 호스트 전용 호출 (LevelUpManager.SendXxxChoices 가 호스트 권위).
+        /// </summary>
+        private static Rarity? ResolveGamblerOverride(System.Random rng, float[] weights)
+        {
+            if (!IsAnyPartyGambler()) return null;
+
+            Rarity baseline = RarityWeightedRoller.Roll(weights, rng);
+            return GamblerRarityBumper.Bump(baseline, rng);
+        }
+
+        /// <summary>파티 한 명이라도 GamblerHandler 활성이면 true.</summary>
+        private static bool IsAnyPartyGambler()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] == null) continue;
+                var chaos = players[i].GetComponentInChildren<ChaosSkillManager>();
+                if (chaos != null && chaos.IsGambler) return true;
+            }
+            return false;
+        }
+
+        /// <summary>등급 가중치 (Config 우선, 없으면 60/25/12/3 기본).</summary>
+        private static float[] GetRarityWeights()
+        {
+            var cfg = GameManager.Instance?.Config;
+            if (cfg != null && cfg.defaultRarityWeights != null && cfg.defaultRarityWeights.Length > 0)
+                return cfg.defaultRarityWeights;
+            return new float[] { 60f, 25f, 12f, 3f };
         }
 
         // ===== 클라이언트: 선택지 수신 =====
