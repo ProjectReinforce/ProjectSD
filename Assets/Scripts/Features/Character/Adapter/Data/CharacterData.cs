@@ -43,8 +43,17 @@ namespace SwDreams.Features.Character.Adapter.Data
         public float knockback = 1f;
         public float critDamage = 1.5f;
         public float expMultiplier = 1f;
-        public float defenseMultiplier = 1f;
+
+        [Tooltip("방어 보너스 (양수 = 강함). 0.05 = 받는 데미지 5% 감소. 패시브와 동일한 입력 컨벤션.")]
+        public float defenseBonus = 0f;
+
         public float healMultiplier = 1f;
         public float skillDuration = 0f;
+
+        [Tooltip("체력 자연회복 (HP/초). HealMultiplier 영향 안 받음.")]
+        public float hpRegen = 0f;
+
+        [Tooltip("피격 후 무적 시간 (초).")]
+        public float iFrameDuration = 0.4f;
     }
 }

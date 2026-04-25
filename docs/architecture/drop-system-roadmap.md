@@ -463,13 +463,19 @@ source = `stat_{boostId}_{rarity}_{localCounter}` — 같은 boostId 를 여러 
 
 ---
 
-## Phase 6 — 퀘스트(Quest) 시스템
+## Phase 6 — 퀘스트(Quest) 시스템 🟡 코드 측 핵심 완료 (2026-04-25)
 
-- [ ] QuestType / QuestState / QuestData SO
-- [ ] QuestZone 상태 머신 + QuestBarrier
-- [ ] QuestRewardDispatcher → StatBoost 선택지
-- [ ] QuestProgressUI
-- [ ] 맵 배치 (WFC 또는 사전 배치)
+- [x] QuestType / QuestState (Domain enum)
+- [x] QuestData SO (`Features/Quest/Adapter/Data/QuestData.cs`)
+- [x] QuestZone 호스트 권위 상태 머신 (KillTarget MVP, RPC_SyncState OthersBuffered)
+- [x] QuestRewardDispatcher → LevelUpManager.RequestQuestReward 호출 (StatBoost 경로 재사용)
+- [x] LevelUpManager.RequestQuestReward 신규 public API + `pendingQuestRewards` 큐 (F2)
+- [x] **QuestBarrier 격리 몹 스폰** — `SpawnManager.SpawnQuestBarriers(EnemyData, center, radius, count)` + `DespawnEnemies(int[])` + `RPC_SpawnQuestBarrier`. `questBarrierVariants` 인스펙터 배열로 인덱스 매칭.
+- [x] **NotifyTargetKilled 호출부 연결** — `SpawnManager.OnEnemyDied` → `QuestZone.NotifyEnemyKilledToAllActive()` 정적 호출. InProgress 활성 zone 레지스트리.
+- [ ] **QuestProgressUI HUD** — 진입 진행 / 대기 카운트다운 / 진행률 바.
+- [ ] **DodgeFalling / Defend / KillInTime** 핸들러 (KillTarget 외 3종).
+- [ ] **맵 배치** (WFC 또는 사전 배치).
+- [ ] **유저 Unity 배선**: QuestData SO 작성, QuestZone 거점 prefab + Scene PhotonView (Owner=null/Master), `SpawnManager.questBarrierVariants` 에 격리 몹 EnemyData 등록, 격리 몹 EnemyData (사실상 무한 HP) 작성.
 
 **목표**: 맵 거점 진입형 부가 목표 4유형, 보상은 StatBoost 선택지(Phase 5 재사용).
 

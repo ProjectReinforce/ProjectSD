@@ -358,6 +358,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8e03b214fcbf5914d815a81c6728b2eb, type: 2}
   - {fileID: 11400000, guid: b6eab1551858bfa44b87995ba75c2c55, type: 2}
   - {fileID: 11400000, guid: 49e51b578ead47e4f95c365b4dd2d6bc, type: 2}
+  questBarrierVariants:
+  - {fileID: 11400000, guid: 1ed1ae5c38566794e9085c941ac9a26e, type: 2}
   eliteSpawnInterval: 10
   enableEliteSpawn: 1
   difficultyData: {fileID: 11400000, guid: 89492b6127c89f04296ae9a667e3bb3f, type: 2}

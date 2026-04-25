@@ -94,8 +94,10 @@ Vampire Survivors에서 영감을 받은 멀티플레이 Survivors-like. 1~4명�
 | `cooldownReduction` | 0 |
 | `knockback` | 1.0 |
 | `expMultiplier` | 1.0 |
-| `defenseMultiplier` | 1.0 |
+| `defenseBonus` | 0 (양수 = 강함, 0.05 = 받는 데미지 -5%) |
 | `healMultiplier` | 1.0 |
+| `hpRegen` | 0 (HP/초, HealMultiplier 영향 안 받음) |
+| `iFrameDuration` | 0.4 (피격 후 무적 시간, 초) |
 
 ## 6. 적과 보스
 

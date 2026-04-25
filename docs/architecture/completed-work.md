@@ -18,6 +18,14 @@ ProjectSD(Sweepin' Dreams) 의 완료된 작업 회고/추적용 ledger.
 - Hook Registry 인프라 + ChainExplosion handler 이전 (Phase 8-B, 커밋 `d9fae5665`)
 - Gambler handler 이전 + 등급 상승 로직 (Phase 8-B3, 사용자 확인)
 - StatBoost SO 통합 (`StatBoost_AttackAdd/AttackMultiple/HPAdd/...` 단일 SO)
+- 플레이어 방어력 적용 데미지 공식 (R1, 2026-04-25) — PlayerHealth.ApplyDamage 진입점 + RegisterPassive 부호 반전
+- 체력 자연회복 패시브 (R2, 2026-04-25) — StatType.HpRegen + 호스트 누적기 + Heal RPC
+- 플레이어 i-frame (R7, 2026-04-25) — StatType.IFrameDuration + ApplyDamage 가드 + PlayerVisual 깜빡임
+- 시작 스킬 발동 가드 (R8, 2026-04-25) — SpawnManager.IsReady AllBuffered 동기화 + Skill.Update 가드
+- N3 빨간색 고착 수정 (2026-04-25) — PlayerVisual.originColor 정적 캡처 + StopCoroutine 직후 즉시 복원
+- N2 피격 이펙트 (0,0) 잔상 (2026-04-25) — 실제 원인은 사용자가 prefab 교체 시 root GameObject 에 HitEffect 스크립트 미부착. 코드 측은 견고화: `GetComponentsInChildren<ParticleSystem>(true)` 로 부모-자식 모든 ps 캐싱 + 명시 Play(true) + AudioSource 캐싱 + SetActive 를 Play(position) 안으로 이동(소리 위치 정확).
+- Phase 6 퀘스트 MVP 인프라 (2026-04-25) — QuestType/State/Data SO + QuestZone 상태 머신 + RewardDispatcher + LevelUpManager.RequestQuestReward
+- Phase 6 격리 몹 + 킬 카운트 연결 (2026-04-25) — `SpawnManager.SpawnQuestBarriers`/`DespawnEnemies` + `QuestZone.activeZones` 레지스트리 + `OnEnemyDied` 통지 경로 + F2 보상 큐잉
 
 ---
 

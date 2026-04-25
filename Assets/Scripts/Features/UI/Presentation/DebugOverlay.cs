@@ -13,6 +13,7 @@ using SwDreams.Features.StatBoost.Adapter;
 using SwDreams.Features.Weapon.Adapter;
 using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Features.Weapon.Domain;
+using SwDreams.Features.Quest.Adapter;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.Interfaces;
 
@@ -345,6 +346,39 @@ namespace SwDreams.Features.UI.Presentation
             }
 
             sb.AppendLine();
+
+            // Quest (Phase 6 임시 UI — 정식 QuestProgressUI 도입 전 검증용)
+            // 모든 zone 을 씬에서 찾아 표시 — Idle 도 포함해 거점 인식 확인.
+            var allZones = Object.FindObjectsByType<QuestZone>(FindObjectsSortMode.None);
+            if (allZones != null && allZones.Length > 0)
+            {
+                sb.AppendLine($"Quests ({allZones.Length})");
+                for (int i = 0; i < allZones.Length; i++)
+                {
+                    var z = allZones[i];
+                    if (z == null || z.Data == null) continue;
+
+                    string detail;
+                    switch (z.CurrentState)
+                    {
+                        case SwDreams.Features.Quest.Domain.QuestState.Waiting:
+                            detail = $" wait {z.WaitRemaining:0.0}s / {z.Data.waitTime:0.0}s";
+                            break;
+                        case SwDreams.Features.Quest.Domain.QuestState.InProgress:
+                            string kills = z.Data.targetCount > 0
+                                ? $" {z.KillCount}/{z.Data.targetCount}" : "";
+                            string timer = z.Data.timeLimit > 0f
+                                ? $" t-{z.TimeRemaining:0.0}s" : "";
+                            detail = $"{kills}{timer}";
+                            break;
+                        default:
+                            detail = "";
+                            break;
+                    }
+                    sb.AppendLine($"  * {z.Data.displayName} [{z.CurrentState}]{detail}");
+                }
+                sb.AppendLine();
+            }
 
             // 네트워크
             string role = PhotonNetwork.IsMasterClient ? "Host" : "Client";

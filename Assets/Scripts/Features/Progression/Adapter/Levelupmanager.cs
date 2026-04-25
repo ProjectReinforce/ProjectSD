@@ -66,6 +66,10 @@ namespace SwDreams.Features.Progression.Adapter
         // 레벨업 큐: 진행 중일 때 추가 레벨업이 발생하면 대기열에 저장
         private Queue<int> pendingLevelUps = new Queue<int>();
 
+        // Phase 6 (F2): 퀘스트 보상 큐. 레벨업 진행 중 RequestQuestReward 호출 시
+        // 보상이 손실되지 않도록 적재 후 EndLevelUpSequence 에서 처리.
+        private Queue<float[]> pendingQuestRewards = new Queue<float[]>();
+
         // 호스트 전용: 각 플레이어의 선택 완료 여부
         // key = Photon ActorNumber, value = 선택 완료 여부
         private Dictionary<int, bool> playerSelections = new Dictionary<int, bool>();
@@ -495,6 +499,90 @@ namespace SwDreams.Features.Progression.Adapter
                 PhotonNetwork.LocalPlayer.ActorNumber, boostId, rarityInt);
         }
 
+        // ===== Phase 6: 퀘스트 보상 진입점 =====
+
+        /// <summary>
+        /// 퀘스트 완료 시 호스트가 호출. 모든 살아있는 플레이어에게 StatBoost 선택지를 보낸다.
+        /// 게임을 일시정지하고 LevelUpManager 의 기존 시퀀스(타임아웃/재개)를 재사용.
+        /// rarityWeights 가 비어 있으면 GameplayConfig.defaultRarityWeights 사용.
+        /// </summary>
+        public void RequestQuestReward(float[] rarityWeights)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            // F2: 진행 중이면 큐에 적재 — EndLevelUpSequence 에서 pendingLevelUps 처리 후 dispatch.
+            if (isLevelUpActive)
+            {
+                pendingQuestRewards.Enqueue(rarityWeights ?? System.Array.Empty<float>());
+                Debug.Log($"[LevelUpManager] 레벨업/보상 진행 중 — 퀘스트 보상 큐 적재 (대기: {pendingQuestRewards.Count}건).");
+                return;
+            }
+
+            StartQuestRewardSequence(rarityWeights);
+        }
+
+        /// <summary>RequestQuestReward 본체 — 큐잉 가드 통과 후 실제 시퀀스.</summary>
+        private void StartQuestRewardSequence(float[] rarityWeights)
+        {
+            isLevelUpActive = true;
+            timeoutTimer = selectionTimeout;
+            playerSelections.Clear();
+            playerChoices.Clear();
+            playerPanelKinds.Clear();
+            playerRolledRarities.Clear();
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.CurrentState != GameManager.GameState.Paused)
+                stateBeforeLevelUp = GameManager.Instance.CurrentState;
+            GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.Paused);
+
+            foreach (var player in PhotonNetwork.PlayerList)
+            {
+                playerSelections[player.ActorNumber] = false;
+                SendStatBoostChoicesWithWeights(player, rarityWeights);
+            }
+
+            photonView.RPC(nameof(RPC_StartTimer), RpcTarget.All, selectionTimeout);
+            Debug.Log("[LevelUpManager] 퀘스트 보상 dispatch — StatBoost 선택지 송신 완료.");
+        }
+
+        /// <summary>
+        /// SendStatBoostChoices 의 rarityWeights 오버라이드 버전.
+        /// 퀘스트 보상은 자체 가중치를 가질 수 있으므로 분리.
+        /// </summary>
+        private void SendStatBoostChoicesWithWeights(Photon.Realtime.Player player, float[] rarityWeights)
+        {
+            var db = GameManager.Instance?.StatBoostDB;
+            if (db == null || db.All == null || db.All.Count == 0)
+            {
+                playerSelections[player.ActorNumber] = true;
+                return;
+            }
+
+            var rng = new System.Random();
+            Rarity? gamblerOverride = ResolveGamblerOverride(rng, GetRarityWeights());
+
+            float[] weights = (rarityWeights != null && rarityWeights.Length > 0)
+                ? rarityWeights : null;
+
+            var (choices, rolledRarity) = StatBoostChoiceService.GenerateChoices(
+                db, 3, rng, rarityWeights: weights, overrideRarity: gamblerOverride);
+            if (choices.Length == 0)
+            {
+                playerSelections[player.ActorNumber] = true;
+                return;
+            }
+
+            int[] boostIds = new int[choices.Length];
+            for (int i = 0; i < choices.Length; i++) boostIds[i] = choices[i].boostId;
+
+            playerChoices[player.ActorNumber] = boostIds;
+            playerPanelKinds[player.ActorNumber] = ChoicePanelKind.StatBoost;
+            playerRolledRarities[player.ActorNumber] = rolledRarity;
+
+            photonView.RPC(nameof(RPC_ReceiveStatBoostChoices), player, boostIds, (int)rolledRarity);
+        }
+
         // ===== 호스트: 선택 결과 수신 =====
 
         [PunRPC]
@@ -690,7 +778,16 @@ namespace SwDreams.Features.Progression.Adapter
                 // UI 닫기 → 새 선택지 UI 열기 (클라이언트에서 자연스럽게 전환)
                 // photonView.RPC(nameof(RPC_LevelUpEnded), RpcTarget.All);
                 StartLevelUpSequenceInternal(isChaosLevel);
-                
+
+                return;
+            }
+
+            // F2: 레벨업 큐 비었으면 보류된 퀘스트 보상 처리.
+            if (PhotonNetwork.IsMasterClient && pendingQuestRewards.Count > 0)
+            {
+                float[] weights = pendingQuestRewards.Dequeue();
+                Debug.Log($"[LevelUpManager] 대기열 퀘스트 보상 처리 (남은 대기: {pendingQuestRewards.Count}건)");
+                StartQuestRewardSequence(weights.Length == 0 ? null : weights);
                 return;
             }
 

@@ -76,15 +76,15 @@ MonoBehaviour:
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}
   paramsByRarity:
-  - primary: 20
-    secondary: 2
+  - primary: 5
+    secondary: 0.5
     tertiary: 0
-  - primary: 0
-    secondary: 0
+  - primary: 8
+    secondary: 0.5
     tertiary: 0
-  - primary: 0
-    secondary: 0
+  - primary: 12
+    secondary: 0.5
     tertiary: 0
-  - primary: 0
-    secondary: 0
+  - primary: 15
+    secondary: 0.5
     tertiary: 0

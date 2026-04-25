@@ -66,6 +66,11 @@ namespace SwDreams.Shared.Managers
         //  eliteVariants 에만 등록.)
         [Header("엘리트 변형 (Phase C, 순서 고정 배열)")]
         [SerializeField] private EnemyData[] eliteVariants;
+
+        // questBarrierVariants 인덱스를 RPC 식별자로 사용 (Ranged/Elite 와 동일 계약).
+        // QuestData.barrierEnemyData 가 이 배열에 등록된 SO 를 참조해야 인덱스 매칭 가능.
+        [Header("퀘스트 격리 몹 변형 (Phase 6, 순서 고정 배열)")]
+        [SerializeField] private EnemyData[] questBarrierVariants;
         [Tooltip("엘리트 스폰 간격(초). 일반 스폰과 병행 동작. 0 이하 또는 enableEliteSpawn=false 면 비활성.")]
         [SerializeField] private float eliteSpawnInterval = 90f;
         [SerializeField] private bool enableEliteSpawn = true;
@@ -93,10 +98,22 @@ namespace SwDreams.Shared.Managers
         private Dictionary<int, Enemy> activeEnemies = new();
         private int nextEnemyId = 0;
 
+        // 격리 몹 ID 추적 — 일반 maxEnemies 카운트에서 제외하기 위함.
+        private readonly HashSet<int> questBarrierIds = new HashSet<int>();
+
+        /// <summary>일반 적 카운트 (격리 몹 제외). maxEnemies 비교 시 사용.</summary>
+        private int CountNonBarrierEnemies() => activeEnemies.Count - questBarrierIds.Count;
+
         private float spawnTimer;
         private float eliteSpawnTimer;
         private bool isReady = false;
         private float startDelayTimer = -1f;
+
+        /// <summary>
+        /// R8: 첫 적 스폰 가능 시점 도달 여부. 모든 클라에서 동기화됨 (호스트가 RPC AllBuffered 송신).
+        /// SkillExecutor/Skill 의 발동 가드용. true 가 될 때까지 액티브 스킬은 대기.
+        /// </summary>
+        public bool IsReady => isReady;
 
         // 적 위치 동기화 (호스트 → 클라이언트)
         [Header("위치 동기화")]
@@ -201,6 +218,10 @@ namespace SwDreams.Shared.Managers
                     eliteSpawnTimer = eliteSpawnInterval;
                     Debug.Log("[SpawnManager] 준비 완료. 스폰 시작.");
 
+                    // R8: 모든 클라에 준비 완료 신호 — Skill/SkillExecutor 가 발동 가드 해제.
+                    // AllBuffered 로 송신해 후입장 클라(중도 참가)도 자동 수신.
+                    photonView.RPC(nameof(RPC_NotifySpawnReady), RpcTarget.AllBuffered);
+
                     // 엘리트 스폰 진단 로그 (1회)
                     int eliteValid = 0;
                     if (eliteVariants != null)
@@ -243,7 +264,7 @@ namespace SwDreams.Shared.Managers
             {
                 int maxEnemies = difficulty.GetMaxEnemyCount(gameTime, playerCount);
 
-                if (activeEnemies.Count < maxEnemies)
+                if (CountNonBarrierEnemies() < maxEnemies)
                 {
                     SpawnWave(gameTime, playerCount, maxEnemies);
                 }
@@ -258,14 +279,15 @@ namespace SwDreams.Shared.Managers
                 if (eliteSpawnTimer <= 0f)
                 {
                     int maxEnemies = difficulty.GetMaxEnemyCount(gameTime, playerCount);
-                    if (activeEnemies.Count < maxEnemies)
+                    int nonBarrier = CountNonBarrierEnemies();
+                    if (nonBarrier < maxEnemies)
                     {
                         float hpMul = difficulty.GetHealthMultiplier(gameTime, playerCount);
                         SpawnElite(hpMul);
                     }
                     else
                     {
-                        Debug.Log($"[SpawnManager] 엘리트 스폰 스킵 — 동시 적 상한 도달 ({activeEnemies.Count}/{maxEnemies}). 다음 interval 까지 대기.");
+                        Debug.Log($"[SpawnManager] 엘리트 스폰 스킵 — 동시 적 상한 도달 ({nonBarrier}/{maxEnemies}). 다음 interval 까지 대기.");
                     }
                     eliteSpawnTimer = eliteSpawnInterval;
                 }
@@ -284,7 +306,7 @@ namespace SwDreams.Shared.Managers
 
             for (int i = 0; i < spawnCount; i++)
             {
-                if (activeEnemies.Count >= maxEnemies) break;
+                if (CountNonBarrierEnemies() >= maxEnemies) break;
 
                 EnemyType type = difficulty.GetRandomEnemyType(gameTime);
 
@@ -323,7 +345,7 @@ namespace SwDreams.Shared.Managers
 
             for (int i = 0; i < groupSize; i++)
             {
-                if (activeEnemies.Count >= maxEnemies) break;
+                if (CountNonBarrierEnemies() >= maxEnemies) break;
 
                 int id = nextEnemyId++;
                 photonView.RPC(nameof(RPC_SpawnSwarm), RpcTarget.All,
@@ -338,6 +360,94 @@ namespace SwDreams.Shared.Managers
         {
             isReady = false;
             Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
+        }
+
+        // ===== Phase 6: 퀘스트 격리 몹 =====
+
+        /// <summary>
+        /// QuestZone 이 격리 몹을 스폰할 때 호출. 호스트만.
+        /// QuestData.barrierEnemyData 를 questBarrierVariants 에서 인덱스로 변환 후 RPC.
+        /// 반환: 스폰된 적의 enemyId 배열 (QuestZone 이 보관 후 완료/실패 시 DespawnEnemies 호출).
+        /// </summary>
+        public int[] SpawnQuestBarriers(EnemyData barrierData, Vector2 center, float radius, int count)
+        {
+            if (!PhotonNetwork.IsMasterClient) return System.Array.Empty<int>();
+            if (barrierData == null || count <= 0) return System.Array.Empty<int>();
+            if (questBarrierVariants == null || questBarrierVariants.Length == 0)
+            {
+                Debug.LogWarning("[SpawnManager] questBarrierVariants 미설정 — 격리 몹 스폰 불가.");
+                return System.Array.Empty<int>();
+            }
+
+            int variantIdx = System.Array.IndexOf(questBarrierVariants, barrierData);
+            if (variantIdx < 0)
+            {
+                Debug.LogWarning($"[SpawnManager] {barrierData.name} 가 questBarrierVariants 에 등록되지 않음.");
+                return System.Array.Empty<int>();
+            }
+
+            int[] ids = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (Mathf.PI * 2f * i) / count;
+                Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                Vector2 pos = center + offset;
+
+                int id = nextEnemyId++;
+                ids[i] = id;
+                photonView.RPC(nameof(RPC_SpawnQuestBarrier), RpcTarget.All, id, variantIdx, pos);
+            }
+            return ids;
+        }
+
+        /// <summary>지정 enemyId 들을 강제 제거. 퀘스트 종료 시 격리 몹 정리 용도.</summary>
+        public void DespawnEnemies(int[] enemyIds)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (enemyIds == null) return;
+            for (int i = 0; i < enemyIds.Length; i++)
+            {
+                if (activeEnemies.TryGetValue(enemyIds[i], out var enemy) && enemy != null)
+                    enemy.ForceReturn();
+            }
+        }
+
+        [PunRPC]
+        private void RPC_SpawnQuestBarrier(int enemyId, int variantIdx, Vector2 position)
+        {
+            if (activeEnemies.ContainsKey(enemyId)) return;
+            if (enemyPrefab == null) return;
+            if (questBarrierVariants == null || variantIdx < 0 || variantIdx >= questBarrierVariants.Length) return;
+
+            EnemyData data = questBarrierVariants[variantIdx];
+            if (data == null) return;
+
+            GameObject obj = PoolManager.Instance.Get(enemyPrefab);
+            Enemy enemy = obj.GetComponent<Enemy>();
+            if (enemy == null)
+            {
+                PoolManager.Instance.Return(obj);
+                return;
+            }
+
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier: 1f);
+
+            // 격리 몹은 Kinematic + EnemyMovement 비활성 — 외부 force 도 무시 + movementStrategy 의
+            // transform.position 변경도 차단. 가만히 서서 벽 역할만.
+            var rb = obj.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.bodyType = RigidbodyType2D.Kinematic;
+            var movement = obj.GetComponent<SwDreams.Features.Enemy.Adapter.EnemyMovement>();
+            if (movement != null) movement.enabled = false;
+
+            activeEnemies[enemyId] = enemy;
+            // 일반 maxEnemies 카운트에서 제외하기 위해 별도 set 에도 등록.
+            questBarrierIds.Add(enemyId);
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                enemy.OnDiedWithRef += OnEnemyDied;
+                enemy.OnForceReturned += OnEnemyForceReturned;
+            }
         }
 
         /// <summary>
@@ -358,6 +468,7 @@ namespace SwDreams.Shared.Managers
             }
 
             activeEnemies.Clear();
+            questBarrierIds.Clear();
 
             // 잔존 경험치 오브 정리 — 역순 순회로 OnReturnToPool 재진입 안전
             for (int i = activeOrbs.Count - 1; i >= 0; i--)
@@ -781,6 +892,18 @@ namespace SwDreams.Shared.Managers
             ApplyKnockbackOnHost(enemyId, sourcePos, force);
         }
 
+        /// <summary>
+        /// R8: 호스트가 첫 스폰 가능 시점 도달 시 AllBuffered 로 송신.
+        /// 모든 클라(후입장 포함)에서 isReady=true → Skill/SkillExecutor 발동 가드 해제.
+        /// </summary>
+        [PunRPC]
+        private void RPC_NotifySpawnReady()
+        {
+            if (isReady) return;
+            isReady = true;
+            Debug.Log("[SpawnManager] 스폰 준비 신호 수신 — 스킬 발동 가드 해제");
+        }
+
         private void ApplyDamageOnHost(int enemyId, int damage, int actorNumber)
         {
             if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
@@ -873,6 +996,11 @@ namespace SwDreams.Shared.Managers
                     enemy.Data.dropTable,
                     enemy.IsElite);
             }
+
+            // Phase 6: 활성 QuestZone (InProgress) 에 적 처치 통지 — KillTarget/KillInTime 진행률 갱신.
+            // 호스트만 호출 (SpawnManager 의 OnEnemyDied 자체가 호스트 핸들러).
+            // 격리 몹 자체는 ForceReturn 경로로 빠져나가므로 본 죽음에는 일반 적만 잡힘.
+            SwDreams.Features.Quest.Adapter.QuestZone.NotifyEnemyKilledToAllActive();
 
             // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
             deathQueue.Add((enemy.EnemyId, (Vector2)enemy.transform.position,
@@ -1032,6 +1160,7 @@ namespace SwDreams.Shared.Managers
                 if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) continue;
 
                 activeEnemies.Remove(enemyId);
+                questBarrierIds.Remove(enemyId);
                 PoolManager.Instance.Return(enemy.gameObject);
 
                 SpawnExpOrb(deathPos, expValue, enemyId);
@@ -1053,6 +1182,7 @@ namespace SwDreams.Shared.Managers
                 if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) continue;
 
                 activeEnemies.Remove(enemyId);
+                questBarrierIds.Remove(enemyId);
                 PoolManager.Instance.Return(enemy.gameObject);
             }
         }

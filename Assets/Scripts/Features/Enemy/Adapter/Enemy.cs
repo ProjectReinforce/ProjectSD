@@ -267,6 +267,13 @@ namespace SwDreams.Features.Enemy.Adapter
             // 스케일 리셋 — 다음 스폰 전 잔상 방지
             transform.localScale = initialLocalScale;
 
+            // Rigidbody2D BodyType reset — 격리 몹용 Kinematic 셋업이 다음 일반 적 사용 시 영향 안 미치도록.
+            var rb = GetComponent<Rigidbody2D>();
+            if (rb != null) rb.bodyType = RigidbodyType2D.Dynamic;
+            // EnemyMovement 도 reset — 격리 몹 사용 시 비활성화했던 게 일반 적 재사용 시 영향 안 미치도록.
+            var movement = GetComponent<EnemyMovement>();
+            if (movement != null) movement.enabled = true;
+
             OnDied = null;
             OnDiedWithRef = null;
             OnHealthChanged = null;

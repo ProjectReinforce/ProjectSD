@@ -243,14 +243,17 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 `docs/check/` 의 두 임시 문서에서 통합한 잔여 + 사용자 추가 신규 항목.
 
-### R1. 플레이어 방어력 적용한 피격 데미지 계산식
-- 현재 데미지 계산에 방어력 차감/감산 로직이 빠져 있음. 데미지 공식에 방어력 반영 필요.
-- 관련 SSOT: [../systems/damage-formula.md](../systems/damage-formula.md) (있다면 갱신)
+### R1. 플레이어 방어력 적용한 피격 데미지 계산식 ✅ (2026-04-25)
+- [PlayerHealth.ApplyDamage](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) 진입점에서 `PlayerStats.DefenseMultiplier` 곱해 RPC 송신.
+- 의미: DefenseMultiplier = "받는 데미지 배율" (1.0 기본, 0.95 = 5% 감소).
+- 패시브 입력은 직관적 "방어력 +5%" 의도이므로 `PlayerStats.RegisterPassive` 에서 부호 반전 후 modifier 등록.
+- 관련 SSOT: [../systems/damage-formula.md](../systems/damage-formula.md) — 적→플레이어 경로(§ 5) 만 적용. 적 측 방어력은 별도 작업.
 
-### R2. 체력 자연회복 패시브 + HP float 타입 전환
-- **자연회복 패시브**: 시간당 일정량 회복. **회복량 증가 패시브 영향 안 받음** (별도 산출).
-- **HP를 float로 전환** 권장. 자연회복 dt 누적 시 float 정밀도 필요. 표시는 `Mathf.CeilToInt(CurrentHP)`. 부동소수 비교는 `<= 0f` 형태로.
-- **다음 작업(플레이어 패시브 추가)에서 한 번에 처리** 예정.
+### R2. 체력 자연회복 패시브 ✅ (2026-04-25)
+- `StatType.HpRegen` + `PassiveBonusType.HpRegen` 신설. 단위는 HP/초.
+- HP 자체는 int 유지, **누적기만 float** (`PlayerHealth.hpRegenAccumulator`). 1.0 이상 차면 정수 부분 `Heal` RPC 송신.
+- HealMultiplier 곱하지 않음 (별도 산출 — 명세 준수).
+- 호스트만 누적 + 송신, 모든 클라가 RPC 수신해 HP 증가.
 
 ### R3. 마이크 필터 드랍 아이템 (재미 요소)
 - 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
@@ -269,14 +272,16 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 ### R6. 회오리/끌어당김 `pullRadius` 패시브 반응
 - [known-issues.md B1](known-issues.md) 과 같은 코드 수정 단위. SkillRange 패시브에 영향 받도록 `pullRadius * (1 + ctx.skillRangeBonus)`.
 
-### R7. 플레이어 무적 시간 (i-frame)
-- 현재 `PlayerHealth` 에 i-frame 없음. 피격 후 N초 무적 + 비주얼 깜빡임.
-- 패시브로 시간 연장 옵션 고려 (R2 패시브 묶음과 함께).
+### R7. 플레이어 무적 시간 (i-frame) ✅ (2026-04-25)
+- `StatType.IFrameDuration` + `PassiveBonusType.IFrameDuration` 신설. base 0.4s.
+- `PlayerHealth.ApplyDamage` 가드: `iFrameTimer > 0` 이면 데미지 무시. 호스트 측 가드(데미지 일관성).
+- `PlayerVisual.HitFlashRoutine` 이 IFrameDuration 길이만큼 깜빡임 (짧으면 단일 플래시, 길면 alpha 토글).
+- 패시브로 IFrameDuration 연장 가능 (Add op).
 
-### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 (명세 변경)
-- 기존 "장검 등이 호스트 측에서만 먼저 발동되는 버그" 를 **명세 변경으로 해결**: 게임 시작 ~ 첫 적 스폰까지 SkillExecutor disable.
-- 적 스폰 자체에 딜레이가 있으므로 그 시간 동안 스킬도 발동되지 않으면 호스트/클라 차이 사라짐.
-- 처리 위치: `SkillExecutor` 또는 `SkillManager` 의 시작 가드 + `SpawnManager` 의 첫 스폰 신호와 동기화.
+### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 ✅ (2026-04-25)
+- `SpawnManager.IsReady` 정적 프로퍼티 + `RPC_NotifySpawnReady` AllBuffered 송신으로 모든 클라 동기화.
+- `Skill.Update` 에 `SpawnManager.Instance.IsReady` 가드 추가 — false 면 발동 자체 차단.
+- 후입장 클라(중도 참가) 도 AllBuffered 덕에 자동 수신.
 
 ---
 

@@ -391,6 +391,8 @@ MonoBehaviour:
   baseDefenseMultiplier: 1
   baseHealMultiplier: 1
   baseSkillDuration: 0
+  baseHpRegen: 0
+  baseIFrameDuration: 0.4
 --- !u!114 &7219839512002637370
 MonoBehaviour:
   m_ObjectHideFlags: 0

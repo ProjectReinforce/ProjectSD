@@ -40,6 +40,10 @@ namespace SwDreams.Features.Character.Adapter
         [SerializeField] private float baseDefenseMultiplier = 1f;
         [SerializeField] private float baseHealMultiplier = 1f;
         [SerializeField] private float baseSkillDuration = 0f;
+        [Tooltip("체력 자연회복 (HP/초). HealMultiplier 영향 안 받음.")]
+        [SerializeField] private float baseHpRegen = 0f;
+        [Tooltip("피격 후 무적 시간 (초).")]
+        [SerializeField] private float baseIFrameDuration = 0.4f;
 
         // ===== Modifier 컬렉션 (패시브/혼돈/진화/무기/정수 등 모든 보정값) =====
         private readonly StatModifierCollection modifiers = new StatModifierCollection();
@@ -99,6 +103,14 @@ namespace SwDreams.Features.Character.Adapter
 
         public float SkillDurationBonus =>
             modifiers.Calculate(StatType.SkillDuration, baseSkillDuration);
+
+        /// <summary>HP/초. HealMultiplier 영향 받지 않음.</summary>
+        public float HpRegen =>
+            Mathf.Max(0f, modifiers.Calculate(StatType.HpRegen, baseHpRegen));
+
+        /// <summary>피격 후 무적 시간 (초).</summary>
+        public float IFrameDuration =>
+            Mathf.Max(0f, modifiers.Calculate(StatType.IFrameDuration, baseIFrameDuration));
 
         // ===== 이벤트 =====
         /// <summary>스탯 재계산 완료 시 발생. UI 갱신, 이동속도 적용 등.</summary>
@@ -259,6 +271,12 @@ namespace SwDreams.Features.Character.Adapter
                 ? ModifierOp.PercentBonus
                 : ModifierOp.Add;
 
+            // Defense 는 SO 입력 의도가 "방어력 +5% (받는 데미지 -5%)" 이지만,
+            // 내부 계산은 DefenseMultiplier (받는 데미지 배율) 이다.
+            // 부호를 반전시켜 등록하면 입력 0.05 → modifier -0.05 → 받는 데미지 95%.
+            if (statType.Value == StatType.Defense)
+                value = -value;
+
             modifiers.AddOrReplace(new StatModifier(
                 source,
                 statType.Value,
@@ -314,6 +332,8 @@ namespace SwDreams.Features.Character.Adapter
                 case PassiveBonusType.MoveSpeed:          return StatType.MoveSpeed;
                 case PassiveBonusType.Defense:            return StatType.Defense;
                 case PassiveBonusType.ExpMultiplier:      return StatType.ExpMultiplier;
+                case PassiveBonusType.HpRegen:            return StatType.HpRegen;
+                case PassiveBonusType.IFrameDuration:     return StatType.IFrameDuration;
                 default:                                  return null;
             }
         }
@@ -481,9 +501,13 @@ namespace SwDreams.Features.Character.Adapter
             baseKnockback = data.knockback;
             baseCritDamage = data.critDamage;
             baseExpMultiplier = data.expMultiplier;
-            baseDefenseMultiplier = data.defenseMultiplier;
+            // CharacterData.defenseBonus 는 패시브와 동일한 양수 컨벤션 ("방어력 +N% = 강함").
+            // 내부 baseDefenseMultiplier 는 "받는 데미지 배율" 이므로 1f 에서 차감해 변환.
+            baseDefenseMultiplier = 1f - data.defenseBonus;
             baseHealMultiplier = data.healMultiplier;
             baseSkillDuration = data.skillDuration;
+            baseHpRegen = data.hpRegen;
+            baseIFrameDuration = data.iFrameDuration;
 
             OnStatsChanged?.Invoke();
             Debug.Log($"[PlayerStats] 캐릭터 base 스탯 적용: {data.displayName}");

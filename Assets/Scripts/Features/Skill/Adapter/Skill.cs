@@ -102,6 +102,10 @@ namespace SwDreams.Features.Skill.Adapter
                 GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
                 return;
 
+            // R8: 첫 적 스폰 가능 시점 전에는 발동 차단 (호스트/클라 동시성 차이 제거).
+            if (SpawnManager.Instance != null && !SpawnManager.Instance.IsReady)
+                return;
+
             if (CooldownRemaining > 0f)
             {
                 CooldownRemaining -= Time.deltaTime;

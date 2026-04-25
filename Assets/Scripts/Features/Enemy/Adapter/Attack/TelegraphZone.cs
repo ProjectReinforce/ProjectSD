@@ -25,14 +25,6 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
                  "프리팹에서 이 자식의 localScale=1 이 Outer 와 동일 크기가 되도록 맞추기.")]
         [SerializeField] private Transform innerFill;
 
-        [Header("외곽 alpha (outerSprite 사용 시)")]
-        [Range(0f, 1f)] [SerializeField] private float outerAlpha = 0.4f;
-
-        [Header("(Legacy) 단일 스프라이트 alpha lerp — outerSprite/innerFill 없을 때만 사용")]
-        [SerializeField] private SpriteRenderer spriteRenderer;
-        [Range(0f, 1f)] [SerializeField] private float startAlpha = 0.3f;
-        [Range(0f, 1f)] [SerializeField] private float endAlpha = 0.9f;
-
         [Header("스케일 처리")]
         [Tooltip("true: Initialize 시 radius 에 맞춰 localScale 을 자동 조정. 프리팹의 수동 스케일은 덮어씀.\n" +
                  "false: 프리팹에서 맞춘 스케일 그대로 유지. Strike 반경은 SO radius 로 독립 동작.")]
@@ -53,9 +45,6 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
 
         private void Awake()
         {
-            if (spriteRenderer == null)
-                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-
             EnsureDefaultCircleSprites();
         }
 
@@ -76,9 +65,6 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
                 if (innerSr != null && innerSr.sprite == null)
                     innerSr.sprite = GetDefaultCircleSprite();
             }
-
-            if (spriteRenderer != null && spriteRenderer.sprite == null)
-                spriteRenderer.sprite = GetDefaultCircleSprite();
         }
 
         /// <summary>
@@ -143,15 +129,7 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
                 transform.localScale = new Vector3(mult, mult, 1f);
             }
 
-            // Outer 외곽 정적 alpha 1회 적용
-            if (outerSprite != null)
-            {
-                Color oc = outerSprite.color;
-                oc.a = outerAlpha;
-                outerSprite.color = oc;
-            }
-
-            // Inner 채움은 중심에서 시작
+            // Inner 채움은 중심에서 시작 — outer/inner 색상 및 alpha 는 prefab 인스펙터에서 관리.
             if (innerFill != null)
                 innerFill.localScale = Vector3.zero;
 
@@ -182,19 +160,11 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
 
         private void ApplyVisual(float t)
         {
-            // 1차 모델: 중심 채움 — Inner 가 0 → 1 로 scale lerp
+            // 중심 채움 — Inner 가 0 → 1 로 scale lerp.
             if (innerFill != null)
             {
                 float s = Mathf.Clamp01(t);
                 innerFill.localScale = new Vector3(s, s, 1f);
-            }
-
-            // Legacy: Outer/Inner 분리 안 된 단일 스프라이트 프리팹용 alpha lerp
-            if (spriteRenderer != null)
-            {
-                Color c = spriteRenderer.color;
-                c.a = Mathf.Lerp(startAlpha, endAlpha, t);
-                spriteRenderer.color = c;
             }
         }
 
@@ -237,13 +207,7 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
         {
             isActive = false;
 
-            // 다음 스폰 직전 잔상 방지
-            if (spriteRenderer != null)
-            {
-                Color c = spriteRenderer.color;
-                c.a = 0f;
-                spriteRenderer.color = c;
-            }
+            // 다음 스폰 직전 잔상 방지 — Inner scale 만 0 으로.
             if (innerFill != null)
                 innerFill.localScale = Vector3.zero;
 

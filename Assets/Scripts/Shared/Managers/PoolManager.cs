@@ -90,6 +90,9 @@ namespace SwDreams.Shared.Managers
             }
 
             obj.GetComponent<IPoolable>()?.OnReturnToPool();
+            // Return 후 다음 Get 사이에 Physics 가 마지막 worldPosition 에서 collider sync 하지 않도록
+            // 풀 주차 위치로 이동.
+            obj.transform.position = PoolParkPosition;
             pools[prefab].Enqueue(obj);
         }
 
@@ -102,6 +105,11 @@ namespace SwDreams.Shared.Managers
                 return queue.Count;
             return 0;
         }
+
+        // 풀 인스턴스의 worldPosition 을 (0,0) 에 모이지 않게 멀리 두어 Physics 트리거 충돌 방지.
+        // 부모 좌표계는 (0,0) 그대로 유지 — 자식 transform 의 localPosition 로직에 영향 없음.
+        // Get 시 호출자가 transform.position 을 정상 위치로 옮긴다 (Enemy.Initialize, HitEffect.Play 등).
+        private static readonly Vector3 PoolParkPosition = new Vector3(-10000f, -10000f, 0f);
 
         private void EnsurePoolExists(GameObject prefab)
         {
@@ -119,6 +127,8 @@ namespace SwDreams.Shared.Managers
         {
             Transform parent = poolParents[prefab];
             GameObject obj = Instantiate(prefab, parent);
+            // Instantiate 직후 즉시 멀리 이동 — 같은 호출 스택이라 SetActive(false) 전 Physics 트리거 윈도우 차단.
+            obj.transform.position = PoolParkPosition;
             instanceToPrefab[obj] = prefab;
             return obj;
         }

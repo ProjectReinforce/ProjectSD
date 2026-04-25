@@ -49,8 +49,10 @@ namespace SwDreams.Features.Skill.Adapter.Data
         CooldownReduction,  // 쿨타임 감소 (0.04 = 4%)
         MaxHP,              // 최대 체력
         MoveSpeed,          // 이동속도
-        Defense,            // 방어력 (0.05 = 5%)
-        ExpMultiplier       // 경험치 배율 (0.1 = +10%)
+        Defense,            // 방어력 (0.05 = 받는 데미지 -5%, 내부에서 부호 반전)
+        ExpMultiplier,      // 경험치 배율 (0.1 = +10%)
+        HpRegen,            // 체력 자연회복 (1 = +1HP/초). HealMultiplier 영향 안 받음
+        IFrameDuration      // 피격 후 무적 시간 (0.1 = +0.1초)
     }
 
     /// <summary>

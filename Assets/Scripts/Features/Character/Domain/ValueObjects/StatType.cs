@@ -22,7 +22,9 @@ namespace SwDreams.Features.Character.Domain.ValueObjects
         Defense,                // 방어력
         ExpMultiplier,          // 경험치 배율
         CritChance,             // 치명타 확률 (무기/정수 시스템용)
-        LifeSteal               // 흡혈 (무기/정수 시스템용)
+        LifeSteal,              // 흡혈 (무기/정수 시스템용)
+        HpRegen,                // 체력 자연회복 (HP/초). HealMultiplier 영향 안 받음
+        IFrameDuration          // 피격 후 무적 시간 (초)
     }
 
     /// <summary>

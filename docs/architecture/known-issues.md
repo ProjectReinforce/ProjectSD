@@ -25,35 +25,16 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 
 ---
 
-### N2. 적 피격 이펙트가 (0,0) 에서 생성됨
-
-**증상**: HitEffect 가 가끔 화면 원점(0,0)에서 보임.
-
-**조사 결과**: 호출부는 모두 `transform.position` 정상 전달.
-- [Enemy.cs:169](../../Assets/Scripts/Features/Enemy/Adapter/Enemy.cs#L169), [Enemy.cs:186](../../Assets/Scripts/Features/Enemy/Adapter/Enemy.cs#L186)
-- [PlayerHealth.cs:91](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs#L91)
-- [Projectile.cs:241](../../Assets/Scripts/Features/Skill/Adapter/Projectile/Projectile.cs#L241), [Projectile.cs:256](../../Assets/Scripts/Features/Skill/Adapter/Projectile/Projectile.cs#L256)
-- [Boss.cs:155](../../Assets/Scripts/Features/Boss/Adapter/Boss.cs#L155), [Boss.cs:227](../../Assets/Scripts/Features/Boss/Adapter/Boss.cs#L227)
-
-**가능한 원인**:
-1. Pool Get 직후 1프레임 prefab 기본 위치(0,0) 노출 (transform.position 적용 전 ParticleSystem 한 번 emit)
-2. ParticleSystem `simulationSpace = World` 인데 spawn 시점 위치 transform 미반영
-3. `OnEnable` 에서 `ps.Play()` 가 위치 set 보다 먼저 실행
-
-**처리 방향**: [HitEffect.cs:77-93](../../Assets/Scripts/Features/Character/Adapter/HitEffect.cs#L77-L93) 의 `Play()` 에서 `transform.position = position` 후 `ps.Clear() → ps.Play()` 순서 보장. ParticleSystem `simulationSpace = Local` 로 변경 검토.
-
----
-
-### N3. 플레이어 피격 후 빨간색에서 원래대로 안 돌아옴
+### N3. 플레이어 피격 후 빨간색에서 원래대로 안 돌아옴 — 수정 완료
 
 **증상**: 가끔 피격 후 플레이어 스프라이트가 빨간색으로 고착.
 
-**원인 식별 완료**: [PlayerVisual.cs:51-63](../../Assets/Scripts/Features/Character/Adapter/PlayerVisual.cs#L51-L63)
-- `OnHit` → `StopCoroutine(hitFlashCoroutine)` 으로 이전 routine 끊기 → **이때 색을 원본으로 복원하지 않음**
-- 새 routine 이 시작하며 `original = spriteRenderer.color` 캡처 → 이 값이 **빨간색** (0.2초 내 재피격이라 이전 routine 복원 전)
-- 이후 영구히 빨간 색을 original로 인식 → 복원해도 빨간색
+**수정 완료** (2026-04-25): [PlayerVisual.cs](../../Assets/Scripts/Features/Character/Adapter/PlayerVisual.cs)
+- `originColor` 를 Awake 에서 정적 캡처 (피격 시점 캡처 X).
+- `OnHit` 시 `StopCoroutine` 직후 즉시 `spriteRenderer.color = originColor` 복원.
+- `OnDeadStateChanged` 도 originColor 기반으로 alpha 만 변경하도록 보강 (사망 중 hit flash 충돌 방지).
 
-**처리 방향**: `OnHit` 시 `StopCoroutine` 직후 `spriteRenderer.color = original` 로 즉시 복원, 또는 `original` 을 정적 필드로 보관 후 매번 같은 값 사용.
+i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 통합).
 
 ---
 
@@ -157,6 +138,41 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 **원인**: [BossSpawner.cs:197-204](../../Assets/Scripts/Features/Boss/Adapter/BossSpawner.cs#L197-L204) `ResetForMigration` 이 보스 파괴 후 재스폰만 함. 보스 상태(체력/페이즈/위치) 이관 없음.
 
 **처리 방향**: 보스 상태를 RoomCustomProperty 로 보관 → 마이그레이션 후 새 호스트가 복원하여 재스폰.
+
+---
+
+## F — Follow-up (2026-04-25 audit 잔여)
+
+> **운영 정책 (2026-04-25):** 게임 중 플레이어 중도 참가는 지원하지 않음. 모든 플레이어가 대기실에서 시작 → 게임 시작 후 신규 참가 차단. 따라서 중도 참가 관련 RPC 동기화 보강(buffered/late-join) 작업은 우선순위에서 제외.
+
+### F1. iFrame 호스트 마이그레이션 후 부활 미보호
+- `PlayerHealth.iFrameTimer` 가 호스트 측 변수. 호스트 마이그레이션 후 새 호스트가 부활한 플레이어 측 iFrame 을 모름.
+- 처리 방향: Respawn 시 호스트가 명시적으로 iFrame RPC 송신 또는 RespawnManager 가 부활 직후 N초 무적을 모든 클라에 알림.
+
+### F2. RequestQuestReward 가 isLevelUpActive 시 무시 ✅ (2026-04-25)
+- `pendingQuestRewards` 큐 신설. RequestQuestReward 시 진행 중이면 큐 적재 → EndLevelUpSequence 에서 레벨업 큐 비운 뒤 dequeue 처리.
+
+### F3. RequestSpawnReady AllBuffered 마이그레이션 윈도우
+- 마이그레이션 직후 1초 startDelay 동안 후입장 클라가 isReady=false 로만 보일 수 있음. 새 호스트가 1초 뒤 다시 AllBuffered 송신 → 그 시점부터 정상.
+- 큰 이슈는 아니나 후입장 시 1초 가량 스킬 발동 안 되는 윈도우가 있음.
+
+### F4. AdoptLevelUpSession 이 playerChoices/playerPanelKinds 미복원
+- `LevelUpManager.AdoptLevelUpSession` 이 새 호스트로 인수 시 선택지 자체를 복원하지 못해 타임아웃 시 랜덤 선택 불가.
+- 별도 디버깅 세션 필요.
+
+### F5. EnemyData 가 다른 Feature(Quest) 에서 직접 참조
+- Architecture-guardian 경고. Quest 가 격리몹 SO 를 직접 의존하므로 Feature 격리 위반.
+- 처리 방향: `EnemyData` 를 `Shared/Data/` 로 승격 (Spawn/Quest/Boss 모두 소비하기 시작하면 우선순위 상승).
+
+### F7. 격리 몹이 KillTarget 카운트에 이중 잡힐 가능성
+- 격리 몹이 외부 데미지로 사망하면 `OnEnemyDied` → `QuestZone.NotifyEnemyKilledToAllActive()` 가 격리 몹 자신을 카운트.
+- 처리 방향: `OnEnemyDied` 에서 `enemy.Data` 가 `questBarrierVariants` 에 등록된 SO 인지 확인 후 통지 스킵, 또는 격리 몹 SO 에 `isQuestBarrier` 플래그.
+
+### F8. QuestZone.activeZones 호스트 마이그레이션 stale
+- 정적 리스트가 마이그레이션 시 명시적 clear 없음. `ResetForMigration` 류 훅 신설 권장.
+
+### F9. pendingQuestRewards 호스트 마이그레이션 유실
+- LevelUpManager 호스트 측 큐. 마이그레이션 시 보상 손실. 빈도 낮아 우선순위 낮음. 필요 시 RoomProperty 로 승격.
 
 ---
 

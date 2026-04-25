@@ -88,6 +88,9 @@ MonoBehaviour:
   - RPC_PlayerBoostSelected
   - RPC_SyncBoostAcquisition
   - RPC_ReceiveStatBoostChoices
+  - RPC_NotifySpawnReady
+  - RPC_SyncState
+  - RPC_SpawnQuestBarrier
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

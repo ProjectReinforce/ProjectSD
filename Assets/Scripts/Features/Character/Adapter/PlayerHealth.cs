@@ -6,6 +6,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Shared.Domain.Interfaces;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Character.Adapter
 {
@@ -39,6 +40,14 @@ namespace SwDreams.Features.Character.Adapter
         // PlayerStats 연동
         private PlayerStats playerStats;
 
+        // R2 자연회복: 호스트 측 누적기 (HP 자체는 int 유지, 누적값만 float).
+        // 1.0 이상 차면 정수 부분을 Heal RPC 로 송신하고 누적값에서 차감.
+        private float hpRegenAccumulator;
+
+        // R7 i-frame: 호스트 측 타이머. 0 보다 크면 ApplyDamage 무시.
+        // 비주얼 깜빡임은 OnHit 이벤트에서 PlayerVisual 이 IFrameDuration 만큼 처리.
+        private float iFrameTimer;
+
         private void Awake()
         {
             CurrentHP = maxHP;
@@ -68,13 +77,69 @@ namespace SwDreams.Features.Character.Adapter
                 playerStats.OnStatsChanged -= OnPlayerStatsChanged;
         }
 
+        private void Update()
+        {
+            // GameState 가드 — 일시정지/메뉴 중 자연회복·i-frame 정지.
+            var gm = GameManager.Instance;
+            if (gm != null &&
+                gm.CurrentState != GameManager.GameState.Playing &&
+                gm.CurrentState != GameManager.GameState.BossFight)
+                return;
+
+            // R7 i-frame 카운트다운 (호스트만 실제 가드를 의미하므로 호스트 측 감소).
+            if (PhotonNetwork.IsMasterClient && iFrameTimer > 0f)
+            {
+                iFrameTimer -= Time.deltaTime;
+                if (iFrameTimer < 0f) iFrameTimer = 0f;
+            }
+
+            // R2 자연회복: 호스트만 누적. 1.0 이상 차면 정수 부분 Heal.
+            if (PhotonNetwork.IsMasterClient && IsAlive && playerStats != null)
+            {
+                float regenPerSec = playerStats.HpRegen;
+                if (regenPerSec > 0f && CurrentHP < MaxHP)
+                {
+                    hpRegenAccumulator += regenPerSec * Time.deltaTime;
+                    if (hpRegenAccumulator >= 1f)
+                    {
+                        int healAmount = Mathf.FloorToInt(hpRegenAccumulator);
+                        hpRegenAccumulator -= healAmount;
+
+                        Heal(healAmount);
+                    }
+                }
+                else
+                {
+                    hpRegenAccumulator = 0f;
+                }
+            }
+        }
+
         // ===== 데미지 (PlayerStub.TakeDamage에서 호출) =====
 
-        /// <summary>호스트에서 호출. RPC로 전파.</summary>
+        /// <summary>호스트에서 호출. 방어력 차감 + i-frame 가드 후 RPC로 전파.</summary>
         public void ApplyDamage(int damage)
         {
+            // 데미지 권위 = 호스트. 클라가 직접 호출해도 RPC_TakeDamage(All) 가 N중복 디버프를
+            // 일으킬 수 있으므로 진입부에서 호스트 가드.
+            if (!PhotonNetwork.IsMasterClient) return;
+
             if (!IsAlive) return;
-            photonView.RPC(nameof(RPC_TakeDamage), RpcTarget.All, damage);
+            if (damage <= 0) return;
+
+            // R7 i-frame: 무적 시간 중이면 데미지 무시.
+            if (iFrameTimer > 0f) return;
+
+            // R1 방어력: PlayerStats.DefenseMultiplier 를 "받는 데미지 배율" 로 해석.
+            // 1.0 = 그대로, 0.95 = 95% 받음. RegisterPassive 에서 부호 반전됐으므로 양수 입력이 감소를 의미.
+            float defMul = playerStats != null ? playerStats.DefenseMultiplier : 1f;
+            int finalDamage = Mathf.Max(1, Mathf.FloorToInt(damage * defMul));
+
+            // i-frame 시작 (호스트만 — 다음 ApplyDamage 호출이 막힘).
+            float iFrame = playerStats != null ? playerStats.IFrameDuration : 0f;
+            if (iFrame > 0f) iFrameTimer = iFrame;
+
+            photonView.RPC(nameof(RPC_TakeDamage), RpcTarget.All, finalDamage);
         }
 
         [PunRPC]

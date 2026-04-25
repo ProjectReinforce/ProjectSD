@@ -37,6 +37,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 61f5eeb06cc512f4ebd2889470b2717b, type: 2}
   - {fileID: 11400000, guid: f0a1aa5fbcad7234e9d61f77ee3943b3, type: 2}
   - {fileID: 11400000, guid: fa68a4aaf8db1cb48b698f7d59624b1f, type: 2}
+  - {fileID: 11400000, guid: 86cef64b945ed2046a1235684a2a84df, type: 2}
+  - {fileID: 11400000, guid: 4b804276363474149b4c9015ed60352d, type: 2}
   chaosSkills:
   - {fileID: 11400000, guid: 0ef7bb7cc6ec12c4184b36751351367a, type: 2}
   - {fileID: 11400000, guid: b7016ed35c5ab184dbe643fdcb08a4e2, type: 2}
