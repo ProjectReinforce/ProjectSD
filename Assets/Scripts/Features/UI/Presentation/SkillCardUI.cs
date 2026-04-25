@@ -91,13 +91,17 @@ namespace SwDreams.Features.UI.Presentation
             if (nameText != null)
                 nameText.text = skillData.skillName;
 
+            // 로컬 SkillManager 1 회 조회 — BuildFullDescription / SetupLevelBadge 가 재사용.
+            // 카드당 FindGameObjectsWithTag 호출을 1 회로 압축 (이전엔 2~3 회).
+            SkillManager sm = FindLocalSkillManager();
+
             if (descText != null)
-                descText.text = GetDescription(skillData);
+                descText.text = BuildFullDescription(skillData, chaosRarity, sm);
 
             if (iconImage != null && skillData.icon != null)
                 iconImage.sprite = skillData.icon;
 
-            SetupLevelBadge(skillData);
+            SetupLevelBadge(skillData, sm);
             SetupTypeBadge(skillData, chaosRarity);
 
             canvasGroup.alpha = 1f;
@@ -108,11 +112,9 @@ namespace SwDreams.Features.UI.Presentation
                 cardBackground.color = defaultCardColor;
         }
 
-        private void SetupLevelBadge(SkillData skillData)
+        private void SetupLevelBadge(SkillData skillData, SkillManager sm)
         {
             if (levelText == null) return;
-
-            SkillManager sm = FindLocalSkillManager();
 
             // 진화 스킬인지 확인
             if (sm != null)
@@ -176,22 +178,54 @@ namespace SwDreams.Features.UI.Presentation
                 typeText.text = typeStr;
         }
 
-        private string GetDescription(SkillData skillData)
+        /// <summary>
+        /// 카드 본문 텍스트. SO description (플레이버) + 자동 수치 라인 (현재→다음 또는 등급별).
+        /// 현재 레벨은 주입된 SkillManager 로 조회 (Active/Passive). chaosRarity 는 외부 주입.
+        /// </summary>
+        private string BuildFullDescription(SkillData skillData, Rarity chaosRarity, SkillManager sm)
         {
-            if (!string.IsNullOrEmpty(skillData.description))
-                return skillData.description;
+            string flavor = string.IsNullOrEmpty(skillData.description)
+                ? GetFallbackFlavor(skillData)
+                : skillData.description;
 
+            int currentLevel = ResolveCurrentLevel(skillData, sm);
+            string stats = SkillCardDescriptionFormatter.FormatStats(skillData, currentLevel, chaosRarity);
+
+            if (string.IsNullOrEmpty(stats)) return flavor;
+            if (string.IsNullOrEmpty(flavor)) return stats;
+            return $"{flavor}\n\n{stats}";
+        }
+
+        /// <summary>SO description 이 비어있을 때 사용할 일반 안내문.</summary>
+        private static string GetFallbackFlavor(SkillData skillData)
+        {
             switch (skillData.skillType)
             {
-                case SkillType.Active:
-                    return $"자동 발동 공격 스킬\n쿨다운: {skillData.GetCooldownForLevel(1):F1}초";
-                case SkillType.Passive:
-                    return "영구 능력치 강화";
-                case SkillType.Chaos:
-                    return "게임 규칙을 변경합니다";
-                default:
-                    return "";
+                case SkillType.Active:  return "자동 발동 공격 스킬";
+                case SkillType.Passive: return "영구 능력치 강화";
+                case SkillType.Chaos:   return "게임 규칙을 변경합니다";
+                default:                return "";
             }
+        }
+
+        /// <summary>
+        /// 보유 중이면 현재 레벨, 미보유면 0 반환. 진화/혼돈은 항상 0 (레벨 개념 없음 또는 신규).
+        /// </summary>
+        private static int ResolveCurrentLevel(SkillData skillData, SkillManager sm)
+        {
+            if (skillData.skillType == SkillType.Chaos) return 0;
+            if (sm == null) return 0;
+
+            // 진화 후보면 미보유로 취급 (진화 결과 스킬은 신규).
+            var evos = sm.GetPendingEvolutions();
+            for (int i = 0; i < evos.Count; i++)
+            {
+                if (evos[i].evolvedSkillData.skillId == skillData.skillId) return 0;
+            }
+
+            if (sm.HasSkill(skillData.skillId))
+                return sm.GetSkill(skillData.skillId).Level;
+            return 0;
         }
 
         private void OnClick()

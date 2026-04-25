@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Photon.Pun;
 using SwDreams.Features.Pickup.Adapter;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Pickup.Presentation
 {
@@ -33,9 +34,14 @@ namespace SwDreams.Features.Pickup.Presentation
 
         private PlayerPickupInteractor boundInteractor;
 
+        // GameState 전이 감지용 — Paused 진입 시 prompt 즉시 숨김 (LevelUpPanel 위에 노출 방지).
+        private bool gameplayStatePrev = true;
+
         private void OnEnable()
         {
             HideImmediate();
+            // 폴링 비교 baseline 을 현재 상태로 초기화 — 첫 프레임 가짜 전이 방지.
+            gameplayStatePrev = IsGameplayState();
         }
 
         private void Update()
@@ -45,6 +51,22 @@ namespace SwDreams.Features.Pickup.Presentation
                 TryBindLocalPlayer();
                 return;
             }
+
+            // GameState 전이 시 강제 갱신 — Refresh 는 OnTargetChanged 에만 묶여 있어
+            // Paused 진입 같은 상태 변경을 자체 감지 못 함. 폴링으로 보강.
+            bool gameplayNow = IsGameplayState();
+            if (gameplayNow != gameplayStatePrev)
+            {
+                gameplayStatePrev = gameplayNow;
+                Refresh();
+            }
+        }
+
+        private static bool IsGameplayState()
+        {
+            var state = GameManager.Instance?.CurrentState;
+            return state == GameManager.GameState.Playing ||
+                   state == GameManager.GameState.BossFight;
         }
 
         private void OnDestroy()
@@ -74,6 +96,13 @@ namespace SwDreams.Features.Pickup.Presentation
         private void Refresh()
         {
             if (boundInteractor == null || boundInteractor.CurrentTarget == null)
+            {
+                HideImmediate();
+                return;
+            }
+
+            // 일시정지(레벨업/메뉴) / 비전투 상태에선 prompt 숨김 — LevelUpPanel 위에 떠보이는 문제 방지.
+            if (!IsGameplayState())
             {
                 HideImmediate();
                 return;

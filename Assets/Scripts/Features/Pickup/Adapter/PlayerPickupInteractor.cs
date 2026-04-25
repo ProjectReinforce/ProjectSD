@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Photon.Pun;
+using SwDreams.Shared.Managers;
 
 namespace SwDreams.Features.Pickup.Adapter
 {
@@ -102,6 +103,12 @@ namespace SwDreams.Features.Pickup.Adapter
             if (!kb.spaceKey.wasPressedThisFrame) return;
             if (CurrentTarget == null) return;
             if (!CurrentTargetPickupable) return;
+
+            // 레벨업 / 일시정지 / 메뉴 상태에선 픽업 차단. PickupItemBase 의 자석 게이트와 동일 규약.
+            var state = GameManager.Instance?.CurrentState;
+            if (state != GameManager.GameState.Playing &&
+                state != GameManager.GameState.BossFight)
+                return;
 
             CurrentTarget.TryInteract(gameObject);
             // 성공 시 PickupItemBase 가 풀 반환 — 다음 PruneDead 에서 nearby 에서 제거됨.
