@@ -360,7 +360,10 @@ namespace SwDreams.Features.Progression.Adapter
             if (!IsAnyPartyGambler()) return null;
 
             Rarity baseline = RarityWeightedRoller.Roll(weights, rng);
-            return GamblerRarityBumper.Bump(baseline, rng);
+            Rarity bumped = GamblerRarityBumper.Bump(baseline, rng);
+            // 인게임 검증용 — 효과가 비주얼로 즉각 드러나지 않으므로 콘솔에서 확인.
+            Debug.Log($"[Gambler] 발동 — baseline:{baseline} → bumped:{bumped}");
+            return bumped;
         }
 
         /// <summary>파티 한 명이라도 GamblerHandler 활성이면 true.</summary>
