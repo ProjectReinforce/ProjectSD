@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Skill.Adapter.Chaos;
+using SwDreams.Features.Skill.Adapter.Chaos.StatWatchers;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
 using SwDreams.Features.Skill.Domain.ValueObjects;
@@ -55,14 +56,16 @@ namespace SwDreams.Features.Skill.Adapter
         // ===== 단결 설정 =====
         [Header("단결")]
         [SerializeField] private float unityCheckRadius = 5f;
-        private float unityCheckTimer;
         private const float UNITY_CHECK_INTERVAL = 0.5f;
-        private int nearbyPlayerCount;
 
-        // ===== 변경 감지용 캐시 (매 프레임 비교) =====
-        // 각 혼돈 효과별로 "현재 상태가 바뀌었는지" 추적. 새 구조(혼돈별 독립 modifier) 에 맞춰 세분화.
-        private bool cachedBerserkActive;      // Berserk HP 임계 통과 여부
-        private float cachedAccelBonus = -1f;  // Accel 의 현재 bonus 값 (0~p.primary). -1 = 아직 초기화 안 됨.
+        // ===== Phase 8-C StatWatcher =====
+        // 조건 변화 감지 책임을 watcher 객체로 분리. ChaosSkillManager 는
+        // Tick() 결과만 모아서 RecalculateChaosModifiers 트리거.
+        // 효과별 인스턴스는 RecalculateChaosModifiers 가 상태 조회용으로 직접 참조.
+        private readonly List<StatWatcher> watchers = new List<StatWatcher>();
+        private HpThresholdWatcher berserkWatcher;
+        private TimerRampWatcher accelWatcher;
+        private NearbyCountWatcher unityWatcher;
 
         // ===== 비수치 효과 프로퍼티 =====
 
@@ -237,17 +240,51 @@ namespace SwDreams.Features.Skill.Adapter
         private void ApplyBerserkMode()
         {
             hasBerserkMode = true;
+
+            // HP 임계 watcher — secondary = 발동 임계 비율 (Common 0.3 기본).
+            // IDamageable 은 provider — Start 전 ApplyChaos 케이스에서 null 회복 가능.
+            berserkWatcher = new HpThresholdWatcher(
+                () =>
+                {
+                    if (playerDamageable == null)
+                        playerDamageable = GetComponentInParent<IDamageable>();
+                    return playerDamageable;
+                },
+                () => GetParams(ChaosEffectType.BerserkMode,
+                    new EffectParams(0.9f, 0.3f, 1.1f)).secondary);
+            watchers.Add(berserkWatcher);
         }
 
         private void ApplyAccelEngine()
         {
             hasAccelEngine = true;
+
+            // 시간 비례 램프 watcher — primary = 최대 보너스, secondary = 램프 시간(0 이면 600 기본).
+            accelWatcher = new TimerRampWatcher(
+                () => GameManager.Instance != null ? GameManager.Instance.GameTime : 0f,
+                () => GetParams(ChaosEffectType.AccelEngine,
+                    new EffectParams(0.1f, 600f, 0f)).primary,
+                () => GetParams(ChaosEffectType.AccelEngine,
+                    new EffectParams(0.1f, 600f, 0f)).secondary);
+            watchers.Add(accelWatcher);
         }
 
         private void ApplyUnity()
         {
             hasUnity = true;
-            nearbyPlayerCount = 0;
+
+            // 근접 인원 watcher — tertiary = 감지 반경(0 이면 인스펙터 기본값).
+            unityWatcher = new NearbyCountWatcher(
+                transform.root,
+                "Player",
+                () =>
+                {
+                    var p = GetParams(ChaosEffectType.Unity,
+                        new EffectParams(0.1f, 0.1f, 0f));
+                    return p.tertiary > 0f ? p.tertiary : unityCheckRadius;
+                },
+                UNITY_CHECK_INTERVAL);
+            watchers.Add(unityWatcher);
         }
 
         // ApplyGambler 제거 — GamblerHandler 로 이전 (Phase 8-B3).
@@ -292,85 +329,14 @@ namespace SwDreams.Features.Skill.Adapter
             if (GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
                 GameManager.Instance.CurrentState != GameManager.GameState.BossFight) return;
 
+            // Phase 8-C: 등록된 watcher 들 일괄 Tick. 하나라도 변화 감지하면 recalc.
+            // ChainExplosion / Gambler 는 handler 측에서 자체 처리 — 여기 Tick 없음.
             bool needRecalc = false;
-
-            if (hasBerserkMode)
-                needRecalc |= CheckBerserkChanged();
-
-            if (hasAccelEngine)
-                needRecalc |= CheckAccelChanged();
-
-            if (hasUnity)
-                needRecalc |= CheckUnityChanged();
-
-            // ChainExplosion: handler 로 이전 — 매니저에서 프레임 리셋 불필요.
+            for (int i = 0; i < watchers.Count; i++)
+                needRecalc |= watchers[i].Tick();
 
             if (needRecalc)
                 RecalculateChaosModifiers();
-        }
-
-        private bool CheckBerserkChanged()
-        {
-            if (playerDamageable == null) return false;
-
-            // Berserk 활성 여부가 바뀌었는지만 체크. 값 자체는 Recalculate 가 SO 에서 다시 읽음.
-            var p = GetParams(ChaosEffectType.BerserkMode,
-                new EffectParams(0.9f, 0.3f, 1.1f));
-            bool nowActive = playerDamageable.CurrentHP <= playerDamageable.MaxHP * p.secondary;
-            if (nowActive != cachedBerserkActive)
-            {
-                cachedBerserkActive = nowActive;
-                return true;
-            }
-            return false;
-        }
-
-        private bool CheckAccelChanged()
-        {
-            // Accel bonus 는 시간에 따라 연속 변동. 임계값 이상 변하면 재계산.
-            var p = GetParams(ChaosEffectType.AccelEngine,
-                new EffectParams(0.1f, 600f, 0f));
-            float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
-            float rampDur = p.secondary > 0f ? p.secondary : 600f;
-            float bonus = Mathf.Lerp(0f, p.primary, gameTime / rampDur);
-
-            if (Mathf.Abs(bonus - cachedAccelBonus) > 0.001f)
-            {
-                cachedAccelBonus = bonus;
-                return true;
-            }
-            return false;
-        }
-
-        private bool CheckUnityChanged()
-        {
-            unityCheckTimer += Time.deltaTime;
-            if (unityCheckTimer < UNITY_CHECK_INTERVAL) return false;
-            unityCheckTimer = 0f;
-
-            // Unity params: primary=기본 보너스, secondary=아군 당 추가, tertiary=감지 반경(0 이면 인스펙터값 사용)
-            var p = GetParams(ChaosEffectType.Unity,
-                new EffectParams(0.1f, 0.1f, 0f));
-            float radius = p.tertiary > 0f ? p.tertiary : unityCheckRadius;
-
-            int count = 0;
-            var players = GameObject.FindGameObjectsWithTag("Player");
-            foreach (var pl in players)
-            {
-                if (pl == transform.root.gameObject) continue;
-                if (!pl.activeInHierarchy) continue;
-
-                float dist = Vector2.Distance(transform.root.position, pl.transform.position);
-                if (dist <= radius)
-                    count++;
-            }
-
-            if (count != nearbyPlayerCount)
-            {
-                nearbyPlayerCount = count;
-                return true;
-            }
-            return false;
         }
 
         // ===== Modifier 등록 =====
@@ -407,13 +373,10 @@ namespace SwDreams.Features.Skill.Adapter
             }
 
             // 2) Accel Engine — 시간 경과 → 모든 주요 스탯 PercentBonus
-            if (hasAccelEngine)
+            // bonus 값은 TimerRampWatcher 가 누적 추적, recalc 트리거도 watcher 가 발생.
+            if (hasAccelEngine && accelWatcher != null)
             {
-                var p = GetParams(ChaosEffectType.AccelEngine,
-                    new EffectParams(0.1f, 600f, 0f));
-                float gameTime = GameManager.Instance != null ? GameManager.Instance.GameTime : 0f;
-                float rampDur = p.secondary > 0f ? p.secondary : 600f;
-                float bonus = Mathf.Lerp(0f, p.primary, gameTime / rampDur);
+                float bonus = accelWatcher.CurrentBonus;
                 AddAccelBonus(StatType.AttackMultiplier, bonus);
                 AddAccelBonus(StatType.MoveSpeed, bonus);
                 AddAccelBonus(StatType.SkillRange, bonus);
@@ -423,11 +386,12 @@ namespace SwDreams.Features.Skill.Adapter
             }
 
             // 3) Berserk — HP 임계 이하 시 발동. Multiplicative 로 "최종 이속/CDR 배율"
-            if (hasBerserkMode && playerDamageable != null)
+            // 활성 여부는 HpThresholdWatcher 가 추적 — 본 메서드는 결과만 반영.
+            if (hasBerserkMode && berserkWatcher != null)
             {
                 var p = GetParams(ChaosEffectType.BerserkMode,
                     new EffectParams(0.9f, 0.3f, 1.1f));
-                bool isBerserk = playerDamageable.CurrentHP <= playerDamageable.MaxHP * p.secondary;
+                bool isBerserk = berserkWatcher.IsActive;
                 // 비활성 상태는 value=1 (Multiplicative 항등원). AddOrReplace 로 매번 덮어씀.
                 float cdrMul = isBerserk ? p.primary   : 1f;
                 float spdMul = isBerserk ? p.tertiary  : 1f;
@@ -438,14 +402,16 @@ namespace SwDreams.Features.Skill.Adapter
             }
 
             // 4) Unity — 근접 아군 수 기반 PercentBonus 데미지 증폭
-            // 공식: primary + (nearby - 1) * secondary. 혼자(nearby=0)면 modifier 제거 (bonus 0).
-            if (hasUnity)
+            // 공식: primary + (nearby - 1) * secondary. 혼자(nearby=0)면 modifier 제거.
+            // 인원 수는 NearbyCountWatcher 가 interval 폴링으로 추적.
+            if (hasUnity && unityWatcher != null)
             {
-                if (nearbyPlayerCount > 0)
+                int nearby = unityWatcher.Count;
+                if (nearby > 0)
                 {
                     var p = GetParams(ChaosEffectType.Unity,
                         new EffectParams(0.03f, 0.02f, 0f));
-                    float unityBonus = p.primary + (nearbyPlayerCount - 1) * p.secondary;
+                    float unityBonus = p.primary + (nearby - 1) * p.secondary;
                     playerStats.AddModifier(new StatModifier(
                         "chaos_unity_atk", StatType.AttackMultiplier, ModifierOp.PercentBonus, unityBonus));
                 }
