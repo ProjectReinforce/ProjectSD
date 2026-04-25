@@ -2,7 +2,7 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2 (2026-04-18) — `docs/` 재정리 완료 후 갱신.
+> **버전:** v2.1 (2026-04-25) — `docs/check/` 임시 폴더 통합 후 `architecture/{known-issues,completed-work}.md` 신설.
 
 ---
 
@@ -128,7 +128,9 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 진입점
 - [docs/README.md](docs/README.md) — **폴더 지도·SSOT 규칙 먼저 확인**
 - [docs/game-design/overview.md](docs/game-design/overview.md) — GDD 전반 (Sweepin' Dreams)
-- [docs/architecture/implementation-roadmap.md](docs/architecture/implementation-roadmap.md) — Phase별 구현 진행도 (현재 Phase 5 진행 중)
+- [docs/architecture/implementation-roadmap.md](docs/architecture/implementation-roadmap.md) — Phase별 구현 진행도 (잔여 작업 SSOT)
+- [docs/architecture/known-issues.md](docs/architecture/known-issues.md) — 알려진 버그·회귀 트래커 (N/B/V)
+- [docs/architecture/completed-work.md](docs/architecture/completed-work.md) — 완료 작업 ledger
 - [docs/architecture/drop-system-roadmap.md](docs/architecture/drop-system-roadmap.md) — 드랍 시스템(정수/무기/퀘스트/능력치/기타/혼돈등급) 구현 로드맵
 
 ### 폴더별

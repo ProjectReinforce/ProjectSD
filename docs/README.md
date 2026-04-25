@@ -9,7 +9,9 @@ docs/
 ├── README.md                          ← (본 파일) 폴더 지도·SSOT 규칙
 ├── architecture/
 │   ├── overview.md                    ← 레이어 구조·의존성 규칙
-│   └── implementation-roadmap.md      ← Phase별 구현 진행도
+│   ├── implementation-roadmap.md      ← Phase별 구현 진행도 (잔여)
+│   ├── known-issues.md                ← 알려진 버그 트래커
+│   └── completed-work.md              ← 완료 작업 ledger
 ├── game-design/
 │   ├── overview.md                    ← 게임 전체 컨셉·코어 루프 (GDD)
 │   ├── flow-design.md                 ← 화면 전환·UI 플로우
@@ -60,13 +62,15 @@ docs/
 | 스킬 선택 UI 플로우 | `game-design/flow-design.md` | 링크만 |
 | 보스 혼돈 스킬 효과 | `game-design/enemies/boss.md` | 링크만 |
 | 정수 / 무기 / 퀘스트 / 능력치 / 추가 아이템 | `game-design/{essence|weapon|quest|stat-boost|items}.md` | overview/rules 는 한 줄+링크 |
-| Phase별 진행 계획·로드맵 | `architecture/implementation-roadmap.md` | 링크만 |
+| **Phase별 진행 계획·잔여 작업** | `architecture/implementation-roadmap.md` | 링크만 |
+| **알려진 버그·회귀** | `architecture/known-issues.md` | 링크만 |
+| **완료 작업 ledger** | `architecture/completed-work.md` | 링크만 |
 | 발사 모드·Stat 필터 | `systems/skill-executor.md` | 링크만 |
 | TriggerEffect 핸들러 | `systems/trigger-effects.md` | 링크만 |
 | 네트워크 RPC·동기화 규약 | `systems/network-sync.md` | "이 규약을 따른다" 만 |
 | 스폰 테이블·인원 스케일링 | `systems/spawn-rules.md` + `game-design/rules.md` | 수식은 systems, 규칙은 game-design |
 | 씬 구조·패널 | `systems/scene-structure.md` | 링크만 |
-| **밸런싱 수치 (데미지/쿨타임/체력/드랍 확률 등)** | **`Assets/Data/**/*.asset` (ScriptableObject)** | 설계 문서는 **현재 SO 값을 반영**할 뿐. 변경은 Unity 에디터 → SO 에서. 마지막 동기화: 2026-04-24 |
+| **밸런싱 수치 (데미지/쿨타임/체력/드랍 확률 등)** | **`Assets/Data/**/*.asset` (ScriptableObject)** | 설계 문서는 **현재 SO 값을 반영**할 뿐. 변경은 Unity 에디터 → SO 에서. 마지막 동기화: 2026-04-25 |
 
 ## 문서 작성 원칙
 
@@ -103,3 +107,5 @@ Claude 는 문서를 Read/Grep 으로 훑고, CLAUDE.md 와 관련 서브에이�
 - **새 시스템 설계** → `templates/system-spec.md` + `systems/README.md`
 - **아키텍처 관련** → `architecture/overview.md`
 - **구현 일정 점검** → `architecture/implementation-roadmap.md`
+- **버그 추적** → `architecture/known-issues.md`
+- **완료 작업 회고** → `architecture/completed-work.md`

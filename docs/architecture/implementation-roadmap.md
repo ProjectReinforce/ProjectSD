@@ -2,23 +2,26 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-19 (현재 브랜치: `Hyeon-Woo` — Feature-first 전환 완료 후)
+최종 업데이트: 2026-04-25 (`docs/check/` 폴더 통합 — 잔여 항목 일괄 정리)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
+>
+> 완료된 항목 ledger = [completed-work.md](completed-work.md). 알려진 버그 = [known-issues.md](known-issues.md). 본 문서는 **잔여**만 다룬다.
 
 ## 진행 요약
 
 | Phase | 상태 | 비고 |
 |---|---|---|
 | 0. 프로젝트 셋업 | ✅ 완료 | Unity 2D + PUN2, SO 템플릿 |
-| 1. 네트워크 + 메뉴 플로우 | ✅ 거의 완료 | MenuScene 패널 전환, 대기실, 캐릭터 선택까지 작동 |
-| 2. 기본 전투 | ✅ 완료 | Enemy, ProjectileEffect, 경험치, 풀링 구현 |
-| 3. 적 AI + 스폰 고도화 | 🟡 진행 중 | 4종 적은 있으나 난이도 곡선 튜닝 중 |
-| 4. 레벨업 시스템 | 🟡 진행 중 | FrameToast/Frame_PopUp 도입, 카드 UI 작업 중 |
-| 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Skill_Refactor`**) | 2차 리팩터링 + 장검 진화 Phase2 복구까지 |
-| 6. 보스 + 네트워크 고급 | ⬜ 대기 | 보스 3페이즈, 사망/부활, 호스트 이탈 |
-| 7. 마무리 + 밸런싱 | ⬜ 대기 | |
-| 8. 출시 인프라 (Voice / Platform SDK) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md) |
+| 1. 네트워크 + 메뉴 플로우 | ✅ 완료 | 메뉴/대기실/에러 처리 포함 |
+| 2. 기본 전투 | 🟡 거의 완료 | 스폰 위치 명세 미달성 (캐릭터 반경 → 맵 경계로 환원) |
+| 3. 적 AI + 스폰 고도화 | 🟡 진행 중 | 난이도 곡선 완료. 화면 밖 AI 간소화 잔여 |
+| 4. 레벨업 시스템 | ✅ 거의 완료 | 6슬롯/진화/패시브/수치 표시 모두 동작 |
+| 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
+| 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
+| 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
+| 8. 출시 인프라 (Voice / Platform SDK) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md). R3 마이크 필터 아이템 8-2 와 함께 |
+| 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
 최근 관련 커밋:
 - `1f225a555` fix: 장검 진화 Phase2 발사 동작 복구 → Phase 5 영역
@@ -75,8 +78,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 ### 2-1. Enemy 기본 클래스 ✅
 - [x] `Enemy`, ChaseMovement, 호스트 AI, 접촉 데미지
 
-### 2-2. PoolManager + SpawnManager 기초 ✅
+### 2-2. PoolManager + SpawnManager 기초 🟡
 - [x] 투사체 풀링 (`ProjectileSpawner`), 기본 스폰
+- [ ] **스폰 위치: 맵 경계 랜덤** — 현재 "캐릭터 기준 일정 반경" 으로 구현됨. 명세는 "맵 경계 기준 랜덤"이므로 미완료 환원 (2026-04-25)
 
 ### 2-3. 스킬 시스템 기초 ✅
 - [x] `Skill`, `SkillExecutor`, `ISkillSpawner` 추상 + 구현체 (`ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `DebuffSpawner`, `PlacedSpawner`)
@@ -102,18 +106,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - [x] 원거리형 4변형 (고정·추격 × 투사체·경고) — Phase B
 - [x] 엘리트형 — 스탯 강화 + Essence 드랍 **훅만** (Essence 시스템은 별건) + `visualScaleMultiplier` — Phase C
 
-### 3-2. 난이도 곡선 🟡
-- [ ] 시간대별 스폰 테이블 (0-3/3-5/5-7/7-10분)
-- [ ] 체력 배율 시간별 증가
-- [ ] 적 타입별 등장 비율 (60/20/10/10)
+### 3-2. 난이도 곡선 ✅
+- [x] 시간대별 스폰 테이블 (0-3/3-5/5-7/7-10분)
+- [x] 체력 배율 시간별 증가 ([DifficultyManager.cs:59-65](../../Assets/Scripts/Shared/Managers/DifficultyManager.cs#L59-L65) AnimationCurve 1.0x→2.0x)
+- [x] 적 타입별 등장 비율 (60/20/10/10)
 
 ### 3-3. 멀티플레이어 스케일링 🟡
-- [x] 기본 스케일링 구조
-- [ ] 인원수별 체력/적 수/경험치 배율 튜닝
+- [x] 기본 스케일링 구조 + 인원수별 체력/적 수/경험치 배율
+- [ ] 인원수별 배율 튜닝 (밸런싱)
 
-### 3-4. 풀링 고도화 ✅ (일부)
+### 3-4. 풀링 고도화 🟡
 - [x] 투사체 풀링
-- [x] 이펙트 풀링 (부분)
+- [x] 이펙트 풀링
+- [ ] **화면 밖 적 간소화 AI** — 카메라 시야 외 적은 path 갱신을 N프레임마다 또는 단순 직진. 90마리 동시 운영 성능 마진
 
 상세 스폰 규칙은 추후 [../systems/spawn-rules.md](../systems/spawn-rules.md) 작성 시 여기에 링크.
 
@@ -159,12 +164,13 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - [x] 번개 (+ 뇌전역)
 - [x] 부메랑 (`BoomerangTrajectory`)
 - [x] 회오리바람 (+ Spiral)
+- [x] 각 스킬별 레벨 스케일링 (`damagePerLevel[]`, `cooldownPerLevel[]`)
 - [ ] 스킬 #11~24 구현 (설계만 있음)
-- [ ] 각 스킬별 레벨 스케일링
 
 ### 5-3. 혼돈 스킬 🟡
-- [ ] 혼돈 스킬 선택 UI
-- [ ] 혼돈 스킬 19종 구현 (6종 우선)
+- [x] 혼돈 스킬 선택 UI (레벨 10/20/30)
+- [x] 혼돈 스킬 6종 구현 (유리대포/연쇄폭발/폭주모드/가속엔진/단결/도박꾼)
+- [ ] 혼돈 스킬 나머지 13종 구현
 - [ ] 런타임 효과 추가 경로 (`essence_*`, `weapon_*`, `chaos_*`) — `SkillTriggerSystem.AddRuntimeEffect()`
 
 ### 5-4. 진화 스킬 🟡
@@ -181,43 +187,131 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ---
 
-## Phase 6 — 보스 + 네트워크 고급 ⬜ 대기
+## Phase 6 — 보스 + 네트워크 고급 🟡 대부분 완료
 
-### 6-1. Boss 클래스
-- [ ] 보스 기본 스펙 + 3페이즈 패턴
-- [ ] 보스 등장 연출 + 체력 바 UI
+### 6-1. Boss 클래스 ✅
+- [x] 보스 기본 스펙 + 3페이즈 패턴
+- [x] 보스 등장 연출 + 체력 바 UI
 
-### 6-2. 보스 혼돈 스킬
-- [ ] 마지막 혼돈 선택 → 미선택 중 랜덤 1개 보스 부여
-- [ ] 6가지 보스 변형 효과 (나머지 13종 TBD)
+### 6-2. 보스 혼돈 스킬 🟡
+- [x] 마지막 혼돈 선택 → 미선택 중 랜덤 1개 보스 부여
+- [x] 6가지 보스 변형 효과 (`BossChaosEffects.cs`)
+- [ ] **보스 등장 시 혼돈 스킬 UI 표시** — `BossWarningUI.Show()` 호출은 있으나 실 표시 검증 필요
+- [ ] 나머지 13종 보스 변형 (Phase 5-3 19종 확장과 함께)
 
-### 6-3. 플레이어 사망/부활
-- [ ] 체력 0 → 10초 부활 타이머 → 안전 지점 (HP 50%)
-- [ ] 전원 사망 → 게임 오버
+### 6-3. 플레이어 사망/부활 ✅
+- [x] 체력 0 → 10초 부활 타이머 → 안전 지점 (HP 50%)
+- [x] 전원 사망 → 게임 오버
 
-### 6-4. 호스트 이탈 처리
-- [ ] 5초 재연결 대기
-- [ ] 실패 시 새 호스트 전환 + 비상 보스전
+### 6-4. 호스트 이탈 처리 ✅
+- [x] 5초 재연결 대기
+- [x] 실패 시 새 호스트 전환 + 비상 보스전
 
-### 6-5. 인게임 HUD 완성
-- [ ] 체력/경험치/타이머/스킬 슬롯/팀원 상태/혼돈 스킬 등
+### 6-5. 인게임 HUD 완성 ✅
+- [x] 체력/경험치/타이머/스킬 슬롯/팀원 상태/혼돈 스킬 아이콘
 
 ---
 
-## Phase 7 — 마무리 + 밸런싱 ⬜ 대기
+## Phase 7 — 마무리 + 밸런싱 🟡 부분 시작
 
-### 7-1. 결과 화면
-- [ ] 클리어/실패 통계, 빌드 요약
+### 7-1. 결과 화면 ✅
+- [x] 클리어/실패 통계, 빌드 요약, 보스 혼돈 스킬 표시
 
-### 7-2. 밸런싱
-- [ ] 경험치 곡선 (보스 등장 시점 레벨 18-22 도달 목표 — 현재 15분 기준)
-- [ ] 적 스펙, 스킬, 보스 난이도, 인원 스케일링
+### 7-2. 밸런싱 🟡
+- [x] 경험치 곡선 (보스 등장 시점 레벨 18-22 도달 목표)
+- [ ] 적 스펙 조정
+- [ ] 스킬 데미지/쿨타임 조정
+- [ ] 보스 난이도 조정 (혼돈 스킬별)
+- [ ] 2~4인 스케일링 검증
 
-### 7-3. 비주얼 + 사운드
-- [ ] 픽셀 아트, Bloom, BGM/SFX, 스킬 이펙트
+### 7-3. 비주얼 + 사운드 🟡
+- [x] BGM + 효과음 적용 (AudioManager + AudioLibrary)
+- [x] 캐릭터/적 아웃라인 — 단 스프라이트 애니메이션 호환성/퍼포먼스 검토는 [§ R4](#신규-잔여-작업-r) 참조
+- [ ] 픽셀 아트 에셋 적용
+- [ ] Bloom 후처리 (드림 테마)
+- [ ] 스킬 이펙트 비주얼
 
 ### 7-4. 버그 수정 + 최적화
-- [ ] 플레이테스트, 네트워크 엣지 케이스, 프로파일링, 빌드 테스트
+- [ ] 플레이테스트
+- [ ] 네트워크 엣지 케이스 처리
+- [ ] 성능 프로파일링
+- [ ] 빌드 테스트
+
+---
+
+## 신규 잔여 작업 (R) — 2026-04-25 정리
+
+`docs/check/` 의 두 임시 문서에서 통합한 잔여 + 사용자 추가 신규 항목.
+
+### R1. 플레이어 방어력 적용한 피격 데미지 계산식
+- 현재 데미지 계산에 방어력 차감/감산 로직이 빠져 있음. 데미지 공식에 방어력 반영 필요.
+- 관련 SSOT: [../systems/damage-formula.md](../systems/damage-formula.md) (있다면 갱신)
+
+### R2. 체력 자연회복 패시브 + HP float 타입 전환
+- **자연회복 패시브**: 시간당 일정량 회복. **회복량 증가 패시브 영향 안 받음** (별도 산출).
+- **HP를 float로 전환** 권장. 자연회복 dt 누적 시 float 정밀도 필요. 표시는 `Mathf.CeilToInt(CurrentHP)`. 부동소수 비교는 `<= 0f` 형태로.
+- **다음 작업(플레이어 패시브 추가)에서 한 번에 처리** 예정.
+
+### R3. 마이크 필터 드랍 아이템 (재미 요소)
+- 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
+- **Photon Voice 2 가능 확인됨**: 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 컴포넌트 부착. 적용 대상은 RPC 동기화.
+- **Phase 8-2 보이스챗 도입과 함께 진행**.
+- 관련 SSOT: [../systems/voice-chat.md](../systems/voice-chat.md), [../game-design/items.md](../game-design/items.md)
+
+### R4. 캐릭터/적 아웃라인 — 스프라이트 애니메이션 호환성 + 퍼포먼스 검토
+- 현재 아웃라인은 적용됐으나, 스프라이트 애니메이션이 적용된 상태에서도 정상 반영되는지 검증 필요.
+- 퍼포먼스 부하 측정 (특히 동시 90마리 적 + 아웃라인 셰이더).
+
+### R5. 혼돈 스킬 글로벌 설정을 GameplayConfig 로 이전 적절성 검토
+- 현재 연쇄폭발/단결 등 글로벌 효과는 캐릭터 프리팹의 Skills 오브젝트에 설정됨.
+- 게임 설정(`GameplayConfig.asset`) 으로 이전이 적절한지 검토. **일단 기록만** (의사결정 보류).
+
+### R6. 회오리/끌어당김 `pullRadius` 패시브 반응
+- [known-issues.md B1](known-issues.md) 과 같은 코드 수정 단위. SkillRange 패시브에 영향 받도록 `pullRadius * (1 + ctx.skillRangeBonus)`.
+
+### R7. 플레이어 무적 시간 (i-frame)
+- 현재 `PlayerHealth` 에 i-frame 없음. 피격 후 N초 무적 + 비주얼 깜빡임.
+- 패시브로 시간 연장 옵션 고려 (R2 패시브 묶음과 함께).
+
+### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 (명세 변경)
+- 기존 "장검 등이 호스트 측에서만 먼저 발동되는 버그" 를 **명세 변경으로 해결**: 게임 시작 ~ 첫 적 스폰까지 SkillExecutor disable.
+- 적 스폰 자체에 딜레이가 있으므로 그 시간 동안 스킬도 발동되지 않으면 호스트/클라 차이 사라짐.
+- 처리 위치: `SkillExecutor` 또는 `SkillManager` 의 시작 가드 + `SpawnManager` 의 첫 스폰 신호와 동기화.
+
+---
+
+## 메뉴 / UI 잔여 (U)
+
+### U1. 방 리스트에서 플레이 중인 방 표시 안함
+- `RoomListPanelController` 의 filter 조건에 `Room.IsOpen && !Room.CustomProperties["InGame"]` 추가. 방 시작 시 InGame 플래그 set.
+
+### U2. 인원수 별 방 정렬
+- 인원 많은 순으로 정렬, 만원방은 가장 아래.
+- `RoomListView` 정렬 로직: `OrderByDescending(r => r.IsFull ? -1 : r.PlayerCount)`.
+
+### U3. 혼자하기에서 나가기 → 방 리스트로
+- 솔로 모드 LeaveRoom 시 `MenuSceneManager.ShowRoomList()` 라우팅.
+
+### U4. ESC 인게임 일시정지 메뉴
+- 인게임: ESC → `GameState.Paused` + 메뉴 UI (재개/설정/방 나가기). 메인씬: ESC = 뒤로가기.
+- 멀티플레이 정지 정책 결정 필요 (혼자 정지 vs 전원 정지 vs 메뉴만 표시).
+
+### U5. 결과창 "나가기" → 방 리스트로
+- 현재 Title 경유. RoomList 직행으로 라우팅 (`ResultManager.OnExit` → `ShowRoomList`).
+
+### U6. 설정창 구조잡기
+- `TitlePanelController.OnClickSettings()` 가 TODO 상태. 볼륨/그래픽/키바인딩 등 항목 정리.
+
+---
+
+## 보류 (D) — 장기/저우선
+
+- **랜덤입장 (자동 매치메이킹)** — 참여 가능 방 탐색 + UI 제공. 출시 후 추가.
+- **이펙트 SortingLayer/OrderInLayer** — 이펙트가 Player/Enemy 보다 아래로. 코드보다 프리팹 일괄 수정 비중 큼.
+
+---
+
+
 
 ---
 
@@ -242,6 +336,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 - [ ] `Features/Voice/Adapter/VoiceController.cs` 작성 (PTT / Open Mic)
 - [ ] 인게임 HUD 에 마이크 토글 UI 추가
 - [ ] ParrelSync 4인스턴스 테스트
+- [ ] **마이크 필터 드랍 아이템 ([§ R3](#r3-마이크-필터-드랍-아이템-재미-요소))** — 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 부착 + RPC 동기화
 
 > 상세 [../systems/voice-chat.md](../systems/voice-chat.md)
 
