@@ -41,7 +41,7 @@ MonoBehaviour:
   waveFrequency: 5
   homingRotateSpeed: 300
   chainFlightCount: 3
-  chainSearchRadius: 3
+  chainSearchRadius: 2
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
