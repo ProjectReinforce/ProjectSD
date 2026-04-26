@@ -144,14 +144,20 @@ namespace SwDreams.Features.Boss.Adapter
 
         // ===== 데미지 =====
 
-        public void TakeDamage(int damage)
+        public void TakeDamage(int damage) => TakeDamage(damage, false);
+
+        /// <summary>
+        /// 데미지 적용 + 호스트 측 비주얼. 호스트만 동작.
+        /// 클라 측 비주얼은 RPC_SyncHP delta 로 표시 — Phase A 범위에선 클라 화면 isCrit 표시 미동기화.
+        /// </summary>
+        public void TakeDamage(int damage, bool isCrit)
         {
             if (!IsAlive) return;
             if (!PhotonNetwork.IsMasterClient) return;
 
             CurrentHP = Mathf.Max(0, CurrentHP - damage);
 
-            DamagePopup.Spawn(transform.position, damage);
+            DamagePopup.Spawn(transform.position, damage, isCrit);
             HitEffect.Spawn(transform.position);
 
             // 페이즈 전환 체크
@@ -182,22 +188,23 @@ namespace SwDreams.Features.Boss.Adapter
         /// <summary>
         /// 클라이언트에서 호출. 보스에게 데미지 요청.
         /// Boss는 PhotonView가 있으므로 직접 RPC 전송 가능.
+        /// isCrit 은 클라 측에서 굴린 결과를 그대로 호스트가 적용 (호스트 화면 색상 일치).
         /// </summary>
-        public void RequestDamageFromClient(int damage)
+        public void RequestDamageFromClient(int damage, bool isCrit = false)
         {
             if (PhotonNetwork.IsMasterClient)
             {
-                TakeDamage(damage);
+                TakeDamage(damage, isCrit);
                 return;
             }
-            photonView.RPC(nameof(RPC_RequestBossDamage), RpcTarget.MasterClient, damage);
+            photonView.RPC(nameof(RPC_RequestBossDamage), RpcTarget.MasterClient, damage, isCrit);
         }
 
         [PunRPC]
-        private void RPC_RequestBossDamage(int damage)
+        private void RPC_RequestBossDamage(int damage, bool isCrit)
         {
             if (!PhotonNetwork.IsMasterClient) return;
-            TakeDamage(damage);
+            TakeDamage(damage, isCrit);
         }
 
         /// <summary>배치된 HP를 클라이언트에 전송.</summary>

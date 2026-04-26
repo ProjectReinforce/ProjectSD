@@ -316,10 +316,20 @@ namespace SwDreams.Features.Skill.Adapter
                 ctx.healMultiplier = 1f;
 
             // ── 치명타 데미지 배율 (필터 적용) ──
+            var cfgForCrit = GameManager.Instance?.Config;
+            float critMultDefault = cfgForCrit != null ? cfgForCrit.critMultBase : 1.5f;
+            float critChanceDefault = cfgForCrit != null ? cfgForCrit.critChanceBase : 0.05f;
+
             if (playerStats != null && data.IsStatApplicable(StatType.CritDamage))
                 ctx.critDamageMultiplier = playerStats.CritDamageMultiplier;
             else
-                ctx.critDamageMultiplier = 1.5f; // PlayerStats.baseCritDamage 기본값
+                ctx.critDamageMultiplier = critMultDefault;
+
+            // ── 치명타 확률 (필터 적용) ──
+            if (playerStats != null && data.IsStatApplicable(StatType.CritChance))
+                ctx.critChance = playerStats.CritChanceProbability;
+            else
+                ctx.critChance = critChanceDefault;
 
             // ── 발사 방향 ──
             ctx.baseDirection = GetBaseDirection(data.aimType);

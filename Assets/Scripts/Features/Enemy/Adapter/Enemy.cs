@@ -146,7 +146,13 @@ namespace SwDreams.Features.Enemy.Adapter
             }
         }
 
-        public void TakeDamage(int damage)
+        public void TakeDamage(int damage) => TakeDamage(damage, false);
+
+        /// <summary>
+        /// 데미지 적용 + 비주얼. 호출 측이 치명타 여부를 알면 isCrit 인자로 전달.
+        /// IDamageable.TakeDamage(int) 는 자동 false 위임 — 직접 호출하는 적/접촉 경로는 일반 색상.
+        /// </summary>
+        public void TakeDamage(int damage, bool isCrit)
         {
             if (!IsAlive) return;
 
@@ -163,7 +169,7 @@ namespace SwDreams.Features.Enemy.Adapter
             TriggerHitFlash();
 
             // 데미지 숫자 팝업 (모든 클라이언트)
-            DamagePopup.Spawn(transform.position, result.FinalDamage);
+            DamagePopup.Spawn(transform.position, result.FinalDamage, isCrit);
 
             // 피격 파티클 이펙트 (모든 클라이언트)
             HitEffect.Spawn(transform.position);
@@ -176,13 +182,16 @@ namespace SwDreams.Features.Enemy.Adapter
         /// 클라이언트용 비주얼 피드백만 재생 (HP 변경 없음).
         /// 클라이언트에서 자기 투사체가 적에게 적중했을 때 호출.
         /// 데미지 팝업, 히트 플래시, 히트 이펙트를 표시.
-        /// 
+        ///
         /// 실제 HP 감소와 사망 판정은 호스트의 TakeDamage()에서만 처리.
         /// </summary>
-        public void ShowHitVisuals(int displayDamage)
+        public void ShowHitVisuals(int displayDamage) => ShowHitVisuals(displayDamage, false);
+
+        /// <summary>치명타 여부를 알 때 사용. 자기 측 화면에 정확한 색상 표시.</summary>
+        public void ShowHitVisuals(int displayDamage, bool isCrit)
         {
             TriggerHitFlash();
-            DamagePopup.Spawn(transform.position, displayDamage);
+            DamagePopup.Spawn(transform.position, displayDamage, isCrit);
             HitEffect.Spawn(transform.position);
         }
 

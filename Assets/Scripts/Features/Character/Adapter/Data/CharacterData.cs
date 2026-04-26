@@ -42,6 +42,11 @@ namespace SwDreams.Features.Character.Adapter.Data
         public float cooldownReduction = 0f;
         public float knockback = 1f;
         public float critDamage = 1.5f;
+
+        [Tooltip("치명타 확률 (0~1). 0.05 = 5%. 패시브 #15 / 무기 등에 의해 가산.")]
+        [Range(0f, 1f)]
+        public float critChance = 0.05f;
+
         public float expMultiplier = 1f;
 
         [Tooltip("방어 보너스 (양수 = 강함). 0.05 = 받는 데미지 5% 감소. 패시브와 동일한 입력 컨벤션.")]

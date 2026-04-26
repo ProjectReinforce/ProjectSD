@@ -45,5 +45,17 @@ namespace SwDreams.Features.Skill.Domain.ValueObjects
         /// 핸들러가 "같은 source 기존 인스턴스 갱신" 같은 중첩 제어에 사용 (예: ApplyDoT/ApplySlow).
         /// </summary>
         public string source;
+
+        /// <summary>
+        /// 치명타 확률 (0~1). SkillExecutor.BuildContext 에서 applicableStats 가드 후 주입.
+        /// 핸들러는 이 값과 critDamageMultiplier 로 치명타 판정.
+        /// 0 이면 치명타 없음 (강제 isCrit=true 경로 — PlacedTurret alwaysCritical — 는 1f 로 주입).
+        /// </summary>
+        public float critChance;
+
+        /// <summary>
+        /// 치명타 데미지 배율 (보통 1.5~). PlayerStats.CritDamageMultiplier 에서 주입.
+        /// </summary>
+        public float critDamageMultiplier;
     }
 }

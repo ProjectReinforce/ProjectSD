@@ -852,16 +852,17 @@ namespace SwDreams.Shared.Managers
         /// 클라이언트에서 호출. 자기 투사체/장판이 적을 맞혔을 때
         /// 호스트에 데미지 처리를 요청.
         /// actorNumber: 데미지를 준 플레이어 (킬러 귀속 효과용).
+        /// isCrit: 클라 측에서 굴린 치명타 결과 (호스트 화면 DamagePopup 색상 일치용).
         /// </summary>
-        public void RequestDamage(int enemyId, int damage, int actorNumber)
+        public void RequestDamage(int enemyId, int damage, int actorNumber, bool isCrit = false)
         {
             if (PhotonNetwork.IsMasterClient)
             {
-                ApplyDamageOnHost(enemyId, damage, actorNumber);
+                ApplyDamageOnHost(enemyId, damage, actorNumber, isCrit);
                 return;
             }
             photonView.RPC(nameof(RPC_RequestDamage), RpcTarget.MasterClient,
-                enemyId, damage, actorNumber);
+                enemyId, damage, actorNumber, isCrit);
         }
 
         /// <summary>
@@ -879,10 +880,10 @@ namespace SwDreams.Shared.Managers
         }
 
         [PunRPC]
-        private void RPC_RequestDamage(int enemyId, int damage, int actorNumber)
+        private void RPC_RequestDamage(int enemyId, int damage, int actorNumber, bool isCrit)
         {
             if (!PhotonNetwork.IsMasterClient) return;
-            ApplyDamageOnHost(enemyId, damage, actorNumber);
+            ApplyDamageOnHost(enemyId, damage, actorNumber, isCrit);
         }
 
         [PunRPC]
@@ -904,12 +905,12 @@ namespace SwDreams.Shared.Managers
             Debug.Log("[SpawnManager] 스폰 준비 신호 수신 — 스킬 발동 가드 해제");
         }
 
-        private void ApplyDamageOnHost(int enemyId, int damage, int actorNumber)
+        private void ApplyDamageOnHost(int enemyId, int damage, int actorNumber, bool isCrit = false)
         {
             if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
             if (enemy == null || !enemy.IsAlive) return;
             enemy.LastDamagerActorNumber = actorNumber;
-            enemy.TakeDamage(damage);
+            enemy.TakeDamage(damage, isCrit);
         }
 
         private void ApplyKnockbackOnHost(int enemyId, Vector2 sourcePos, float force)

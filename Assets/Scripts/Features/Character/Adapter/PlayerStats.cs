@@ -36,6 +36,8 @@ namespace SwDreams.Features.Character.Adapter
         [SerializeField] private float baseCooldownReduction = 0f;
         [SerializeField] private float baseKnockback = 1f;
         [SerializeField] private float baseCritDamage = 1.5f;
+        [Range(0f, 1f)]
+        [SerializeField] private float baseCritChance = 0.05f;
         [SerializeField] private float baseExpMultiplier = 1f;
         [SerializeField] private float baseDefenseMultiplier = 1f;
         [SerializeField] private float baseHealMultiplier = 1f;
@@ -91,6 +93,10 @@ namespace SwDreams.Features.Character.Adapter
 
         public float CritDamageMultiplier =>
             modifiers.Calculate(StatType.CritDamage, baseCritDamage);
+
+        /// <summary>치명타 확률 (0~1). 0.05 = 5%.</summary>
+        public float CritChanceProbability =>
+            Mathf.Clamp01(modifiers.Calculate(StatType.CritChance, baseCritChance));
 
         public float ExpMultiplier =>
             modifiers.Calculate(StatType.ExpMultiplier, baseExpMultiplier);
@@ -327,6 +333,7 @@ namespace SwDreams.Features.Character.Adapter
                 case PassiveBonusType.Knockback:          return StatType.Knockback;
                 case PassiveBonusType.HealingMultiplier:  return StatType.HealMultiplier;
                 case PassiveBonusType.CritDamage:         return StatType.CritDamage;
+                case PassiveBonusType.CritChance:         return StatType.CritChance;
                 case PassiveBonusType.CooldownReduction:  return StatType.CooldownReduction;
                 case PassiveBonusType.MaxHP:              return StatType.MaxHP;
                 case PassiveBonusType.MoveSpeed:          return StatType.MoveSpeed;
@@ -500,6 +507,7 @@ namespace SwDreams.Features.Character.Adapter
             baseCooldownReduction = data.cooldownReduction;
             baseKnockback = data.knockback;
             baseCritDamage = data.critDamage;
+            baseCritChance = data.critChance;
             baseExpMultiplier = data.expMultiplier;
             // CharacterData.defenseBonus 는 패시브와 동일한 양수 컨벤션 ("방어력 +N% = 강함").
             // 내부 baseDefenseMultiplier 는 "받는 데미지 배율" 이므로 1f 에서 차감해 변환.

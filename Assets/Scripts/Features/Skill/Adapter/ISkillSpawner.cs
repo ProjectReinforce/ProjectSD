@@ -63,6 +63,9 @@ namespace SwDreams.Features.Skill.Adapter
         /// <summary>치명타 데미지 배율 (패시브 보너스 적용 완료).</summary>
         public float critDamageMultiplier;
 
+        /// <summary>치명타 확률 (0~1, 패시브 보너스 적용 완료). PlacedTurret.alwaysCritical 같은 강제 치명타는 1f 로 주입.</summary>
+        public float critChance;
+
         // ===== TriggerSystem 참조 =====
 
         /// <summary>스킬의 TriggerSystem. 투사체/장판에 연결용. null 가능.</summary>

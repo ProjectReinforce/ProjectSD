@@ -52,7 +52,8 @@ namespace SwDreams.Features.Skill.Adapter.Data
         Defense,            // 방어력 (0.05 = 받는 데미지 -5%, 내부에서 부호 반전)
         ExpMultiplier,      // 경험치 배율 (0.1 = +10%)
         HpRegen,            // 체력 자연회복 (1 = +1HP/초). HealMultiplier 영향 안 받음
-        IFrameDuration      // 피격 후 무적 시간 (0.1 = +0.1초)
+        IFrameDuration,     // 피격 후 무적 시간 (0.1 = +0.1초)
+        CritChance          // 치명타 확률 (0.05 = +5%) — R9 (2026-04-26). 신규 항목은 enum 끝에 추가 (SO 데이터 시프팅 방지)
     }
 
     /// <summary>

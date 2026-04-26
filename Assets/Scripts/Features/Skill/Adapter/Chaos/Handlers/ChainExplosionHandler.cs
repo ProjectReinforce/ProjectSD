@@ -134,13 +134,19 @@ namespace SwDreams.Features.Skill.Adapter.Chaos.Handlers
 
         private void TriggerExplosionDamage(Vector2 position, int damage, float radius)
         {
+            // R9: 연쇄폭발 노드별 1회 판정 (§ 9 "체인 / 연쇄폭발 노드별 재판정").
+            // ChainExplosion 은 ChaosHandlerContext 가 critChance/critMultiplier 를 들고있지 않으므로,
+            // 현 구조에선 보스 변형 데미지 톤만 보존 — 일반 치명타는 미적용 (필요 시 ChaosHandlerContext 확장).
             var hits = Physics2D.OverlapCircleAll(position, radius);
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag("Enemy")) continue;
                 var damageable = hit.GetComponent<IDamageable>();
-                if (damageable != null && damageable.IsAlive)
-                    damageable.TakeDamage(damage);
+                if (damageable == null || !damageable.IsAlive) continue;
+
+                var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
+                if (enemy != null) enemy.TakeDamage(damage, false);
+                else damageable.TakeDamage(damage);
             }
         }
 

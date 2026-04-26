@@ -56,6 +56,16 @@ namespace SwDreams.Features.Skill.Adapter
         private bool isLocalPlayerOwned;
         private int ownerActorNumber = -1;
 
+        // 치명타 (R9) — AreaSpawner 에서 SetCritStats 로 주입
+        private float critChance;
+        private float critDamageMultiplier = 1.5f;
+
+        public void SetCritStats(float critChance, float critDamageMultiplier)
+        {
+            this.critChance = Mathf.Clamp01(critChance);
+            this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
         /// <summary>AreaSpawner에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
         public void SetTriggerSystem(SkillTriggerSystem system, Transform owner)
         {
@@ -165,6 +175,9 @@ namespace SwDreams.Features.Skill.Adapter
 
         private void ApplyDamageTick()
         {
+            // R9: 한 틱 = 1회 치명타 판정. 범위 내 모든 적에 동일 isCrit 적용 ("단일 적중 내 1회").
+            int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
+
             var hits = Physics2D.OverlapCircleAll(transform.position, radius);
 
             foreach (var hit in hits)
@@ -182,27 +195,29 @@ namespace SwDreams.Features.Skill.Adapter
                     if (PhotonNetwork.IsMasterClient)
                     {
                         if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                        damageable.TakeDamage(damage);
+                        if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                        else damageable.TakeDamage(finalDmg);
                     }
                     else if (enemy != null)
                     {
-                        enemy.ShowHitVisuals(damage);
+                        enemy.ShowHitVisuals(finalDmg, isCrit);
                         SpawnManager.Instance?.RequestDamage(
-                            enemy.EnemyId, damage, ownerActorNumber);
+                            enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                     }
                     else
                     {
                         // Boss: PhotonView RPC로 직접 데미지 요청
                         var boss = hit.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                         if (boss != null)
-                            boss.RequestDamageFromClient(damage);
+                            boss.RequestDamageFromClient(finalDmg, isCrit);
                     }
                 }
                 else
                 {
                     // 남의 장판 (호스트에서만 여기 도달): 직접 데미지
                     if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                    damageable.TakeDamage(damage);
+                    if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                    else damageable.TakeDamage(finalDmg);
                 }
 
                 // OnHit / OnKill 트리거 발동
@@ -212,8 +227,10 @@ namespace SwDreams.Features.Skill.Adapter
                     {
                         position = hit.transform.position,
                         target = hit.transform,
-                        damage = damage,
-                        owner = ownerTransform
+                        damage = finalDmg,
+                        owner = ownerTransform,
+                        critChance = critChance,
+                        critDamageMultiplier = critDamageMultiplier
                     };
 
                     if (triggerSystem.HasTrigger(TriggerType.OnHit))
@@ -258,7 +275,9 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     position = transform.position,
                     damage = damage,
-                    owner = ownerTransform
+                    owner = ownerTransform,
+                    critChance = critChance,
+                    critDamageMultiplier = critDamageMultiplier
                 });
             }
 
@@ -287,6 +306,8 @@ namespace SwDreams.Features.Skill.Adapter
             ownerTransform = null;
             isLocalPlayerOwned = false;
             ownerActorNumber = -1;
+            critChance = 0f;
+            critDamageMultiplier = 1.5f;
             gameObject.SetActive(false);
         }
     }

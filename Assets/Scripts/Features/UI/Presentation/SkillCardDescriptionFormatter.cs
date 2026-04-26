@@ -121,6 +121,7 @@ namespace SwDreams.Features.UI.Presentation
                 case PassiveBonusType.Knockback:          return "넉백";
                 case PassiveBonusType.HealingMultiplier:  return "회복량";
                 case PassiveBonusType.CritDamage:         return "치명타 데미지";
+                case PassiveBonusType.CritChance:         return "치명타 확률";
                 case PassiveBonusType.CooldownReduction:  return "쿨다운 감소";
                 case PassiveBonusType.MaxHP:              return "최대 체력";
                 case PassiveBonusType.MoveSpeed:          return "이동 속도";
@@ -141,6 +142,7 @@ namespace SwDreams.Features.UI.Presentation
                 case PassiveBonusType.HealingMultiplier:
                 case PassiveBonusType.ExpMultiplier:
                 case PassiveBonusType.CritDamage:
+                case PassiveBonusType.CritChance:
                     return true;
                 default:
                     return false;

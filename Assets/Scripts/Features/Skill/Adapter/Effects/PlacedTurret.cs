@@ -32,7 +32,9 @@ namespace SwDreams.Features.Skill.Adapter
         private float attackRange;
         private float attackCooldown;
         private float duration;
-        private bool alwaysCritical;
+        // R9: alwaysCritical 강제 치명타는 critChance=1f 로 통일 (코드 경로 단일화).
+        // 일반 치명타도 critChance > 0 이면 적중마다 새 판정 (적별 재판정).
+        private float critChance;
         private float critDamageMultiplier;
 
         // 타이머
@@ -87,10 +89,11 @@ namespace SwDreams.Features.Skill.Adapter
 
         /// <summary>
         /// PlacedEffect에서 스폰 후 호출.
+        /// alwaysCritical=true 면 critChance=1f 로 통일 강제 치명타.
         /// </summary>
         public void Initialize(Vector2 position, int damage, float attackRange,
             float attackCooldown, float duration, bool alwaysCritical,
-            float critDamageMultiplier, Transform ownerTransform,
+            float critChance, float critDamageMultiplier, Transform ownerTransform,
             SkillTriggerSystem triggerSystem = null)
         {
             transform.position = position;
@@ -98,8 +101,8 @@ namespace SwDreams.Features.Skill.Adapter
             this.attackRange = attackRange;
             this.attackCooldown = Mathf.Max(0.1f, attackCooldown);
             this.duration = duration;
-            this.alwaysCritical = alwaysCritical;
-            this.critDamageMultiplier = critDamageMultiplier;
+            this.critChance = alwaysCritical ? 1f : Mathf.Clamp01(critChance);
+            this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
             this.triggerSystem = triggerSystem;
             this.ownerTransformRef = ownerTransform;
 
@@ -123,7 +126,7 @@ namespace SwDreams.Features.Skill.Adapter
             isActive = true;
 
             Debug.Log($"[PlacedTurret] 설치 — pos:{position}, range:{attackRange}, " +
-                      $"cd:{attackCooldown}, duration:{duration}, crit:{alwaysCritical}");
+                      $"cd:{attackCooldown}, duration:{duration}, critChance:{this.critChance:F2}");
         }
 
         private void Update()
@@ -168,9 +171,8 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     attackTimer -= attackCooldown;
 
-                    int finalDamage = damage;
-                    if (alwaysCritical)
-                        finalDamage = Mathf.RoundToInt(damage * critDamageMultiplier);
+                    // R9: 적별 1회 판정. critChance=1f (alwaysCritical) 면 무조건 치명타.
+                    int finalDamage = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
 
                     // 비주얼: 모든 클라이언트에서 표시
                     ShowAttackLine(currentTarget.position);
@@ -186,8 +188,9 @@ namespace SwDreams.Features.Skill.Adapter
                             var damageable = currentTarget.GetComponent<IDamageable>();
                             if (damageable != null && damageable.IsAlive)
                             {
-                                damageable.TakeDamage(finalDamage);
-                                FireHitTriggers(currentTarget, damageable, finalDamage);
+                                if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                                else damageable.TakeDamage(finalDamage);
+                                FireHitTriggers(currentTarget, damageable, finalDamage, isCrit);
                             }
                         }
                         else
@@ -195,12 +198,12 @@ namespace SwDreams.Features.Skill.Adapter
                             // 클라이언트의 자기 터렛: 비주얼 + 데미지 요청
                             if (enemy != null && enemy.IsAlive)
                             {
-                                enemy.ShowHitVisuals(finalDamage);
+                                enemy.ShowHitVisuals(finalDamage, isCrit);
                                 SpawnManager.Instance?.RequestDamage(
-                                    enemy.EnemyId, finalDamage, ownerActorNumber);
+                                    enemy.EnemyId, finalDamage, ownerActorNumber, isCrit);
                                 // 로컬 소유자 기준 트리거 발화 — 정수 효과(OnHit)가 로컬에서 동작
                                 var damageable = currentTarget.GetComponent<IDamageable>();
-                                FireHitTriggers(currentTarget, damageable, finalDamage);
+                                FireHitTriggers(currentTarget, damageable, finalDamage, isCrit);
                             }
                             else
                             {
@@ -208,9 +211,9 @@ namespace SwDreams.Features.Skill.Adapter
                                 var boss = currentTarget.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                                 if (boss != null)
                                 {
-                                    boss.RequestDamageFromClient(finalDamage);
+                                    boss.RequestDamageFromClient(finalDamage, isCrit);
                                     var damageable = currentTarget.GetComponent<IDamageable>();
-                                    FireHitTriggers(currentTarget, damageable, finalDamage);
+                                    FireHitTriggers(currentTarget, damageable, finalDamage, isCrit);
                                 }
                             }
                         }
@@ -222,7 +225,10 @@ namespace SwDreams.Features.Skill.Adapter
                         if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
                         var damageable = currentTarget.GetComponent<IDamageable>();
                         if (damageable != null && damageable.IsAlive)
-                            damageable.TakeDamage(finalDamage);
+                        {
+                            if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                            else damageable.TakeDamage(finalDamage);
+                        }
                     }
                 }
             }
@@ -232,7 +238,7 @@ namespace SwDreams.Features.Skill.Adapter
         /// OnHit/OnKill 트리거 발화. 로컬 소유자 triggerSystem 에만 실행.
         /// 정수/무기 등 runtime 효과(OnHit), 처치 보상(OnKill) 실행 지점.
         /// </summary>
-        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg)
+        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg, bool isCritFromBody = false)
         {
             if (triggerSystem == null || target == null) return;
 
@@ -242,6 +248,8 @@ namespace SwDreams.Features.Skill.Adapter
                 position = target.position,
                 damage = dmg,
                 owner = ownerTransformRef,
+                critChance = critChance,
+                critDamageMultiplier = critDamageMultiplier
             };
             triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
 

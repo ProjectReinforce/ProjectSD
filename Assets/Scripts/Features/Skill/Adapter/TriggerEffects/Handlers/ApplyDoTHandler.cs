@@ -35,16 +35,19 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
             string source = string.IsNullOrEmpty(context.source) ? RuntimeSources.Legacy : context.source;
 
+            // R9: 부착 시점 1회 치명타 판정 → 모든 틱에 동일 적용 (§ 9 "DoT 부착 시점 스냅샷").
+            int finalTickDamage = CritJudgment.Roll(tickDamage, context.critChance, context.critDamageMultiplier, out bool isCrit);
+
             // 같은 source 의 기존 DoT 있으면 Refresh, 없으면 새 컴포넌트 추가.
             var existing = FindDoTBySource(context.target.gameObject, source);
             if (existing != null)
             {
-                existing.Refresh(tickDamage, duration, tickInterval);
+                existing.Refresh(finalTickDamage, duration, tickInterval, isCrit);
                 return;
             }
 
             var dot = context.target.gameObject.AddComponent<DoTEffect>();
-            dot.Initialize(source, tickDamage, duration, tickInterval);
+            dot.Initialize(source, finalTickDamage, duration, tickInterval, isCrit);
         }
 
         private static DoTEffect FindDoTBySource(GameObject go, string source)
@@ -71,24 +74,29 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
         private float tickInterval;
         private float tickTimer;
         private float aliveTime;
+        // R9: 부착 시점 1회 판정 결과 스냅샷. 모든 틱에 동일 적용.
+        private bool isCritSnapshot;
 
         public string Source => source;
 
-        public void Initialize(string source, int tickDamage, float duration, float tickInterval)
+        public void Initialize(string source, int tickDamage, float duration, float tickInterval, bool isCrit = false)
         {
             this.source = source;
             this.tickDamage = tickDamage;
             this.duration = duration;
             this.tickInterval = tickInterval;
+            this.isCritSnapshot = isCrit;
             tickTimer = 0f;
             aliveTime = 0f;
         }
 
-        public void Refresh(int tickDamage, float duration, float tickInterval)
+        public void Refresh(int tickDamage, float duration, float tickInterval, bool isCrit = false)
         {
             this.tickDamage = tickDamage;
             this.duration = duration;
             this.tickInterval = tickInterval;
+            // Refresh 시 새 판정 결과로 스냅샷 갱신.
+            this.isCritSnapshot = isCrit;
             aliveTime = 0f; // 지속시간 리셋
         }
 
@@ -99,6 +107,13 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 Destroy(this);
                 return;
             }
+
+            // 게임 정지 시 도트 진행/만료 모두 정지 (timeScale=0 안 쓰는 멀티 패턴).
+            var gm = SwDreams.Shared.Managers.GameManager.Instance;
+            if (gm != null
+                && gm.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.Playing
+                && gm.CurrentState != SwDreams.Shared.Managers.GameManager.GameState.BossFight)
+                return;
 
             aliveTime += Time.deltaTime;
             if (aliveTime >= duration)
@@ -113,8 +128,11 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 tickTimer -= tickInterval;
 
                 var damageable = GetComponent<SwDreams.Shared.Domain.Interfaces.IDamageable>();
-                if (damageable != null && damageable.IsAlive)
-                    damageable.TakeDamage(tickDamage);
+                if (damageable == null || !damageable.IsAlive) return;
+
+                var enemy = GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
+                if (enemy != null) enemy.TakeDamage(tickDamage, isCritSnapshot);
+                else damageable.TakeDamage(tickDamage);
             }
         }
     }

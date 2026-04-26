@@ -36,6 +36,9 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
             if (radius <= 0f || maxCount <= 0 || damage <= 0) return;
 
+            // R9: 단일 발화 = 1회 치명타 판정 → N마리 모두 동일 isCrit (§ 9 "단일 적중 내 1회").
+            int finalDamage = CritJudgment.Roll(damage, context.critChance, context.critDamageMultiplier, out bool isCrit);
+
             _buffer.Clear();
 
             Vector2 origin = context.position;
@@ -62,7 +65,11 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
 
             int applyCount = Mathf.Min(maxCount, _buffer.Count);
             for (int i = 0; i < applyCount; i++)
-                _buffer[i].dmg.TakeDamage(damage);
+            {
+                var enemy = _buffer[i].t.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
+                if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                else _buffer[i].dmg.TakeDamage(finalDamage);
+            }
         }
     }
 }

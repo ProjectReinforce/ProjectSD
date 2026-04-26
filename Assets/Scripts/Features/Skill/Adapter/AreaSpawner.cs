@@ -107,6 +107,10 @@ namespace SwDreams.Features.Skill.Adapter
             // TriggerSystem + 소유자 연결 (항상 호출 — 소유자 판별에 필요)
             zone.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
 
+            // 치명타 파라미터 (R9). 회복 장판은 critChance=0 으로 (회복 치명타는 별건 결정).
+            float critChanceForZone = data.isHealingEffect ? 0f : ctx.critChance;
+            zone.SetCritStats(critChanceForZone, ctx.critDamageMultiplier);
+
             activeZones.Add(zoneObj);
         }
 

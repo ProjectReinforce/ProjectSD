@@ -53,6 +53,15 @@ namespace SwDreams.Shared.Data
         [Tooltip("투사체 기본 넉백 힘 (PlayerStats.KnockbackMultiplier와 곱셈)")]
         public float baseKnockbackForce = 0.9f;
 
+        // ===== 치명타 (damage-formula.md § 9·10) =====
+        [Header("치명타")]
+        [Tooltip("치명타 데미지 기본 배율. 1.5 = 1.5배. PlayerStats.baseCritDamage 기본값과 일치 권장.")]
+        public float critMultBase = 1.5f;
+
+        [Tooltip("치명타 확률 기본값 (0~1). 0.05 = 5%. CharacterData.critChance / PlayerStats.baseCritChance 기본값과 일치 권장.")]
+        [Range(0f, 1f)]
+        public float critChanceBase = 0.05f;
+
         // ===== 비주얼 피드백 =====
         [Header("비주얼 피드백")]
         [Tooltip("데미지 숫자 팝업 프리팹 (TextMeshPro + DamagePopup)")]

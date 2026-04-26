@@ -73,6 +73,9 @@ namespace SwDreams.Features.Skill.Adapter
             // ── TriggerSystem + 소유자 연결 (항상 호출 — 소유자 판별에 필요) ──
             projectile.SetTriggerSystem(ctx.triggerSystem, ctx.playerTransform);
 
+            // ── 치명타 파라미터 (R9) ──
+            projectile.SetCritStats(ctx.critChance, ctx.critDamageMultiplier);
+
             // ── Trajectory 부착 (R6/B1: pullRadius 에 ctx.skillRangeBonus 반영) ──
             ITrajectoryBehavior trajectory = TrajectoryFactory.Create(
                 data.trajectoryType, data, ctx.skillRangeBonus);

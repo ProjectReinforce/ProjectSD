@@ -71,6 +71,7 @@ Spawner 구현체: `ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `Debuff
 - ✅ `SkillExecutor.BuildContext()` 가 발사 시점에 위 메서드들을 호출하여 컨텍스트에 주입 완료 (`SkillExecutor.cs:276, 286, 299, 305, 311, 317`).
 - ✅ Projectile/Area 등 Effect 측은 `context.attackMultiplier` 등 사전 계산된 값을 읽으므로 하드코딩 제거됨.
 - ⚠️ 신규 추가될 스탯이 있으면 위 두 곳(필터 메서드 + Executor 호출)에 짝을 맞춰 추가해야 한다.
+- ✅ `CritChance` / `CritDamage` 필터 가능 — `SkillExecutor.BuildContext` 가 `ctx.critChance` / `ctx.critDamageMultiplier` 주입 (R9, 2026-04-26). 핸들러는 `CritJudgment.Roll(...)` 로 사용. 상세 [damage-formula.md § 4.3](damage-formula.md).
 
 ## 4. IFireRecorder (메아리용)
 

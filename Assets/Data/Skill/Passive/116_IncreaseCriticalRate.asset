@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ebb1a8d0155f6a047a852887d58943ac, type: 3}
-  m_Name: 114_IncreaseNoDamageTime
+  m_Name: 116_IncreaseCriticalRate
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.PassiveSkillData
   skillId: 115
   skillName: "\uBB34\uC801 \uC2DC\uAC04 \uC99D\uAC00"

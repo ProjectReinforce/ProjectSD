@@ -150,6 +150,12 @@ chainDamage(n) = final * 0.8^n     // n: 이번 전이가 몇 번째 (0-based)
 - **데미지 판정 주체: 호스트.** 클라이언트는 스킬 발동 알림만 전송, 데미지 최종값은 호스트가 공식 적용 후 RPC 로 결과 전파.
 - 각 클라는 수신한 결과로 피격 이펙트·HP 바 갱신.
 - 규약 상세 [network-sync.md](network-sync.md).
+- **치명타 판정 주체 (R9 Phase A 정책, 2026-04-26 도입):**
+  - 데미지 사이트(`Projectile`/`AreaZone`/`OrbitalObject`/`PlacedTurret`)에서 **자기 측이 굴린 isCrit 를 채택** (호스트/클라 self-judging).
+  - 클라가 자기 투사체로 적중 시: 자기 측 굴린 finalDamage + isCrit 를 `RequestDamage(...,isCrit)` 또는 `Boss.RequestDamageFromClient(damage, isCrit)` RPC 로 호스트에 전달 → 호스트는 그대로 적용 (재굴림 없음). 호스트 화면 색상도 클라 결과와 일치.
+  - **사이드이펙트:** 다른 클라 화면(자기 투사체 아님)은 owner 굴림 결과 모름 → 일반 색상 표시. **Phase B 작업으로 전체 broadcast 동기화 예정.**
+  - **TriggerEffect 핸들러** (`DealDamage`/`Explode`/`Chain`/`ApplyDoT`/`DamageNearby` 등) 는 호스트만 `CritJudgment.Roll` 굴림. 클라 fire 시엔 일반 데미지 fallback (양측 분기 회피).
+  - **WHY:** Survivors-like 협동 게임 cheat 위협 적음 + 응답성 우선. 정석 호스트 권위 대비 일관성은 약하나 게임 느낌 손해 없음.
 
 ## 12. 테스트
 

@@ -84,6 +84,9 @@ namespace SwDreams.Features.Skill.Adapter
                 triggerSystem: ctx.triggerSystem
             );
 
+            // 치명타 파라미터 (R9)
+            orbital.SetCritStats(ctx.critChance, ctx.critDamageMultiplier);
+
             // TwoPhase: Phase1 완료 콜백 연결 (각 orbital이 자기 위치/방향 전달)
             if (ctx.onSpawnComplete != null)
                 orbital.SetOnComplete(ctx.onSpawnComplete);

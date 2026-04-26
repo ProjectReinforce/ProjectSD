@@ -56,6 +56,16 @@ namespace SwDreams.Features.Skill.Adapter
         private SkillTriggerSystem triggerSystem;
         private Transform ownerTransformRef;
 
+        // 치명타 (R9) — OrbitalSpawner 에서 SetCritStats 로 주입.
+        private float critChance;
+        private float critDamageMultiplier = 1.5f;
+
+        public void SetCritStats(float critChance, float critDamageMultiplier)
+        {
+            this.critChance = Mathf.Clamp01(critChance);
+            this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
         // 이미 맞은 적 추적 (1회전 동안 중복 방지)
         private readonly HashSet<int> hitEnemyIds = new HashSet<int>();
 
@@ -171,27 +181,31 @@ namespace SwDreams.Features.Skill.Adapter
                 // Enemy 컴포넌트는 넉백/ShowHitVisuals/EnemyId용 (Boss는 null)
                 var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
 
+                // R9: 적별 1회 판정 (장검이 새 적과 접촉할 때마다 새 굴림).
+                int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
+
                 if (isLocalPlayerOwned)
                 {
                     if (PhotonNetwork.IsMasterClient)
                     {
                         if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                        damageable.TakeDamage(damage);
+                        if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                        else damageable.TakeDamage(finalDmg);
                         if (knockbackForce > 0f && enemy != null)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
-                        FireHitTriggers(hit.transform, damageable, damage);
+                        FireHitTriggers(hit.transform, damageable, finalDmg, isCrit);
                     }
                     else if (enemy != null)
                     {
-                        enemy.ShowHitVisuals(damage);
+                        enemy.ShowHitVisuals(finalDmg, isCrit);
                         if (knockbackForce > 0f)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
                         SwDreams.Shared.Managers.SpawnManager.Instance?.RequestDamage(
-                            enemy.EnemyId, damage, ownerActorNumber);
+                            enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                         if (knockbackForce > 0f)
                             SwDreams.Shared.Managers.SpawnManager.Instance?.RequestKnockback(
                                 enemy.EnemyId, transform.position, knockbackForce);
-                        FireHitTriggers(hit.transform, damageable, damage);
+                        FireHitTriggers(hit.transform, damageable, finalDmg, isCrit);
                     }
                     else
                     {
@@ -199,8 +213,8 @@ namespace SwDreams.Features.Skill.Adapter
                         var boss = hit.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                         if (boss != null)
                         {
-                            boss.RequestDamageFromClient(damage);
-                            FireHitTriggers(hit.transform, damageable, damage);
+                            boss.RequestDamageFromClient(finalDmg, isCrit);
+                            FireHitTriggers(hit.transform, damageable, finalDmg, isCrit);
                         }
                     }
                 }
@@ -209,7 +223,8 @@ namespace SwDreams.Features.Skill.Adapter
                     // 남의 궤도 무기 (호스트에서만 여기 도달): 직접 데미지.
                     // triggerSystem 은 null (원격 플레이어의 것은 로컬에 없음) → FireTrigger 생략.
                     if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                    damageable.TakeDamage(damage);
+                    if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                    else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
                         enemy.ApplyKnockback(transform.position, knockbackForce);
                 }
@@ -281,13 +296,16 @@ namespace SwDreams.Features.Skill.Adapter
             triggerSystem = null;
             ownerTransformRef = null;
             hitEnemyIds.Clear();
+            critChance = 0f;
+            critDamageMultiplier = 1.5f;
             gameObject.SetActive(false);
         }
 
         /// <summary>
         /// OnHit/OnKill 트리거 발화. 로컬 소유자 triggerSystem 에만 실행.
+        /// finalDamage / isCrit 는 본체 적중에서 굴린 결과를 핸들러까지 전달.
         /// </summary>
-        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg)
+        private void FireHitTriggers(Transform target, IDamageable damageable, int dmg, bool isCritFromBody = false)
         {
             if (triggerSystem == null || target == null) return;
 
@@ -297,6 +315,8 @@ namespace SwDreams.Features.Skill.Adapter
                 position = target.position,
                 damage = dmg,
                 owner = ownerTransformRef,
+                critChance = critChance,
+                critDamageMultiplier = critDamageMultiplier
             };
             triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
 

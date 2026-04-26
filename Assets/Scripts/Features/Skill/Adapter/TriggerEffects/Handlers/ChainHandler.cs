@@ -40,7 +40,13 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                     // 체인마다 데미지 감소 (80%씩)
                     int chainDamage = Mathf.RoundToInt(damage * Mathf.Pow(0.8f, i + 1));
                     if (chainDamage < 1) chainDamage = 1;
-                    damageable.TakeDamage(chainDamage);
+
+                    // R9: 노드별 재판정 (§ 9 "체인 / 연쇄폭발 노드별 재판정").
+                    int finalDamage = CritJudgment.Roll(chainDamage, context.critChance, context.critDamageMultiplier, out bool isCrit);
+
+                    var enemy = next.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
+                    if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                    else damageable.TakeDamage(finalDamage);
                 }
 
                 hitTargets.Add(next.GetInstanceID());

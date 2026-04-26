@@ -68,11 +68,15 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                     lifetime: 3f,
                     knockbackForce: 0f
                 );
+
+                // R9: 자식 투사체에도 부모 critStats 전달 — 자식 적중도 노드별 새 판정.
+                projectile.SetCritStats(context.critChance, context.critDamageMultiplier);
             }
         }
 
         /// <summary>
         /// 프리팹 없을 때 fallback. 방향별 즉시 데미지.
+        /// R9: 방향별로 1회 판정 (각 방향 = 새 노드).
         /// </summary>
         private void SpawnInstantDamage(int count, int damage, TriggerContext context)
         {
@@ -85,6 +89,8 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
                 Vector2 pos = context.position + dir * searchDist;
 
+                int finalDamage = CritJudgment.Roll(damage, context.critChance, context.critDamageMultiplier, out bool isCrit);
+
                 var hits = Physics2D.OverlapCircleAll(pos, 0.5f);
                 foreach (var hit in hits)
                 {
@@ -92,7 +98,9 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                     var damageable = hit.GetComponent<IDamageable>();
                     if (damageable != null && damageable.IsAlive)
                     {
-                        damageable.TakeDamage(damage);
+                        var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
+                        if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                        else damageable.TakeDamage(finalDamage);
                         break;
                     }
                 }

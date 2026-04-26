@@ -110,6 +110,19 @@ namespace SwDreams.Features.Skill.Adapter
         protected bool isLocalPlayerOwned;
         protected int ownerActorNumber = -1;
 
+        // ===== 치명타 (R9) =====
+        // ProjectileSpawner 가 SpawnContext 에서 받아서 SetCritStats 로 주입.
+        // 적중 시점에 CritJudgment.Roll → finalDamage 산출 + 비주얼 색상.
+        protected float critChance;
+        protected float critDamageMultiplier = 1.5f;
+
+        /// <summary>치명타 파라미터 주입. ProjectileSpawner에서 호출.</summary>
+        public void SetCritStats(float critChance, float critDamageMultiplier)
+        {
+            this.critChance = Mathf.Clamp01(critChance);
+            this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
         /// <summary>ProjectileEffect에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
         public void SetTriggerSystem(SkillTriggerSystem system, Transform owner)
         {
@@ -197,39 +210,42 @@ namespace SwDreams.Features.Skill.Adapter
                 // 소유자 미설정 (서브 투사체 등): 기존 호스트 권한 방식
                 if (PhotonNetwork.IsMasterClient)
                 {
+                    int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
                     if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                    damageable.TakeDamage(damage);
+                    if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                    else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
                         enemy.ApplyKnockback(transform.position, knockbackForce);
-                    FireOnHit(other.transform, damageable);
+                    FireOnHit(other.transform, damageable, finalDmg, isCrit);
                 }
             }
             else if (isLocalPlayerOwned)
             {
                 if (PhotonNetwork.IsMasterClient)
                 {
-                    // 호스트의 자기 투사체: 직접 데미지 처리
+                    int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
                     if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
-                    damageable.TakeDamage(damage);
+                    if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
+                    else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
                         enemy.ApplyKnockback(transform.position, knockbackForce);
-                    FireOnHit(other.transform, damageable);
+                    FireOnHit(other.transform, damageable, finalDmg, isCrit);
                 }
                 else
                 {
-                    // 클라이언트의 자기 투사체: 비주얼 즉시 + 호스트에 데미지 요청
+                    int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
                     if (enemy != null)
                     {
-                        enemy.ShowHitVisuals(damage);
+                        enemy.ShowHitVisuals(finalDmg, isCrit);
                         if (knockbackForce > 0f)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
                         SpawnManager.Instance?.RequestDamage(
-                            enemy.EnemyId, damage, ownerActorNumber);
+                            enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                         if (knockbackForce > 0f)
                             SpawnManager.Instance?.RequestKnockback(
                                 enemy.EnemyId, transform.position, knockbackForce);
                         // 로컬 소유자 기준 트리거 발화 — 정수 효과(OnHit)가 로컬에서 동작
-                        FireOnHit(other.transform, damageable);
+                        FireOnHit(other.transform, damageable, finalDmg, isCrit);
                     }
                     else
                     {
@@ -237,10 +253,10 @@ namespace SwDreams.Features.Skill.Adapter
                         var boss = other.GetComponent<SwDreams.Features.Boss.Adapter.Boss>();
                         if (boss != null)
                         {
-                            DamagePopup.Spawn(other.transform.position, damage);
+                            DamagePopup.Spawn(other.transform.position, finalDmg, isCrit);
                             HitEffect.Spawn(other.transform.position);
-                            boss.RequestDamageFromClient(damage);
-                            FireOnHit(other.transform, damageable);
+                            boss.RequestDamageFromClient(finalDmg, isCrit);
+                            FireOnHit(other.transform, damageable, finalDmg, isCrit);
                         }
                     }
                 }
@@ -248,6 +264,7 @@ namespace SwDreams.Features.Skill.Adapter
             else
             {
                 // 다른 플레이어의 투사체: 데미지/킬 판정은 owner 측이 처리, 자기 화면엔 비주얼만.
+                // isCrit 은 owner 가 굴린 결과 모름 → 흰색 (Phase B 에서 broadcast 도입 시 정확화).
                 if (enemy != null)
                     enemy.ShowHitVisuals(damage);
                 else
@@ -340,8 +357,10 @@ namespace SwDreams.Features.Skill.Adapter
         /// 적 적중 시 OnHit 트리거 발동. 로컬 소유자 기준.
         /// damageable 이 전달되면 사망 판정 후 OnKill 도 이어서 발화.
         /// 호스트 자기 투사체는 직접 TakeDamage 후 호출, 클라 자기 투사체는 RequestDamage 후 호출(로컬 효과용).
+        /// finalDamage 는 본체 적중에서 굴린 최종 데미지 — 핸들러가 ctx.damage 로 참조 (Explode 등 배율).
+        /// isCritFromBody 는 호출 측 일관성을 위한 인자 (현재 핸들러가 ctx.critChance 로 노드별 재판정).
         /// </summary>
-        protected void FireOnHit(Transform target, IDamageable damageable = null)
+        protected void FireOnHit(Transform target, IDamageable damageable = null, int finalDamage = 0, bool isCritFromBody = false)
         {
             if (triggerSystem == null) return;
 
@@ -350,9 +369,11 @@ namespace SwDreams.Features.Skill.Adapter
                 position = transform.position,
                 direction = direction,
                 target = target,
-                damage = damage,
+                damage = finalDamage > 0 ? finalDamage : damage,
                 owner = ownerTransform,
-                subProjectilePrefab = subProjectilePrefab
+                subProjectilePrefab = subProjectilePrefab,
+                critChance = critChance,
+                critDamageMultiplier = critDamageMultiplier
             };
 
             if (triggerSystem.HasTrigger(TriggerType.OnHit))
@@ -376,7 +397,9 @@ namespace SwDreams.Features.Skill.Adapter
                 direction = direction,
                 damage = damage,
                 owner = ownerTransform,
-                subProjectilePrefab = subProjectilePrefab
+                subProjectilePrefab = subProjectilePrefab,
+                critChance = critChance,
+                critDamageMultiplier = critDamageMultiplier
             });
         }
 
@@ -399,6 +422,8 @@ namespace SwDreams.Features.Skill.Adapter
             chainFlightCount = 0;
             chainHitIds?.Clear();
             subProjectilePrefab = null;
+            critChance = 0f;
+            critDamageMultiplier = 1.5f;
         }
     }
 }

@@ -75,6 +75,7 @@ namespace SwDreams.Features.Skill.Adapter
                 attackCooldown: data.attackCooldown,
                 duration: duration,
                 alwaysCritical: data.alwaysCritical,
+                critChance: ctx.critChance,
                 critDamageMultiplier: ctx.critDamageMultiplier,
                 ownerTransform: ctx.playerTransform,
                 triggerSystem: ctx.triggerSystem

@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-26 (Moderate 트림 — ✅ 완료 항목 1줄 요약 + completed-work.md 링크로 정리)
+최종 업데이트: 2026-04-26 (R9 ✅ 마이그레이션 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -20,15 +20,15 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | [§ R9](#r9-데미지-공식--치명타-확률치명타-데미지-적용) **치명타 확률·데미지 적용** | 인프라 절반 깔려있음(`PlayerStats.baseCritDamage`, `PlacedTurret.alwaysCritical`). 마무리 효과 큼. damage-formula.md § 9 정책 확정 완료 | 없음 (선행 가능) | 1~1.5일 |
-| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 3 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
-| 4 | [§ R11](#r11-파티원--보스-위치-인디케이터--world-indicator-ui) **World Indicator UI** | 4인 Co-op UX 개선. 명세 완비 (world-indicator.md). 보스 추적도 개선 | 없음 (선행 가능) | 1.5~2일 |
-| 5 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 2 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
+| 3 | [§ R11](#r11-파티원--보스-위치-인디케이터--world-indicator-ui) **World Indicator UI** | 4인 Co-op UX 개선. 명세 완비 (world-indicator.md). 보스 추적도 개선 | 없음 (선행 가능) | 1.5~2일 |
+| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R9, R10, R11, R12 모두 독립.
-**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R11 + R9 셋이 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R3 (마이크 필터 — Phase 8-2 동반), R4 (아웃라인 검증), R5 (혼돈 글로벌 설정 이전), R6 (회오리 pullRadius — known-issues B1 동반), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R11, R12, R4 모두 독립.
+**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R11 + R10 셋이 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R3 (마이크 필터 — Phase 8-2 동반), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
 
 ---
 
@@ -251,46 +251,7 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 ### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
-### R9. 데미지 공식 — 치명타 확률·치명타 데미지 적용
-
-**현재 상태:** 인프라가 반쯤 깔려 있으나 **일반 스킬 적중에서 미적용**. `PlacedTurret` 만 `alwaysCritical=true` 로 강제 치명타 처리 중. 명세는 [../systems/damage-formula.md § 4.3](../systems/damage-formula.md) 에 이미 정의됨 — 본 작업은 그 공식을 코드에 반영.
-
-**이미 있는 것:**
-- `StatType.CritDamage`/`CritChance` enum
-- `PlayerStats.baseCritDamage` + `CritDamageMultiplier` 프로퍼티 + `PassiveBonusType.CritDamage` 매핑
-- `CharacterData.critDamage` 필드
-- `SkillExecutor.BuildContext` → `ctx.critDamageMultiplier` 주입 ([SkillExecutor.cs:319-322](../../Assets/Scripts/Features/Skill/Adapter/SkillExecutor.cs#L319-L322))
-- `DamageResult.IsCritical`, `DamagePopup.Setup(isCrit)` (구조만)
-
-**잔여 작업:**
-- [ ] **데이터 스키마:**
-  - [ ] `CharacterData.critChance` 필드 추가 (기본 0.05~0.10, 밸런싱)
-  - [ ] `PlayerStats.baseCritChance` + `CritChanceProbability` 프로퍼티 — `CritDamageMultiplier` 동일 패턴(`modifiers.Calculate(StatType.CritChance, baseCritChance)`)
-  - [ ] `PassiveBonusType.CritChance` enum 추가 + `PlayerStats.RegisterPassive` switch 매핑 (현재 line 329 옆)
-- [ ] **컨텍스트 주입:**
-  - [ ] `TriggerContext.critChance` 필드 추가 (현재 `critDamageMultiplier` 만 있음)
-  - [ ] `SkillExecutor.BuildContext` 에 `data.IsStatApplicable(StatType.CritChance)` 가드로 `ctx.critChance` 주입 (line 319 옆 동일 패턴)
-- [ ] **판정 로직:**
-  - [ ] [DealDamageHandler.cs](../../Assets/Scripts/Features/Skill/Adapter/TriggerEffects/Handlers/DealDamageHandler.cs) 에 치명타 판정 — `Random.value < ctx.critChance` → `finalDamage *= ctx.critDamageMultiplier`, `isCrit=true` 마킹
-  - [ ] `ExplodeHandler` / `ChainHandler` / `ApplyDoTHandler` 등 데미지 발생 핸들러에도 동일 정책 적용
-  - [ ] `PlacedTurret.alwaysCritical` 분기를 `ctx.critChance=1f` 강제 설정으로 통일 (코드 경로 단일화) — [PlacedTurret.cs:172-173](../../Assets/Scripts/Features/Skill/Adapter/Effects/PlacedTurret.cs#L172-L173) 정리
-- [ ] **네트워크 동기화 (호스트 권위):**
-  - [ ] 호스트 판정 `isCrit` 결과를 데미지 RPC payload 에 포함 → 각 클라 `DamagePopup.Spawn(..., isCrit)` 동일 색상·크기 표시
-  - [ ] `photon-sync-auditor` 호출 (RPC 시그니처 변경)
-- [ ] **튜닝 상수:**
-  - [ ] `GameplayConfig` 에 `CRIT_MULT_BASE` (1.5), `CRIT_CHANCE_BASE` (0.05) 노출 (현재 하드코딩) — [damage-formula.md § 10](../systems/damage-formula.md) 정렬
-- [ ] **UI:**
-  - [ ] `SkillCardDescriptionFormatter` 에 `PassiveBonusType.CritChance` 라벨 추가 (line 123, 143 옆)
-  - [ ] `SkillData.applicableStats` 인스펙터에 `CritChance` 항목 노출 — `SkillDataEditor` 동시 업데이트 (메모리: Custom Editor Sync)
-- [ ] **치명타 정책 (확정 — [damage-formula.md § 9](../systems/damage-formula.md) 준수):**
-  - [ ] **단일 적중 내 1회:** 동시 여러 치명타 소스가 있어도 `critMult` 1회만 적용
-  - [ ] **체인 / 연쇄폭발 노드별 재판정:** ChainHandler 다음 전이마다, 연쇄폭발 새 노드마다 `Random.value < critChance` 새로 굴림. `critMult` 도 노드별 독립
-  - [ ] **DoT 부착 시점 스냅샷:** ApplyDoTHandler 가 부착 1회 판정 후 결과를 인스턴스에 스냅샷, 모든 틱에 동일 적용 (틱마다 재판정 안 함)
-- [ ] **테스트:**
-  - [ ] 단위: `critChance=1.0` 일 때 항상 `final = base * critDamageMultiplier`
-  - [ ] 플레이 모드: 패시브 #15 (치명타 확률) 획득 후 데미지 팝업 색상이 호스트/클라 동일하게 표시되는지
-
-**관련:** [damage-formula.md § 4.3](../systems/damage-formula.md), [skill-executor.md](../systems/skill-executor.md) (applicableStats 필터)
+### R9. 데미지 공식 — 치명타 확률·치명타 데미지 적용 ✅ (2026-04-26) → [completed-work.md](completed-work.md)
 
 ### R10. 클라이언트 적 위치 수렴 — Convergence Damping
 
