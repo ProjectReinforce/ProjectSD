@@ -293,8 +293,10 @@ namespace SwDreams.Shared.Managers
         /// </summary>
         public void OnRetry()
         {
-            // 씬 동기화 해제 (각 클라이언트가 독립적으로 씬 전환하기 위해)
-            PhotonNetwork.AutomaticallySyncScene = false;
+            // [B8 A-1] AutomaticallySyncScene = false 항상 (NetworkManager.Awake 에서 set).
+            // OnRetry 의 SceneManager.LoadScene 이 PUN 의 SetLevelInPropsIfSynced 를 트리거해도
+            // autoSync=false 가드로 RoomProperty 갱신 안 됨 → 클라 강제 sync 안 일어남.
+            // 호스트 다시하기 ≠ 클라 강제 sync (디자인 의도).
 
             // ready 초기화
             NetworkManager.Instance?.SetLocalReady(false);
@@ -323,6 +325,9 @@ namespace SwDreams.Shared.Managers
             PhotonNetwork.SendAllOutgoingCommands();
             yield return null;
 
+            // [B8 A-1] 다시하기는 각 클라가 독립 — 호스트가 다시하기 클릭해도 클라는 결과창 그대로 둬야 함.
+            // AutomaticallySyncScene = false 정책상 LoadScene 이 RoomProperty SceneIndex 갱신 안 함 →
+            // 클라 강제 sync 트리거 안 됨. 게임 시작은 NetworkManager.RequestLoadGameScene RaiseEvent 로 동기.
             UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScene");
             Debug.Log("[ResultManager] 다시 하기 → MenuScene (방 유지)");
         }

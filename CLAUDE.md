@@ -2,7 +2,7 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.3 (2026-04-25) — Localization 시스템(`Shared/Localization/`) 추가.
+> **버전:** v2.4 (2026-04-26) — World Indicator UI(`Features/UI/{Adapter,Presentation}/Indicator/`) 추가.
 
 ---
 
@@ -59,8 +59,10 @@ Assets/Scripts/
 │   ├── Character/           ← Adapter (Player/PlayerStub, PlayerStats, PlayerMovement, PlayerHealth, PlayerVisual, RespawnManager) + Adapter/Data (CharacterData)
 │   ├── Progression/         ← Adapter (Levelupmanager, SkillManager, ChaosSkillManager, 진화·경험치)
 │   └── UI/
-│       ├── Adapter/Menu/    ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
-│       └── Presentation/    ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, ResultPanelUI, DamagePopup, DeathOverlayUI, ReconnectUI, DebugOverlay, UIBackgroundBlur, UIImageBlur
+│       ├── Adapter/Menu/        ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
+│       ├── Adapter/Indicator/   ← IWorldIndicatorTarget, IndicatorPolicy, PlayerColorPalette, WorldIndicatorManager. 설계만 — [docs/systems/world-indicator.md](docs/systems/world-indicator.md)
+│       ├── Presentation/        ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, ResultPanelUI, DamagePopup, DeathOverlayUI, ReconnectUI, DebugOverlay, UIBackgroundBlur, UIImageBlur
+│       └── Presentation/Indicator/ ← WorldIndicatorView (히스테리시스 상태머신, 가장자리 클램프). 설계만
 ├── Shared/                  ← Feature 경계를 넘는 공유 코드
 │   ├── Domain/              ← 순수 C# (GameResult, PlayerBuildData, IDamageable, IPoolable)
 │   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
@@ -109,6 +111,8 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **호스트-클라이언트:** Photon MasterClient 가 권위. 투사체는 로컬 렌더, 히트는 호스트. [docs/systems/network-sync.md](docs/systems/network-sync.md).
 - **런타임 Effect source prefix:** `essence_*` / `weapon_*` / `chaos_*` / `buff_*`.
 - **Voice (보이스챗):** Photon Voice 2 사용 예정. 무료 티어 20 CCU. 미구현 — 설계만 [docs/systems/voice-chat.md](docs/systems/voice-chat.md).
+- **World Indicator:** 파티원/보스 위치 표시 UI. In-Screen 머리 위 이름표 / Off-Screen 가장자리 화살표(테두리색 + 아래 이름). 히스테리시스 β 표준. 클라이언트 로컬 (네트워크 동기화 없음). 설계만 — [docs/systems/world-indicator.md](docs/systems/world-indicator.md).
+- **IndicatorPolicy:** `AlwaysShow` (파티원) / `OffScreenOnly` (보스) / `WhileActive` (퀘스트, 보류). 카테고리별 표시 정책.
 
 **플랫폼 / 인프라**
 - **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
@@ -140,7 +144,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**, **localization**
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -152,6 +156,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **보이스챗(마이크) 구현 →** [docs/systems/voice-chat.md](docs/systems/voice-chat.md) 만 보면 완결. Photon Voice 2 기반
 - **Steam/Stove SDK 통합 →** [docs/systems/platform-integration.md](docs/systems/platform-integration.md). Phase A(추상화) → B(Stove) → C(Steam) 순
 - **다국어/번역 →** [docs/systems/localization.md](docs/systems/localization.md). 1차 KO/EN/JA/ZH-CN. Google Sheets → 빌드타임 SO 임포트. Key 기반
+- **파티원/보스 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

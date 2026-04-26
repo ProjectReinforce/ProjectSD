@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
+using SwDreams.Shared.Network;
 using UnityEngine;
 
 namespace SwDreams.Shared.Managers
 {
-    public class NetworkManager : MonoBehaviourPunCallbacks
+    public class NetworkManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         // 플레이어 커스텀 프로퍼티 키
         public const string CharacterIdKey = "characterId";
@@ -57,6 +58,12 @@ namespace SwDreams.Shared.Managers
             // "CloseConnection is disabled. No need to call it." 에러만 찍히고 실제 강퇴는 일어나지 않는다.
             // 우리 게임은 호스트 권위 Co-op이므로 앱 시작 시 명시적으로 true로 세팅한다.
             PhotonNetwork.EnableCloseConnection = true;
+
+            // [B8 A-1] AutomaticallySyncScene = false 항상 유지.
+            // PUN 의 자동 sync 는 호스트 LoadScene 시 SceneIndex RoomProperty 자동 갱신 → 클라 강제 LoadScene.
+            // 이로 인해 다시하기 시 호스트만 대기실 가도 클라가 강제로 따라가는 부작용.
+            // 게임 시작은 명시적 RPC_LoadGameScene 으로 모든 클라 동시 LoadScene 처리.
+            PhotonNetwork.AutomaticallySyncScene = false;
         }
 
         private void Start()
@@ -498,6 +505,36 @@ namespace SwDreams.Shared.Managers
             var action = pendingMatchmakingAction;
             pendingMatchmakingAction = null;
             action.Invoke();
+        }
+
+        // ===== [B8 A-1] 게임 시작 명시적 동기화 =====
+
+        /// <summary>
+        /// 호스트 전용. 모든 클라에 GameScene 로드 신호 송신.
+        /// PhotonNetwork.LoadLevel 대신 사용 — autoSync=false 유지하면서도 양쪽 동시 LoadScene 보장.
+        /// 다시하기 같은 "호스트만 처리" 흐름은 SceneManager.LoadScene 로 처리해 클라 강제 sync 안 함.
+        /// PhotonView 의존을 피해 RaiseEvent 사용 (DropSpawner 와 같은 패턴).
+        /// </summary>
+        public void RequestLoadGameScene(string sceneName)
+        {
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                Debug.LogWarning("[NetworkManager] RequestLoadGameScene 은 호스트 전용.");
+                return;
+            }
+            PhotonNetwork.RaiseEvent(
+                LoadSceneEvent.EventCode,
+                sceneName,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable);
+        }
+
+        public void OnEvent(EventData photonEvent)
+        {
+            if (photonEvent.Code != LoadSceneEvent.EventCode) return;
+            var sceneName = photonEvent.CustomData as string;
+            if (string.IsNullOrEmpty(sceneName)) return;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
         }
     }
 }

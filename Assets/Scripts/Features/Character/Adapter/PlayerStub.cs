@@ -171,20 +171,7 @@ namespace SwDreams.Features.Character.Adapter
 
             if (target == null)
             {
-                // 매칭 실패 진단 — 호스트 측 모든 활성 픽업 덤프해 위치/itemId 차이 확인.
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine($"[PlayerStub] RPC_HostPickup itemId={itemId} pos={reqPos} — 매칭 인스턴스 없음.");
-                sb.AppendLine($"호스트 측 활성 픽업 (총 {pickups.Length}):");
-                for (int i = 0; i < pickups.Length; i++)
-                {
-                    var p = pickups[i];
-                    if (p == null) continue;
-                    bool active = p.gameObject.activeInHierarchy;
-                    Vector2 pp = p.transform.position;
-                    float d = Vector2.Distance(pp, reqPos);
-                    sb.AppendLine($"  - itemId={p.ItemId} pos={pp} dist={d:F2} active={active}");
-                }
-                Debug.LogWarning(sb.ToString());
+                Debug.LogWarning($"[PlayerStub] RPC_HostPickup itemId={itemId} pos={reqPos} — 매칭 인스턴스 없음.");
                 return;
             }
 

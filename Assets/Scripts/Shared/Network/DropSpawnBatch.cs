@@ -35,4 +35,25 @@ namespace SwDreams.Shared.Network
     {
         public const byte EventCode = 14;
     }
+
+    /// <summary>
+    /// [B8 A-1] 호스트가 모든 클라에 GameScene 로드 신호 송신.
+    /// AutomaticallySyncScene = false 정책상 PhotonNetwork.LoadLevel 대신 명시적 RaiseEvent 사용.
+    /// payload = string sceneName. NetworkManager 가 송수신.
+    /// </summary>
+    public static class LoadSceneEvent
+    {
+        public const byte EventCode = 15;
+    }
+
+    /// <summary>
+    /// [B8] 대기실(WaitingRoomPanel) 진입 시 다른 클라들에 자기 LobbyPlayer 재 spawn 요청.
+    /// PhotonNetwork.Instantiate 의 buffered event 가 같은 클라에 replay 되지 않으므로
+    /// 늦게 진입한 측이 먼저 진입자의 LobbyPlayer 를 받지 못함 → 모두 새로 spawn 해 새 buffered event 보장.
+    /// payload 없음. LobbyPlayerSpawner 가 송수신.
+    /// </summary>
+    public static class LobbyRefreshEvent
+    {
+        public const byte EventCode = 16;
+    }
 }

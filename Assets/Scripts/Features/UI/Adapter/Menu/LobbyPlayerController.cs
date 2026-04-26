@@ -40,6 +40,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private void Awake()
         {
+            // [B8] 잘못된 씬(예: GameScene 결과창 시점에 다른 클라가 MenuScene 진입해
+            // PhotonNetwork.Instantiate 한 LobbyPlayer 가 우리 GameScene 에 spawn) 에 spawn 되면
+            // 자기 측에서 즉시 제거. 실제 MenuScene 에 진입 시 RaiseRefreshRequest 로
+            // 재 spawn 받음 (LobbyPlayerSpawner.OnEvent).
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "MenuScene")
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             rb = GetComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;

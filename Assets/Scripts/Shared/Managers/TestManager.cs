@@ -40,7 +40,9 @@ namespace SwDreams.Shared.Managers
             SetState(GameState.InGame);
             if (PhotonNetwork.IsMasterClient)
             {
-                PhotonNetwork.LoadLevel(gameSceneName);
+                // [B8 A-1] PhotonNetwork.LoadLevel 대신 명시적 RPC 사용.
+                // LoadLevel 은 autoSync=true 일 때만 클라 자동 따라감. autoSync=false 정책상 RPC 로 동기화.
+                NetworkManager.Instance?.RequestLoadGameScene(gameSceneName);
             }
         }
 

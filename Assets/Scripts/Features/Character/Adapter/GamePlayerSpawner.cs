@@ -24,8 +24,32 @@ namespace SwDreams.Features.Character.Adapter
         [Tooltip("characterId를 찾지 못할 때 사용할 기본 캐릭터 ID")]
         [SerializeField] private int fallbackCharacterId = 0;
 
+        // [B8 안전망] race 로 같은 GameScene 로드 frame 안에 두 번 GamePlayerSpawner 가 활성화되어도
+        // 한 번만 spawn 하도록 정적 instance 가드. Awake 에서 첫 instance 만 instance 로 기록하고,
+        // Start 에서 instance != this 면 spawn skip. NetworkManager 처럼 Destroy(gameObject) 는
+        // 안 함 — 같은 prefab(Managers.prefab) 의 다른 매니저들이 이미 Singleton 가드로 정리되므로
+        // 중복 GameObject 자체는 그쪽이 처리.
+        private static GamePlayerSpawner instance;
+
+        private void Awake()
+        {
+            if (instance != null && instance != this) return;
+            instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this) instance = null;
+        }
+
         private void Start()
         {
+            if (instance != this)
+            {
+                Debug.LogWarning("[B8-DIAG] GamePlayerSpawner 중복 instance — spawn skip.");
+                return;
+            }
+
             if (!PhotonNetwork.InRoom)
             {
                 Debug.LogWarning("[GamePlayerSpawner] Photon 방에 접속되지 않았습니다.");
@@ -48,7 +72,7 @@ namespace SwDreams.Features.Character.Adapter
 
         private void SpawnLocalPlayer()
         {
-            // [B8/N7/N10/N11] 중복 스폰 가드 — 이전 라운드의 본인 Player PhotonView 가
+            // [B8] 중복 스폰 가드 — 이전 라운드의 본인 Player PhotonView 가
             // ResultManager.OnRetry 의 Destroy 보다 늦게 실제 GameObject 정리될 가능성 + 후입장 등
             // 엣지케이스 모두 차단. 기존 PV 가 있으면 신규 spawn 스킵.
             var existing = GameObject.FindGameObjectsWithTag("Player");

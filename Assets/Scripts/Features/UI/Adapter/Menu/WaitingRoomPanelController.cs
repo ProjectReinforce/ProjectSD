@@ -135,6 +135,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (lobbyPlayerSpawner != null && PhotonNetwork.InRoom)
             {
                 lobbyPlayerSpawner.Spawn();
+                // [B8] 다른 클라들에게 진입 알림 → 그들이 자기 LobbyPlayer 재 spawn → 본인 받음.
+                // PUN buffered Instantiate event 가 같은 클라에 replay 되지 않는 한계 우회.
+                LobbyPlayerSpawner.RaiseRefreshRequest();
             }
 
             RefreshRoomUi();
@@ -663,7 +666,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             ShowCountdownText(string.Empty);
 
-            PhotonNetwork.AutomaticallySyncScene = true;
+            // [B8] AutomaticallySyncScene 는 OnRetry / 게임 시작 진입점에서 한 번만 set.
+            // 매 frame 재 set 은 stale SceneIndex mismatch 자동 LoadScene race 의 트리거가 됨.
 
             if (!PhotonNetwork.IsMasterClient || isLoadingGameScene)
             {

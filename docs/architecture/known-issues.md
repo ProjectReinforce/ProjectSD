@@ -66,13 +66,23 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 
 ---
 
-### N7. 다시하기 → 대기실 복귀 시 먼저 도착한 측 화면에 캐릭터 2개 (B8 연관) ⚠️
+### N7. 다시하기 → 대기실 복귀 시 LobbyPlayer 동기화 race — 수정 완료
 
-**증상**: 게임 종료 → 다시하기 → 대기실 복귀 시, 먼저 돌아온 측 화면에만 LobbyPlayer 가 두 개 다 보임 (자기 캐릭터 + 상대 캐릭터 둘 다 자기 위치 근처).
+**증상**: 게임 종료 → 다시하기 → 대기실 복귀 시, **늦게 도착한 측** 화면에 다른 유저의 LobbyPlayer 가 안 보임.
 
-**연관**: [B8](#b8-다시하기-두번째-플로우부터-호스트가-클라-복제체-생성-클라-동작-불가-) 와 같은 뿌리(GameScene → MenuScene 전환 시 PhotonView 정리 누락) 가능성 높음.
+**진짜 원인**: PUN `PhotonNetwork.Instantiate` 의 buffered event 가 **같은 클라에 LoadScene 후 replay 되지 않음**. 즉:
+- 클라 먼저 MenuScene → LobbyPlayer spawn → 호스트는 GameScene 이라 호스트 GameScene 에 spawn (받음)
+- 호스트 LoadScene(MenuScene) → 호스트 측 클라 LobbyPlayer GameObject destroy + viewID 등록 해제. server cache 잔존.
+- 호스트 MenuScene → buffered event replay 안 됨 → 호스트 측에 클라 LobbyPlayer 안 보임.
 
-**처리 방향**: B8 디버깅 세션과 묶어서 진행. `returnToWaitingRoom` 시점에 GameScene 의 Player PhotonView 가 명시적으로 Destroy 되는지 확인.
+**수정 완료** (2026-04-26):
+- `LobbyRefreshEvent.EventCode = 16` 신규 RaiseEvent 채널 ([DropSpawnBatch.cs](../../Assets/Scripts/Shared/Network/DropSpawnBatch.cs))
+- [LobbyPlayerSpawner](../../Assets/Scripts/Features/UI/Adapter/Menu/LobbyPlayerSpawner.cs) 가 `IOnEventCallback` 구현 + `RaiseRefreshRequest` 정적 메서드
+- [WaitingRoomPanelController.OnEnable](../../Assets/Scripts/Features/UI/Adapter/Menu/WaitingRoomPanelController.cs:137) 에서 자기 spawn 직후 RaiseRefreshRequest 송신 (Receivers=Others)
+- 다른 클라들이 LobbyPlayer Despawn + Spawn 으로 새 viewID/buffered event 송신 → 진입자가 받음
+- 위치 보존: Refresh 시 현재 transform.position 을 새 spawn 의 overridePosition 으로 전달
+
+부수 fix: [LobbyPlayerController.Awake](../../Assets/Scripts/Features/UI/Adapter/Menu/LobbyPlayerController.cs:41) 가 자기 씬이 MenuScene 아니면 즉시 self-destroy → 호스트가 결과창(GameScene) 시점 클라 LobbyPlayer 가 GameScene 에 spawn 되는 부작용 차단.
 
 ---
 
@@ -100,19 +110,20 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 
 ---
 
-### N10. 1 사이클 후 다시하기 → 대기실 → 게임 시작 시 호스트 측에 더미 캐릭터 (B8 연관) ⚠️
+### N10. 1 사이클 후 다시하기 → 대기실 → 게임 시작 시 호스트 측에 더미 PlayerStub — 수정 완료
 
-**증상**: 다시하기 → 대기실 → 게임 시작 시 호스트 측에만 추가 캐릭터 하나 더 등장. 어그로 끌리고 부활도 계속됨. 호스트/클라 둘 다 죽어도 더미가 살아 있어 게임 종료 트리거 안 됨. 스킬도 둘 중 누군가의 것을 복사해서 사용 (정확히 누구건지 미확인, 둘 다였을 가능성 있음).
+**증상**: 다시하기 → 대기실 → 게임 시작 시 호스트 측에만 추가 캐릭터 하나 더 등장. 어그로 끌리고 부활도 계속됨. 호스트/클라 둘 다 죽어도 더미가 살아 있어 게임 종료 트리거 안 됨.
 
-**위험도**: ⚠️ 매우 높음. 출시 차단.
+**진짜 원인 두 단계**:
+1. **`AutomaticallySyncScene = true` 의 자동 RoomProperty 갱신**: PUN [PhotonNetworkPart.cs:1478](../../Assets/FromStore/Photon/PhotonUnityNetworking/Code/PhotonNetworkPart.cs:1478) 의 OnSceneLoaded 콜백이 호스트 LoadScene 시 자동으로 SceneIndex RoomProperty 갱신 → 클라 강제 sync. 이게 클라 GameScene 두 번 로드 race 의 원인.
+2. **GameScene 두 번 로드 → GamePlayerSpawner.Start 두 번 호출 → PhotonNetwork.Instantiate 두 번**: 첫 PV 가 클라 측 SceneManager 자동 정리 후에도 호스트 측에 잔존 → 더미.
 
-**연관**: [B8](#b8-다시하기-두번째-플로우부터-호스트가-클라-복제체-생성-클라-동작-불가-), N7 과 동일 뿌리 추정. 이전 라운드의 Player PhotonView 가 cleanup 되지 않고 두 번째 라운드에 잔존.
-
-**처리 방향**: B8/N7/N10 묶어서 별도 디버깅 세션. 후보:
-- 씬 언로드 시 강제 Player cleanup
-- `PhotonNetwork.RemoveBufferedRPCs()` + Owner Destroy
-- Player 풀링 도입 (Instantiate 대신 재사용)
-- 게임 종료 트리거가 "살아있는 PhotonPlayer 수" 기준이라면 "AlivePlayerActor 가 PhotonNetwork.PlayerList 에 포함" 가드 추가
+**수정 완료** (2026-04-26):
+- [NetworkManager.Awake](../../Assets/Scripts/Shared/Managers/NetworkManager.cs:60) 에서 `AutomaticallySyncScene = false` 항상 유지 (자동 sync 차단)
+- [NetworkManager.RequestLoadGameScene](../../Assets/Scripts/Shared/Managers/NetworkManager.cs:510) — `LoadSceneEvent.EventCode = 15` RaiseEvent 로 명시적 동기화 (호스트 → 모든 클라)
+- [TestManager.EnterGameSceneByMaster](../../Assets/Scripts/Shared/Managers/TestManager.cs:38) 가 `PhotonNetwork.LoadLevel` 대신 RequestLoadGameScene 호출
+- [GamePlayerSpawner](../../Assets/Scripts/Features/Character/Adapter/GamePlayerSpawner.cs) 정적 instance 가드 (race 안전망 — 같은 frame 에 두 instance 활성화돼도 두번째 Start 는 spawn skip)
+- 부수: [PlayerHealth.Update](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) 의 GameState 가드에 `GameManager.Instance == null` 포함, [ResultManager.OnRetry](../../Assets/Scripts/Shared/Managers/ResultManager.cs:294) 코루틴으로 본인 PV PhotonNetwork.Destroy 후 LoadScene
 
 ---
 
@@ -142,10 +153,10 @@ Ev Destroy Failed. Could not find PhotonView with instantiationId 2012. Sent by 
 
 **처리 방향**: 단독 항목 아님. N5 / N7+N10+B8 묶음 디버깅 시 이 로그가 **회귀 검증의 카나리아**. 수정 후 위 4종 경고가 콘솔에서 사라져야 완료로 간주.
 
-**부분 진행** (2026-04-26):
-- R2 자연회복 RPC 잔존: [PlayerHealth.Update](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) 의 GameState 가드를 `gm == null` 까지 포함해 강화 → MenuScene 전환 직후 stale Player 에 RPC_Heal 송신 차단.
-- 다시하기 cleanup 1차: [ResultManager.OnRetry](../../Assets/Scripts/Shared/Managers/ResultManager.cs) 를 코루틴으로 분리 (PhotonNetwork.Destroy → 1프레임 yield → SendAllOutgoingCommands → LoadScene) + [GamePlayerSpawner](../../Assets/Scripts/Features/Character/Adapter/GamePlayerSpawner.cs) 중복 스폰 가드.
-- 잔존: 호스트 측 "Could not find PhotonView with instantiationId ... Sent by actorNr: 2" 일부 잔존, 캐릭터 복제 양상 여전 → N7/N10/B8 다음 세션에서 추가 디버깅.
+**수정 완료** (2026-04-26): N7/N10/B8 묶음 fix 로 같이 해결.
+- N5 RPC_TakeDamage 잔존: 더미 PV 가 호스트 측에 잔존하면서 발생 → N10 fix 로 해소.
+- R2 RPC_Heal 잔존: PlayerHealth.Update 의 GameManager null 가드 강화 + ResultManager 의 명시적 PhotonNetwork.Destroy + autoSync=false 정책 → stale RPC 송신 차단.
+- LobbyPlayer cleanup 비대칭 "Could not find PV ...2005": LobbyPlayerController.Awake 의 잘못된 씬 self-destroy + LobbyRefreshEvent 재 spawn 으로 해소 (N7).
 
 ---
 
@@ -205,18 +216,15 @@ Ev Destroy Failed. Could not find PhotonView with instantiationId 2012. Sent by 
 
 ---
 
-### B8. 다시하기 두번째 플로우부터 호스트가 클라 복제체 생성, 클라 동작 불가 ⚠️
+### B8. 다시하기 두번째 플로우부터 호스트가 클라 복제체 생성, 클라 동작 불가 — 수정 완료
 
 **증상**: 첫 플로우는 정상. 다시하기로 두번째 라운드 진입 시:
 - 호스트 측: 클라이언트의 캐릭터 복제체가 같이 보임 (스킬은 클라 것을 따라가지만 데미지는 따로). 부활도 별개.
-- 클라이언트 측: 동작 불가. 몬스터도 멈춤. 호스트 캐릭터 안 보임. 레벨업 1회 이후 로직만 동작.
+- 클라이언트 측: 동작 불가. 몬스터도 멈춤. 호스트 캐릭터 안 보임.
 
-**위험도**: ⚠️ 매우 높음. 출시 차단 버그.
+**수정 완료** (2026-04-26): N10 묶음 fix 와 동일. 핵심은 `AutomaticallySyncScene = false` 정책 + `RequestLoadGameScene` RaiseEvent 동기화. 상세는 [N10](#n10-1-사이클-후-다시하기--대기실--게임-시작-시-호스트-측에-더미-playerstub--수정-완료) 참조.
 
-**처리 방향**: GameScene 재진입 시 PhotonView/Player 객체가 정리되지 않는 문제로 추정. 별도 디버깅 세션 필요. 후보:
-- 씬 언로드 시 강제 cleanup
-- Player 풀링 도입
-- `returnToWaitingRoom` 흐름에서 `PhotonNetwork.RemoveBufferedRPCs()` + Owner Destroy
+추가 디자인 결정: **호스트 다시하기 ≠ 클라 강제 sync**. 호스트가 다시하기 클릭해도 클라는 결과창에 그대로 남아 자기 의지로 선택. autoSync=false 라 호스트 LoadScene 이 RoomProperty 갱신 안 함.
 
 ---
 
