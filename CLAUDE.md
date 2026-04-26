@@ -2,7 +2,9 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.5 (2026-04-26) — 폴더 지도 미스매치 수정(Skill/Progression 입혀쓰기, Essence/Pickup/Quest/StatBoost/Weapon/Enemy.Attack 추가, EffectActionType 12종 갱신). 최상단 4종 진입점 명문화. spec↔roadmap 분리 룰 도입.
+> **버전:** v2.6 (2026-04-26) — § 6 작업 규칙에 "ScriptableObject 인스턴스(.asset) 직접 수정 금지" 추가.
+>
+> **이전:** v2.5 (2026-04-26) — 폴더 지도 미스매치 수정(Skill/Progression 입혀쓰기, Essence/Pickup/Quest/StatBoost/Weapon/Enemy.Attack 추가, EffectActionType 12종 갱신). 최상단 4종 진입점 명문화. spec↔roadmap 분리 룰 도입.
 
 ---
 
@@ -190,6 +192,9 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
    - **의도 재확인:** 사용자의 원래 의도를 다시 자세히 파악 (요구사항이 본질인지, 수단인지 구분).
    - **사용자 판단 후 진행:** 사용자가 원래 안을 고수하면 그대로 따른다. 토론 후 결정된 방향으로만 진행.
    - 단, 명백히 사소한 사안(네이밍 취향, 1~2줄 스타일 차이)은 토 달지 말고 그대로 진행.
+8. **ScriptableObject 인스턴스(.asset) 직접 수정 절대 금지:** SO `.asset` 파일(인스펙터에서 채우는 데이터)은 **사용자가 Unity 에디터에서 직접 수정한다.** Claude는 어떤 경우에도 `.asset` 파일을 `Edit`/`Write` 하지 않는다 (YAML 직편집·`fileID`·`guid` 변경 포함 일체 금지).
+   - 데이터 변경이 필요하면 **어떤 SO의 어떤 필드에 어떤 값을 넣어야 하는지 안내만** 하고 멈춘다 (예: "`Skill_Sword_Lv3.asset` 의 `damage` 를 25 → 30").
+   - SO 클래스 정의 `.cs` 파일(필드 추가/제거 등 코드 작업)은 본 규칙의 적용 대상이 아니다 — 단, 필드 추가 시 메모리 [Custom Editor Sync](feedback_custom_editor_sync.md)에 따라 `SkillDataEditor` 등 커스텀 에디터도 함께 업데이트할 것.
 
 ---
 
