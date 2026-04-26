@@ -765,6 +765,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
                     if (entryPool[i].gameObject.activeSelf) entryPool[i].gameObject.SetActive(false);
                 }
             }
+
+            // [N8] VerticalLayoutGroup 자동 dirty 가 다시하기 후 진입 시점에 발동 안 되는 문제 →
+            // 강제 Layout rebuild. 새 entry 가 Instantiate 됐을 때만 호출하면 충분하지만
+            // 매 RefreshLobbyEntries 호출 시 호출해도 비용 무시할 수준 (entry 수 ≤ 4).
+            var containerRT = lobbyEntryContainer as RectTransform;
+            if (containerRT != null)
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(containerRT);
         }
 
         private void SetStateText(string text)

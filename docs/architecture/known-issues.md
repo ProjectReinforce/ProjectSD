@@ -86,13 +86,19 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 
 ---
 
-### N8. 다시하기 → 대기실 복귀 시 우측 플레이어 상태 패널 겹침
+### N8. 다시하기 → 대기실 복귀 시 우측 플레이어 상태 패널 겹침 — 수정 완료
 
 **증상**: 양쪽(호스트/클라) 모두 우측 플레이어 상태 UI(호스트 표시, 캐릭터, 강퇴 버튼, 준비 상태)가 한 슬롯에 겹쳐 보임. 클라가 레디 토글 또는 캐릭터 변경하면 정상 복원됨.
 
-**원인 추정**: WaitingRoomPanelController 가 대기실 재진입 시 슬롯 컨테이너를 clear/rebuild 하지 않고 stale 상태로 첫 렌더. CustomProperties 변경 콜백이 들어와야 비로소 리프레시되는 구조로 보임.
+**진단 결과** (B8-DIAG 로그 분석):
+- `lobbyEntryContainer = PlayersListContainer` 에 VerticalLayoutGroup + ContentSizeFitter 정상 부착
+- 첫 진입: `Instantiate` 후 entry 위치 정상 정렬됨 (예: pos=(400, -25))
+- **다시하기 후 진입**: `Instantiate` 후에도 entry 위치 (0, 0) 으로 영구 미정렬. 이후 RefreshLobbyEntries 가 12초+ 동안 여러 번 호출되어도 미정렬 (Instantiate 안 하니 dirty 트리거 없음).
+- 레디 토글/캐릭터 변경 → CustomProperties 변경 → HandlePlayersChanged → RefreshLobbyEntries 다시 호출되며 LayoutGroup 가 그 사이 한 번 처리되어 정렬
 
-**처리 방향**: `WaitingRoomPanelController.OnEnable` 또는 복귀 진입점에서 슬롯 컨테이너 자식 destroy → 현재 룸 인원 기준 강제 rebuild.
+**진짜 원인**: 다시하기 후 진입 시점에 PUN callback / SceneManager.LoadScene 의 frame timing 으로 VerticalLayoutGroup 자동 dirty 가 발동 안 함. 첫 진입은 OnJoinedRoom 흐름에서 자연스러운 frame 지연으로 정상.
+
+**수정 완료** (2026-04-26): [WaitingRoomPanelController.RefreshLobbyEntries](../../Assets/Scripts/Features/UI/Adapter/Menu/WaitingRoomPanelController.cs:736) 끝에 `LayoutRebuilder.ForceRebuildLayoutImmediate(containerRT)` 한 줄 추가 — 매 호출 시 즉시 Layout 정렬 강제.
 
 ---
 
