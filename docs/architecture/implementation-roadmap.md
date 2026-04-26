@@ -2,11 +2,13 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-26 (R11 World Indicator UI 추가)
+최종 업데이트: 2026-04-26 (Moderate 트림 — ✅ 완료 항목 1줄 요약 + completed-work.md 링크로 정리)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
 > 완료된 항목 ledger = [completed-work.md](completed-work.md). 알려진 버그 = [known-issues.md](known-issues.md). 본 문서는 **잔여**만 다룬다.
+>
+> **운영 룰 (2026-04-26 도입):** R/U/Phase 항목이 ✅ 처리되는 순간 → [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. Phase 별 ✅ 완료 서브섹션은 묶어서 1줄 요약. 본 문서는 항상 **현재 해야 할 일** 만 보이도록 유지.
 
 ## 진행 요약
 
@@ -34,91 +36,105 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ## Phase 0 — 프로젝트 셋업 ✅
 
-### 0-1. 프로젝트 기반 ✅
-- [x] Unity 2D 프로젝트, Git, PUN2 + App ID, ParrelSync
-- [x] 폴더 구조 (Adapter / Domain / Data / Application / BootStrap 등)
-
-### 0-2. ScriptableObject 템플릿 ✅
-- [x] `CharacterData`, `SkillData` (서브타입 7종: Projectile/Area/Orbital/Placed/Debuff/Passive/Chaos), `EnemyData`, `BossData`, `DifficultyData`, `GameplayConfig`, `AudioLibrary`
-
-### 0-3. 씬 기본 구조 ✅
-- [x] MenuScene / GameScene 2개 씬
-- [x] Build Settings 등록
+Unity 2D + PUN2 + ParrelSync + 폴더 구조 + ScriptableObject 템플릿 + 2씬 셋업 모두 완료. 상세 [completed-work.md § Phase 0](completed-work.md).
 
 ---
 
-## Phase 1 — 네트워크 + 메뉴 플로우 ✅ (거의)
+## Phase 1 — 네트워크 + 메뉴 플로우 ✅
 
-### 1-1. NetworkManager 싱글톤 ✅
-- [x] DontDestroyOnLoad 싱글톤, Photon 콜백 중앙 처리, 연결 상태 노출
-
-### 1-2. MenuScene 패널 전환 ✅
-- [x] `MenuSceneManager`, `TitlePanelController`, `RoomListPanelController`, `WaitingRoomPanelController`
-- [x] 패널 간 전환 흐름
-
-### 1-3. 대기실 핵심 기능 ✅
-- [x] 캐릭터 선택 (CustomProperties 동기화) — `CharacterSelectUI`
-- [x] 준비 상태 토글
-- [x] 전원 준비 → **호스트 수동 Start** → 3초 카운트다운 → 씬 전환
-- [x] 카운트다운 취소 처리
-- [x] **월드 공간 LobbyPlayer + 오버헤드 UI(이름/Host/Ready) + 호스트 Kick** — [../systems/waiting-room.md](../systems/waiting-room.md)
-
-### 1-4. GameScene 기본 + 플레이어 ✅
-- [x] `GameManager` + GameState
-- [x] `Player` 프리팹, 이동, 카메라 추적, `AutomaticallySyncScene`
-
-### 1-5. 결과 → 대기실 복귀 ✅
-- [x] `returnToWaitingRoom` 플래그 기반 복귀
-- [x] 에러 처리 (호스트 퇴장, 연결 끊김)
+NetworkManager 싱글톤 / MenuScene 패널 전환 / 대기실(LobbyPlayer + 캐릭터 선택 + Ready + 카운트다운 + Kick) / GameScene 기본 + Player / 결과→대기실 복귀 / 에러 처리 모두 완료. 상세 [completed-work.md § Phase 1](completed-work.md).
 
 ---
 
-## Phase 2 — 기본 전투 ✅
+## Phase 2 — 기본 전투 🟡 (스폰 위치 환원만 잔여)
 
-### 2-1. Enemy 기본 클래스 ✅
-- [x] `Enemy`, ChaseMovement, 호스트 AI, 접촉 데미지
+완료: Enemy 기본 클래스 / 스킬 시스템 기초(Spawner 5종, 표창, 쿨다운) / DamageCalculator / 경험치 시스템(ExperienceOrb, 자석, 팀 공유). 상세 [completed-work.md § Phase 2](completed-work.md).
 
-### 2-2. PoolManager + SpawnManager 기초 🟡
-- [x] 투사체 풀링 (`ProjectileSpawner`), 기본 스폰
+### 2-2. 스폰 위치 명세 환원 🟡
 - [ ] **스폰 위치: 맵 경계 랜덤** — 현재 "캐릭터 기준 일정 반경" 으로 구현됨. 명세는 "맵 경계 기준 랜덤"이므로 미완료 환원 (2026-04-25)
-
-### 2-3. 스킬 시스템 기초 ✅
-- [x] `Skill`, `SkillExecutor`, `ISkillSpawner` 추상 + 구현체 (`ProjectileSpawner`, `AreaSpawner`, `OrbitalSpawner`, `DebuffSpawner`, `PlacedSpawner`)
-- [x] `ProjectileEffect` 구현
-- [x] 표창 기본 동작 (및 진화형 폭렬 표창 복구)
-- [x] 쿨다운 시스템
-
-### 2-4. DamageCalculator + 데미지 판정 ✅
-- [x] DealDamage 핸들러, 호스트 히트 판정 구조
-
-### 2-5. 경험치 시스템 ✅
-- [x] `ExperienceOrb`, 자석 흡수, 팀 공유 경험치, 레벨업 판정
 
 ---
 
 ## Phase 3 — 적 AI + 스폰 고도화 🟡 진행 중
 
-### 3-1. 나머지 적 타입 🟡
-- [x] 기본 추적형, 빠른형 (부분) 구현
+완료: 빠른형/무리형 겹침/원거리 4변형/엘리트(Essence 드랍 훅) + 난이도 곡선(스폰 테이블, 체력 배율, 등장 비율) + 풀링(투사체/이펙트) + 인원수 스케일링 구조. 상세 [completed-work.md § Phase 3](completed-work.md).
+
+### 3-1. 적 타입 잔여 🟡
 - [ ] 둔한형 넉백 저항 튜닝
 - [ ] 무리형 그룹 스폰 완성
-- [x] 무리형 겹침 허용 (`EnemyData.resolveOverlap=false`) — Phase A
-- [x] 원거리형 4변형 (고정·추격 × 투사체·경고) — Phase B
-- [x] 엘리트형 — 스탯 강화 + Essence 드랍 **훅만** (Essence 시스템은 별건) + `visualScaleMultiplier` — Phase C
 
-### 3-2. 난이도 곡선 ✅
-- [x] 시간대별 스폰 테이블 (0-3/3-5/5-7/7-10분)
-- [x] 체력 배율 시간별 증가 ([DifficultyManager.cs:59-65](../../Assets/Scripts/Shared/Managers/DifficultyManager.cs#L59-L65) AnimationCurve 1.0x→2.0x)
-- [x] 적 타입별 등장 비율 (60/20/10/10)
+### 3-3. 인원수별 배율 튜닝 (밸런싱) 🟡
+- [ ] 2~4인 배율 실측 튜닝
 
-### 3-3. 멀티플레이어 스케일링 🟡
-- [x] 기본 스케일링 구조 + 인원수별 체력/적 수/경험치 배율
-- [ ] 인원수별 배율 튜닝 (밸런싱)
+### 3-4. 화면 밖 적 간소화 AI 🟡
+- [ ] **화면 밖 적 간소화 AI** — 90마리 동시 운영 시 성능 마진. ↓ 설계 메모 참조
 
-### 3-4. 풀링 고도화 🟡
-- [x] 투사체 풀링
-- [x] 이펙트 풀링
-- [ ] **화면 밖 적 간소화 AI** — 카메라 시야 외 적은 path 갱신을 N프레임마다 또는 단순 직진. 90마리 동시 운영 성능 마진
+#### 화면 밖 적 간소화 AI — 설계 메모 (착수 전 반드시 읽기)
+
+**전제 — 현재 적 동기화는 Dead Reckoning 방식**: [EnemyMovement.cs:16-21, 158-167](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L16). 호스트만 적 AI를 돌리는 게 아니라 **호스트 + 클라가 각자 같은 시뮬레이션을 돌린다**. 양쪽이 같은 입력(플레이어 위치)으로 같은 출력(적 위치)을 만들어내는 구조. 호스트는 가끔 자기 측 위치를 RPC로 보내서 미세 오차만 보정.
+
+**왜 "호스트 카메라 시야 기준 간소화"가 깨지나**:
+- 호스트만 자기 화면 밖 적의 path 갱신을 늦추면 → 호스트 측에선 그 적이 거의 멈춤
+- 클라는 그 규칙 모름 → 정상적으로 매 프레임 path 갱신 → 적이 잘 쫓아옴
+- 양쪽 시뮬레이션 결과가 **달라짐** → 호스트가 보내는 위치로 강제 보정 발동 → 적이 클라 화면에서 **워프**
+- 카메라 위치/줌은 측마다 다르고 동기화 안 함 → "내 화면" 기준은 절대 사용 불가
+
+**올바른 접근 — 동기화된 정보로만 결정**:
+- 결정 입력 = "**적과 가장 가까운 (살아있는) 플레이어와의 거리**"
+- 모든 플레이어 위치는 PhotonTransformView로 동기화됨 → 모든 측이 같은 거리값을 계산 → 같은 간소화 결정
+- 추적 대상 플레이어 거리만 보는 변형도 가능하지만, 다른 플레이어 시야엔 보일 수 있어 어색해질 수 있음. **"가장 가까운 임의 플레이어 거리"가 가장 안전**
+
+**"간소화"의 의미 — path 재계산 빈도만 줄이기**:
+- ❌ 정지 / 단순 직진: 양쪽 동시에 멈춰도 시각적으로 어색. 다시 화면 안으로 들어오면 갑자기 방향 휙 바뀜
+- ✅ **이동 자체는 매 프레임 유지**, `FindClosestPlayer()` 재계산만 0.3초마다. 적이 마지막으로 잡은 target 방향으로 계속 이동
+
+**구현 스케치**:
+```csharp
+// EnemyMovement.cs Update 안
+private const float SIMPLIFY_DISTANCE = 25f;        // 화면 대각선 + 안전 margin
+private const float SIMPLIFY_HYSTERESIS = 3f;       // 22m에서 정상 복귀 (flap 방지)
+private const float SIMPLIFIED_PATH_INTERVAL = 0.3f;
+
+private bool isSimplified;
+private float pathUpdateTimer;
+private Transform cachedTarget;
+
+// 1. 간소화 여부 결정 (모든 측 동일 입력 → 동일 결정)
+float minDist = ComputeMinDistanceToAnyAlivePlayer();
+if (isSimplified) {
+    if (minDist < SIMPLIFY_DISTANCE - SIMPLIFY_HYSTERESIS) isSimplified = false;
+} else {
+    if (minDist > SIMPLIFY_DISTANCE) isSimplified = true;
+}
+
+// 2. path 갱신 — 간소화면 0.3초마다, 정상이면 매 프레임
+pathUpdateTimer -= Time.deltaTime;
+if (pathUpdateTimer <= 0f || cachedTarget == null) {
+    cachedTarget = FindClosestPlayer();
+    pathUpdateTimer = isSimplified ? SIMPLIFIED_PATH_INTERVAL : 0f;
+}
+
+// 3. 이동은 항상 매 프레임 (정지/직진 X)
+movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
+```
+
+**추가 절감 포인트**:
+- **`ResolveEnemyOverlap()`** ([EnemyMovement.cs:332-384](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L332)) — 간소화 모드에선 LateUpdate 진입부에서 즉시 return. `Physics2D.Overlap` 호출 자체가 무거워 가장 큰 절감 포인트. 화면 밖 적이 서로 겹쳐있어도 안 보이니 무관
+- **`TickSlowStack()`** — 화면 밖 적은 슬로우 만료 갱신만 하면 됨 (어차피 안 보임). 단 화면 안으로 들어왔을 때 효과 정확해야 하므로 dt 누적은 유지
+- **Animator disable** — 화면 밖 적은 SpriteRenderer/Animator 비활성. 풀 반환 시 다시 enable 필수. R4 (스프라이트 애니메이션 + outline) 작업 후 평가하는 게 안전
+- **`FindClosestPlayer` 캐싱** — 현재 한 프레임 캐시. 간소화 적은 0.3초 캐시로 더 절감 가능
+
+**검증 포인트 — 간소화 도입 후 모니터링 필요**:
+- [EnemyMovement.cs:319](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L319) `SnapThreshold = 3m` 즉시 스냅이 자주 발동하면 → 양측 시뮬레이션이 결정적이지 않다는 신호. path interval을 더 짧게 (0.3 → 0.15) 하거나 결정 입력 재검토
+- 클라 화면에서 화면 밖 → 화면 안 진입 시점에 적이 잘 따라오는지 (워프/멈춤/이상 방향 없는지)
+- Profiler에서 EnemyMovement.Update + LateUpdate 비용이 실제로 떨어지는지 (간소화 적이 많을 때 80%+ 절감 기대)
+
+**연관 항목**:
+- 본 작업 = Phase 3-4 잔여
+- R4 (스프라이트 애니메이션 호환성·퍼포먼스) 와 함께 처리하면 Animator disable까지 한 번에 평가 가능
+- B5 (토네이도 발사 방향 호스트/클라 차이) 와는 무관 (Dead Reckoning 미적용 영역)
+
+**한 줄 요약**: 간소화 결정 입력은 **반드시 동기화된 데이터(가장 가까운 플레이어 거리)** 로, 간소화 효과는 **path 갱신 빈도만 줄이고 이동은 매 프레임 유지**.
 
 상세 스폰 규칙은 추후 [../systems/spawn-rules.md](../systems/spawn-rules.md) 작성 시 여기에 링크.
 
@@ -126,62 +142,25 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ## Phase 4 — 레벨업 시스템 ✅ (2026-04-25 검증)
 
-### 4-1. 레벨업 UI ✅
-- [x] FrameToast / Frame_PopUp 프리팹 도입 (커밋 `84dfb3b3f`, `6d6112763`)
-- [x] `LevelUpPanel`, `SkillCardUI`
-- [x] 선택지 3장 RPC 전파 (`RPC_ReceiveChoices` / `RPC_ReceiveStatBoostChoices`)
-- [x] 타임아웃 자동 선택 (`HandleTimeout` 미선택 플레이어 랜덤 처리)
-- [x] 전원 선택 완료 재개 동기화 (`CheckAllSelected` → `EndLevelUpSequence`)
-
-> 원래 "카드 3장 UI"로 계획했으나, 실제로는 **FrameToast/Frame_PopUp 기반 UI 프레임**으로 재설계. [../systems/ui-frame.md](../systems/ui-frame.md) 참조.
-
-### 4-2. SkillManager ✅
-- [x] 6슬롯 제한 (`MaxSlots=6` + `HasEmptySlot`/`EmptySlots` API)
-- [x] 슬롯 풀일 때 기존 스킬 레벨업만 (`AcquireSkill` → `LevelUpExisting` 분기)
-- [x] 만렙 시 능력치 선택지 전환 (스킬 풀 고갈 → `SendStatBoostChoices` 자동 분기)
-
-### 4-3. 진화 시스템 ✅
-- [x] EvolutionData 테이블 — `SkillData.evolutionPair`/`evolvedSkill` 필드로 SO 단위 관리
-- [x] 액티브 + 패시브 최대 레벨 감지 (`CheckEvolution` + 역방향 검사)
-- [x] 2슬롯 → 1슬롯 처리 (`PerformEvolution` + `PreservePassiveForEvolution`)
-- [x] 장검 진화 Phase2 복구 (커밋 `1f225a555`)
-
-### 4-4. 패시브 스킬 적용 ✅
-- [x] `PlayerStats.RegisterPassive` + `applicableStats` 필터 경로 완성
+레벨업 UI(`FrameToast`/`Frame_PopUp` + `LevelUpPanel` + `SkillCardUI`) / 선택지 RPC 전파 / 타임아웃 자동 선택 / SkillManager(6슬롯/풀시 레벨업/만렙시 StatBoost 전환) / 진화 시스템(EvolutionData + 2슬롯→1슬롯 + 장검 Phase2) / 패시브 적용(`applicableStats` 필터) 모두 동작. 상세 [completed-work.md § Phase 4](completed-work.md). 상세 설계 [../systems/ui-frame.md](../systems/ui-frame.md).
 
 ---
 
-## Phase 5 — 나머지 스킬 + 혼돈 스킬 🟡 진행 중 (**현재 브랜치 `Skill_Refactor`**)
+## Phase 5 — 나머지 스킬 + 혼돈 스킬 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**)
 
-### 5-1. Spawner 타입 완성 ✅
-- [x] `AreaSpawner` (개미지옥, 성역, 번개)
-- [x] `OrbitalSpawner` (장검)
-- [x] `PlacedSpawner` (자동포탑) → `PlacedTurret`
-- [x] `DebuffSpawner` → `DebuffMark`
+완료: Spawner 5종(Area/Orbital/Placed/Debuff/Projectile) / 액티브 #1~10(매직미사일·번개·부메랑·회오리·각 레벨 스케일링) / 진화 10종 부분~완성 / 혼돈 6종(유리대포/연쇄폭발/폭주/가속/단결/도박꾼) + 선택 UI / Trajectory enum 7종 + 서브클래스 6개 통합 삭제 / `applicableStats` 필터 8종 / `SpawnProjectileHandler` 서브 프리팹 SO화. 상세 [completed-work.md § Phase 5](completed-work.md).
 
 ### 5-2. 나머지 액티브 스킬 🟡
-- [x] 매직 미사일 (+ 체인 비행 시스템)
-- [x] 번개 (+ 뇌전역)
-- [x] 부메랑 (`BoomerangTrajectory`)
-- [x] 회오리바람 (+ Spiral)
-- [x] 각 스킬별 레벨 스케일링 (`damagePerLevel[]`, `cooldownPerLevel[]`)
 - [ ] 스킬 #11~24 구현 (설계만 있음)
 
-### 5-3. 혼돈 스킬 🟡
-- [x] 혼돈 스킬 선택 UI (레벨 10/20/30)
-- [x] 혼돈 스킬 6종 구현 (유리대포/연쇄폭발/폭주모드/가속엔진/단결/도박꾼)
+### 5-3. 혼돈 스킬 잔여 🟡
 - [ ] 혼돈 스킬 나머지 13종 구현
 - [ ] 런타임 효과 추가 경로 (`essence_*`, `weapon_*`, `chaos_*`) — `SkillTriggerSystem.AddRuntimeEffect()`
 
-### 5-4. 진화 스킬 🟡
-- [x] 폭렬 표창, 검무(Phase2 복구), 체인 미사일, 뇌전역, 나락, 그래비톤 부메랑, 심판의 성역, 미니건 포탑, 역병 인형, 대선풍 — 각각 부분 또는 완성
+### 5-4. 진화 스킬 잔여 🟡
 - [ ] 진화 조합 데이터 SO 완성
 
 ### 5-5. 리팩터링 잔여 🟡
-- [x] Trajectory/TriggerEffect 조합 체계 정착 (Trajectory enum 7종: Straight/Homing/Boomerang/Tornado/Spiral/Zigzag/SinWave)
-- [x] 스킬 서브클래스 6개 삭제 (HomingProjectile/BoomerangProjectile/TornadoProjectile/SpiralTornadoProjectile/ExplodingProjectile/ChainProjectile)
-- [x] `applicableStats` 필터 호출부 완성 (`PlayerStats.GetFilteredXxx` 8종 → `SkillExecutor.BuildContext`)
-- [x] `SpawnProjectileHandler` 서브 프리팹 SO 필드화 (`SkillData.subProjectilePrefab` → `TriggerContext.subProjectilePrefab`)
 - [ ] `IFireRecorder` 호출부·구현체·`RefireHandler` 작성 (메아리 #17 연동 시)
 - [ ] 디버그 로그 정리 (Projectile/ExplodeHandler/ChainHandler 등)
 
@@ -189,44 +168,25 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ## Phase 6 — 보스 + 네트워크 고급 🟡 대부분 완료
 
-### 6-1. Boss 클래스 ✅
-- [x] 보스 기본 스펙 + 3페이즈 패턴
-- [x] 보스 등장 연출 + 체력 바 UI
+완료: Boss 3페이즈 + 등장 연출 + 체력바 / 보스 혼돈 부여(미선택 랜덤) + 6가지 변형(`BossChaosEffects`) / 사망부활(10초 + HP 50%) + 전원 사망 게임오버 / 호스트 이탈(5초 대기 + 비상 보스전) / 인게임 HUD(체력/경험치/타이머/스킬슬롯/팀원/혼돈 아이콘). 상세 [completed-work.md § Phase 6](completed-work.md).
 
-### 6-2. 보스 혼돈 스킬 🟡
-- [x] 마지막 혼돈 선택 → 미선택 중 랜덤 1개 보스 부여
-- [x] 6가지 보스 변형 효과 (`BossChaosEffects.cs`)
+### 6-2. 보스 혼돈 스킬 잔여 🟡
 - [ ] **보스 등장 시 혼돈 스킬 UI 표시** — `BossWarningUI.Show()` 호출은 있으나 실 표시 검증 필요
 - [ ] 나머지 13종 보스 변형 (Phase 5-3 19종 확장과 함께)
-
-### 6-3. 플레이어 사망/부활 ✅
-- [x] 체력 0 → 10초 부활 타이머 → 안전 지점 (HP 50%)
-- [x] 전원 사망 → 게임 오버
-
-### 6-4. 호스트 이탈 처리 ✅
-- [x] 5초 재연결 대기
-- [x] 실패 시 새 호스트 전환 + 비상 보스전
-
-### 6-5. 인게임 HUD 완성 ✅
-- [x] 체력/경험치/타이머/스킬 슬롯/팀원 상태/혼돈 스킬 아이콘
 
 ---
 
 ## Phase 7 — 마무리 + 밸런싱 🟡 부분 시작
 
-### 7-1. 결과 화면 ✅
-- [x] 클리어/실패 통계, 빌드 요약, 보스 혼돈 스킬 표시
+완료: 결과 화면(통계/빌드/보스 혼돈) / 경험치 곡선(보스 시점 레벨 18~22) / BGM·효과음(AudioManager + AudioLibrary) / 캐릭터·적 아웃라인(R4 검토 잔여). 상세 [completed-work.md § Phase 7](completed-work.md).
 
-### 7-2. 밸런싱 🟡
-- [x] 경험치 곡선 (보스 등장 시점 레벨 18-22 도달 목표)
+### 7-2. 밸런싱 잔여 🟡
 - [ ] 적 스펙 조정
 - [ ] 스킬 데미지/쿨타임 조정
 - [ ] 보스 난이도 조정 (혼돈 스킬별)
 - [ ] 2~4인 스케일링 검증
 
-### 7-3. 비주얼 + 사운드 🟡
-- [x] BGM + 효과음 적용 (AudioManager + AudioLibrary)
-- [x] 캐릭터/적 아웃라인 — 단 스프라이트 애니메이션 호환성/퍼포먼스 검토는 [§ R4](#신규-잔여-작업-r) 참조
+### 7-3. 비주얼 + 사운드 잔여 🟡
 - [ ] 픽셀 아트 에셋 적용
 - [ ] Bloom 후처리 (드림 테마)
 - [ ] 스킬 이펙트 비주얼
@@ -243,17 +203,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 `docs/check/` 의 두 임시 문서에서 통합한 잔여 + 사용자 추가 신규 항목.
 
-### R1. 플레이어 방어력 적용한 피격 데미지 계산식 ✅ (2026-04-25)
-- [PlayerHealth.ApplyDamage](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) 진입점에서 `PlayerStats.DefenseMultiplier` 곱해 RPC 송신.
-- 의미: DefenseMultiplier = "받는 데미지 배율" (1.0 기본, 0.95 = 5% 감소).
-- 패시브 입력은 직관적 "방어력 +5%" 의도이므로 `PlayerStats.RegisterPassive` 에서 부호 반전 후 modifier 등록.
-- 관련 SSOT: [../systems/damage-formula.md](../systems/damage-formula.md) — 적→플레이어 경로(§ 5) 만 적용. 적 측 방어력은 별도 작업.
+### R1. 플레이어 방어력 적용 피격 데미지 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
-### R2. 체력 자연회복 패시브 ✅ (2026-04-25)
-- `StatType.HpRegen` + `PassiveBonusType.HpRegen` 신설. 단위는 HP/초.
-- HP 자체는 int 유지, **누적기만 float** (`PlayerHealth.hpRegenAccumulator`). 1.0 이상 차면 정수 부분 `Heal` RPC 송신.
-- HealMultiplier 곱하지 않음 (별도 산출 — 명세 준수).
-- 호스트만 누적 + 송신, 모든 클라가 RPC 수신해 HP 증가.
+### R2. 체력 자연회복 패시브 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
 ### R3. 마이크 필터 드랍 아이템 (재미 요소)
 - 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
@@ -272,16 +224,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 ### R6. 회오리/끌어당김 `pullRadius` 패시브 반응
 - [known-issues.md B1](known-issues.md) 과 같은 코드 수정 단위. SkillRange 패시브에 영향 받도록 `pullRadius * (1 + ctx.skillRangeBonus)`.
 
-### R7. 플레이어 무적 시간 (i-frame) ✅ (2026-04-25)
-- `StatType.IFrameDuration` + `PassiveBonusType.IFrameDuration` 신설. base 0.4s.
-- `PlayerHealth.ApplyDamage` 가드: `iFrameTimer > 0` 이면 데미지 무시. 호스트 측 가드(데미지 일관성).
-- `PlayerVisual.HitFlashRoutine` 이 IFrameDuration 길이만큼 깜빡임 (짧으면 단일 플래시, 길면 alpha 토글).
-- 패시브로 IFrameDuration 연장 가능 (Add op).
+### R7. 플레이어 무적 시간 (i-frame) ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
-### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 ✅ (2026-04-25)
-- `SpawnManager.IsReady` 정적 프로퍼티 + `RPC_NotifySpawnReady` AllBuffered 송신으로 모든 클라 동기화.
-- `Skill.Update` 에 `SpawnManager.Instance.IsReady` 가드 추가 — false 면 발동 자체 차단.
-- 후입장 클라(중도 참가) 도 AllBuffered 덕에 자동 수신.
+### R8. 시작 스킬: 스폰 딜레이 동안 발동 차단 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
 ### R9. 데미지 공식 — 치명타 확률·치명타 데미지 적용
 
@@ -402,6 +347,70 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 **관련:** [world-indicator.md](../systems/world-indicator.md), [waiting-room.md](../systems/waiting-room.md) (LobbyPlayer 오버헤드 UI 패턴)
 
+### R12. 설정 패널 — Video / Audio / Language
+
+**개요:** TitlePanelController 의 설정 버튼(현재 TODO)과 ESC 인게임 일시정지 메뉴(U4) 양쪽에서 호출되는 통합 설정 패널. 비디오·오디오·언어 카테고리. **U6 (설정창 구조잡기) 를 본 R12 로 흡수.**
+
+**확정 결정사항:**
+- **비디오:** 창모드 토글(Fullscreen Borderless / Windowed) + 해상도 드롭다운(코드 작성, 1차 빌드는 FHD 16:9 강제 — 베타 테스트 후 토글 결정)
+- **오디오:** 5 슬라이더 (Master / BGM / SFX / Voice / MicSensitivity)
+  - **Voice 만 0~2 범위** + AudioMixer dB 변환 (`Mathf.Log10(v)*20`) → 1.0 = 0dB, 2.0 = +6dB 부스트
+  - BGM/SFX/Master 는 0~1 (게임 사운드 클리핑 방지)
+  - **MicSensitivity 는 볼륨 슬라이더 아님** — Photon Voice 2 의 `Recorder.VoiceDetectionThreshold` (게이트 임계값, 0~1)
+- **언어:** 4개 드롭다운 (KO/EN/JA/ZH-CN), `LocalizationBootstrap.Service?.SetLocale(...)` 풀 구현
+- **저장:** 1차 PlayerPrefs. Phase 8-1 PlatformService 도입 후 `settings.video` / `settings.audio` / `settings.input` 키로 클라우드 마이그레이션
+- **진입 경로:** TitlePanelController.OnClickSettings + ESC 일시정지 메뉴 (U4 별건 유지)
+
+**Phase 1 — AudioMixer 셋업 (사전 작업):**
+- [ ] `Assets/Audio/MasterMixer.mixer` 생성
+- [ ] Group: Master → BGM, SFX, Voice (3 자식)
+- [ ] Exposed Parameters: `MasterVol`, `BGMVol`, `SFXVol`, `VoiceGain` (dB)
+- [ ] 기존 `AudioManager` / `AudioLibrary` 의 AudioSource Output 을 해당 Mixer Group 으로 라우팅
+- [ ] Photon Voice 2 도입 시(Phase 8-2) `Speaker` 프리팹 Output → Voice Group 명시 (8-2 체크리스트에 추가 메모)
+
+**Phase 2 — 설정 데이터 모델:**
+- [ ] `Features/UI/Adapter/Settings/SettingsModel.cs` — 직렬화 가능 VO (창모드 enum, 해상도 width/height, 5 볼륨 float, locale enum)
+- [ ] `Features/UI/Adapter/Settings/SettingsManager.cs` 싱글턴 — Load/Save (PlayerPrefs), 변경 시 즉시 적용 (Apply 버튼 vs 즉시? **즉시 적용** 권장 — 슬라이더 미리듣기)
+- [ ] PlayerPrefs 키: `settings.video.windowMode`, `settings.video.resWidth`, `settings.video.resHeight`, `settings.audio.master`, `settings.audio.bgm`, `settings.audio.sfx`, `settings.audio.voice`, `settings.audio.micSens`, `settings.locale`
+
+**Phase 3 — 설정 UI 패널:**
+- [ ] `Assets/Resources/Prefabs/UI/SettingsPanel.prefab` 신규
+- [ ] 탭 3개 (Video / Audio / Language) — 또는 단일 스크롤 패널 (디자인 결정)
+- [ ] **Video:** 창모드 Toggle + 해상도 Dropdown (16:9 비율만 필터)
+- [ ] **Audio:** 슬라이더 5개. Voice 슬라이더 1.0 위치에 노치 마커 (UI Image)
+- [ ] **Language:** Dropdown 4개 옵션
+- [ ] 닫기 버튼 — 자동 저장 (PlayerPrefs.Save)
+- [ ] `Features/UI/Presentation/SettingsPanelUI.cs` — 슬라이더 onValueChanged → SettingsManager 즉시 적용
+
+**Phase 4 — 진입 경로 연결:**
+- [ ] [TitlePanelController.OnClickSettings](../../Assets/Scripts/Features/UI/Adapter/Menu/TitlePanelController.cs) — TODO 해소, SettingsPanel 호출
+- [ ] ESC 일시정지 메뉴(U4) 의 "설정" 버튼 → SettingsPanel 호출 (U4 자체는 별건 유지)
+- [ ] SettingsPanel 은 `Frame_PopUp` 프레임워크 사용 (모달, 일시정지 가능 — 멀티에선 GameState.Paused 패턴 메모리 룰)
+
+**Phase 5 — 검증:**
+- [ ] 설정 변경 후 게임 재시작 시 값 복원
+- [ ] 슬라이더 즉시 적용 (미리듣기 동작)
+- [ ] Voice 슬라이더 1.5 → 보이스 1.5배 들리는지 (Photon Voice 2 도입 후 검증, 8-2 단계)
+- [ ] 언어 변경 시 모든 `LocalizedText` 즉시 갱신 (Phase 8-5 A 도입 후 검증)
+- [ ] 창모드 토글 시 즉시 전환 (재시작 불필요)
+- [ ] `architecture-guardian` 통과
+
+**Phase 6 — 클라우드 세이브 마이그레이션 (Phase 8-1 후):**
+- [ ] `SettingsManager` 의 PlayerPrefs Read/Write 를 `PlatformBootstrap.Service.LoadData/SaveData("settings.*")` 로 변경
+- [ ] PlayerPrefs 는 fallback 으로만 유지 (오프라인 / Local 플랫폼)
+
+**범위 외:**
+- 키바인딩 (별도 작업 — `settings.input` 키만 미리 예약)
+- 그래픽 품질 옵션 (Bloom on/off 등 — 7-3 비주얼 작업과 함께)
+- 접근성 옵션 (색약 모드, 자막 등) — 출시 후 검토
+- ExclusiveFullScreen 모드 (모니터 충돌 위험으로 제외)
+
+**관련:**
+- [platform-integration.md](../systems/platform-integration.md) — 클라우드 세이브 키 규약
+- [localization.md](../systems/localization.md) — 언어 드롭다운 동작
+- [voice-chat.md](../systems/voice-chat.md) — Voice/MicSens 적용 대상
+- [ui-frame.md](../systems/ui-frame.md) — Frame_PopUp 프레임워크
+
 ---
 
 ## 메뉴 / UI 잔여 (U)
@@ -423,8 +432,9 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 ### U5. 결과창 "나가기" → 방 리스트로
 - 현재 Title 경유. RoomList 직행으로 라우팅 (`ResultManager.OnExit` → `ShowRoomList`).
 
-### U6. 설정창 구조잡기
-- `TitlePanelController.OnClickSettings()` 가 TODO 상태. 볼륨/그래픽/키바인딩 등 항목 정리.
+### U6. 설정창 구조잡기 → **R12 로 통합 (2026-04-26)**
+- ~~`TitlePanelController.OnClickSettings()` TODO~~ → [§ R12](#r12-설정-패널--video--audio--language) 로 흡수. Video/Audio/Language 카테고리로 확정.
+- 키바인딩은 R12 범위 외 — 별건 작업으로 보류 (`settings.input` PlayerPrefs 키만 예약).
 
 ---
 
