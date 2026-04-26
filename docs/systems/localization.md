@@ -692,59 +692,15 @@ CLAUDE.md §2 의존성 방향 엄수:
 
 **검증 방법:** Phase A 완료 후 `architecture-guardian` 서브에이전트 호출.
 
-## 19. 구현 단계
+## 19. 구현 진행 → 별도 SSOT
 
-### Phase A — 코어 시스템 + 임포터 (1.5~2일)
+**구현 단계 체크리스트 (Phase A~D) 와 검증 항목은 [implementation-roadmap.md § 8-5](../architecture/implementation-roadmap.md) 에서 관리.**
 
-**범위:**
-- §4 폴더/파일 생성
-- §7 Domain 인터페이스/Locale enum
-- §8~12 Adapter 일체 (Manager, Table, FontMap, LocalizedText, Bootstrap)
-- §13 Editor 임포터
-- 빈 `LocalizationTable.asset` + `LocaleFontMap.asset` 생성
-- Google Sheet 템플릿 작성 + 1~2개 키로 임포트 테스트
+본 문서는 **spec(무엇/어떻게)** 만 다루고, **roadmap(언제/어디까지)** 은 분리. 운영 룰 (2026-04-26):
+- 구현 진행 중 → roadmap 의 § 8-5 체크리스트 토글
+- 모든 Phase ✅ 완료 → 본 문서 §1 "구현 상태" 헤더 ⬜ → ✅ 갱신 + completed-work.md 1줄 추가
 
-**산출물:** 게임 동작 변화 없음. 메뉴씬 런타임에 `[Localization] Initialized: KO_KR` 로그.
-
-### Phase B — UI 키 매핑 (수일~1주, 점진적)
-
-**범위:**
-- MenuScene UI(타이틀, 룸리스트, 대기실, 캐릭터 선택)에 `LocalizedText` 추가 + 키 매핑
-- InGameHUD, LevelUpPanel, ResultPanel, FrameToast 메시지
-- 옵션 패널 언어 드롭다운 추가
-- 시트 KO 컬럼 채우기 (기존 한국어 텍스트 마이그레이션)
-
-### Phase C — SO 통합 (1주)
-
-**범위:**
-- SkillData/PassiveSkillData/ChaosSkillData 에 `nameKey`/`descKey` 필드 추가 + `OnValidate` 자동 채움
-- SkillData 별 시트 행 추가 (스킬 24+패시브 19+혼돈 19 = 62개)
-- SkillCardUI 등 호출부 변경
-- 자동 번역 적용(EN/JA/ZH-CN 자동 채움)
-
-### Phase D — 검수 & 폰트 (Steam 출시 전)
-
-**범위:**
-- 시트 `*_final` 컬럼 검수 (도메인 용어 우선: 스킬 이름, "혼돈", "정수" 등)
-- TMP_FontAsset 4종 셋업 (NotoSans 패밀리)
-- LocaleFontMap.asset 에 매핑
-- 4개 언어 전부 플레이 모드 검증
-
-## 20. Phase A 검증 체크리스트
-
-- [ ] `Shared/Localization/Domain/` 3 파일 컴파일 OK
-- [ ] `Shared/Localization/Adapter/` 5 파일 컴파일 OK
-- [ ] `Shared/Localization/Editor/` 1 파일 컴파일 OK
-- [ ] Domain 3 파일에 `using UnityEngine` / `using Photon` / `using TMPro` 없음 (Grep 검증)
-- [ ] `architecture-guardian` 서브에이전트 통과
-- [ ] MenuScene 진입 시 Console 에 `[Localization] Initialized: KO_KR` 출력
-- [ ] `LocalizationBootstrap` 이 씬에 없어도 NRE 발생 없이 게임 정상 동작 (`?.` 안전 호출 검증)
-- [ ] 임포터 메뉴 `ProjectSD/Localization/Import from Google Sheet` 노출
-- [ ] 테스트 시트 1개 키 임포트 → SO 인스펙터에 항목 1개 추가 확인
-- [ ] CLAUDE.md §3 폴더 지도에 `Shared/Localization/` 추가
-- [ ] `docs/architecture/implementation-roadmap.md` 의 Phase A 항목 ✅ 처리
-
-## 21. 비범위 (Phase A~D 에서 안 함)
+## 20. 비범위 (Phase A~D 에서 안 함)
 
 - Pluralization (`{count, plural, one, other}` 같은 ICU 형식)
 - Gender / 어형 변화
@@ -754,7 +710,7 @@ CLAUDE.md §2 의존성 방향 엄수:
 - 시트 → 게임 자동 빌드 파이프라인 (CI 통합)
 - 출시 후 OTA 텍스트 업데이트 (런타임 fetch) — 본 시스템은 빌드 타임 임포트만
 
-## 22. 마이그레이션 (백엔드 교체 시)
+## 21. 마이그레이션 (백엔드 교체 시)
 
 `ILocalizationService` 만 만족하면 백엔드 교체 가능. 출시 후 다음 트리거 발생 시 Unity Localization Package 로 이관 검토:
 
@@ -764,7 +720,7 @@ CLAUDE.md §2 의존성 방향 엄수:
 
 이관 시 변경 범위: `LocalizationManager.cs` 만 교체, `LocalizedText.cs` 와 호출부 변경 없음.
 
-## 23. 알려진 제약 / 트레이드오프
+## 22. 알려진 제약 / 트레이드오프
 
 - [x] **자동 번역 품질** — 자동 번역만으로는 도메인 용어("혼돈", "정수", 스킬 이름) 어색. `*_final` 컬럼 수동 검수 필수
 - [x] **CJK 폰트 사이즈** — NotoSans CJK 글리프 atlas 가 수십 MB. TMP 다이나믹 모드로 우회 시 첫 등장 시 1프레임 hitch 가능
@@ -773,7 +729,7 @@ CLAUDE.md §2 의존성 방향 엄수:
 - [x] **사용자 텍스트(닉네임)** — 번역 대상 아님. 현재 `PhotonNetwork.NickName` 그대로 사용
 - [ ] **다단 폰트 폴백** — 한 텍스트에 KO + EN 혼합 시 (예: "Steam 에 오신 것을") TMP fallback 폰트 체인 별도 구성 필요
 
-## 24. 기존 코드 참조
+## 23. 기존 코드 참조
 
 | 파일 | 용도 |
 |---|---|
@@ -785,7 +741,7 @@ CLAUDE.md §2 의존성 방향 엄수:
 | `CLAUDE.md` §2 | 의존성 방향 규칙 |
 | `docs/systems/platform-integration.md` | 부트스트랩/SDK 추상화 설계 패턴 참고 |
 
-## 25. 외부 참고
+## 24. 외부 참고
 
 - TextMesh Pro 폰트 에셋 가이드: https://docs.unity3d.com/Packages/com.unity.textmeshpro@latest/manual/FontAssetsCreator.html
 - Noto Sans CJK (Google, SIL OFL): https://fonts.google.com/noto/specimen/Noto+Sans+KR

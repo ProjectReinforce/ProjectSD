@@ -10,7 +10,7 @@
 | 분류 | UI |
 | 의존 레이어 | Adapter (Manager, Interface, Policy) + Presentation (View) |
 | 최종 업데이트 | 2026-04-26 |
-| 구현 상태 | ⬜ 미구현 (R11) |
+| 구현 상태 | ⬜ 미구현 — 진행 체크리스트 [implementation-roadmap.md § R11](../architecture/implementation-roadmap.md) |
 
 ## 2. 목적
 
@@ -464,29 +464,29 @@ namespace SwDreams.Features.UI.Presentation.Indicator
 
 본 시스템은 Domain 레이어를 두지 않음 (UI 보조 시스템). `architecture-guardian` 통과 가능.
 
-## 15. 테스트
+## 15. 검증 시나리오 (구현 시 사용)
 
-ParrelSync 4 인스턴스 기준.
+ParrelSync 4 인스턴스 기준. **체크리스트화 된 작업 항목은 [implementation-roadmap.md § R11 Phase 3](../architecture/implementation-roadmap.md) 참조** — 본 섹션은 시나리오 정의.
 
 **파티원 인디케이터:**
-- [ ] 자기 인디케이터 안 뜸 (`IsMine` 가드)
-- [ ] 다른 3명이 화면 밖일 때 가장자리 표시, 안일 때 머리 위 이름
-- [ ] 4명 같은 모서리에 모이면 색상 4종으로 구분됨
-- [ ] 한 명 disconnect 시 인디케이터 즉시 사라짐
+- 자기 인디케이터 안 뜸 (`IsMine` 가드)
+- 다른 3명이 화면 밖일 때 가장자리 표시, 안일 때 머리 위 이름
+- 4명 같은 모서리에 모이면 색상 4종으로 구분됨
+- 한 명 disconnect 시 인디케이터 즉시 사라짐
 
 **보스:**
-- [ ] 보스 등장 시 등록, 사망 시 해제
-- [ ] 화면 안에 있을 때 인디케이터 안 보임 (OffScreenOnly)
-- [ ] 페이즈 이동 패턴으로 화면 밖 이탈 시 가장자리 표시
-- [ ] 비상 보스전 (호스트 마이그레이션) 후에도 정상 동작
+- 보스 등장 시 등록, 사망 시 해제
+- 화면 안에 있을 때 인디케이터 안 보임 (OffScreenOnly)
+- 페이즈 이동 패턴으로 화면 밖 이탈 시 가장자리 표시
+- 비상 보스전 (호스트 마이그레이션) 후에도 정상 동작
 
 **히스테리시스:**
-- [ ] 화면 경계에서 좌우로 ε 픽셀 진동시켜도 모드 깜빡임 없음
-- [ ] 카메라 뒤 (z<0) 안전 가드 동작
+- 화면 경계에서 좌우로 ε 픽셀 진동시켜도 모드 깜빡임 없음
+- 카메라 뒤 (z<0) 안전 가드 동작
 
 **아키텍처:**
-- [ ] `architecture-guardian` 통과
-- [ ] (선택) `photon-sync-auditor` — RPC 변경 없지만 후크 위치 검증
+- `architecture-guardian` 통과
+- (선택) `photon-sync-auditor` — RPC 변경 없지만 후크 위치 검증
 
 ## 16. 알려진 제약
 

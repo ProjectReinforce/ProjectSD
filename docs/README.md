@@ -2,6 +2,43 @@
 
 Claude 는 **필요한 순간에만** `docs/` 를 읽는다. 모든 작업이 이곳을 거치는 건 아니지만, 설계 의사결정과 도메인 지식의 **단일 출처(SSOT)** 역할을 한다.
 
+---
+
+## 🎯 최상단 4종 — "다음 뭐 할까?" 물으면 이것만 보면 됨
+
+본 4종이 **사용자 작업 지시 답변용 1차 진입점**. 그 외 문서는 깊이 들어갈 때만.
+
+| 문서 | 역할 | 변경 빈도 |
+|---|---|---|
+| [architecture/overview.md](architecture/overview.md) | 레이어/의존성 규칙 (Feature-first + Clean Architecture) | 드뭄 |
+| [architecture/implementation-roadmap.md](architecture/implementation-roadmap.md) | Phase 진행 + **잔여 작업 SSOT** + § 지금 추천 작업 (Top 5) | 자주 |
+| [architecture/completed-work.md](architecture/completed-work.md) | 완료 ledger | ✅ 처리 시 |
+| [architecture/known-issues.md](architecture/known-issues.md) | 버그/회귀 트래커 (N/B/V 카테고리) | 버그 발생 시 |
+
+**작업 흐름:**
+1. 사용자 "다음 뭐 할까?" → roadmap.md § 지금 추천 작업 (Top 5) 만 보고 답변
+2. 특정 항목 결정 → 해당 R 항목 본문 + 연결된 시스템 spec 문서로 drill down
+3. 작업 종료 → finalize-work skill 자동 호출 (✅ 마이그레이션 + 작업 순서 큐 갱신)
+
+---
+
+## 📐 시스템 spec ↔ roadmap 분리 룰 (2026-04-26 도입)
+
+| 종류 | 위치 | 내용 | 라이프사이클 |
+|---|---|---|---|
+| **시스템 spec** | `docs/systems/{id}.md` | 인터페이스·수식·정책·폴더 구조 | 시스템이 바뀔 때만 변경. 영구 보존 |
+| **시스템 roadmap** | `implementation-roadmap.md § R{n} 또는 § Phase X-Y` | Phase 체크리스트·진행 상태 | 작업 시 자주 변경. ✅ 처리 시 completed-work.md 로 마이그레이션 |
+
+**위반하면 안 되는 것:**
+- 시스템 spec 안에 phase 체크리스트 두지 말 것 (roadmap 으로 분리)
+- spec 문서의 §1 메타 헤더에 `구현 상태 | ⬜ — 진행 [implementation-roadmap.md § R{n}](...)` 링크 명시
+
+**별도 roadmap 파일 임계값:**
+- R 항목 체크리스트가 **30줄 미만** → roadmap.md 안에 인라인
+- **30줄 초과** → `docs/architecture/{system}-roadmap.md` 별도 파일 (예: [drop-system-roadmap.md](architecture/drop-system-roadmap.md))
+
+---
+
 ## 폴더 지도
 
 ```

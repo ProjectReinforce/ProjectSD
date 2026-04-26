@@ -10,6 +10,28 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 >
 > **운영 룰 (2026-04-26 도입):** R/U/Phase 항목이 ✅ 처리되는 순간 → [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. Phase 별 ✅ 완료 서브섹션은 묶어서 1줄 요약. 본 문서는 항상 **현재 해야 할 일** 만 보이도록 유지.
 
+---
+
+## 🎯 지금 추천 작업 (Top 5) — 사용자가 "다음 뭐 할까?" 물으면 이 섹션만 보고 답변
+
+> **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
+>
+> 마지막 갱신: **2026-04-26**
+
+| 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
+|---|---|---|---|---|
+| 1 | [§ R9](#r9-데미지-공식--치명타-확률치명타-데미지-적용) **치명타 확률·데미지 적용** | 인프라 절반 깔려있음(`PlayerStats.baseCritDamage`, `PlacedTurret.alwaysCritical`). 마무리 효과 큼. damage-formula.md § 9 정책 확정 완료 | 없음 (선행 가능) | 1~1.5일 |
+| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 3 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
+| 4 | [§ R11](#r11-파티원--보스-위치-인디케이터--world-indicator-ui) **World Indicator UI** | 4인 Co-op UX 개선. 명세 완비 (world-indicator.md). 보스 추적도 개선 | 없음 (선행 가능) | 1.5~2일 |
+| 5 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R9, R10, R11, R12 모두 독립.
+**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R11 + R9 셋이 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R3 (마이크 필터 — Phase 8-2 동반), R4 (아웃라인 검증), R5 (혼돈 글로벌 설정 이전), R6 (회오리 pullRadius — known-issues B1 동반), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
+
+---
+
 ## 진행 요약
 
 | Phase | 상태 | 비고 |
@@ -23,6 +45,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
 | 8. 출시 인프라 (Voice / Platform SDK / Localization) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md), [localization.md](../systems/localization.md). R3 마이크 필터 아이템 8-2 와 함께 |
+| 드랍/장비/퀘스트 (Phase 0~7) | 🟡 코드 거의 완료 | 코드 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md). HUD/유저 Unity 배선/Quest 핸들러 잔여 — 본 문서 § DQ |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
 최근 관련 커밋:
@@ -435,6 +458,53 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 ### U6. 설정창 구조잡기 → **R12 로 통합 (2026-04-26)**
 - ~~`TitlePanelController.OnClickSettings()` TODO~~ → [§ R12](#r12-설정-패널--video--audio--language) 로 흡수. Video/Audio/Language 카테고리로 확정.
 - 키바인딩은 R12 범위 외 — 별건 작업으로 보류 (`settings.input` PlayerPrefs 키만 예약).
+
+---
+
+## 드랍 / 장비 / 퀘스트 잔여 (DQ)
+
+`drop-system-roadmap.md` (Phase 0~7) 의 코드 측 핵심은 모두 완료. 잔여는 HUD / 유저 Unity 배선 / Quest 핸들러 3종.
+완료 내역 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md).
+
+### DQ1. Quest 시스템 잔여
+- [ ] **QuestProgressUI HUD** — 진입 진행 / 대기 카운트다운 / 진행률 바
+- [ ] **DodgeFalling / Defend / KillInTime** 핸들러 (현재 KillTarget MVP 만)
+- [ ] **맵 배치** (WFC 또는 사전 배치, `GameplayConfig` 에 거점 개수/최소 간격)
+- [ ] **유저 Unity 배선** — QuestData SO 작성, QuestZone 거점 prefab + Scene PhotonView (Owner=null/Master), `SpawnManager.questBarrierVariants` 에 격리 몹 EnemyData 등록, 격리 몹 EnemyData (사실상 무한 HP) 작성
+
+### DQ2. Essence HUD / Combo
+- [ ] `EssenceSlotsUI` HUD — 보유 정수 2슬롯 표시 (Phase 4 와 병행 보류 상태)
+- [ ] `EssenceCombo` VO — 조합 히든 효과 (얼음+불 / 얼음+번개 / 불+번개). 설계서 TBD 상태, 수치 확정 후 착수. [essence.md § 10](../game-design/essence.md) 5가지 결정 항목 선행 필요
+
+### DQ3. Weapon HUD
+- [ ] `WeaponSlotsUI` — HUD 4슬롯 + 등급 색상 테두리
+- [ ] `WeaponCombinePreview` — 근접 시 조합 결과 프리뷰 팝업 (Frame)
+- 현재는 `DebugOverlay` 로 modifier 수 / runtime effect 수 관찰 중
+
+### DQ4. Phase 4 (Weapon) 유저 Unity 배선
+1. `WeaponData` SO 5~8종 생성 (`Assets → Create → SwDreams/Data/WeaponData`) — `weaponId` / `rarity` / `statEntries` / `triggerEntries` / `combineRecipe`
+2. `WeaponDatabase` SO 생성 — `weapons` 리스트에 위 SO 전부 등록 (네트워크 인덱스 기반이라 빌드 간 일관 유지)
+3. `GameManager.weaponDatabase` Inspector 할당
+4. `Weapon.prefab` 작성 — `WeaponPickup` + Collider2D(isTrigger) + Rigidbody2D(Kinematic) + SpriteRenderer
+5. `DropSpawner.weaponPrefab` 할당, 적 SO 별 `EnemyDropTable.weaponChance` 0.01~0.05 조정
+6. Player 프리팹 자식에 `PlayerWeaponInventory` 부착 + 자체 PhotonView 필수 (Essence 패턴)
+
+### DQ5. Phase 5 (StatBoost) 유저 Unity 배선
+1. `StatBoostData` SO 생성 (`SwDreams/Data/StatBoostData`) — `boostId` 고유 int 필수
+2. `StatBoostDatabase` SO 생성 — boosts 리스트
+3. `GameManager.statBoostDatabase` Inspector 할당
+4. Player 프리팹 자식에 `StatBoostManager` 컴포넌트 부착
+5. 테스트: 스킬 풀 만렙 후 레벨업 → StatBoost 패널 등장 확인
+
+### DQ6. Phase 7 (혼돈 등급) 유저 Unity 배선
+- 혼돈 스킬 SO 19종 Inspector 의 `Rarity` 필드 등급 재지정 (Common/Rare/Epic/Legendary)
+- 현재 모두 기본값 Common — 등급 선정기는 동작하나 분포 평탄. 밸런싱 의도에 맞춰 분산
+- `paramsByRarity[4]` 치트시트는 [completed-work.md § Phase 8](completed-work.md) 또는 `drop-system-roadmap.md § Phase 8-A 치트시트` 참조
+
+### DQ7. 보류 (설계 선행 필요)
+- **정수 데미지 스케일링** — 정수 OnHit 데미지가 SO 수치 그대로 사용. ATK / CritChance / 무기 영향 미반영. 5가지 결정 항목 [essence.md § 10](../game-design/essence.md). 결정 후 1~1.5시간
+- **`BossChaosApplicator` 등급 가중치** — 현재 `ChaosEffectType` enum 직접 사용. 등급별 보스 강도 차등은 별도 기획 확정 후 (Phase 7 MVP 범위 외)
+- **Architecture 부채** — `ChoicePanelKind` Shared 승격 여부 / `IChaosHookBus` 의 `Vector2` 의존 → `Position2D` VO 분리 / `IPlayerTransform` 포트 (`ChaosHandlerContext.playerRoot` 가 구체 Transform) / EssenceResolver 순수함수화 / DebugOverlay 릴리스 빌드 가드
 
 ---
 

@@ -199,3 +199,129 @@ ProjectSD(Sweepin' Dreams) 의 완료된 작업 회고/추적용 ledger.
 ## 환원된 항목 (다시 잔여로)
 
 - **Phase 2-2: 스폰 위치 맵 경계 랜덤** — 이전에 체크됐으나, 현재 구현은 "캐릭터 기준 일정 반경 스폰"이라 명세("맵 경계 기준 랜덤")와 다름. [implementation-roadmap.md Phase 2-2](implementation-roadmap.md) 로 환원.
+
+---
+
+## 드랍 시스템 구현 (Phase 0 ~ 7)
+
+`drop-system-roadmap.md` (2026-04-21 승인본) 의 단계별 완료 내역을 ledger 로 통합. 잔여 작업은 [implementation-roadmap.md](implementation-roadmap.md) 의 해당 섹션 + § R / § U 로 흡수.
+
+### Priority 0 — 선행 버그픽스
+- **P0.1 게임 시작 시 경험치 UI 이미 차있는 현상** ✅ — 원인 식별 + 수정 + 회귀 테스트
+- **P0.2 경험치 오브 동시 존재 수량 제한** ✅ — `GameplayConfig.maxActiveExpOrbs=200` + `SpawnManager.activeOrbs` FIFO 추적 + `OnExpOrbReturned` 알림. 상한 도달 시 정책: **드랍 생략** (병합 아님)
+
+### Phase 0 — 공통 인프라 ✅
+- `Rarity` enum + `RarityWeightedRoller` (순수 C# 정적 유틸) + `RarityPoolChoiceGenerator` (공통 등급 선정기 — 카드 3장 동일 등급 규칙 SSOT)
+- `IPickup` / `PickupType` / `PickupItemBase` (Pickup Feature 베이스. `IPoolable` + 자석 + GameState 체크 + 호스트 권위)
+- `EnemyDropTable` SO (Shared/Data 승격) + `DropSpawner` (호스트 전용)
+- `EventCode_DropSpawnBatch = 13` (`DropSpawnBatch.cs`)
+- `GameplayConfig` / `EnemyData.dropTable` 필드 연결
+
+### Phase 1 — ExperienceOrb 리팩터링 ✅
+- `ExperienceOrb` → `PickupItemBase` 상속 전환. 자석/호스트 체크 베이스 위임. `OnPickedUpByPlayer` 만 `GameManager.AddExp` 호출
+- `SpawnManager.SpawnExpOrb` 경로 유지 (XP는 100% 드랍이라 DropSpawner 경로 불필요)
+
+### Phase 2 — 자석 / 물약 ✅
+- `MagnetPickup` (`RPC_ActivateMagnet` 브로드캐스트, ExperienceOrb 만 끌어오는 필터)
+- `PotionPickup` (호스트 권위 `PlayerHealth.Heal(baseHeal × HealMultiplier)`, 획득자만 회복)
+- `Magnet.prefab` / `Potion.prefab`
+- `SpawnManager.OnEnemyDied` → `DropSpawner.TrySpawnDropsForEnemy` 연동
+- `EventCode_DropSpawnBatch` 송수신
+- `IHealable` 포트 (Pickup → Character 경계)
+- 자석 RPC 1프레임 지연 (RPC/RaiseEvent 채널 순서 보장)
+- `HostMigrationHandler.DropSpawner.ResetForMigration` 연동
+- `GameplayConfig.dropScatterRadius` (드랍 위치 분산)
+
+### Phase 3 — 정수(Essence) 시스템 ✅ (HUD 일부 잔여)
+- `EssenceType` enum (Ice/Fire/Lightning, Domain)
+- `EssenceData` SO + `EssenceDatabase` SO (`GameManager.EssenceDB` SSOT)
+- `EssencePickup` + `PlayerEssenceInventory` (최대 2슬롯, AllBuffered RPC)
+- `SkillTriggerSystem.AddRuntimeEffect` 주입 + source 슬롯 네이밍 + Stack2 시너지
+- 상호작용 기반 획득 UX (Space 키 + `CanBePickedUpBy` 2슬롯 가득 시 차단)
+- OnHit/OnKill 트리거 전 스킬 일관화 (Projectile / AreaZone / PlacedTurret / OrbitalObject)
+- `DamageNearbyHandler` 신규 액션 (번개 정수용. `primary=반경, secondary=수, tertiary=데미지`)
+- `DebugOverlay` — Essence + `T:{base}+{runtime} H:{onHit}` 표시
+- 잔여: `EssenceSlotsUI` HUD, `EssenceCombo` VO (조합 히든 효과 — 설계서 TBD)
+
+### Phase 4 — 무기(Weapon) 시스템 ✅ 코드 완료 (유저 Unity 배선 대기)
+- **W2 포트 추출**: `IRuntimeEffectSink` (`Shared/Domain/Interfaces`) — `SkillTriggerSystem` 구현, `PlayerEssenceInventory` 도 포트 의존으로 전환
+- `WeaponStatEntry` / `WeaponCombineRecipe` VO (Domain, 순수 C#)
+- `WeaponData` SO + `WeaponDatabase` SO (`GameManager.WeaponDB`)
+- `WeaponPickup` (`PickupItemBase` 상속, `RequiresInteraction` + `PromptExtraInfo` 조합 프리뷰)
+- `PlayerWeaponInventory` (4슬롯, AllBuffered `RPC_EquipWeapon`/`RPC_CombineWeapon`, 조합 매처)
+- `DropSpawner` Weapon 분기 — `WeaponDatabase.All` 인덱스를 `dataIdHash` 로 전송
+- **데미지 공식 재설계 (2026-04-24)**: `PlayerStats.ApplyAttackTo(skillBase, skillData)` — `(skillBase + ΣAdd + skillBase × ΣPercentBonus) × ΠMultiplicative × baseAttackMultiplier`. AttackMultiplier 패시브는 `PercentBonus` op 자동 등록 (`bonusPerLevel` 그대로 "+N%" 해석)
+- **3-op ModifierOp 전환**: `Multiply` → `Multiplicative` 리네임 + `PercentBonus` 신설. 모든 혼돈 호출처는 `Multiplicative` 매핑
+- **Per-entry isUnique**: `WeaponStatEntry.isUnique` + 신규 `WeaponTriggerEntry { effect, isUnique }`. `triggerEffects` → `triggerEntries` 교체
+- **Source 네이밍**: unique = `weapon_{id}_u_e{entryIdx}` (슬롯 무관 1회분), non-unique = `weapon_{id}_s{slotUid}_e{entryIdx}` (슬롯별 독립)
+- **slotUid 결정성**: 호스트가 할당 후 RPC 에 실어 전달. host migration 후 어긋남 차단
+- **RPC 이름 변경**: `RPC_Equip` → `RPC_EquipWeapon`, `RPC_Combine` → `RPC_CombineWeapon` (Essence `RPC_Equip(int)` 충돌 차단)
+- 잔여: `WeaponSlotsUI` / 조합 프리뷰 HUD, **유저 Unity 배선** (WeaponData SO 5~8종, WeaponDatabase, GameManager 할당, Weapon.prefab, DropSpawner.weaponPrefab, Player 자식 PlayerWeaponInventory + PhotonView)
+
+### Phase 5 — 능력치(StatBoost) 시스템 ✅ 코드 완료 (유저 Unity 배선 대기)
+- `StatBoostData` SO / `StatBoostDatabase` SO
+- `StatBoostManager` (`IPlayerStatsMutator` 포트 경유 — Character.Adapter 직접 참조 없음)
+- `StatBoostChoiceService` (Phase 0 `RarityPoolChoiceGenerator` 재사용)
+- `LevelUpManager` — "만렙" = **스킬 풀 고갈** 감지. `RPC_ReceiveChoices` 시그니처 `bool isChaos` → `int panelKindInt` 확장 (`ChoicePanelKind { Skill, Chaos, StatBoost }` enum)
+- RPC 3종: `RPC_PlayerBoostSelected` / `RPC_SyncBoostAcquisition` / `RPC_ForceBoostChoice` (타임아웃 랜덤 선택 분기)
+- `UIManager.ShowLevelUpStatBoost` / `LevelUpPanel.SetupStatBoost` / `SkillCardUI.SetupAsStatBoost` — 카드 프리팹 재사용
+- `GameManager.StatBoostDB` SSOT
+- `DebugOverlay` StatBoosts 섹션
+- **통합 SO 방식 (2026-04-24)**: `StatBoostData` 1개가 `valueByRarity[4]` 보유 → SO 수 1/4 감소, 한 SO 에서 등급 밸런싱
+- **중복 누적**: source = `stat_{boostId}_{rarity}_{localCounter}` 로 자연 누적
+- 잔여: 유저 Unity 배선 (StatBoostData SO + Database + GameManager 슬롯 + Player 자식 StatBoostManager)
+
+### Phase 6 — 퀘스트(Quest) 시스템 🟡 코드 측 핵심 완료 (HUD/핸들러 잔여)
+- `QuestType` / `QuestState` (Domain enum)
+- `QuestData` SO (`Features/Quest/Adapter/Data/QuestData.cs`)
+- `QuestZone` 호스트 권위 상태머신 (KillTarget MVP, `RPC_SyncState` OthersBuffered)
+- `QuestRewardDispatcher` → `LevelUpManager.RequestQuestReward` (StatBoost 경로 재사용)
+- `LevelUpManager.RequestQuestReward` 신규 public API + `pendingQuestRewards` 큐 ([known-issues.md F2](known-issues.md))
+- `SpawnManager.SpawnQuestBarriers(EnemyData, center, radius, count)` + `DespawnEnemies(int[])` + `RPC_SpawnQuestBarrier`
+- `SpawnManager.OnEnemyDied` → `QuestZone.NotifyEnemyKilledToAllActive()` 정적 호출 + `activeZones` 레지스트리
+- F7 격리 몹 KillTarget 이중 카운트 가드 (`questBarrierIds` 1줄 가드)
+- 잔여 (→ implementation-roadmap.md): QuestProgressUI HUD / DodgeFalling·Defend·KillInTime 핸들러 / 맵 배치 / 유저 Unity 배선
+
+### Phase 7 — 혼돈 스킬 등급 적용 ✅ 코드 완료 (유저 Unity 등급 재지정 대기)
+- `SkillData.rarity` 필드 추가 (Active/Passive/Chaos 공통, 기본 Common)
+- `SkillManager.GenerateChaosChoices` → `RarityPoolChoiceGenerator` 전환 (StatBoost 와 동일 공통기, 카드 3장 항상 동일 등급)
+- `SkillCardUI.SetupTypeBadge` 혼돈 분기 — 라벨 `혼돈 · {Rarity}` + 등급 색상
+- 잔여: `BossChaosApplicator` 등급 가중치 (선택 — 별도 기획), 유저 Unity 등급 재지정 (혼돈 SO 19종)
+
+### Phase 8 — 혼돈 스킬 하드코딩 제거 (W5)
+- **8-A** ✅ (커밋 `027604f01`) — `ChaosSkillData.paramsByRarity[4]` + 혼돈별 독립 modifier + 올바른 op 전환
+- **8-B 인프라** ✅ (커밋 `d9fae5665`) — `IChaosHookBus` / `IChaosEffectHandler` / `ChaosEffectRegistry` 신설. 4종 훅 (EnemyKilled / PlayerTakeDamage / PlayerDeath / LevelUpChoice). `ChaosSkillManager` 가 hook bus 구현
+- **8-B ChainExplosion handler 이전** ✅ — `ChainExplosionHandler` 가 `EnemyKilled` 훅 구독 + 프레임 리셋 자체 관리. `ChaosSkillManager` 의 switch case / `hasChainExplosion` flag / `GetChainExplosionConfig` / `TriggerExplosionDamage` / `SpawnExplosionVisual` / `IsLocalPlayer` 제거
+- **8-B3 Gambler handler 이전** ✅ (2026-04-25) — `GamblerHandler` 가 `IsActive` 플래그만 노출, `ChaosSkillManager.IsGambler` 는 registry 조회 래퍼
+- **Gambler rarity bump 소비자** ✅ — `GamblerRarityBumper` 정적 + `LevelUpManager.ResolveGamblerOverride` / `IsAnyPartyGambler`. `StatBoostChoiceService.GenerateChoices` / `SkillManager.GenerateChaosChoices` 에 `overrideRarity` 옵션 파라미터. 분포표 bump (Common 100% +1, Rare 90/10, Epic 80/20, Legendary 70/20/10)
+- **8-C StatWatcher 공용 컴포넌트** ✅ (2026-04-25) — `StatWatcher` 추상 + `HpThresholdWatcher` (Berserk) / `TimerRampWatcher` (Accel) / `NearbyCountWatcher` (Unity) 3종. `ChaosSkillManager` 의 `Check*` 메서드 + 캐시 필드 전부 제거 → watcher 리스트 일괄 Tick
+
+### 추가 포트 추출 (Clean Architecture 정합성)
+- **W4** ✅ — `IPlayerStatsMutator` / `ISkillRegistry` 포트 추출 (`Shared/Domain/Interfaces/`). `PlayerStats` / `SkillManager` 가 각 포트 구현. Essence/Weapon Inventory 는 Character.Adapter / Skill.Adapter 직접 참조 완전 제거
+  - `ISkillRegistry.EffectSinks` (`IReadOnlyList<IRuntimeEffectSink>`) + `OnSinkAdded` 이벤트
+  - `SkillManager.cachedSinks` + `RefreshSinkCache()` (Acquire/Remove/Evolution 3 경로)
+  - `PlayerEssenceInventory`: `SkillManager` → `ISkillRegistry`. `HandleSkillAdded(Skill)` → `HandleSinkAdded(IRuntimeEffectSink)`
+  - `PlayerWeaponInventory`: `PlayerStats` → `IPlayerStatsMutator`
+
+### 공통 의사결정 기록 (드랍 시스템 SSOT)
+1. **드랍 오브젝트 네트워크 모델**: 로컬 생성(모든 클라 동일 좌표) + 호스트 권위 픽업. `PhotonNetwork.Instantiate` 사용 안 함
+2. **Source 접두사 컨벤션** (`PlayerStats.modifiers`): `passive_ / evolution_ / chaos_ / essence_ / essence_combo_ / weapon_ / stat_ / buff_`
+3. **`SkillTriggerSystem.AddRuntimeEffect` source 컨벤션**: `essence_{id} / weapon_{id} / chaos_{id}`
+4. **SO 생성 메뉴 루트**: `SwDreams/Data/{Essence|Weapon|Quest|StatBoost|EnemyDropTable}`
+5. **배치 이벤트 코드**: `EnemyDeathBatch=11` / `EnemyRemoveBatch=12` / `DropSpawnBatch=13` (이후 `LoadSceneEvent=15` / `LobbyRefreshEvent=16` 추가)
+6. **풀링**: 모든 픽업 프리팹 `PoolManager.Prewarm` 게임 시작 시 warm-up
+
+### 드랍 시스템 SO 입력값 SSOT (2026-04-24 동기화)
+
+| 항목 | 값 | 출처 |
+|---|---|---|
+| 일반 적 자석 드랍 | 1% | `EnemyDropTable.magnetChance = 0.01` |
+| 일반 적 물약 드랍 | 1% | `EnemyDropTable.potionChance = 0.01` |
+| 일반 적 무기 드랍 | 100% | `EnemyDropTable.weaponChance = 1` |
+| 일반 적 정수 드랍 | 0% | `EnemyDropTable.essenceChance = 0` |
+| 엘리트 정수 드랍 | 100% | `EliteDropTable.essenceChance = 1` |
+| 엘리트 무기 드랍 | 0.01% | `EliteDropTable.weaponChance = 0.0001` |
+| 무기 등급 가중치 | 60/25/12/3 | `weaponRarityWeights` |
+| 경험치 오브 동시 상한 | 200 | `GameplayConfig.maxActiveExpOrbs` |
+| 자석 범위 / 속도 | 0.7 / 2 | `GameplayConfig.magnetRange` / `magnetSpeed` |
+| 공용 4등급 가중치 | 60/25/12/3 | `GameplayConfig.defaultRarityWeights` |

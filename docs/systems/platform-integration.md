@@ -9,8 +9,8 @@
 | 시스템 ID | `platform-integration` |
 | 분류 | 인프라 |
 | 의존 레이어 | Domain (인터페이스), Adapter (SDK 구현) |
-| 최종 업데이트 | 2026-04-19 |
-| 구현 상태 | ⬜ 미구현 (Phase A 문서화 단계) |
+| 최종 업데이트 | 2026-04-26 |
+| 구현 상태 | ⬜ 미구현 — 진행 체크리스트 [implementation-roadmap.md § 8-1, 8-3, 8-4](../architecture/implementation-roadmap.md) |
 
 ## 2. 목적
 
@@ -405,62 +405,15 @@ CLAUDE.md §2 의존성 방향 엄수:
 
 **검증 방법:** Phase A 완료 후 `architecture-guardian` 서브에이전트 호출.
 
-## 12. 3단계 구현 계획
+## 12. 구현 진행 → 별도 SSOT
 
-### Phase A — 추상화 + Stub (지금~컨텐츠 완성)
+**3단계 구현 계획 (Phase A/B/C) 과 검증 체크리스트는 [implementation-roadmap.md § Phase 8-1, 8-3, 8-4](../architecture/implementation-roadmap.md) 에서 관리.**
 
-**범위:**
-- §4 폴더/파일 생성
-- §5 인터페이스 + VO + AchievementId 작성
-- §6 PlatformBootstrap + LocalPlatformService 작성
-- §7 호출 후크 5~6 곳 추가 (`?.` 안전 호출)
-- §13 검증
+본 문서는 **spec(인터페이스/SDK 매핑/AchievementId)** 만 다루고, **roadmap(언제/어디까지)** 은 분리. 운영 룰 (2026-04-26):
+- 구현 진행 중 → roadmap 의 § 8-1/8-3/8-4 체크리스트 토글
+- 모든 Phase ✅ 완료 → 본 문서 §1 "구현 상태" 헤더 ⬜ → ✅ 갱신 + completed-work.md 1줄 추가
 
-**소요 추정:** 한 세션 (2~3시간)
-
-**산출물:** 기존 게임 동작 변화 없음. Console 에 `[Platform/Local] ...` 로그가 적절히 출력.
-
-### Phase B — Stove Indie SDK 연동 (Stove 출시 전)
-
-**범위:**
-- Stove 인디 개발자 등록 + AppId 발급
-- Stove SDK Unity 패키지 임포트
-- `StovePlatformService.cs` 구현 — `IPlatformService` 의 모든 메서드를 Stove API 로 매핑
-- Stove 실적·통계 포털 등록 (§9 ID 와 동일)
-- 빌드 설정 분기 (`PLATFORM_STOVE` define)
-- 한국 게임 등급 분류 신청
-
-**선결 조건:** Phase A 완료, 컨텐츠(스킬·보스·UI) 안정화
-
-### Phase C — Steam SDK 연동 (Steam 출시 전)
-
-**범위:**
-- Steamworks 파트너 등록 + AppId 발급
-- Steamworks.NET 임포트
-- `SteamPlatformService.cs` 구현 — 동일 인터페이스 충족
-- Steam 실적·통계 포털 등록 (§9 ID 와 동일)
-- 빌드 설정 분기 (`PLATFORM_STEAM` define) + `steam_appid.txt` 배치
-- Steam 페이지 작성 + 출시 심사
-
-**선결 조건:** Phase A 완료, Stove 출시 후 등급 획득
-
-## 13. Phase A 검증 체크리스트
-
-다른 세션이 Phase A 완료 시 수행:
-
-- [ ] `Shared/Platform/Domain/` 4 파일 컴파일 OK
-- [ ] `Shared/Platform/Adapter/` 2 파일 컴파일 OK
-- [ ] Domain 4 파일에 `using UnityEngine` / `using Photon` 없음 (Grep 검증)
-- [ ] `architecture-guardian` 서브에이전트 통과
-- [ ] GameScene 진입 시 Console 에 `[Platform/Local] Initialized` 출력
-- [ ] 한 판 클리어 후 Console 에 `[Platform/Local] SubmitRunResult: cleared=true, ...` 출력
-- [ ] 보스 사망 시 `[Platform/Local] Achievement: BOSS_KILLED` 출력
-- [ ] 적 처치 시 `[Platform/Local] Stat: stat_total_kills += 1 (total N)` 출력
-- [ ] `PlatformBootstrap` 이 씬에 없어도 NRE 발생 없이 게임 정상 동작 (`?.` 안전 호출 검증)
-- [ ] CLAUDE.md §3 폴더 지도에 `Shared/Platform/` 추가
-- [ ] `docs/architecture/implementation-roadmap.md` 의 Phase A 항목 ✅ 처리
-
-## 14. 비범위 (Phase A 에서 안 함)
+## 13. 비범위 (Phase A 에서 안 함)
 
 - Stove / Steam SDK 임포트
 - 실제 클라우드 세이브 직렬화 로직 (Phase A 는 메모리 캐시만)
@@ -469,7 +422,7 @@ CLAUDE.md §2 의존성 방향 엄수:
 - DRM
 - 캐릭터 언락 시스템 자체 (저장 인프라만 준비, 언락 시스템은 Phase 7 이후)
 
-## 15. 기존 코드 참조
+## 14. 기존 코드 참조
 
 | 파일 | 용도 |
 |---|---|
@@ -481,13 +434,13 @@ CLAUDE.md §2 의존성 방향 엄수:
 | `Assets/Scripts/Shared/Managers/NetworkManager.cs` | 부트 시점 (Awake) 참조 |
 | `CLAUDE.md` §2 | 의존성 방향 규칙 |
 
-## 16. 외부 참고
+## 15. 외부 참고
 
 - Stove Indie 개발자 포털: https://indie.onstove.com/
 - Steamworks 파트너: https://partner.steamgames.com/
 - Steamworks.NET (C# 래퍼): https://steamworks.github.io/
 
-## 17. 알려진 제약
+## 16. 알려진 제약
 
 - [ ] Stove SDK 의 보이스챗·친구 API 가능 여부는 파트너 등록 후 확인. 본 인터페이스는 음성/친구 메서드 없음 — Phase B 에서 인터페이스 확장 검토
 - [ ] Steam Family Sharing 시 실적 동기화 정책 별도 검토 (Phase C)
