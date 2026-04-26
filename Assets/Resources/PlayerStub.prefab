@@ -167,6 +167,7 @@ GameObject:
   - component: {fileID: 4807599115664780703}
   - component: {fileID: 3056507572805276594}
   - component: {fileID: 6682751105019308557}
+  - component: {fileID: 6461712572194601780}
   m_Layer: 10
   m_Name: PlayerStub
   m_TagString: Player
@@ -387,6 +388,7 @@ MonoBehaviour:
   baseCooldownReduction: 0
   baseKnockback: 1
   baseCritDamage: 1.5
+  baseCritChance: 0.05
   baseExpMultiplier: 1
   baseDefenseMultiplier: 1
   baseHealMultiplier: 1
@@ -443,6 +445,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef9bb72e7fe5b534bbe35e623b3773b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Entity.Player.DebugInputHandler
+--- !u!114 &6461712572194601780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab42123a2f9bf8a4f8cdc20b9ce3d2ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Character.Adapter.PartyMemberIndicatorAdapter
 --- !u!1 &5449631014595424917
 GameObject:
   m_ObjectHideFlags: 0

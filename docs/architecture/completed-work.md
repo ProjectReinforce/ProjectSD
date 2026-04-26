@@ -33,6 +33,7 @@ ProjectSD(Sweepin' Dreams) 의 완료된 작업 회고/추적용 ledger.
 - B7 HitEffect Pause 가드 (2026-04-25) — Update 에서 ParticleSystem.Pause/Play + returnTimer 정지
 - N1 대기실 입장 대기 디폴트 (2026-04-25) — `readyToggle.SetIsOnWithoutNotify(false)` 즉시 동기화
 - 스킬 새로고침 시스템 (2026-04-25) — 일반 스킬 패널 한정, 카운트 기반(기본 `GameplayConfig.baseSkillRefreshCharges=2` + 혼돈 스킬 `LevelUpManager.AddRefreshChargesToAll(N)` 진입점). 호스트 권위 + 본인 클라 캐시 + RPC_SyncRefreshRemaining 으로 UI 동기화. LevelUpPanel 인스펙터에 refreshButton/refreshCountText 슬롯.
+- **R11 World Indicator UI** (2026-04-26) — 화면 안 머리 위 이름표 / 화면 밖 가장자리 화살표+테두리색+이름. 히스테리시스 β 표준(ε=0.05). 클라이언트 로컬(네트워크 동기화 없음). `Features/UI/Adapter/Indicator/` (IWorldIndicatorTarget / IndicatorPolicy / PlayerColorPalette / WorldIndicatorManager) + `Features/UI/Presentation/Indicator/WorldIndicatorView` + 어댑터 3종(`PartyMemberIndicatorAdapter` / `BossIndicatorAdapter` / `QuestIndicatorAdapter`). Manager 가 정적 `pendingTargets` 큐로 Awake race 차단. 파티원=AlwaysShow(슬롯 4색) / 보스=OffScreenOnly(빨강) / 랜덤 퀘스트=OffScreenOnly(자주). `QuestData.isRandom` 플래그로 맵 고정/랜덤 분류. `WorldIndicator.prefab` 신규 + GameScene 에 Manager + Canvas 2종(World/Screen) 배치. 상세 [world-indicator.md](../systems/world-indicator.md). 부산물 fix: 퀘스트 흰원 InProgress 진입 시 숨김 + RPC_SyncState 클라 동기화 / 팀원 HP UI disconnect entry 자동 정리 / LevelUpManager OnPlayerLeftRoom override 로 선택지 도중 disconnect 즉시 재개.
 
 ---
 

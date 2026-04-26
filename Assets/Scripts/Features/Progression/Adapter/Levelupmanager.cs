@@ -43,7 +43,7 @@ namespace SwDreams.Features.Progression.Adapter
     /// - ExperienceService (혼돈 스킬 레벨 판정)
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
-    public class LevelUpManager : MonoBehaviourPun
+    public class LevelUpManager : MonoBehaviourPunCallbacks
     {
         public static LevelUpManager Instance { get; private set; }
 
@@ -155,16 +155,38 @@ namespace SwDreams.Features.Progression.Adapter
             if (Instance == this) Instance = null;
         }
 
-        private void OnEnable()
+        public override void OnEnable()
         {
+            base.OnEnable();
             if (GameManager.Instance != null)
                 GameManager.Instance.OnLevelUp += OnTeamLevelUp;
         }
 
-        private void OnDisable()
+        public override void OnDisable()
         {
+            base.OnDisable();
             if (GameManager.Instance != null)
                 GameManager.Instance.OnLevelUp -= OnTeamLevelUp;
+        }
+
+        public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+        {
+            base.OnPlayerLeftRoom(otherPlayer);
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (!isLevelUpActive) return;
+            if (otherPlayer == null) return;
+
+            int actorNumber = otherPlayer.ActorNumber;
+            bool removed = playerSelections.Remove(actorNumber);
+            playerChoices.Remove(actorNumber);
+            playerPanelKinds.Remove(actorNumber);
+            playerRolledRarities.Remove(actorNumber);
+
+            if (!removed) return;
+            Debug.Log($"[LevelUpManager] disconnect 정리 — Actor {actorNumber} 제거 (남은: {playerSelections.Count}명)");
+
+            // 남은 사람들이 이미 선택 완료 상태였다면 즉시 진행.
+            CheckAllSelected();
         }
 
         /// <summary>

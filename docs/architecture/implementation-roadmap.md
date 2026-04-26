@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-26 (R9 ✅ 마이그레이션 + Top 5 갱신)
+최종 업데이트: 2026-04-26 (R11 ✅ 마이그레이션 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -22,13 +22,13 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 |---|---|---|---|---|
 | 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
 | 2 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
-| 3 | [§ R11](#r11-파티원--보스-위치-인디케이터--world-indicator-ui) **World Indicator UI** | 4인 Co-op UX 개선. 명세 완비 (world-indicator.md). 보스 추적도 개선 | 없음 (선행 가능) | 1.5~2일 |
-| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 5 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 Voice 동반. 출시 전 재미 요소 | Phase 8-2 (Voice 통합) 선행 | 0.5일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R11, R12, R4 모두 독립.
-**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R11 + R10 셋이 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R3 (마이크 필터 — Phase 8-2 동반), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R12, R4 모두 독립. R3 는 8-2 후행.
+**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
 
 ---
 
@@ -287,49 +287,11 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 **관련:** [network-sync.md § 8.1](../systems/network-sync.md), [EnemyMovement.cs](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs)
 
-### R11. 파티원 / 보스 위치 인디케이터 — World Indicator UI
+### R11. 파티원 / 보스 위치 인디케이터 — World Indicator UI ✅ (2026-04-26) → [completed-work.md](completed-work.md)
 
-**개요:** 화면 안에 있을 때는 머리 위 이름표만, 화면 밖으로 나가면 가장자리 인디케이터(화살표 + 테두리색 + 아래 이름)로 전환. 4인 Co-op 파티원 위치 추적 + 보스 페이즈 이동 시 추적 끊김 해소. 상세 [../systems/world-indicator.md](../systems/world-indicator.md).
-
-**확정 결정사항:**
-- In-Screen: 머리 위 이름 텍스트만 (마커/아이콘 없음)
-- Off-Screen: 작은 화살표 + 테두리색 + 아래 이름
-- 히스테리시스 β 표준 — 두 임계값 (`viewport ∈ [0,1]` 진입 / `[-ε, 1+ε]` 이탈, ε=0.05)
-- 표시 정책 카테고리별: 파티원 `AlwaysShow` / 보스 `OffScreenOnly` / 퀘스트 `WhileActive` (보류)
-- 색상: ActorNumber 기준 슬롯 팔레트 4색
-
-**Phase 1 — 코어 시스템:**
-- [ ] 폴더 생성: `Features/UI/Adapter/Indicator/`, `Features/UI/Presentation/Indicator/`
-- [ ] `IWorldIndicatorTarget` 인터페이스 + `IndicatorPolicy` enum (Adapter)
-- [ ] `PlayerColorPalette` 정적 클래스 (Adapter, 슬롯 4색)
-- [ ] `WorldIndicatorManager` 싱글턴 — `Register`/`Unregister` + View 풀 (Adapter)
-- [ ] `WorldIndicatorView` 히스테리시스 상태머신 + 가장자리 클램프 (Presentation)
-- [ ] 프리팹 `Assets/Resources/Prefabs/UI/WorldIndicator.prefab` — 자식 `OnScreenRoot`/`OffScreenRoot` 토글 구조
-- [ ] GameScene 진입점에 Manager + Canvas 2종(WorldSpace / ScreenSpaceOverlay) 배치
-
-**Phase 2 — 등록/해제 어댑터:**
-- [ ] `Features/Character/Adapter/PartyMemberIndicatorAdapter.cs` — Player 프리팹에 부착, `pv.IsMine==false` 일 때만 등록
-- [ ] `Features/Boss/Adapter/BossIndicatorAdapter.cs` — Boss 프리팹에 부착, `IsActive` 는 `boss.IsAlive && GameState==BossFight`
-- [ ] Player / Boss 프리팹에 컴포넌트 추가 (인스펙터 작업)
-- [ ] `GamePlayerSpawner` / `BossSpawner` 가 어댑터 컴포넌트 부착되어 있는지 검증
-
-**Phase 3 — 검증:**
-- [ ] ParrelSync 4 인스턴스 — 4인 동시 화면 밖 시나리오, 모서리 색상 4종 구분
-- [ ] 화면 경계 진동 시 깜빡임 없는지 (히스테리시스)
-- [ ] 보스 페이즈 이동 패턴 시 인디케이터 표시 / 화면 안 복귀 시 숨김 (`OffScreenOnly`)
-- [ ] 카메라 뒤(`z<0`) 안전 가드 동작
-- [ ] `architecture-guardian` 호출 — Domain 위반 없음 확인 (본 시스템은 Domain 레이어 없음)
-
-**Phase 4 — Localization 후속 (Phase 8-5 C 시점):**
-- [ ] Boss `DisplayName` 의 "Boss" 문자열을 키로 교체 (`boss.indicator.name` 등)
-
-**범위 외 (별건 작업):**
-- 퀘스트 인디케이터 실 등록 — `IndicatorPolicy.WhileActive` enum 만 추가, 어댑터는 퀘스트 시스템 구현 시점에 작성
-- 인접 인디케이터 오프셋 분산
-- 화면 short-side 기준 padding 정규화
-- 미니맵 (별도 시스템)
-
-**관련:** [world-indicator.md](../systems/world-indicator.md), [waiting-room.md](../systems/waiting-room.md) (LobbyPlayer 오버헤드 UI 패턴)
+랜덤 퀘스트 인디케이터까지 R11 범위에 흡수해 어댑터 3종 + Manager pending drain 패턴으로 완료. 후속:
+- [ ] **Localization** (Phase 8-5 C) — Boss `DisplayName` "Boss" 및 QuestData displayName 을 키로 교체
+- [ ] **인접 인디케이터 오프셋 분산** (별건) — 모서리 4명 밀집 시 색만으로 구분 어려운 케이스 발견되면
 
 ### R12. 설정 패널 — Video / Audio / Language
 

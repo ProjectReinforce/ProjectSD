@@ -67,9 +67,9 @@ Assets/Scripts/
 │   ├── Pickup/              ← Domain + Adapter (DropSpawner, PickupItemBase, MagnetPickup, PotionPickup, PlayerPickupInteractor) + Presentation (InteractionPromptUI)
 │   └── UI/
 │       ├── Adapter/Menu/        ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
-│       ├── Adapter/Indicator/   ← IWorldIndicatorTarget, IndicatorPolicy, PlayerColorPalette, WorldIndicatorManager. 설계만 — [docs/systems/world-indicator.md](docs/systems/world-indicator.md)
+│       ├── Adapter/Indicator/   ← IWorldIndicatorTarget, IndicatorPolicy, PlayerColorPalette, WorldIndicatorManager (pending drain) — [docs/systems/world-indicator.md](docs/systems/world-indicator.md)
 │       ├── Presentation/        ← UImanager, InGameHUD, LevelUpPanel, SkillCardUI, ResultPanelUI, DamagePopup, DeathOverlayUI, ReconnectUI, DebugOverlay, UIBackgroundBlur, UIImageBlur
-│       └── Presentation/Indicator/ ← WorldIndicatorView (히스테리시스 상태머신, 가장자리 클램프). 설계만
+│       └── Presentation/Indicator/ ← WorldIndicatorView (히스테리시스 상태머신, 가장자리 클램프)
 ├── Shared/                  ← Feature 경계를 넘는 공유 코드
 │   ├── Domain/              ← 순수 C# (GameResult, PlayerBuildData, IDamageable, IPoolable)
 │   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
@@ -118,7 +118,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **호스트-클라이언트:** Photon MasterClient 가 권위. 투사체는 로컬 렌더, 히트는 호스트. [docs/systems/network-sync.md](docs/systems/network-sync.md).
 - **런타임 Effect source prefix:** `essence_*` / `weapon_*` / `chaos_*` / `buff_*`.
 - **Voice (보이스챗):** Photon Voice 2 사용 예정. 무료 티어 20 CCU. 미구현 — 설계만 [docs/systems/voice-chat.md](docs/systems/voice-chat.md).
-- **World Indicator:** 파티원/보스 위치 표시 UI. In-Screen 머리 위 이름표 / Off-Screen 가장자리 화살표(테두리색 + 아래 이름). 히스테리시스 β 표준. 클라이언트 로컬 (네트워크 동기화 없음). 설계만 — [docs/systems/world-indicator.md](docs/systems/world-indicator.md).
+- **World Indicator:** 파티원/보스/랜덤 퀘스트 위치 표시 UI. In-Screen 머리 위 이름표 / Off-Screen 가장자리 화살표(테두리색 + 아래 이름). 히스테리시스 β 표준. 클라이언트 로컬 (네트워크 동기화 없음). Manager pending drain 패턴으로 Awake race 차단. — [docs/systems/world-indicator.md](docs/systems/world-indicator.md).
 - **IndicatorPolicy:** `AlwaysShow` (파티원) / `OffScreenOnly` (보스) / `WhileActive` (퀘스트, 보류). 카테고리별 표시 정책.
 
 **플랫폼 / 인프라**
@@ -171,7 +171,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **보이스챗(마이크) 구현 →** [docs/systems/voice-chat.md](docs/systems/voice-chat.md) 만 보면 완결. Photon Voice 2 기반
 - **Steam/Stove SDK 통합 →** [docs/systems/platform-integration.md](docs/systems/platform-integration.md). Phase A(추상화) → B(Stove) → C(Steam) 순
 - **다국어/번역 →** [docs/systems/localization.md](docs/systems/localization.md). 1차 KO/EN/JA/ZH-CN. Google Sheets → 빌드타임 SO 임포트. Key 기반
-- **파티원/보스 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11
+- **파티원/보스/랜덤 퀘스트 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11 ✅
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

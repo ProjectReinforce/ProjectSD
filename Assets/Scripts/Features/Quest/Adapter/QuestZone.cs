@@ -228,6 +228,7 @@ namespace SwDreams.Features.Quest.Adapter
                     progressElapsed = 0f;
                     killCount = 0;
                     SpawnBarrierEnemies();
+                    HideRangeIndicator();
                     if (!activeZones.Contains(this)) activeZones.Add(this);
                     break;
                 case QuestState.Completed:
@@ -254,7 +255,13 @@ namespace SwDreams.Features.Quest.Adapter
         private void RPC_SyncState(int stateInt)
         {
             state = (QuestState)stateInt;
-            // 클라이언트 측 시각/UI 반영 — Presentation 레이어가 본 컴포넌트의 CurrentState 폴링하거나 이벤트 구독.
+            // 클라 측 시각 마커 갱신 — 호스트에서 TransitionTo 가 호출하는 HideRangeIndicator 와 같은 동작을 클라에서도 재현.
+            if (state == QuestState.InProgress
+                || state == QuestState.Completed
+                || state == QuestState.Failed)
+            {
+                HideRangeIndicator();
+            }
         }
 
         private void Start()
