@@ -24,6 +24,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private Button settingsButton;
         [SerializeField] private GameObject connectingPanel;
 
+        // R12 설정 패널: 코드 의존 제거 (Adapter→Presentation 역방향 의존 방지).
+        // settingsButton.onClick 인스펙터에서 SettingsPanelUI.Show 직접 연결 — Unity-native first 패턴.
+
         private bool pendingSoloCreate;
         private bool pendingGoRoomList;
         private bool lastInteractableState;
@@ -83,10 +86,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
             TryConnectOrRunPendingAction();
         }
 
-        public void OnClickSettings()
-        {
-            Debug.Log("Open settings popup (TODO)");
-        }
+        // OnClickSettings 제거 — settingsButton.onClick 에서 SettingsPanelUI.Show 직접 연결.
+        // (Adapter→Presentation 역방향 의존 회피)
 
         public void OnClickQuit()
         {

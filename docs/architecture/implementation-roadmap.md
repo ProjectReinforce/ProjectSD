@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-26 (R11 ✅ 마이그레이션 + Top 5 갱신)
+최종 업데이트: 2026-04-27 (R12 ✅ 마이그레이션 + Top 5 갱신 — Phase 8-5 A 승격)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,19 +16,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-04-26**
+> 마지막 갱신: **2026-04-27**
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
 | 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
+| 2 | [§ Phase 8-5 A](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization 코어 + 임포터** | R12 에서 Locale.cs 선행 도입됨. UI 키 매핑(Phase B) 의 전제 조건 | 없음 (컨텐츠 독립) | 1.5~2일 |
 | 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
 | 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
 | 5 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 Voice 동반. 출시 전 재미 요소 | Phase 8-2 (Voice 통합) 선행 | 0.5일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R12, R4 모두 독립. R3 는 8-2 후행.
-**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, Phase 8-5 A, R4 모두 독립. R3 는 8-2 후행.
+**병렬 가능 그룹**: Phase 8-5 A + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화).
 
 ---
 
@@ -293,69 +293,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - [ ] **Localization** (Phase 8-5 C) — Boss `DisplayName` "Boss" 및 QuestData displayName 을 키로 교체
 - [ ] **인접 인디케이터 오프셋 분산** (별건) — 모서리 4명 밀집 시 색만으로 구분 어려운 케이스 발견되면
 
-### R12. 설정 패널 — Video / Audio / Language
+### R12. 설정 패널 — Video / Audio / Language ✅ (2026-04-27) → [completed-work.md](completed-work.md)
 
-**개요:** TitlePanelController 의 설정 버튼(현재 TODO)과 ESC 인게임 일시정지 메뉴(U4) 양쪽에서 호출되는 통합 설정 패널. 비디오·오디오·언어 카테고리. **U6 (설정창 구조잡기) 를 본 R12 로 흡수.**
-
-**확정 결정사항:**
-- **비디오:** 창모드 토글(Fullscreen Borderless / Windowed) + 해상도 드롭다운(코드 작성, 1차 빌드는 FHD 16:9 강제 — 베타 테스트 후 토글 결정)
-- **오디오:** 5 슬라이더 (Master / BGM / SFX / Voice / MicSensitivity)
-  - **Voice 만 0~2 범위** + AudioMixer dB 변환 (`Mathf.Log10(v)*20`) → 1.0 = 0dB, 2.0 = +6dB 부스트
-  - BGM/SFX/Master 는 0~1 (게임 사운드 클리핑 방지)
-  - **MicSensitivity 는 볼륨 슬라이더 아님** — Photon Voice 2 의 `Recorder.VoiceDetectionThreshold` (게이트 임계값, 0~1)
-- **언어:** 4개 드롭다운 (KO/EN/JA/ZH-CN), `LocalizationBootstrap.Service?.SetLocale(...)` 풀 구현
-- **저장:** 1차 PlayerPrefs. Phase 8-1 PlatformService 도입 후 `settings.video` / `settings.audio` / `settings.input` 키로 클라우드 마이그레이션
-- **진입 경로:** TitlePanelController.OnClickSettings + ESC 일시정지 메뉴 (U4 별건 유지)
-
-**Phase 1 — AudioMixer 셋업 (사전 작업):**
-- [ ] `Assets/Audio/MasterMixer.mixer` 생성
-- [ ] Group: Master → BGM, SFX, Voice (3 자식)
-- [ ] Exposed Parameters: `MasterVol`, `BGMVol`, `SFXVol`, `VoiceGain` (dB)
-- [ ] 기존 `AudioManager` / `AudioLibrary` 의 AudioSource Output 을 해당 Mixer Group 으로 라우팅
-- [ ] Photon Voice 2 도입 시(Phase 8-2) `Speaker` 프리팹 Output → Voice Group 명시 (8-2 체크리스트에 추가 메모)
-
-**Phase 2 — 설정 데이터 모델:**
-- [ ] `Features/UI/Adapter/Settings/SettingsModel.cs` — 직렬화 가능 VO (창모드 enum, 해상도 width/height, 5 볼륨 float, locale enum)
-- [ ] `Features/UI/Adapter/Settings/SettingsManager.cs` 싱글턴 — Load/Save (PlayerPrefs), 변경 시 즉시 적용 (Apply 버튼 vs 즉시? **즉시 적용** 권장 — 슬라이더 미리듣기)
-- [ ] PlayerPrefs 키: `settings.video.windowMode`, `settings.video.resWidth`, `settings.video.resHeight`, `settings.audio.master`, `settings.audio.bgm`, `settings.audio.sfx`, `settings.audio.voice`, `settings.audio.micSens`, `settings.locale`
-
-**Phase 3 — 설정 UI 패널:**
-- [ ] `Assets/Resources/Prefabs/UI/SettingsPanel.prefab` 신규
-- [ ] 탭 3개 (Video / Audio / Language) — 또는 단일 스크롤 패널 (디자인 결정)
-- [ ] **Video:** 창모드 Toggle + 해상도 Dropdown (16:9 비율만 필터)
-- [ ] **Audio:** 슬라이더 5개. Voice 슬라이더 1.0 위치에 노치 마커 (UI Image)
-- [ ] **Language:** Dropdown 4개 옵션
-- [ ] 닫기 버튼 — 자동 저장 (PlayerPrefs.Save)
-- [ ] `Features/UI/Presentation/SettingsPanelUI.cs` — 슬라이더 onValueChanged → SettingsManager 즉시 적용
-
-**Phase 4 — 진입 경로 연결:**
-- [ ] [TitlePanelController.OnClickSettings](../../Assets/Scripts/Features/UI/Adapter/Menu/TitlePanelController.cs) — TODO 해소, SettingsPanel 호출
-- [ ] ESC 일시정지 메뉴(U4) 의 "설정" 버튼 → SettingsPanel 호출 (U4 자체는 별건 유지)
-- [ ] SettingsPanel 은 `Frame_PopUp` 프레임워크 사용 (모달, 일시정지 가능 — 멀티에선 GameState.Paused 패턴 메모리 룰)
-
-**Phase 5 — 검증:**
-- [ ] 설정 변경 후 게임 재시작 시 값 복원
-- [ ] 슬라이더 즉시 적용 (미리듣기 동작)
-- [ ] Voice 슬라이더 1.5 → 보이스 1.5배 들리는지 (Photon Voice 2 도입 후 검증, 8-2 단계)
-- [ ] 언어 변경 시 모든 `LocalizedText` 즉시 갱신 (Phase 8-5 A 도입 후 검증)
-- [ ] 창모드 토글 시 즉시 전환 (재시작 불필요)
-- [ ] `architecture-guardian` 통과
-
-**Phase 6 — 클라우드 세이브 마이그레이션 (Phase 8-1 후):**
-- [ ] `SettingsManager` 의 PlayerPrefs Read/Write 를 `PlatformBootstrap.Service.LoadData/SaveData("settings.*")` 로 변경
-- [ ] PlayerPrefs 는 fallback 으로만 유지 (오프라인 / Local 플랫폼)
-
-**범위 외:**
-- 키바인딩 (별도 작업 — `settings.input` 키만 미리 예약)
-- 그래픽 품질 옵션 (Bloom on/off 등 — 7-3 비주얼 작업과 함께)
-- 접근성 옵션 (색약 모드, 자막 등) — 출시 후 검토
-- ExclusiveFullScreen 모드 (모니터 충돌 위험으로 제외)
-
-**관련:**
-- [platform-integration.md](../systems/platform-integration.md) — 클라우드 세이브 키 규약
-- [localization.md](../systems/localization.md) — 언어 드롭다운 동작
-- [voice-chat.md](../systems/voice-chat.md) — Voice/MicSens 적용 대상
-- [ui-frame.md](../systems/ui-frame.md) — Frame_PopUp 프레임워크
+Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 메뉴 진입점. 후행: Voice/Mic 실효 = Phase 8-2, Locale 실효 = Phase 8-5 A, 클라우드 마이그레이션 = Phase 8-1.
 
 ---
 
