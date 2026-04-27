@@ -10,8 +10,8 @@ Sweepin' Dreams 의 Co-op 보이스챗 시스템. 본 문서는 **다음 세션�
 | 분류 | 네트워크 / UX |
 | 의존 레이어 | Adapter (Voice), Presentation (UI) |
 | 의존 외부 패키지 | Photon Voice 2 (Asset Store 무료) |
-| 최종 업데이트 | 2026-04-19 |
-| 구현 상태 | ⬜ 미구현 (Phase A 문서화 단계) |
+| 최종 업데이트 | 2026-04-27 |
+| 구현 상태 | ✅ 1차 통합 완료 (Phase 8-2) — 송수신 / PTT / OpenMic / 마이크 자체 테스트 동작. R3 마이크 필터 드랍은 후행 |
 
 ## 2. 결정 근거
 
@@ -44,14 +44,14 @@ Photon Voice 2 는 직접 코드 작성보다 **컴포넌트 부착 중심**이�
 
 ### 4-1. 씬 레벨 (1회 셋업)
 
-`GameScene` 의 NetworkManager 와 같은 GameObject 또는 형제 GameObject 에:
+`MenuScene` 의 NetworkManager GameObject 에 부착 (DontDestroyOnLoad 따라감):
 
-| 컴포넌트 | 역할 |
+| 컴포넌트 | 역할 / 설정 |
 |---|---|
-| `PhotonVoiceNetwork` | Voice 서버 연결 관리. PUN 의 `PhotonNetwork` 와 동등한 역할 |
-| (Inspector) `Settings.AppIdVoice` | 위 §3에서 발급받은 Voice AppId 입력 |
-| (Inspector) `Settings.FixedRegion` | PUN 과 동일 Region (예: `kr`, `asia`) |
-| (Inspector) `Settings.AutoConnect` | true (PUN 연결 시 자동 Voice 연결) |
+| `PunVoiceClient` | Voice 서버 연결 관리. PUN 의 `PhotonNetwork` 와 동등한 역할. **구 명칭 `PhotonVoiceNetwork` 에서 변경됨 (Photon Voice 2 최신 버전)** |
+| (Inspector) `Use Pun App Settings` | ✓ 기본값. `PhotonAppSettings.asset` 의 **App Id Voice** 칸을 자동 사용 (PUN AppId 와 별도). 별도 입력 칸 사라짐 |
+| (Inspector) `Use Pun Auth Values` | ✓ 기본값 |
+| `PhotonAppSettings.asset` | `App Id Voice` 칸에 발급받은 Voice AppId. `Fixed Region` 은 PUN 과 동일 (예: `kr`, `jp`). PUN 룸 follow 자동 (`LeaderInRoom => PhotonNetwork.InRoom`) — `_voice_` suffix 룸명 |
 
 ### 4-2. Player 프리팹 변경
 
@@ -65,18 +65,22 @@ Photon Voice 2 는 직접 코드 작성보다 **컴포넌트 부착 중심**이�
 
 **왜 `TransmitEnabled = false` 시작:** 입장 직후 의도치 않은 마이크 송출 방지. UI에서 명시적 토글로 켠다.
 
-### 4-3. 새로 작성할 C# (최소)
+### 4-3. 작성된 C# (Phase 8-2 1차)
 
-`Assets/Scripts/Features/Voice/` 폴더 신규.
+`Assets/Scripts/Features/Voice/` (실제 파일):
 
 ```
 Features/Voice/
 ├── Adapter/
-│   ├── VoiceController.cs       ← Recorder 제어 (Mute/Unmute, PTT 입력 처리)
-│   └── VoiceBootstrap.cs         ← PhotonVoiceNetwork 초기화 보조 (필요 시)
+│   ├── VoiceController.cs       ← Recorder 제어 (Mute/PTT/OpenMic). 자기 PhotonView (IsMine) 만 제어. SettingsManager.OnMicChanged 구독해서 모드/감도 자동 반영. 새 Input System (Keyboard.current[Key.V]) 사용. 정적 LocalInstance 로 UI 가 인스펙터 드래그 없이 호출
+│   └── MicTestService.cs         ← UnityEngine.Microphone 으로 직접 캡처 → AudioSource.loop 재생. Photon voice 룸 의존성 0 — 룸 미가입/메뉴씬/ParrelSync 무관. 설정 패널 "내 마이크 테스트" 토글이 호출
 └── Presentation/
-    └── VoiceIndicatorUI.cs       ← 누가 말하는 중인지 표시 (Speaker.IsPlaying 구독)
+    └── MicToggleButton.cs       ← InGameHUD 의 마이크 ON/OFF 버튼 브리지. VoiceController.LocalInstance.ToggleMute() + 음소거 상태에 따라 sprite/색 자동 토글
 ```
+
+**보류 (필요 시 추후):**
+- `VoiceIndicatorUI` — 누가 말하는 중인지 시각화 (Speaker.IsPlaying 구독). 현재 미작성
+- 빌드 환경에서 송수신 검증 + R3 마이크 필터 드랍과 함께 후행
 
 **`VoiceController.cs` 스켈레톤:**
 
@@ -177,7 +181,7 @@ PUN 호스트 마이그레이션 시 Voice 는 **자동 재연결**. 추가 코�
 // VoiceController.cs 추가 시그니처
 private void OnEnable()
 {
-    PhotonVoiceNetwork.Instance.Client.StateChanged += OnVoiceStateChanged;
+    PunVoiceClient.Instance.Client.StateChanged += OnVoiceStateChanged;
 }
 
 private void OnVoiceStateChanged(...) { /* 재연결 시 송신 상태 복원 */ }
@@ -187,7 +191,7 @@ private void OnVoiceStateChanged(...) { /* 재연결 시 송신 상태 복원 */
 
 ParrelSync 4 인스턴스 기준.
 
-- [ ] PUN 룸 입장 직후 Voice 도 자동 연결 (`PhotonVoiceNetwork.Client.State == ConnectedToMasterServer` → `Joined`)
+- [ ] PUN 룸 입장 직후 Voice 도 자동 연결 (`PunVoiceClient.Client.State == ConnectedToMasterServer` → `Joined`)
 - [ ] 기본 상태에서 마이크 송출 안 됨 (`Recorder.TransmitEnabled == false`)
 - [ ] PTT 키 누르면 다른 인스턴스에서 음성 들림
 - [ ] PTT 키 떼면 즉시 송출 중단
@@ -207,41 +211,56 @@ Voice 는 **Adapter / Presentation 레이어 한정**. Domain 에 음성 관련 
 
 CLAUDE.md §2 의존성 방향 준수: Voice 는 다른 Feature 의 Domain 을 호출하지 않음. 호출 방향은 **UI(Presentation) → VoiceController(Adapter) → Photon Voice SDK** 단방향.
 
-## 11. 구현 순서 (다른 세션이 따라야 할 단계)
+## 11. 구현 순서 — Phase 8-2 1차 통합 ✅ (2026-04-27)
 
-1. **Photon 대시보드 작업** (사람이 함):
-   - https://dashboard.photonengine.com 접속
-   - "Create a New App" → Type: **Photon Voice**
-   - App ID 복사
-2. **Asset Store 임포트** (Unity 에서):
-   - "PUN 2 - FREE" 이미 설치된 상태 가정
-   - "Photon Voice 2" 검색 → Import
-   - PUN 과 충돌 없음 (별도 네임스페이스)
-3. **씬 셋업:**
-   - `GameScene` 의 NetworkManager GameObject 에 `PhotonVoiceNetwork` 추가
-   - Inspector 에 Voice AppId, Region 입력
-4. **Player 프리팹 수정:**
-   - `Assets/Resources/Prefabs/Player.prefab` (또는 실제 경로) 열기
-   - `PhotonVoiceView`, `Recorder`, `Speaker` 컴포넌트 추가
-   - Recorder 의 `TransmitEnabled = false` 설정
-5. **VoiceController.cs 작성:** §4-3 스켈레톤 그대로 사용
-6. **UI 후크:** §6 표 따라. 최소한 InGameHUD 에 토글 1개
-7. **테스트:** §9 체크리스트
-8. **CLAUDE.md §3 폴더 지도** 갱신: `Features/Voice/` 추가
-9. **`docs/architecture/implementation-roadmap.md`** 의 해당 Phase 항목 ✅ 처리
+1. ✅ **Photon 대시보드** — Voice AppId 발급
+2. ✅ **Asset Store** — Photon Voice 2 임포트 (`Assets/FromStore/Photon/PhotonVoice/`)
+3. ✅ **씬 셋업** — NetworkManager GameObject 에 `PunVoiceClient` 컴포넌트 추가. `PhotonAppSettings.asset` 의 `App Id Voice` 입력
+4. ✅ **PlayerStub 프리팹** — `PhotonVoiceView` + `Recorder` (`TransmitEnabled = false`) + `Speaker` + `VoiceController` 부착
+5. ✅ **VoiceController.cs** — 새 Input System 기반, `Keyboard.current[pushToTalkKey].isPressed`. SettingsManager.OnMicChanged 구독해서 모드/감도 자동 반영
+6. ✅ **MicToggleButton** — InGameHUD 마이크 토글 버튼 (정적 `LocalInstance` 경유)
+7. ✅ **MicTestService** — 단일 인스턴스 마이크 자체 테스트 (UnityEngine.Microphone 직접 캡처)
+8. ✅ **micSensitivity 안전 클램프** — SettingsManager 에 `Mathf.Clamp(v, 0.01f, 1f)` (§13 함정 회피)
+9. ✅ **검증** — 단일 인스턴스 마이크 테스트 동작 확인. ParrelSync 송수신은 micSensitivity 올린 후 정상 동작 확인. 빌드 환경 송수신 검증은 R3 작업과 함께 후행
+
+**남은 후행 작업:** R3 (마이크 필터 드랍 아이템) — 빌드로 진짜 송수신 검증 + Speaker AudioFilter 부착 + RPC 동기화. [implementation-roadmap.md § R3](../architecture/implementation-roadmap.md) 참조.
+
+## 11-MicTest. 마이크 자체 테스트 (MicTestService)
+
+ParrelSync/멀티 인스턴스 의존 없이 자기 마이크 입력을 자기 Speaker 로 즉시 echo. **Photon Voice 의 voice 룸과 완전 무관** — 룸 미가입 상태(메뉴씬)에서도 동작.
+
+**왜 Photon `Recorder.DebugEchoMode` 안 씀:** DebugEchoMode 는 "outgoing stream routed back to client via server" — voice 룸 서버 경유라 룸 미가입 시 동작 X. 메뉴씬에서 마이크 점검 가능해야 하므로 Unity 직접 캡처 채택.
+
+**구조:**
+```
+MicTestService (DontDestroyOnLoad 싱글턴, GetOrCreate 자동 생성)
+├── Microphone.Start(deviceName, loop=true, 1s, 44100Hz)
+├── AudioSource.loop = true, volume = 0.7 (feedback 완화)
+└── StartTest() / StopTest() / Toggle() public API
+```
+
+**SettingsPanelUI 통합:** Audio 섹션의 `micTestToggle` (Toggle) 이 `OnMicTestToggled(bool)` 호출 → MicTestService.Toggle. 패널 Hide() 시 강제 종료. 패널 열 때 항상 OFF 시작 (PlayerPrefs 미저장).
+
+**한계:**
+- 동일 OS 마이크 디바이스를 Photon Recorder 와 동시 사용 시 경합 가능 → 인게임 (Recorder 활성) 에선 비권장. 메뉴씬 마이크 점검 용도로 설계
+- AudioSource.Output 이 master 라우팅 (AudioMixerGroup 미할당) — voiceGain 슬라이더 미적용. 마이크 테스트는 입력 검증 목적이라 OK
 
 ## 12. 기존 코드 참조
 
-- `Assets/Scripts/Shared/Managers/NetworkManager.cs` — PUN 연결 관리. PhotonVoiceNetwork 를 형제 GameObject 로 두기 위한 위치 확인
+- `Assets/Scripts/Shared/Managers/NetworkManager.cs` — PUN 연결 관리. PunVoiceClient 를 형제 GameObject 로 두기 위한 위치 확인
 - `Assets/Resources/Prefabs/` — Player 프리팹 위치 (실제 파일명 확인 후 작업)
 - `Assets/Scripts/Features/Character/Adapter/` — Player 관련 컴포넌트들. VoiceController 가 PhotonView 와 통신할 위치
 
 ## 13. 알려진 제약 / 주의
 
+- [x] **micSensitivity = 0 함정** (Phase 8-2 통합 검증 시 발견) — `Recorder.VoiceDetectionThreshold` 가 0 이면 OpenMic 모드에서 voice publish 자체가 차단되거나 silent frame 만 송출됨. SettingsManager.SetMicSensitivity 에 `Mathf.Clamp(v, 0.01f, 1f)` floor 적용. 슬라이더 minValue 도 0.01 권장
+- [x] **PhotonVoiceNetwork → PunVoiceClient 명칭 변경** — Photon Voice 2 최신 버전부터. AppIdVoice 입력 위치도 컴포넌트 인스펙터 → `PhotonAppSettings.asset` 으로 이전 (`Use Pun App Settings = true` 기본)
+- [x] **새 Input System 호환** — VoiceController 의 PTT 키 처리는 `Keyboard.current[Key.V].isPressed` (legacy `Input.GetKey` 금지). 이 프로젝트 표준 패턴 따름
 - [ ] **에코 캔슬:** Photon Voice 의 기본 인코더는 Opus. 헤드폰 미사용 시 에코 발생 가능 — 옵션 메뉴에 안내 권장
 - [ ] **Stove 인디 빌드 인증:** Photon Voice 가 사용하는 마이크 권한·네트워크 도메인이 Stove 심사를 통과하는지 출시 전 검증 필요
 - [ ] **CCU 한도 모니터링:** 무료 티어 20 CCU 초과 시 음성만 끊기는 게 아니라 룸 자체 영향 가능 → Photon 대시보드 알람 설정
 - [ ] **모바일 빌드:** 본 프로젝트는 PC 우선이지만 향후 모바일 검토 시 마이크 권한 처리 재확인
+- [ ] **ParrelSync 환경에서 송수신 검증의 한계:** 같은 OS 마이크/같은 PhotonAppSettings 공유로 인해 미묘한 매핑 이슈가 발생할 수 있음. 진짜 송수신 검증은 빌드 + 다른 PC 또는 빌드 1 + 에디터 1 권장. 자체 마이크 입력 검증은 § 14-MicTestService 로 단일 인스턴스에서 가능
 
 ## 14. 외부 참고
 

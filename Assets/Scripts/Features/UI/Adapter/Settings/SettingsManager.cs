@@ -170,10 +170,11 @@ namespace SwDreams.Features.UI.Adapter.Settings
 
         public void SetMicSensitivity(float v)
         {
-            v = Mathf.Clamp01(v);
+            // VAD threshold 가 0 이면 OpenMic 모드에서 voice publish 자체가 차단됨 (silent frame).
+            // Phase 8-2 통합 검증 시 발견된 함정. 슬라이더 minValue 도 0.01 로 맞추는 게 안전.
+            v = Mathf.Clamp(v, 0.01f, 1f);
             Model.micSensitivity = v;
             PlayerPrefs.SetFloat(KeyMicSens, v);
-            // Phase 8-2: Recorder.VoiceDetectionThreshold = v
             OnMicChanged?.Invoke();
         }
 

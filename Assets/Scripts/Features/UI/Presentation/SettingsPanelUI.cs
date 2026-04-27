@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 using SwDreams.Features.UI.Adapter.Settings;
+using SwDreams.Features.Voice.Adapter;
 using SwDreams.Shared.Localization.Domain;
 
 namespace SwDreams.Features.UI.Presentation
@@ -57,6 +58,8 @@ namespace SwDreams.Features.UI.Presentation
         [SerializeField] private Slider micSensSlider;
         [Tooltip("Open Mic / Push-to-Talk")]
         [SerializeField] private TMP_Dropdown micModeDropdown;
+        [Tooltip("자기 마이크가 자기 Speaker 로 echo. 마이크 감도/볼륨 점검용. ParrelSync 불필요.")]
+        [SerializeField] private Toggle micTestToggle;
 
         [Header("Language")]
         [SerializeField] private TMP_Dropdown localeDropdown;
@@ -123,6 +126,10 @@ namespace SwDreams.Features.UI.Presentation
             // isShown 가드 제거 — 외부에서 SetActive/alpha 직접 만진 경우에도 닫기 가능하도록.
             isShown = false;
 
+            // 마이크 테스트 진행 중이면 강제 종료 (패널 닫혀도 마이크 잡고 있으면 안 됨)
+            if (MicTestService.Instance != null) MicTestService.Instance.StopTest();
+            if (micTestToggle != null) micTestToggle.SetIsOnWithoutNotify(false);
+
             // 닫기 시점에 디스크 동기화
             SettingsManager.Instance?.Flush();
 
@@ -178,6 +185,8 @@ namespace SwDreams.Features.UI.Presentation
             if (micSensSlider != null) micSensSlider.onValueChanged.AddListener(OnMicSensChanged);
             if (micModeDropdown != null)
                 micModeDropdown.onValueChanged.AddListener(OnMicModeChanged);
+            if (micTestToggle != null)
+                micTestToggle.onValueChanged.AddListener(OnMicTestToggled);
 
             if (localeDropdown != null)
                 localeDropdown.onValueChanged.AddListener(OnLocaleChanged);
@@ -220,6 +229,10 @@ namespace SwDreams.Features.UI.Presentation
             if (micModeDropdown != null)
                 micModeDropdown.SetValueWithoutNotify((int)m.micInputMode);
 
+            // 마이크 테스트는 일시적 토글 (PlayerPrefs 미저장). 패널 열 때 항상 OFF.
+            if (micTestToggle != null)
+                micTestToggle.SetIsOnWithoutNotify(false);
+
             // Language
             if (localeDropdown != null)
                 localeDropdown.SetValueWithoutNotify((int)m.locale);
@@ -249,6 +262,23 @@ namespace SwDreams.Features.UI.Presentation
         private void OnMicModeChanged(int idx)
         {
             SettingsManager.Instance?.SetMicInputMode((MicInputMode)idx);
+        }
+
+        private void OnMicTestToggled(bool on)
+        {
+            var svc = MicTestService.GetOrCreate();
+            if (on)
+            {
+                if (!svc.StartTest() && micTestToggle != null)
+                {
+                    // 시작 실패 시 토글 즉시 원복 (마이크 디바이스/권한 문제)
+                    micTestToggle.SetIsOnWithoutNotify(false);
+                }
+            }
+            else
+            {
+                svc.StopTest();
+            }
         }
 
         private void OnLocaleChanged(int idx)

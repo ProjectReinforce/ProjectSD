@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-27 (R12 ✅ 마이그레이션 + Top 5 갱신 — Phase 8-5 A 승격)
+최종 업데이트: 2026-04-27 (Phase 8-2 마이크 SDK 1차 ✅ 마이그레이션 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -20,15 +20,15 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ Phase 8-5 A](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization 코어 + 임포터** | R12 에서 Locale.cs 선행 도입됨. UI 키 매핑(Phase B) 의 전제 조건 | 없음 (컨텐츠 독립) | 1.5~2일 |
-| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
-| 5 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 Voice 동반. 출시 전 재미 요소 | Phase 8-2 (Voice 통합) 선행 | 0.5일 |
+| 1 | [§ Phase 8-5 A](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization 코어 + 임포터** | 사용자 다음 작업으로 명시 (마이크 SDK 다음 순). R12 에서 Locale.cs 선행 도입됨 | 없음 (컨텐츠 독립) | 1.5~2일 |
+| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 3 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 마이크 SDK 1차 ✅ 완료 — 빌드 환경 송수신 검증과 함께 진행 | Phase 8-2 ✅ 해제됨 | 0.5일 |
+| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, Phase 8-5 A, R4 모두 독립. R3 는 8-2 후행.
-**병렬 가능 그룹**: Phase 8-5 A + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): Phase 8-5 A, R10, R3, R4 모두 독립.
+**병렬 가능 그룹**: Phase 8-5 A + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK. R3 는 빌드 환경 검증 동반이라 단독 권장.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), R6 (회오리 pullRadius 패시브 반응).
 
 ---
 
@@ -44,7 +44,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
-| 8. 출시 인프라 (Voice / Platform SDK / Localization) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md), [localization.md](../systems/localization.md). R3 마이크 필터 아이템 8-2 와 함께 |
+| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-2 ✅ 1차) | 8-2 Photon Voice 2 1차 통합 ✅ (2026-04-27). 8-1/8-3/8-4/8-5 ⬜ 대기 |
 | 드랍/장비/퀘스트 (Phase 0~7) | 🟡 코드 거의 완료 | 코드 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md). HUD/유저 Unity 배선/Quest 핸들러 잔여 — 본 문서 § DQ |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
@@ -233,7 +233,7 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 ### R3. 마이크 필터 드랍 아이템 (재미 요소)
 - 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
 - **Photon Voice 2 가능 확인됨**: 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 컴포넌트 부착. 적용 대상은 RPC 동기화.
-- **Phase 8-2 보이스챗 도입과 함께 진행**.
+- **Phase 8-2 ✅ (2026-04-27) 해제됨** — 진행 시 빌드 환경 송수신 검증과 함께. ParrelSync 한정 한계 회피.
 - 관련 SSOT: [../systems/voice-chat.md](../systems/voice-chat.md), [../game-design/items.md](../game-design/items.md)
 
 ### R4. 캐릭터/적 아웃라인 — 스프라이트 애니메이션 호환성 + 퍼포먼스 검토
@@ -395,17 +395,9 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 
 > **컨텐츠 작업과 병행 가능.** 코드 변경 최소, 게임 동작 변화 없음. 상세 [../systems/platform-integration.md § 12](../systems/platform-integration.md)
 
-### 8-2. Photon Voice 2 통합
-- [ ] Photon 대시보드에서 Voice AppId 발급
-- [ ] Asset Store 에서 "Photon Voice 2" 임포트
-- [ ] `PhotonVoiceNetwork` 컴포넌트 씬 배치
-- [ ] Player 프리팹에 `PhotonVoiceView` + `Recorder` + `Speaker` 추가
-- [ ] `Features/Voice/Adapter/VoiceController.cs` 작성 (PTT / Open Mic)
-- [ ] 인게임 HUD 에 마이크 토글 UI 추가
-- [ ] ParrelSync 4인스턴스 테스트
-- [ ] **마이크 필터 드랍 아이템 ([§ R3](#r3-마이크-필터-드랍-아이템-재미-요소))** — 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 부착 + RPC 동기화
+### 8-2. Photon Voice 2 통합 ✅ 1차 (2026-04-27) → [completed-work.md](completed-work.md)
 
-> 상세 [../systems/voice-chat.md](../systems/voice-chat.md)
+PunVoiceClient + PlayerStub 4컴포넌트 + VoiceController/MicToggleButton/MicTestService + SettingsPanel 통합 완료. micSensitivity = 0 함정 floor 클램프. 후행: 빌드 환경 송수신 검증 + R3 마이크 필터 드랍 ([§ R3](#r3-마이크-필터-드랍-아이템-재미-요소)). 상세 [../systems/voice-chat.md](../systems/voice-chat.md).
 
 ### 8-3. Stove Indie 출시 (Phase B)
 - [ ] Stove 인디 개발자 등록 + AppId 발급
