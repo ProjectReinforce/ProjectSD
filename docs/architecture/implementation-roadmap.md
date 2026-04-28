@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-27 (Phase 8-2 마이크 SDK 1차 ✅ 마이그레이션 + Top 5 갱신)
+최종 업데이트: 2026-04-28 (Phase 8-5 A Localization 코어+임포터 ✅ 마이그레이션 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,19 +16,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-04-27**
+> 마지막 갱신: **2026-04-28**
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | [§ Phase 8-5 A](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization 코어 + 임포터** | 사용자 다음 작업으로 명시 (마이크 SDK 다음 순). R12 에서 Locale.cs 선행 도입됨 | 없음 (컨텐츠 독립) | 1.5~2일 |
-| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 3 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 마이크 SDK 1차 ✅ 완료 — 빌드 환경 송수신 검증과 함께 진행 | Phase 8-2 ✅ 해제됨 | 0.5일 |
-| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 2 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 마이크 SDK 1차 ✅ 완료 — 빌드 환경 송수신 검증과 함께 진행 | Phase 8-2 ✅ 해제됨 | 0.5일 |
+| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 5 | [§ Phase 8-5 B](#phase-8--출시-인프라--대기-설계만-완료) **Localization Phase B (UI 키 매핑)** | Phase 8-5 A ✅ 후속. 점진적 — MenuScene UI / HUD / LevelUp / Result 의 한국어 라벨에 LocalizedText 부착 + 시트 ko_final 채우기 | Phase 8-5 A ✅ 해제됨 | 수일~1주 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): Phase 8-5 A, R10, R3, R4 모두 독립.
-**병렬 가능 그룹**: Phase 8-5 A + R10 + R4 가 서로 다른 파일 영역이라 동시 진행 OK. R3 는 빌드 환경 검증 동반이라 단독 권장.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), R6 (회오리 pullRadius 패시브 반응).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R3, R4, Phase 8-5 B 모두 독립.
+**병렬 가능 그룹**: R10 + R4 + Phase 8-5 B 가 서로 다른 파일 영역이라 동시 진행 OK. R3 는 빌드 환경 검증 동반이라 단독 권장.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), R6 (회오리 pullRadius 패시브 반응), Phase 8-5 C (스킬 SO 통합).
 
 ---
 
@@ -44,7 +44,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
-| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-2 ✅ 1차) | 8-2 Photon Voice 2 1차 통합 ✅ (2026-04-27). 8-1/8-3/8-4/8-5 ⬜ 대기 |
+| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-2 ✅, 8-5 A ✅) | 8-2 Voice 1차 ✅ (2026-04-27). 8-5 A 코어+임포터 ✅ (2026-04-28). 8-1/8-3/8-4/8-5 B~D ⬜ |
 | 드랍/장비/퀘스트 (Phase 0~7) | 🟡 코드 거의 완료 | 코드 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md). HUD/유저 Unity 배선/Quest 핸들러 잔여 — 본 문서 § DQ |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
@@ -421,15 +421,7 @@ PunVoiceClient + PlayerStub 4컴포넌트 + VoiceController/MicToggleButton/MicT
 
 자체 구현 (Unity Localization Package 미사용). Google Sheets 가 작업용 SSOT, 빌드타임에 SO 임포트. 상세 [../systems/localization.md](../systems/localization.md).
 
-**Phase A — 코어 시스템 + 임포터** (1.5~2일, 컨텐츠 독립 / 선행 가능)
-- [ ] `Assets/Scripts/Shared/Localization/{Domain,Adapter,Editor}/` 폴더 생성
-- [ ] `ILocalizationService` + `Locale` enum + (선택) `LocalizationKey` 상수 (Domain)
-- [ ] `LocalizationManager` (동기 API) + `LocalizationTable` (SO) + `LocaleFontMap` (SO) + `LocalizedText` (TMP 컴포넌트) + `LocalizationBootstrap` (싱글턴, DontDestroyOnLoad) (Adapter)
-- [ ] `LocalizationSheetImporter` 에디터 윈도우 — public CSV export URL 기반 (Service Account JSON 불필요)
-- [ ] 빈 `Assets/Data/Localization/LocalizationTable.asset` + `LocaleFontMap.asset` 생성
-- [ ] Google Sheet 템플릿 작성 (헤더: `key`, `ko_auto`, `en_auto`, `ja_auto`, `zh_auto`, `ko_final`, `en_final`, `ja_final`, `zh_final`, `note`)
-- [ ] 1~2개 키로 임포트 동작 확인
-- [ ] `architecture-guardian` 통과 (Domain 3 파일에 `UnityEngine`/`Photon`/`TMPro` import 없음)
+**Phase A — 코어 시스템 + 임포터** ✅ (2026-04-28) → [completed-work.md](completed-work.md)
 
 **Phase B — UI 키 매핑** (수일~1주, 점진적)
 - [ ] MenuScene UI(Title/RoomList/WaitingRoom/CharacterSelect)에 `LocalizedText` + 키 매핑

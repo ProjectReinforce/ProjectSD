@@ -9,8 +9,8 @@ Google Sheets 를 작업용 SSOT 로, 빌드타임에 ScriptableObject 로 임�
 | 시스템 ID | `localization` |
 | 분류 | UI / 인프라 |
 | 의존 레이어 | Domain (인터페이스), Adapter (Manager/SO/Editor) |
-| 최종 업데이트 | 2026-04-25 |
-| 구현 상태 | ⬜ 미구현 (Phase A 문서화 단계) |
+| 최종 업데이트 | 2026-04-28 |
+| 구현 상태 | 🟡 Phase A ✅ 완료 (2026-04-28) — 코어+임포터 동작 검증. Phase B/C/D ⬜ |
 | 1차 지원 언어 | KO, EN, JA, ZH-CN (Steam 출시 시점까지) |
 
 ## 2. 목적

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7990902732398101038}
   - component: {fileID: 7069802227192294720}
   - component: {fileID: 6139219931090736250}
+  - component: {fileID: 3495965716856466067}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -137,6 +138,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3495965716856466067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 305453936117015507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fb87effdab6b5d4b9cdc5caa56442b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Shared.Localization.Adapter.LocalizedText
+  key: ui.settings.title
+  applyFontPerLocale: 1
 --- !u!1 &1435861752308280951
 GameObject:
   m_ObjectHideFlags: 0
@@ -568,6 +583,7 @@ GameObject:
   - component: {fileID: 8152151081885999455}
   - component: {fileID: 2756209238960938047}
   - component: {fileID: 4988388800772389774}
+  - component: {fileID: 7699765789862918538}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -694,6 +710,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7699765789862918538
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3991268395647610739}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fb87effdab6b5d4b9cdc5caa56442b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Shared.Localization.Adapter.LocalizedText
+  key: ui.menu.start_button
+  applyFontPerLocale: 1
 --- !u!1 &4724739068657819285
 GameObject:
   m_ObjectHideFlags: 0

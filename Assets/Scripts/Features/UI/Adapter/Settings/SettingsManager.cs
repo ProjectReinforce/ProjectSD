@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using SwDreams.Shared.Localization.Adapter;
 using SwDreams.Shared.Localization.Domain;
 using SwDreams.Shared.Managers;
 
@@ -90,7 +91,7 @@ namespace SwDreams.Features.UI.Adapter.Settings
         {
             ApplyVideo();
             ApplyAudio();
-            // Locale: Phase 8-5 LocalizationBootstrap 도입 후
+            ApplyLocale();
             // Voice/Mic: Phase 8-2 Photon Voice 도입 후
         }
 
@@ -110,6 +111,13 @@ namespace SwDreams.Features.UI.Adapter.Settings
             am.SetBGMVolume(Model.bgmVolume);
             am.SetSFXVolume(Model.sfxVolume);
             am.SetVoiceGain(Model.voiceGain);
+        }
+
+        private void ApplyLocale()
+        {
+            // LocalizationBootstrap 이 PlayerPrefs 같은 키를 직접 읽어 자기 초기 Locale 을 정함.
+            // 여기선 SettingsManager 가 UI 등 후순위 Apply 시점에 한 번 더 push 해서 동기화 보장.
+            LocalizationBootstrap.Service?.SetLocale(Model.locale);
         }
 
         // ===== Setters (즉시 반영) =====
@@ -190,7 +198,7 @@ namespace SwDreams.Features.UI.Adapter.Settings
         {
             Model.locale = locale;
             PlayerPrefs.SetInt(KeyLocale, (int)locale);
-            // Phase 8-5: LocalizationBootstrap.Service?.SetLocale(locale)
+            LocalizationBootstrap.Service?.SetLocale(locale);
             OnLocaleChanged?.Invoke();
         }
 

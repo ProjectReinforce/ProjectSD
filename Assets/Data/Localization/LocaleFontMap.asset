@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67849a86e09a1d2408940a9e5bfd4d5a, type: 3}
+  m_Name: LocaleFontMap
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Shared.Localization.Adapter.LocaleFontMap
+  koFont: {fileID: 11400000, guid: 63c2fd3fd992a4d4f94b3b14cc4e5280, type: 2}
+  enFont: {fileID: 0}
+  jaFont: {fileID: 0}
+  zhFont: {fileID: 0}
