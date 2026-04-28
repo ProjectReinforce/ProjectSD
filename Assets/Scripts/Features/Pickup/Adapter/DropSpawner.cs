@@ -9,6 +9,7 @@ using SwDreams.Features.Essence.Adapter;
 using SwDreams.Features.Essence.Adapter.Data;
 using SwDreams.Features.Essence.Domain;
 using SwDreams.Features.Pickup.Domain;
+using SwDreams.Features.Voice.Adapter;
 using SwDreams.Features.Weapon.Adapter;
 using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Shared.Data;
@@ -48,6 +49,9 @@ namespace SwDreams.Features.Pickup.Adapter
         [Tooltip("무기. Phase 4 이후. null 이면 스폰 생략 + 경고.")]
         [SerializeField] private GameObject weaponPrefab;
 
+        [Tooltip("마이크 필터(R3, 카오스 재미). null 이면 스폰 생략 + 경고.")]
+        [SerializeField] private GameObject micFilterPrefab;
+
         [Header("풀 Prewarm")]
         [SerializeField] private int prewarmPerType = 16;
 
@@ -72,6 +76,7 @@ namespace SwDreams.Features.Pickup.Adapter
             PrewarmIfSet(potionPrefab);
             PrewarmIfSet(essencePrefab);
             PrewarmIfSet(weaponPrefab);
+            PrewarmIfSet(micFilterPrefab);
         }
 
         private void PrewarmIfSet(GameObject prefab)
@@ -123,6 +128,10 @@ namespace SwDreams.Features.Pickup.Adapter
 
             if (Roll(table.potionChance))
                 dropQueue.Add((PickupType.Potion, ScatterFrom(position), Rarity.Common, 0));
+
+            // 마이크 필터(R3) — 등급 개념 없음. 효과 결정(타겟/필터 종류)은 픽업 시 호스트가 다시 롤.
+            if (Roll(table.micFilterChance))
+                dropQueue.Add((PickupType.MicFilter, ScatterFrom(position), Rarity.Common, 0));
         }
 
         /// <summary>
@@ -339,6 +348,7 @@ namespace SwDreams.Features.Pickup.Adapter
                 case PickupType.Potion:  return potionPrefab;
                 case PickupType.Essence: return essencePrefab;
                 case PickupType.Weapon:  return weaponPrefab;
+                case PickupType.MicFilter: return micFilterPrefab;
                 // ExpOrb 는 DropSpawner 관리 대상 아님 — SpawnManager 가 직접 스폰.
                 case PickupType.ExpOrb:
                 default:
@@ -403,6 +413,45 @@ namespace SwDreams.Features.Pickup.Adapter
                     return players[i].transform;
             }
             return null;
+        }
+
+        // ===== R3 마이크 필터 적용 브로드캐스트 =====
+
+        /// <summary>
+        /// 호스트 전용. MicFilterPickup 이 호스트 권위로 타겟 ActorNumber + 필터 인덱스 결정 후 호출.
+        /// 모든 클라(호스트 포함)가 자기 측 PlayerStub 들 중 ActorNumber 매칭 인스턴스에 필터 적용.
+        /// duration 은 SO 에서 읽은 값을 호스트가 그대로 송신 — 모든 클라 동일 SO 참조라 일관성 보장.
+        /// </summary>
+        public void RaiseMicFilterApplied(int targetActorNumber, int filterIdx, float duration)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            if (photonView == null || photonView.ViewID == 0)
+            {
+                Debug.LogError("[DropSpawner] PhotonView ViewID 미할당! Scene 저장 후 재시작.");
+                return;
+            }
+            photonView.RPC(nameof(RPC_ApplyMicFilter), RpcTarget.All,
+                targetActorNumber, filterIdx, duration);
+        }
+
+        [PunRPC]
+        private void RPC_ApplyMicFilter(int targetActorNumber, int filterIdx, float duration)
+        {
+            // 활성 PlayerStub 중 ActorNumber 매칭하는 곳의 MicFilterController 호출.
+            // PlayerStub 자체 PhotonView 의 Owner.ActorNumber 사용 — 자식 컴포넌트의 별도 PhotonView 와 무관.
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            for (int i = 0; i < players.Length; i++)
+            {
+                var pv = players[i].GetComponent<PhotonView>();
+                if (pv == null || pv.Owner == null) continue;
+                if (pv.Owner.ActorNumber != targetActorNumber) continue;
+
+                var ctrl = players[i].GetComponent<MicFilterController>();
+                if (ctrl != null) ctrl.ApplyFilter(filterIdx, duration);
+                else Debug.LogWarning($"[DropSpawner] PlayerStub '{players[i].name}' 에 MicFilterController 미부착.");
+                return;
+            }
+            Debug.LogWarning($"[DropSpawner] RPC_ApplyMicFilter: ActorNumber={targetActorNumber} 매칭 PlayerStub 미발견. 룸 떠난 직후 race 가능.");
         }
 
         // ===== 유틸 =====

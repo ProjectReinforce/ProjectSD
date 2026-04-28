@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-28 (Phase 8-5 A Localization 코어+임포터 ✅ 마이그레이션 + Top 5 갱신)
+최종 업데이트: 2026-04-29 (R3 마이크 필터 드랍 픽업 ✅ 마이그레이션 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,19 +16,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-04-28**
+> 마지막 갱신: **2026-04-29**
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
 | 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ R3](#r3-마이크-필터-드랍-아이템-재미-요소) **마이크 필터 드랍 아이템** | Phase 8-2 마이크 SDK 1차 ✅ 완료 — 빌드 환경 송수신 검증과 함께 진행 | Phase 8-2 ✅ 해제됨 | 0.5일 |
-| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
-| 5 | [§ Phase 8-5 B](#phase-8--출시-인프라--대기-설계만-완료) **Localization Phase B (UI 키 매핑)** | Phase 8-5 A ✅ 후속. 점진적 — MenuScene UI / HUD / LevelUp / Result 의 한국어 라벨에 LocalizedText 부착 + 시트 ko_final 채우기 | Phase 8-5 A ✅ 해제됨 | 수일~1주 |
+| 2 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 3 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 4 | [§ Phase 8-5 B](#phase-8--출시-인프라--대기-설계만-완료) **Localization Phase B (UI 키 매핑)** | Phase 8-5 A ✅ 후속. 점진적 — MenuScene UI / HUD / LevelUp / Result 의 한국어 라벨에 LocalizedText 부착 + 시트 ko_final 채우기 | Phase 8-5 A ✅ 해제됨 | 수일~1주 |
+| 5 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R3, R4, Phase 8-5 B 모두 독립.
-**병렬 가능 그룹**: R10 + R4 + Phase 8-5 B 가 서로 다른 파일 영역이라 동시 진행 OK. R3 는 빌드 환경 검증 동반이라 단독 권장.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), R6 (회오리 pullRadius 패시브 반응), Phase 8-5 C (스킬 SO 통합).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R4, Phase 8-5 B, R6 모두 독립.
+**병렬 가능 그룹**: R10 + R4 + Phase 8-5 B + R6 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
 
 ---
 
@@ -230,11 +230,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 ### R2. 체력 자연회복 패시브 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
-### R3. 마이크 필터 드랍 아이템 (재미 요소)
-- 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
-- **Photon Voice 2 가능 확인됨**: 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 컴포넌트 부착. 적용 대상은 RPC 동기화.
-- **Phase 8-2 ✅ (2026-04-27) 해제됨** — 진행 시 빌드 환경 송수신 검증과 함께. ParrelSync 한정 한계 회피.
-- 관련 SSOT: [../systems/voice-chat.md](../systems/voice-chat.md), [../game-design/items.md](../game-design/items.md)
+### R3. 마이크 필터 드랍 아이템 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+5종 필터(LowPass/Distortion/Echo/PitchHelium/PitchDemon) + 호스트 권위 RPC + 클라 자체 만료 + 본인 포함 랜덤 1명 + 새 필터로 즉시 교체 + 시각 표시 없음(카오스 재미). ParrelSync 2 인스턴스 검증 통과. 빌드 환경 송수신 종합 검증은 Phase 8-2 후행과 별건.
 
 ### R4. 캐릭터/적 아웃라인 — 스프라이트 애니메이션 호환성 + 퍼포먼스 검토
 - 현재 아웃라인은 적용됐으나, 스프라이트 애니메이션이 적용된 상태에서도 정상 반영되는지 검증 필요.

@@ -5,6 +5,7 @@ using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Essence.Adapter.Data;
 using SwDreams.Features.StatBoost.Adapter.Data;
+using SwDreams.Features.Voice.Adapter.Data;
 using SwDreams.Features.Weapon.Adapter.Data;
 using UnityEngine;
 using Photon.Pun;
@@ -55,6 +56,9 @@ namespace SwDreams.Shared.Managers
         // 능력치 부스트 DB. LevelUpManager 만렙 분기 + 퀘스트 보상에서 공용 사용.
         [SerializeField] private StatBoostDatabase statBoostDatabase;
 
+        // R3 마이크 필터 DB. DropSpawner 가 픽업 결정 시 / MicFilterController 가 인덱스 해결 시 사용.
+        [SerializeField] private MicFilterDatabase micFilterDatabase;
+
         /// <summary>
         /// 게임플레이 설정 SO. 읽기 전용 접근.
         /// null 체크 후 사용 권장:
@@ -84,6 +88,12 @@ namespace SwDreams.Shared.Managers
         /// 능력치 부스트 DB. LevelUpManager 가 스킬 풀 고갈(만렙) 시 / 퀘스트 보상에서 선택지 생성용.
         /// </summary>
         public StatBoostDatabase StatBoostDB => statBoostDatabase;
+
+        /// <summary>
+        /// R3 마이크 필터 DB. MicFilterPickup 이 호스트에서 인덱스 롤 + 호스트→클라 RPC 인자로 인덱스 전송,
+        /// MicFilterController 가 인덱스 → MicFilterData 해결.
+        /// </summary>
+        public MicFilterDatabase MicFilterDB => micFilterDatabase;
 
         // Application 서비스
         private ExperienceService expService = new ExperienceService();

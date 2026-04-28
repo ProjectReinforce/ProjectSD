@@ -10,7 +10,7 @@
 | 시스템 ID | `items_pickup` |
 | 분류 | 게임플레이 / 드랍 |
 | 의존 레이어 | Adapter (`Features/Progression/Adapter/ExperienceOrb.cs` 패턴 재사용) |
-| 최종 업데이트 | 2026-04-24 |
+| 최종 업데이트 | 2026-04-29 (R3 마이크 필터 픽업 ✅ 구현 완료) |
 
 > **SSOT:** 이 문서의 수치는 `Assets/Data/GameplayConfig.asset` 과 `Assets/Data/EnemyDropTable.asset` / `EliteDropTable.asset` 의 복제본이다.
 
@@ -25,6 +25,7 @@
 | **경험치 오브** | 처치한 적의 경험치 부여. 자석 흡수 가능. | 모든 적 처치 시 드랍 (확정) | 동일 |
 | **자석** | 맵에 남아 있는 경험치 조각을 **전부** 끌어와 획득 | `magnetChance = 0.01` (1%) | 0 (엘리트는 자석 안 드랍) |
 | **물약** | 체력 소량 회복. **"체력 회복량 증가" 패시브와 시너지** (`StatType.HealMultiplier`) | `potionChance = 0.01` (1%) | 0 |
+| **마이크 필터 (R3)** | 카오스 재미. 호스트가 활성 플레이어 중 랜덤 1명(본인 포함) 선택 + 5종 필터 중 랜덤 1종 적용. 일정 시간 후 자동 해제. | `micFilterChance = 0.005` (0.5% 권장) | 0 |
 
 - **흡수 범위:** 경험치 오브는 `GameplayConfig.magnetRange = 0.7` 이내 진입 시 자석처럼 끌려옴. 끌어당기는 속도는 `magnetSpeed = 2`.
 - **흡수 범위 확장:** 패시브 스킬로 확장 가능 (`StatType.SkillRange` 또는 별도 `StatType.PickupRange` 검토).
@@ -83,6 +84,61 @@ ScriptableObject 안:
 - [rules.md § 2 경험치](rules.md) — 팀 공유, 흡수 범위
 - [rules.md § 8 아이템/드랍](rules.md) — 드랍 규칙 요약
 - [essence.md](essence.md), [weapon.md](weapon.md) — 별도 시스템
+
+## 8-1. 마이크 필터 픽업 (R3) — 카오스 아이템
+
+**컨셉:** Photon Voice 송신 음성을 일정 시간 변형. **본인은 자기 음성을 못 듣는다**(Photon Voice self-mute) → 다른 사람들이 "어 너 마이크 왜 그래?" 반응에서 깨닫는 게 본질적 재미.
+
+**5종 필터 (MicFilterType enum):**
+
+| Type | 효과 | Unity 컴포넌트 / 속성 | 인스펙터 핵심 파라미터 |
+|---|---|---|---|
+| `LowPass` | 먹먹/물 속 | `AudioLowPassFilter` | `cutoffFrequency` (Hz, 1500↓ 명확) |
+| `Distortion` | 깨진 마이크 | `AudioDistortionFilter` | `distortionLevel` (0~1, 0.5↑ 명확) |
+| `Echo` | 동굴 메아리 | `AudioEchoFilter` | `delay` (ms), `decayRatio`, `dryMix`, `wetMix` |
+| `PitchHelium` | 헬륨 고음 | `AudioSource.pitch` | `pitchValue` (1.5~1.8) |
+| `PitchDemon` | 악마 저음 | `AudioSource.pitch` | `pitchValue` (0.6~0.7) |
+
+**디자인 결정 기록:**
+- **드랍 소스:** 모든 적 매우 낮은 확률 (`EnemyDropTable.micFilterChance`, 0.005 기본)
+- **타겟:** 본인 포함 활성 플레이어 중 랜덤 1명 (호스트 권위)
+- **지속 시간:** 인스펙터 노출 (`MicFilterData.durationSeconds`, 기본 15초)
+- **겹침 처리:** 새 필터로 즉시 교체. 같은 사람에게 같은 필터 또 걸리면 자동 시간 연장 효과
+- **시각 표시:** 없음. 본인/타인 모두 안내 0 — 카오스 재미 유지
+
+**구현 위치:**
+- `Features/Voice/Domain/MicFilterType.cs` — 5종 enum
+- `Features/Voice/Adapter/Data/MicFilterData.cs` — SO (필터별 파라미터 + 지속 시간)
+- `Features/Voice/Adapter/Data/MicFilterDatabase.cs` — SO 루트
+- `Features/Voice/Adapter/MicFilterController.cs` — PlayerStub 부착, RPC 수신 + AudioFilter 동적 add/destroy + 만료 코루틴
+- `Features/Voice/Adapter/MicFilterPickup.cs` — `PickupItemBase` 즉시 발동
+- `Features/Pickup/Adapter/DropSpawner.cs` — `RaiseMicFilterApplied` + `RPC_ApplyMicFilter`
+- `Shared/Data/EnemyDropTable.cs` — `micFilterChance` 필드
+- `Shared/Managers/GameManager.cs` — `MicFilterDB` 슬롯
+
+**네트워크 흐름:**
+```
+호스트 측 MicFilterPickup.OnPickedUpByPlayer
+  → 활성 ActorNumber 랜덤 선택 + filterIdx 랜덤 롤
+  → DropSpawner.RaiseMicFilterApplied(actor, idx, dur)
+  → photonView.RPC(RPC_ApplyMicFilter, All)
+모든 클라 (호스트 포함)
+  → 자기 측 PlayerStub 들 중 ActorNumber 매칭
+  → MicFilterController.ApplyFilter(idx, dur)
+  → AudioFilter 컴포넌트 동적 추가 (또는 AudioSource.pitch 변경)
+  → 클라 자체 코루틴이 dur 후 ClearFilterImmediate
+```
+
+**만료 권위:** 클라 자체. 시작 시점만 RPC 동기화 (100ms 차이 무관). 호스트 마이그레이션 시에도 영향 0.
+
+**검증:**
+- **R3 효과 검증은 ParrelSync 2 인스턴스로 충분** — Phase 8-2 와 동일 음성 인프라 위에서 동작. 한 인스턴스에서 V (PTT) 로 송출하면 다른 인스턴스 측에서 필터 변형된 음성이 들림.
+- ParrelSync 4 인스턴스 동시 송출은 같은 OS 마이크 공유로 누가 누구를 듣는지 살짝 헷갈림 → 검증 시 2 인스턴스 권장.
+- **빌드 환경 종합 송수신 검증 (다른 PC/OS/마이크, 호스트 마이그레이션 중 끊김 등) 은 R3 와 별건**. Stove/Steam 출시 전 1회 수행. R3 커밋 블로커 아님.
+
+**알려진 한계 (수용):**
+- **타겟 race window** — 호스트가 ActorNumber 결정 → RPC 도달 사이 그 플레이어가 룸을 이탈하면 모든 측이 매칭 실패 + LogWarning 후 픽업 소실. fallback 재롤은 무한 재귀 위험으로 미적용. 100~500ms 윈도우라 매우 드물고 카오스 재미 영향 미미.
+- **PUN spoofing** — RPC_ApplyMicFilter 자체 권한 검증 없음(자석/물약과 동일 수준). 인디 게임 보안 모델상 수용.
 
 ## 9. 오픈 이슈
 

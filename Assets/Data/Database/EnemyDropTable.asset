@@ -16,6 +16,7 @@ MonoBehaviour:
   weaponChance: 0.0001
   magnetChance: 0.001
   potionChance: 0.001
+  micFilterChance: 1
   essenceTypeWeights:
   - 1
   - 1

@@ -173,6 +173,7 @@ GameObject:
   - component: {fileID: 1770379040936252756}
   - component: {fileID: 7740481071653913483}
   - component: {fileID: 1325441109456859435}
+  - component: {fileID: 3034519361243767251}
   m_Layer: 10
   m_Name: PlayerStub
   m_TagString: Player
@@ -646,6 +647,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Voice.Adapter.VoiceController
   pushToTalkKey: 36
   logStateChange: 1
+--- !u!114 &3034519361243767251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25ad2b0f02ac51948819b6ca0f7db8b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Voice.Adapter.MicFilterController
 --- !u!1 &5449631014595424917
 GameObject:
   m_ObjectHideFlags: 0

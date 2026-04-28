@@ -11,6 +11,7 @@ namespace SwDreams.Features.Pickup.Domain
         Magnet = 1,
         Potion = 2,
         Essence = 3,
-        Weapon = 4
+        Weapon = 4,
+        MicFilter = 5,
     }
 }
