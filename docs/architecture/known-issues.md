@@ -11,21 +11,37 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 - **B (기존 미체크)**: 두 원본 문서에 있었던 버그 중 잔존
 - **V (검증 필요)**: 코드상 완료로 보이지만 실 동작 미확인. 검증 후 fix 또는 ledger 이동
 
-마지막 정리: 2026-04-29 (N15 번개 위치 desync / N16 VFX 분리 / N17 발사 흐름 핑 어긋남 추가)
+마지막 정리: 2026-04-29 (N15+N17 ✅ 호스트 권위 RPC 인프라로 해소 — 이중 발사 fix 포함)
 
 ---
 
 ## N — 신규 추가
 
-### N15. 번개(Area) 스킬 위치 클라 간 desync — 미수정
+### N19. TwoPhase 스킬 (장검 진화 검광 등) 호스트 권위 RPC 미지원 — Phase 2 후행
 
-**증상:** 호스트와 클라가 보는 번개 떨어지는 위치가 다름. 데미지 판정은 호스트 측 위치 기준 → 클라 화면 번개에 적이 안 맞음.
+**증상:** N15/N17 호스트 권위 RPC 인프라가 TwoPhase 스킬에는 미적용. 자기 클라 자체 시뮬레이션 그대로 유지 → 다른 클라 측에서 보면 Phase2 검광 발사 desync 가능.
 
-**원인:** [AreaSpawner.Spawn](../../Assets/Scripts/Features/Skill/Adapter/AreaSpawner.cs) 의 `Random.insideUnitCircle * spawnRadius` 가 각 클라에서 독립 호출. SkillExecutor 가 모든 클라에서 자체 발사 (Dead Reckoning 패턴) 라 호스트와 클라가 다른 위치 결정.
+**원인:** `SkillExecutor.BeginFromNetwork` 가 firingMode = Single 강제. 자기 클라만 SkillExecutor 활성이라 다른 클라 측에선 NotifyPhase1Complete 호출 자체가 안 되어 Phase2 발사 안 됨.
 
-**해결 방향 (옵션 B 확정):** 호스트가 spawnPos 결정 → RaiseEvent batch 로 모든 클라에 spawnPos 송신 (DropSpawnBatch 패턴). 클라 측 AreaSpawner.Spawn 은 IsMasterClient 가드로 즉시 return + RaiseEvent 수신 시점에 풀에서 zone 꺼냄. 별도 MonoBehaviour + PhotonView 인프라 추가 또는 GameManager.photonView 경유 RPC. 0.5~1일.
+**처리 (Phase 1):** `SkillExecutor.FireOnce` 가 firingMode == TwoPhase 면 RPC 송신 차단. 송신/수신 모두 자기 클라 자체 시뮬레이션 (기존 동작).
 
-**연관:** N17 (발사 흐름 일반화) 와 같은 인프라 도입 시 함께 처리.
+**해결 방향 (Phase 2+, 사용자 제안):** Phase2 RPC 추가가 아니라 **각 클라 자체 처리** — Phase1 Orbital 만 RPC 동기화 (이미 됨), 회전 속도가 결정적(SO 동일)이라 자체 시뮬레이션 결과 일치. `BeginFromNetwork` 가 firingMode = TwoPhase 보존 + 다른 클라 측에서도 SkillExecutor + Phase1 N발 spawn + Orbital 회전 + NotifyPhase1Complete → Phase2 자체 발사. 0.5일.
+
+### N20. RPC drop (LevelUp 도중) — 사실상 무시 가능
+
+**증상:** PauseAllSkills 윈도우 (LevelUp UI 도중) 에 도착한 RPC 가 silently drop (`Skill.FireFromNetwork` 의 `if (!isActive) return;`). PUN buffered RPC 미사용이라 단발 시각 유실.
+
+**규모:** 매우 미미. ProjectSD 는 매치메이킹 모델이라 **게임 진행 중 늦은 join 자체가 없음** (R8 와 동기화로 보장). 남은 시나리오는 LevelUp 도중 + 호스트 마이그레이션 중 reconnect 정도. 둘 다 단발 1~2개 시각 유실 + 데미지는 호스트 처리 → 게임플레이 영향 0.
+
+**처리 (Phase 1):** silently 무시 — 영향 미미. 추가 작업 불필요.
+
+### N21. RPC 송신 트래픽 측정 필요 — 메모
+
+DelayedBurst (번개 0.05s × N발) × 4인 동시 = 초당 수백 RPC. PUN reliable channel ordering 보장이지만 네트워크 부하 측정 필요. PhotonView serialize 압축 0 — short fixed-point 같은 packing 검토 (Phase 2+).
+
+### N15. 번개(Area) 스킬 위치 클라 간 desync ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+호스트 권위 RPC 인프라 (Client-decided + Host-trusted 패턴) 로 해소. PlayerStub.RPC_RequestSkillSpawn / RPC_BroadcastSkillSpawn + ISkillSpawner.TryGenerateSpawnPos + SpawnContext.spawnPosOverride. AreaSpawner 가 자기 클라 측에서 Random.insideUnitCircle 한 번만 결정 → RPC 인자로 모든 클라에 전파 → 동일 위치 보장. **부산물 fix:** Skill.Update 의 IsMine 가드 추가 — 모든 클라 자체 시뮬레이션이 RPC 인프라와 중복돼 이중 발사 버그 발생 → 자기 PlayerStub 만 자체 cooldown+Fire.
 
 ### N16. AreaZone VFX 분리 시 코드 수정 필요 — 메모
 
@@ -33,20 +49,9 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 
 **처리 방향:** `PrefabSequence` SO (Stage 별 prefab 리스트: Drop → Explode → Lingering) 또는 `AreaZone.OnStageStart` 이벤트 + 외부 VFX 컨트롤러 구독. Phase 7-3 비주얼 + 사운드 작업 시 함께.
 
-### N17. 스킬 발사 방향 핑 어긋남 (토네이도 등 방향 의존 스킬) — 미수정
+### N17. 스킬 발사 방향 핑 어긋남 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
 
-**증상:** 토네이도/방향 의존 스킬에서 클라가 누른 시점의 방향과 호스트가 보는 방향이 핑(50~150ms) 만큼 어긋남. PhotonTransformView 동기화 지연 때문.
-
-**해결 방향 (Client-trusted submission 패턴 권장):**
-1. 클라가 발사 시점에 자기 spawnPos + spawnDirection 결정
-2. 클라 → 호스트 RPC 송신 (RPC_RequestSpawn)
-3. 호스트가 받아 그대로 신뢰 + 모든 클라(자기 포함)에 RPC_BroadcastSpawn(spawnPos, spawnDir, ...) 전파
-4. 모든 클라가 받아 자기 측 풀에서 zone/projectile 꺼냄
-5. 자기 클라는 Client Prediction — 자기 발사 즉시 시각 + 호스트 응답 안 기다림. reject 시 retract (rare)
-
-**RPC 송신 위치:** PlayerStub.photonView 경유 권장. ActorNumber 자동 + 가장 자연스러운 권한 모델. 스킬 풀링 객체에 PhotonView 부착은 비추천 (ViewID 동적 할당이 풀과 안 어울림).
-
-**연관:** N15 와 같은 인프라 (호스트 권위 RPC) 도입. 패시브 계수 (`applicableStats` 다중) 와도 같은 SkillData 영역 → 한 라운드 묶음 가능.
+N15 와 같은 호스트 권위 RPC 인프라로 동시 해소. SkillExecutor.FireOnce 가 자기 PhotonView.IsMine 일 때만 RPC 송신 → 모든 클라에 baseDirection 전파 → ProjectileSpawner.ComputeDirection 이 ctx.baseDirection 사용 → 토네이도 등 방향 의존 스킬도 클라가 누른 시점 방향 그대로 호스트가 신뢰 + 다른 클라 broadcast.
 
 ### N18. applicableStats 패시브별 계수 미지원 — 메모
 

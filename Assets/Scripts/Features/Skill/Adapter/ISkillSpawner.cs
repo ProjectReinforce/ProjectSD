@@ -76,6 +76,18 @@ namespace SwDreams.Features.Skill.Adapter
         /// OrbitalObject가 1바퀴 완주 시 (position, outwardDirection)을 Executor에 전달.
         /// </summary>
         public System.Action<Vector2, Vector2> onSpawnComplete;
+
+        // ===== N15/N17 호스트 권위 동기화 (Phase 1) =====
+
+        /// <summary>
+        /// 외부에서 결정된 spawn 위치. Random.insideUnitCircle 같은 비결정적 결정을
+        /// 자기 클라가 한 번만 수행 → RPC 인자로 모든 클라에 전파 → ctx 에 주입.
+        /// hasSpawnPosOverride == true 면 Spawner 가 자체 Random 대신 spawnPosOverride 사용.
+        /// </summary>
+        public Vector2 spawnPosOverride;
+
+        /// <summary>spawnPosOverride 가 유효한지. Vector2.zero 가 valid 위치라 sentinel 분리 필요.</summary>
+        public bool hasSpawnPosOverride;
     }
 
     /// <summary>
@@ -114,5 +126,13 @@ namespace SwDreams.Features.Skill.Adapter
         /// 기본적으로 no-op이어도 됨.
         /// </summary>
         void Cleanup();
+
+        /// <summary>
+        /// [N15/N17] 자기 클라가 발사 결정 시 비결정적 spawn 위치(Random 등) 를 한 번만 결정.
+        /// 결정한 spawnPos 는 RPC 인자로 모든 클라에 전파되어 동일 위치 보장.
+        /// override 가 필요 없는 Spawner (Projectile / Orbital / Placed / Debuff) 는 false 반환.
+        /// AreaSpawner 만 Random.insideUnitCircle 결정 후 true 반환.
+        /// </summary>
+        bool TryGenerateSpawnPos(SpawnContext context, out Vector2 spawnPos);
     }
 }

@@ -37,6 +37,12 @@ namespace SwDreams.Features.Skill.Adapter
             // 포탑은 자체 duration으로 소멸
         }
 
+        public bool TryGenerateSpawnPos(SpawnContext ctx, out Vector2 spawnPos)
+        {
+            spawnPos = ctx.playerPosition;
+            return false; // 결정성 있음 — override 불필요.
+        }
+
         public void Spawn(SpawnContext ctx)
         {
             if (turretPrefab == null) return;

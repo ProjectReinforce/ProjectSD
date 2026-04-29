@@ -143,6 +143,41 @@ namespace SwDreams.Features.Character.Adapter
                 worldPos.x, worldPos.y, itemId);
         }
 
+        // ===== [N15/N17] 스킬 발사 동기화 RPC (Phase 1) =====
+        // Client-decided + Host-trusted 패턴.
+        // 자기 클라가 spawnPos / spawnDir 결정 + RPC 송신:
+        //   - 자기 = 호스트 → RPC_BroadcastSkillSpawn (Others)
+        //   - 자기 ≠ 호스트 → RPC_RequestSkillSpawn (MasterClient)
+        // 호스트가 RequestSpawn 수신 시 자기 측 Spawn 처리(데미지 권위) + Others 에 Broadcast.
+        // 다른 클라가 Broadcast 수신 시 자기 측 Spawn (시각만).
+
+        [PunRPC]
+        private void RPC_RequestSkillSpawn(int skillId, Vector2 baseDir, Vector2 spawnPos, bool hasSpawnPosOverride, int fireIndex, int totalCount)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            // 호스트 자기 측 Spawn (데미지 권위)
+            DispatchNetworkSkillSpawn(skillId, baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
+
+            // 다른 클라들에 broadcast (자기 = master 송신자 제외)
+            photonView.RPC(nameof(RPC_BroadcastSkillSpawn), RpcTarget.Others,
+                skillId, baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
+        }
+
+        [PunRPC]
+        private void RPC_BroadcastSkillSpawn(int skillId, Vector2 baseDir, Vector2 spawnPos, bool hasSpawnPosOverride, int fireIndex, int totalCount)
+        {
+            // 자기 PhotonView (자기 클라가 본인) 면 이미 prediction 했으므로 무시.
+            if (photonView.IsMine) return;
+            DispatchNetworkSkillSpawn(skillId, baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
+        }
+
+        private void DispatchNetworkSkillSpawn(int skillId, Vector2 baseDir, Vector2 spawnPos, bool hasSpawnPosOverride, int fireIndex, int totalCount)
+        {
+            if (skillManager == null) return;
+            skillManager.HandleNetworkSkillSpawn(skillId, baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
+        }
+
         [PunRPC]
         private void RPC_HostPickup(float x, float y, string itemId)
         {

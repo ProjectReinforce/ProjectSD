@@ -753,6 +753,33 @@ namespace SwDreams.Features.Skill.Adapter
         // Skill.Fire() → Executor → Spawner 직통.
         // 새 스킬 추가 시 ISkillSpawner 구현 + SkillSpawnerFactory.RegisterDefaults()에 등록.
 
+        // ===== [N15/N17] 네트워크 스킬 발사 진입점 =====
+
+        /// <summary>
+        /// PlayerStub.RPC_RequestSkillSpawn / RPC_BroadcastSkillSpawn 가 호출.
+        /// skillId 매칭 → Skill.FireFromNetwork.
+        /// </summary>
+        public void HandleNetworkSkillSpawn(int skillId, Vector2 baseDir, Vector2 spawnPos, bool hasSpawnPosOverride, int fireIndex, int totalCount)
+        {
+            Skill skill = FindEquippedSkillById(skillId);
+            if (skill == null)
+            {
+                // 다른 클라에서 이 스킬을 모르는 경우 — 정상 (스킬 슬롯 다름).
+                return;
+            }
+            skill.FireFromNetwork(baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
+        }
+
+        private Skill FindEquippedSkillById(int skillId)
+        {
+            for (int i = 0; i < equippedSkills.Count; i++)
+            {
+                var s = equippedSkills[i];
+                if (s != null && s.Data != null && s.Data.skillId == skillId) return s;
+            }
+            return null;
+        }
+
         // ===== GameState 연동 =====
 
         /// <summary>
