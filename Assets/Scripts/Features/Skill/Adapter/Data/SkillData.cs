@@ -173,8 +173,6 @@ namespace SwDreams.Features.Skill.Adapter.Data
         public int spreadOnDeathCount = 0;
 
         [Header("공통 효과")]
-        [Tooltip("최대 동시 설치/장판 수")]
-        public int maxInstances = 3;
         [Tooltip("효과 프리팹 (장판/회전체/포탑/마커)")]
         public GameObject effectPrefab;
 

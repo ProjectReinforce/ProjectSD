@@ -11,11 +11,52 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 - **B (기존 미체크)**: 두 원본 문서에 있었던 버그 중 잔존
 - **V (검증 필요)**: 코드상 완료로 보이지만 실 동작 미확인. 검증 후 fix 또는 ledger 이동
 
-마지막 정리: 2026-04-25
+마지막 정리: 2026-04-29 (N15 번개 위치 desync / N16 VFX 분리 / N17 발사 흐름 핑 어긋남 추가)
 
 ---
 
 ## N — 신규 추가
+
+### N15. 번개(Area) 스킬 위치 클라 간 desync — 미수정
+
+**증상:** 호스트와 클라가 보는 번개 떨어지는 위치가 다름. 데미지 판정은 호스트 측 위치 기준 → 클라 화면 번개에 적이 안 맞음.
+
+**원인:** [AreaSpawner.Spawn](../../Assets/Scripts/Features/Skill/Adapter/AreaSpawner.cs) 의 `Random.insideUnitCircle * spawnRadius` 가 각 클라에서 독립 호출. SkillExecutor 가 모든 클라에서 자체 발사 (Dead Reckoning 패턴) 라 호스트와 클라가 다른 위치 결정.
+
+**해결 방향 (옵션 B 확정):** 호스트가 spawnPos 결정 → RaiseEvent batch 로 모든 클라에 spawnPos 송신 (DropSpawnBatch 패턴). 클라 측 AreaSpawner.Spawn 은 IsMasterClient 가드로 즉시 return + RaiseEvent 수신 시점에 풀에서 zone 꺼냄. 별도 MonoBehaviour + PhotonView 인프라 추가 또는 GameManager.photonView 경유 RPC. 0.5~1일.
+
+**연관:** N17 (발사 흐름 일반화) 와 같은 인프라 도입 시 함께 처리.
+
+### N16. AreaZone VFX 분리 시 코드 수정 필요 — 메모
+
+**증상:** 현재 `AreaZone` 한 prefab 에 떨어지는 시각 + 폭발 + (진화 후) 감전 지역 다 들어가있음. VFX 작업 시 단계별 prefab 분리 필요.
+
+**처리 방향:** `PrefabSequence` SO (Stage 별 prefab 리스트: Drop → Explode → Lingering) 또는 `AreaZone.OnStageStart` 이벤트 + 외부 VFX 컨트롤러 구독. Phase 7-3 비주얼 + 사운드 작업 시 함께.
+
+### N17. 스킬 발사 방향 핑 어긋남 (토네이도 등 방향 의존 스킬) — 미수정
+
+**증상:** 토네이도/방향 의존 스킬에서 클라가 누른 시점의 방향과 호스트가 보는 방향이 핑(50~150ms) 만큼 어긋남. PhotonTransformView 동기화 지연 때문.
+
+**해결 방향 (Client-trusted submission 패턴 권장):**
+1. 클라가 발사 시점에 자기 spawnPos + spawnDirection 결정
+2. 클라 → 호스트 RPC 송신 (RPC_RequestSpawn)
+3. 호스트가 받아 그대로 신뢰 + 모든 클라(자기 포함)에 RPC_BroadcastSpawn(spawnPos, spawnDir, ...) 전파
+4. 모든 클라가 받아 자기 측 풀에서 zone/projectile 꺼냄
+5. 자기 클라는 Client Prediction — 자기 발사 즉시 시각 + 호스트 응답 안 기다림. reject 시 retract (rare)
+
+**RPC 송신 위치:** PlayerStub.photonView 경유 권장. ActorNumber 자동 + 가장 자연스러운 권한 모델. 스킬 풀링 객체에 PhotonView 부착은 비추천 (ViewID 동적 할당이 풀과 안 어울림).
+
+**연관:** N15 와 같은 인프라 (호스트 권위 RPC) 도입. 패시브 계수 (`applicableStats` 다중) 와도 같은 SkillData 영역 → 한 라운드 묶음 가능.
+
+### N18. applicableStats 패시브별 계수 미지원 — 메모
+
+**증상:** 현재 `SkillData.applicableStats: List<StatType>` 가 boolean 필터 (적용 여부만). 스킬마다 패시브 영향력 차등 불가 (예: 표창 투사체 속도 100% / 부메랑 50%).
+
+**해결 방향:** `applicableStats` 를 `List<StatModifierEntry { StatType type, float multiplier = 1f }>` 로 변경. PlayerStats.GetFilteredXxx 메서드들이 multiplier 받게 + 모든 호출부 수정 + SkillDataEditor 동시 갱신 (Custom Editor Sync). 0.5~1일.
+
+**호환성:** 기존 SO 의 `applicableStats` 마이그레이션 필요 — multiplier=1f 디폴트로 자동 변환 가능.
+
+
 
 ### N3. 플레이어 피격 후 빨간색에서 원래대로 안 돌아옴 — 수정 완료
 

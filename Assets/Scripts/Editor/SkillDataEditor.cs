@@ -240,7 +240,6 @@ namespace SwDreams.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("공통 효과", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("maxInstances"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("effectPrefab"));
                 }
 
