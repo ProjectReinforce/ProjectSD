@@ -153,6 +153,9 @@ namespace SwDreams.Features.Skill.Adapter.Data
         public int objectCount = 3;
         [Tooltip("넉백 힘")]
         public float knockbackForce = 2f;
+        [Tooltip("TwoPhase 전용 — Phase2(검광 등) 발사 전 회전 횟수. 1.0 = 한 바퀴, 2.0 = 두 바퀴.")]
+        [Min(0.1f)]
+        public float phase1RotationCount = 1f;
 
         [Header("설치형 전용 (Placed)")]
         [Tooltip("포탑 공격 사거리")]
@@ -176,9 +179,14 @@ namespace SwDreams.Features.Skill.Adapter.Data
         [Tooltip("효과 프리팹 (장판/회전체/포탑/마커)")]
         public GameObject effectPrefab;
 
-        [Header("패시브 적용 필터")]
-        [Tooltip("이 스킬에 영향을 주는 스탯 목록. 비어있으면 전부 적용.")]
-        public List<StatType> applicableStats = new List<StatType>();
+        [Header("패시브 배율 예외 (N18)")]
+        [Tooltip("이 스킬에 대한 패시브 스탯의 multiplier 예외만 나열.\n" +
+                 "**미나열 = 1배 (기본 100% 적용)** — 모든 패시브가 default 로 적용됨.\n" +
+                 "나열 = 그 multiplier 로 차등 적용 (0=미적용 / 0.5=50% / 1.5=150%).\n" +
+                 "용도: 특정 스킬이 특정 패시브 영향을 받지 않게 / 약하게 / 강하게 하고 싶을 때만 추가.\n" +
+                 "보너스 부분에만 곱. 스킬 base / 캐릭터 base 는 보호.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("applicableStats")]
+        public List<StatModifierEntry> statOverrides = new List<StatModifierEntry>();
 
         [Header("Trigger+Effect 조합")]
         [Tooltip("기본 추가 효과. 진화 스킬 등에서 설정. 런타임 추가는 SkillTriggerSystem 사용.")]
@@ -201,14 +209,39 @@ namespace SwDreams.Features.Skill.Adapter.Data
         }
 
         /// <summary>
-        /// 이 스킬에 해당 스탯이 영향을 주는지 확인.
-        /// applicableStats가 비어있으면 모든 스탯 적용 (하위 호환).
+        /// 이 스킬에 해당 스탯이 영향을 주는지 확인 (mult > 0 이면 true).
+        /// 기본 모든 스탯 적용 — statOverrides 에 명시적으로 multiplier=0 인 항목만 false.
         /// </summary>
         public bool IsStatApplicable(StatType statType)
         {
-            if (applicableStats == null || applicableStats.Count == 0)
-                return true;
-            return applicableStats.Contains(statType);
+            return GetStatMultiplier(statType) > 0f;
         }
+
+        /// <summary>
+        /// 이 스킬에 해당 스탯의 적용 비율. 보너스 부분에만 곱 (스킬 base 는 보호).
+        /// **default = 1.0 (100% 적용)**. statOverrides 에 명시된 항목만 그 multiplier 로 차등.
+        /// 미나열 항목 = 1.0 (기본 적용).
+        /// </summary>
+        public float GetStatMultiplier(StatType statType)
+        {
+            if (statOverrides == null || statOverrides.Count == 0)
+                return 1f;
+            for (int i = 0; i < statOverrides.Count; i++)
+            {
+                if (statOverrides[i].type == statType) return statOverrides[i].multiplier;
+            }
+            return 1f; // 미나열 = default 적용 (예외만 override 모델)
+        }
+    }
+
+    /// <summary>
+    /// [N18] 스킬별 패시브 multiplier 예외. SkillData.statOverrides 의 엔트리.
+    /// multiplier: 0=미적용 / 1=100% / 0.5=50% / 1.5=150% (보너스 부분에만 곱). 스킬 base 는 보호.
+    /// </summary>
+    [System.Serializable]
+    public struct StatModifierEntry
+    {
+        public StatType type;
+        [Range(0f, 2f)] public float multiplier;
     }
 }

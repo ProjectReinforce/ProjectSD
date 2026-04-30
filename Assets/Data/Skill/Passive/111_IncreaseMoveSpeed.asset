@@ -29,18 +29,25 @@ MonoBehaviour:
   - 1.1
   - 1
   - 0.9
+  firingMode: 0
+  burstDelay: 0.1
   bonusType: 11
-  bonusPerLevel: 0.04
+  bonusPerLevel: 0.02
   projectilePrefab: {fileID: 0}
   projectileSpeed: 5
   projectileCount: 1
   projectileLifetime: 5
+  penetrates: 0
+  subProjectilePrefab: {fileID: 0}
+  aimType: 0
   spreadPattern: 1
   spreadAngle: 15
   trajectoryType: 0
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 300
+  chainFlightCount: 0
+  chainSearchRadius: 5
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
@@ -51,11 +58,11 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 3
-  isDualZone: 0
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 2
+  phase1RotationCount: 1
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0
@@ -63,9 +70,8 @@ MonoBehaviour:
   damageAmplify: 1.3
   targetCount: 3
   spreadOnDeathCount: 0
-  maxInstances: 3
   effectPrefab: {fileID: 0}
-  applicableStats: 
+  statOverrides: []
   triggerEffects: []
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

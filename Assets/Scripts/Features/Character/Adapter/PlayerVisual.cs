@@ -91,8 +91,13 @@ namespace SwDreams.Features.Character.Adapter
             }
             else
             {
-                // 긴 i-frame: 깜빡임 (alpha 토글)
-                float elapsed = 0f;
+                // 긴 i-frame: 첫 빨간 플래시 (피격 인지) + 그 후 alpha 깜빡임 (무적 표현).
+                // i-frame 패시브로 길어진 경우에도 피격 자체가 명확히 인지되도록 첫 한 번은 빨간색.
+                Color hitColor = new Color(1f, 0.4f, 0.4f, originColor.a);
+                spriteRenderer.color = hitColor;
+                yield return new WaitForSeconds(singleFlash);
+
+                float elapsed = singleFlash;
                 bool dim = false;
                 Color dimColor = new Color(originColor.r, originColor.g, originColor.b, 0.4f);
 

@@ -392,100 +392,92 @@ namespace SwDreams.Features.Character.Adapter
             return baseSpeed + ProjectileSpeedBonus;
         }
 
-        // ===== 필터 적용 스탯 접근 (스킬별 패시브 적용 필터) =====
-
-        /// <summary>
-        /// SkillData.applicableStats 필터를 적용하여 스탯값 반환.
-        /// 필터에 포함되지 않은 스탯은 base값만 반환 (보너스 미적용).
-        /// filter가 null이거나 비어있으면 전부 적용 (하위 호환).
-        /// </summary>
-        public float GetFilteredStat(StatType type, float baseValue, SkillData skillData)
-        {
-            if (skillData == null || skillData.IsStatApplicable(type))
-                return modifiers.Calculate(type, baseValue);
-
-            return baseValue;
-        }
+        // ===== 필터 적용 스탯 접근 (스킬별 패시브 적용 필터, N18 multiplier 차등) =====
+        //
+        // 패턴: skillData.GetStatMultiplier(type) 로 비율 (0=미적용 / 1=100% / 0.5=50% / 1.5=150%) 얻은 후
+        //       보너스 부분에만 곱. 스킬 base / 캐릭터 base 는 보호.
+        //   actualBonus = finalValue - baseValue
+        //   filtered    = baseValue + actualBonus * mult
 
         /// <summary>투사체 개수 (필터 적용).</summary>
         public int GetFilteredProjectileCount(int baseCount, SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.ProjectileCount))
-                return baseCount + ProjectileCountBonus;
-            return baseCount;
+            int actualBonus = ProjectileCountBonus - baseProjectileCount;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.ProjectileCount) : 1f;
+            return baseCount + Mathf.RoundToInt(actualBonus * mult);
         }
 
         /// <summary>투사체 속도 (필터 적용).</summary>
         public float GetFilteredProjectileSpeed(float baseSpeed, SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.ProjectileSpeed))
-                return baseSpeed + ProjectileSpeedBonus;
-            return baseSpeed;
+            float actualBonus = ProjectileSpeedBonus - baseProjectileSpeed;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.ProjectileSpeed) : 1f;
+            return baseSpeed + actualBonus * mult;
         }
 
         /// <summary>공격력 배율 (필터 적용). 데미지 경로는 <see cref="ApplyAttackTo"/> 사용 권장 — 이 프로퍼티는
         /// 디버그/HUD 표시나 조건부 로직용. 새 데미지 공식이 skillBase 에 의존하므로 단일 "배율" 은 정확한 수치가 아님.</summary>
         public float GetFilteredAttackMultiplier(SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.AttackMultiplier))
-                return AttackMultiplier;
-            return baseAttackMultiplier;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.AttackMultiplier) : 1f;
+            return baseAttackMultiplier + (AttackMultiplier - baseAttackMultiplier) * mult;
         }
 
         /// <summary>
         /// 스킬 데미지 공식. SkillExecutor.BuildContext 에서 ctx.damage 산출 시 호출.
         ///
         /// 공식:
-        ///   final = (skillBase + ΣAdd + skillBase × ΣPercentBonus) × ΠMultiplicative × baseAttackMultiplier
+        ///   final = (skillBase + ΣAdd × mult + skillBase × ΣPercentBonus × mult) × (1 + (ΠMultiplicative - 1) × mult) × baseAttackMultiplier
         ///
-        /// - ΣAdd            — 플랫 데미지 가산. 관례: 무기 엔트리 op=Add 만 여기로.
-        /// - ΣPercentBonus   — 스킬 기본의 % 가산. 관례: 무기 엔트리 op=PercentBonus + 패시브 AttackMultiplier.
-        /// - ΠMultiplicative — 최종 수치 조정. 관례: 혼돈 chaos_gc_atk / chaos_berserk_* 등. 향후 무기도 편입 가능.
-        ///
-        /// applicableStats 필터: 스킬이 AttackMultiplier 를 받지 않도록 선언됐으면 skillBase 그대로 반환.
+        /// N18 statOverrides multiplier: mult = skillData.GetStatMultiplier(AttackMultiplier).
+        ///   default(미나열) = 1 → 전체 보너스 100% 적용
+        ///   override mult=0 → 모든 보너스 미적용, skillBase * baseAttackMultiplier 만
+        ///   override mult=0.5 → 보너스 50% 만 적용 / mult=1.5 → 150% 강화
         /// </summary>
         public float ApplyAttackTo(float skillBase, SkillData skillData)
         {
-            if (skillData != null && !skillData.IsStatApplicable(StatType.AttackMultiplier))
-                return skillBase;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.AttackMultiplier) : 1f;
+            if (mult <= 0f) return skillBase * baseAttackMultiplier;
 
-            float adds    = modifiers.GetAddTotal(StatType.AttackMultiplier);
-            float percent = modifiers.GetPercentBonusTotal(StatType.AttackMultiplier);
-            float mult    = modifiers.GetMultiplicativeTotal(StatType.AttackMultiplier);
+            float adds    = modifiers.GetAddTotal(StatType.AttackMultiplier) * mult;
+            float percent = modifiers.GetPercentBonusTotal(StatType.AttackMultiplier) * mult;
+            float multTotal = modifiers.GetMultiplicativeTotal(StatType.AttackMultiplier);
+            // multiplicative 는 1.0 base 라 (값-1)*mult + 1 로 차등 적용
+            float multAdjusted = 1f + (multTotal - 1f) * mult;
 
-            return (skillBase + adds + skillBase * percent) * mult * baseAttackMultiplier;
+            return (skillBase + adds + skillBase * percent) * multAdjusted * baseAttackMultiplier;
         }
 
         /// <summary>스킬 범위 보너스 (필터 적용).</summary>
         public float GetFilteredSkillRangeBonus(SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.SkillRange))
-                return SkillRangeBonus;
-            return baseSkillRange;
+            float actualBonus = SkillRangeBonus - baseSkillRange;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.SkillRange) : 1f;
+            return baseSkillRange + actualBonus * mult;
         }
 
         /// <summary>스킬 유지 시간 보너스 (필터 적용).</summary>
         public float GetFilteredSkillDurationBonus(SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.SkillDuration))
-                return SkillDurationBonus;
-            return baseSkillDuration;
+            float actualBonus = SkillDurationBonus - baseSkillDuration;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.SkillDuration) : 1f;
+            return baseSkillDuration + actualBonus * mult;
         }
 
         /// <summary>넉백 배율 (필터 적용).</summary>
         public float GetFilteredKnockbackMultiplier(SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.Knockback))
-                return KnockbackMultiplier;
-            return baseKnockback;
+            float actualBonus = KnockbackMultiplier - baseKnockback;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.Knockback) : 1f;
+            return baseKnockback + actualBonus * mult;
         }
 
         /// <summary>회복량 배율 (필터 적용).</summary>
         public float GetFilteredHealMultiplier(SkillData skillData)
         {
-            if (skillData == null || skillData.IsStatApplicable(StatType.HealMultiplier))
-                return HealMultiplier;
-            return baseHealMultiplier;
+            float actualBonus = HealMultiplier - baseHealMultiplier;
+            float mult = skillData != null ? skillData.GetStatMultiplier(StatType.HealMultiplier) : 1f;
+            return baseHealMultiplier + actualBonus * mult;
         }
 
         // ===== 캐릭터 데이터 연동 =====

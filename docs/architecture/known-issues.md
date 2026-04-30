@@ -53,13 +53,9 @@ DelayedBurst (번개 0.05s × N발) × 4인 동시 = 초당 수백 RPC. PUN reli
 
 N15 와 같은 호스트 권위 RPC 인프라로 동시 해소. SkillExecutor.FireOnce 가 자기 PhotonView.IsMine 일 때만 RPC 송신 → 모든 클라에 baseDirection 전파 → ProjectileSpawner.ComputeDirection 이 ctx.baseDirection 사용 → 토네이도 등 방향 의존 스킬도 클라가 누른 시점 방향 그대로 호스트가 신뢰 + 다른 클라 broadcast.
 
-### N18. applicableStats 패시브별 계수 미지원 — 메모
+### N18. applicableStats 패시브별 계수 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
 
-**증상:** 현재 `SkillData.applicableStats: List<StatType>` 가 boolean 필터 (적용 여부만). 스킬마다 패시브 영향력 차등 불가 (예: 표창 투사체 속도 100% / 부메랑 50%).
-
-**해결 방향:** `applicableStats` 를 `List<StatModifierEntry { StatType type, float multiplier = 1f }>` 로 변경. PlayerStats.GetFilteredXxx 메서드들이 multiplier 받게 + 모든 호출부 수정 + SkillDataEditor 동시 갱신 (Custom Editor Sync). 0.5~1일.
-
-**호환성:** 기존 SO 의 `applicableStats` 마이그레이션 필요 — multiplier=1f 디폴트로 자동 변환 가능.
+`statOverrides` (List<StatModifierEntry>) 로 변경. 예외 override 모델 — 빈 리스트 = 모든 스탯 100%, 명시 항목만 multiplier 차등. PlayerStats GetFiltered* 8개 모두 multiplier 적용 (보너스만 곱). audit/검증 통과.
 
 
 

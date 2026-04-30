@@ -99,6 +99,8 @@ MonoBehaviour:
   - ChangeColour
   - HeresWhy
   - RPC_ApplyMicFilter
+  - RPC_BroadcastSkillSpawn
+  - RPC_RequestSkillSpawn
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

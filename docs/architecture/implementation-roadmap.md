@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-29 (N15+N17 호스트 권위 스킬 RPC ✅ + Top 5 갱신)
+최종 업데이트: 2026-04-29 (N18 패시브 계수 ✅ + 디테일 fix 묶음 + Top 5 갱신)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -20,11 +20,11 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | **N18 패시브 계수** (`applicableStats` 다중) | 스킬마다 패시브 영향력 차등. 사용자 다음 작업으로 명시 | 없음 | 0.5~1일 |
-| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
-| 5 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
+| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 2 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 3 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 4 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
+| 5 | [§ Phase 8-5 B](#phase-8--출시-인프라--대기-설계만-완료) **Localization Phase B (UI 키 매핑)** | Phase 8-5 A ✅ 후속. 점진적 — MenuScene UI / HUD / LevelUp / Result 의 한국어 라벨에 LocalizedText 부착 + 시트 ko_final 채우기 | Phase 8-5 A ✅ 해제됨 | 수일~1주 |
 
 **선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R4, Phase 8-5 B, R6 모두 독립.
 **병렬 가능 그룹**: R10 + R4 + Phase 8-5 B + R6 가 서로 다른 파일 영역이라 동시 진행 OK.
@@ -319,6 +319,14 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 ### U6. 설정창 구조잡기 → **R12 로 통합 (2026-04-26)**
 - ~~`TitlePanelController.OnClickSettings()` TODO~~ → [§ R12](#r12-설정-패널--video--audio--language) 로 흡수. Video/Audio/Language 카테고리로 확정.
 - 키바인딩은 R12 범위 외 — 별건 작업으로 보류 (`settings.input` PlayerPrefs 키만 예약).
+
+### U7. 스킬 카드에 적용 패시브 + multiplier 표시 (N18 후속, 옵션)
+- 현재 [SkillCardDescriptionFormatter](../../Assets/Scripts/Features/UI/Presentation/SkillCardDescriptionFormatter.cs) 가 SO base 수치만 표시 (Survivors-like 표준). N18 도입으로 스킬마다 패시브 영향력 차등 가능해진 후, 카드에서 "이 스킬은 SkillRange 50% 만 적용" 같은 정보가 노출되지 않음.
+- 우선순위: 낮음 (Vampire Survivors 등도 동일 패턴, 데미지 팝업으로 실효 확인). 후속 UX 향상 필요 시 추가.
+- 구현 후보:
+  - 카드 하단 작은 영역에 적용 패시브 리스트 (예: `SkillRange ×50%, ProjectileSpeed ×100%`) — 빈 리스트(전부 적용) 인 경우 미표시
+  - `PlayerStats.ApplyAttackTo(data.GetDamageForLevel(level), data)` 호출로 실제 적용 데미지 부가 표시
+- 0.5일.
 
 ---
 

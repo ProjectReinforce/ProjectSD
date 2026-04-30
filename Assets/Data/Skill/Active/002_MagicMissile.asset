@@ -69,9 +69,8 @@ MonoBehaviour:
   damageAmplify: 1.3
   targetCount: 3
   spreadOnDeathCount: 0
-  maxInstances: 3
   effectPrefab: {fileID: 0}
-  applicableStats: 
+  statOverrides: []
   triggerEffects: []
   evolutionPair: {fileID: 11400000, guid: 8a0132335e42e2245914bf8d658e9614, type: 2}
   evolvedSkill: {fileID: 11400000, guid: c1cd202716473ae40b85b922f676bf28, type: 2}

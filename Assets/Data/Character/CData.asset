@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 2
   displayName: C
   portrait: {fileID: 0}
-  startingActiveSkill: {fileID: 11400000, guid: 9df42b5317752984da71bf347d04019d, type: 2}
+  startingActiveSkill: {fileID: 11400000, guid: bbdf85f0df59a3b47bbe533ff114f78e, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: e75ec2b6288cf2940bcec948194bf37e, type: 2}
   maxHP: 100
   moveSpeed: 0.8
@@ -26,6 +26,7 @@ MonoBehaviour:
   cooldownReduction: 0
   knockback: 1
   critDamage: 1.5
+  critChance: 0.05
   expMultiplier: 1
   defenseBonus: 0.05
   healMultiplier: 1
