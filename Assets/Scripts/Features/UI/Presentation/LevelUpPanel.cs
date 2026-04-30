@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Skill.Adapter.Data;
@@ -43,6 +45,10 @@ namespace SwDreams.Features.UI.Presentation
         [SerializeField] private UnityEngine.UI.Button refreshButton;
         [Tooltip("(선택) 잔여 횟수 표시. 비워두면 표시 안 함.")]
         [SerializeField] private TMP_Text refreshCountText;
+        [Tooltip("R 키 홀드 동안 채워지는 진행도 이미지(Filled). 비워두면 시각 표시만 생략, 키 동작은 유지.")]
+        [SerializeField] private Image refreshHoldFill;
+        [Tooltip("R 키를 몇 초 누르고 있어야 새로고침이 발동하는지.")]
+        [SerializeField] private float refreshHoldDuration = 0.5f;
 
         [Header("연출 설정")]
         [SerializeField] private float fadeDuration = 0.3f;
@@ -58,6 +64,12 @@ namespace SwDreams.Features.UI.Presentation
         // 한 레벨업 내에서 새로고침 1회만 허용. Setup 진입 시 리셋, OnClickRefresh 시 true.
         // 새로고침 응답은 RefreshCards 경로로 분리되어 이 플래그를 안 건드림.
         private bool currentLevelRefreshConsumed = false;
+
+        // ===== 키보드 네비게이션 상태 =====
+        // -1: 아직 아무 카드도 focus 안 됨 (A / D 첫 입력 대기)
+        private int focusedIndex = -1;
+        private readonly List<int> activeIndices = new List<int>();
+        private float refreshHoldTimer = 0f;
 
         private void Awake()
         {
@@ -77,6 +89,27 @@ namespace SwDreams.Features.UI.Presentation
         private void OnDisable()
         {
             KillTweens();
+            ResetKeyboardState();
+        }
+
+        private void Update()
+        {
+            // 표시·연출 완료·미선택 상태에서만 입력 받음.
+            if (!isShowing || hasSelected || !canvasGroup.interactable) return;
+
+            var kb = Keyboard.current;
+            if (kb == null) return;
+
+            // 좌/우 이동 키는 PlayerMovement 와 동일하게 A/D.
+            if (kb.aKey.wasPressedThisFrame)
+                MoveFocus(-1);
+            else if (kb.dKey.wasPressedThisFrame)
+                MoveFocus(+1);
+
+            if (kb.spaceKey.wasPressedThisFrame)
+                ConfirmFocus();
+
+            HandleRefreshHold(kb);
         }
 
         // ===== 외부 호출용 =====
@@ -90,6 +123,7 @@ namespace SwDreams.Features.UI.Presentation
         {
             hasSelected = false;
             currentLevelRefreshConsumed = false;
+            ResetKeyboardState();
 
             if (titleText != null)
                 titleText.text = isChaos ? $"혼돈 선택 · {chaosRarity}" : "스킬을 선택하세요";
@@ -107,6 +141,8 @@ namespace SwDreams.Features.UI.Presentation
                     skillCards[i].gameObject.SetActive(false);
                 }
             }
+
+            RebuildActiveIndices();
 
             if (timerBarFill != null)
             {
@@ -129,6 +165,7 @@ namespace SwDreams.Features.UI.Presentation
         {
             hasSelected = false;
             currentLevelRefreshConsumed = false;
+            ResetKeyboardState();
 
             if (titleText != null)
                 titleText.text = $"능력치 선택 · {rolledRarity}";
@@ -145,6 +182,8 @@ namespace SwDreams.Features.UI.Presentation
                     skillCards[i].gameObject.SetActive(false);
                 }
             }
+
+            RebuildActiveIndices();
 
             if (timerBarFill != null)
             {
@@ -209,6 +248,7 @@ namespace SwDreams.Features.UI.Presentation
         {
             KillTweens();
             canvasGroup.interactable = false;
+            ResetKeyboardState();
 
             var refreshSeq = DOTween.Sequence();
 
@@ -238,6 +278,7 @@ namespace SwDreams.Features.UI.Presentation
                         skillCards[i].gameObject.SetActive(false);
                     }
                 }
+                RebuildActiveIndices();
                 UpdateRefreshButton(skillPanelActive: true);
             });
 
@@ -264,6 +305,8 @@ namespace SwDreams.Features.UI.Presentation
         /// </summary>
         public void Hide()
         {
+            ResetKeyboardState();
+
             if (!isShowing)
             {
                 // 연출 중이 아니면 바로 비활성화
@@ -412,6 +455,114 @@ namespace SwDreams.Features.UI.Presentation
             hideSequence?.Kill();
             showSequence = null;
             hideSequence = null;
+        }
+
+        // ===== 키보드 네비게이션 =====
+
+        private void ResetKeyboardState()
+        {
+            focusedIndex = -1;
+            refreshHoldTimer = 0f;
+            UpdateRefreshHoldFill(0f);
+
+            // 활성 카드들 focus 시각 해제 — Setup 의 transform.localScale = 1 이 시각도 자동 리셋하지만
+            // 명시적 호출로 RefreshCards 같은 부분 갱신 경로에서도 안전.
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (skillCards[i] != null && skillCards[i].gameObject.activeSelf)
+                    skillCards[i].SetFocused(false);
+            }
+        }
+
+        private void RebuildActiveIndices()
+        {
+            activeIndices.Clear();
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (skillCards[i] != null && skillCards[i].gameObject.activeSelf)
+                    activeIndices.Add(i);
+            }
+        }
+
+        private void MoveFocus(int dir)
+        {
+            if (activeIndices.Count == 0) return;
+
+            if (focusedIndex < 0)
+            {
+                // 첫 입력: A 면 가장 왼쪽(첫 활성), D 면 가장 오른쪽(마지막 활성).
+                focusedIndex = (dir < 0)
+                    ? activeIndices[0]
+                    : activeIndices[activeIndices.Count - 1];
+            }
+            else
+            {
+                int curPos = activeIndices.IndexOf(focusedIndex);
+                int newPos = Mathf.Clamp(curPos + dir, 0, activeIndices.Count - 1);
+                focusedIndex = activeIndices[newPos];
+            }
+
+            ApplyFocusVisual();
+        }
+
+        private void ApplyFocusVisual()
+        {
+            for (int i = 0; i < skillCards.Length; i++)
+            {
+                if (skillCards[i] == null || !skillCards[i].gameObject.activeSelf) continue;
+                skillCards[i].SetFocused(i == focusedIndex);
+            }
+        }
+
+        private void ConfirmFocus()
+        {
+            if (focusedIndex < 0 || focusedIndex >= skillCards.Length) return;
+            var card = skillCards[focusedIndex];
+            if (card == null || !card.gameObject.activeSelf) return;
+
+            // Skill 모드 우선, 아니면 StatBoost 모드 — SkillCardUI.OnClick 과 동일 규약.
+            if (card.CurrentSkillData != null)
+                OnCardClicked(card.CurrentSkillData);
+            else if (card.CurrentStatBoostData != null)
+                OnBoostCardClicked(card.CurrentStatBoostData);
+        }
+
+        // ===== R 홀드 새로고침 =====
+
+        private bool CanRefreshNow()
+        {
+            return refreshButton != null
+                && refreshButton.gameObject.activeSelf
+                && refreshButton.interactable;
+        }
+
+        private void HandleRefreshHold(Keyboard kb)
+        {
+            bool holdingR = kb.rKey.isPressed && CanRefreshNow();
+
+            if (holdingR)
+            {
+                refreshHoldTimer += Time.unscaledDeltaTime;
+                UpdateRefreshHoldFill(refreshHoldTimer / Mathf.Max(0.01f, refreshHoldDuration));
+
+                if (refreshHoldTimer >= refreshHoldDuration)
+                {
+                    refreshHoldTimer = 0f;
+                    UpdateRefreshHoldFill(0f);
+                    OnClickRefresh();
+                }
+            }
+            else if (refreshHoldTimer > 0f)
+            {
+                refreshHoldTimer = 0f;
+                UpdateRefreshHoldFill(0f);
+            }
+        }
+
+        private void UpdateRefreshHoldFill(float t)
+        {
+            if (refreshHoldFill == null) return;
+            refreshHoldFill.fillAmount = Mathf.Clamp01(t);
         }
     }
 }
