@@ -47,7 +47,7 @@ Assets/Resources/Prefabs/UI/
 | 준비 상태(isReady) | 각 클라 로컬 | `Player.CustomProperties["isReady"]` |
 | 카운트다운 | MasterClient | `Room.CustomProperties["startCountdownActive"/"Time"]` |
 | 강퇴 | MasterClient | `PhotonNetwork.CloseConnection(player)` |
-| 게임씬 로드 | MasterClient | `PhotonNetwork.AutomaticallySyncScene` + `TestManager.EnterGameSceneByMaster()` |
+| 게임씬 로드 | MasterClient | `PhotonNetwork.AutomaticallySyncScene` + `SceneTransitionManager.EnterGameSceneByMaster()` |
 
 ## 4. Unity 에디터 셋업 (신규 작업 체크리스트)
 
@@ -158,7 +158,7 @@ MenuScene Start
      └─ CanMasterStartGameInCurrentRoom = true → Start 버튼 interactable
  └─ A가 Start 클릭 → StartCountdown (방 프로퍼티 세팅)
      └─ 전 클라 OnRoomPropertiesUpdate → countdownText 3,2,1
-     └─ 0이 되면 A만 TestManager.EnterGameSceneByMaster() 호출
+     └─ 0이 되면 A만 SceneTransitionManager.EnterGameSceneByMaster() 호출
      └─ PhotonNetwork.AutomaticallySyncScene = true → 모두 GameScene 로드
      └─ GamePlayerSpawner가 characterId 읽어 인게임 플레이어 스폰
 ```

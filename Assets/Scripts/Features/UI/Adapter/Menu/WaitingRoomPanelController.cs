@@ -689,7 +689,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 PhotonNetwork.CurrentRoom.IsOpen = false;
             }
 
-            TestManager.Instance?.EnterGameSceneByMaster();
+            SceneTransitionManager.Instance?.EnterGameSceneByMaster();
         }
 
         private void ShowCountdownText(string text)

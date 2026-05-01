@@ -326,7 +326,7 @@ namespace SwDreams.Features.Boss.Adapter
         // ===== 디버그 =====
 
         /// <summary>
-        /// 디버그 키(B)로 즉시 소환. TestManager에서 호출.
+        /// 디버그 키(B)로 즉시 소환. 외부 디버그 핸들러에서 호출.
         /// </summary>
         public void DebugSpawnBoss()
         {

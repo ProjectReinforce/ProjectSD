@@ -29,7 +29,7 @@ Sweepin' Dreams 의 매니저 클래스 구조. 각 매니저의 생명주기·�
 | **DifficultyManager** | `Shared/Managers/` | GameScene 만 | 난이도 곡선·시간대 스케일링 |
 | **HostMigrationHandler** | `Shared/Managers/` | DontDestroyOnLoad | MasterClient 전환 시 비상 처리 |
 | **GameAudioConnector** | `Shared/Managers/` | GameScene 만 | 게임 이벤트 → AudioManager 다리 |
-| **TestManager** | `Shared/Managers/` | 옵션 | 디버그 단축키·치트 |
+| **SceneTransitionManager** | `Shared/Managers/` | DontDestroyOnLoad | 씬 전환 진입점 (`EnterGameSceneByMaster` / `ReturnToMenu` / `ReturnToWaitingRoom`) + 자체 `GameState` enum (`None/Menu/WaitingRoom/InGame/Result/Paused`). ※ `GameManager.GameState` 와 별개 (통합 검토 부채) |
 | **UIManager (`UImanager`)** | `Features/UI/Presentation/` | 각 씬마다 | 씬마다 UI 다름. 파일명 소문자 m 주의 |
 | **MenuSceneManager** | `Features/UI/Adapter/Menu/` | MenuScene 만 | 패널 전환 (Title/RoomList/WaitingRoom) |
 | **Levelupmanager / SkillManager / ChaosSkillManager** | `Features/Progression/Adapter/` | GameScene 만 | 레벨업·스킬·혼돈 슬롯 관리. 파일명 표기 그대로 |
@@ -187,7 +187,7 @@ UI 프레임 시스템은 [ui-frame.md](ui-frame.md) 참조.
 
 ## 15. 기존 코드 참조
 
-- `Assets/Scripts/Shared/Managers/*.cs` — 공용 싱글턴 (Network/Game/Result/Spawn/Audio/Pool/GameStat/Difficulty/HostMigration/GameAudioConnector/TestManager)
+- `Assets/Scripts/Shared/Managers/*.cs` — 공용 싱글턴 (Network/Game/Result/Spawn/Audio/Pool/GameStat/Difficulty/HostMigration/GameAudioConnector/SceneTransition)
 - `Assets/Scripts/Shared/Network/NetworkAdapter.cs` — 트리거/데미지 통지 RPC
 - `Assets/Scripts/Features/UI/Presentation/UImanager.cs` — 인게임 UI 매니저
 - `Assets/Scripts/Features/UI/Adapter/Menu/MenuSceneManager.cs` — 메뉴 씬 패널 전환

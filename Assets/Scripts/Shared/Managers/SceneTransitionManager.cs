@@ -14,9 +14,9 @@ namespace SwDreams.Shared.Managers
         Paused
     }
 
-    public class TestManager : MonoBehaviour
+    public class SceneTransitionManager : MonoBehaviour
     {
-        public static TestManager Instance { get; private set; }
+        public static SceneTransitionManager Instance { get; private set; }
 
         [SerializeField] private string menuSceneName = "MenuScene";
         [SerializeField] private string gameSceneName = "GameScene";

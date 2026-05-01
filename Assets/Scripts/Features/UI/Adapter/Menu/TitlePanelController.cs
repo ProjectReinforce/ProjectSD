@@ -91,7 +91,11 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         public void OnClickQuit()
         {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
             Application.Quit();
+#endif
         }
 
         private void TryConnectOrRunPendingAction()

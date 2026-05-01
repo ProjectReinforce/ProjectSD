@@ -169,7 +169,7 @@ i-frame 길이가 길면 빨간 단일 플래시 대신 alpha 깜빡임 (R7 와 
 **수정 완료** (2026-04-26):
 - [NetworkManager.Awake](../../Assets/Scripts/Shared/Managers/NetworkManager.cs:60) 에서 `AutomaticallySyncScene = false` 항상 유지 (자동 sync 차단)
 - [NetworkManager.RequestLoadGameScene](../../Assets/Scripts/Shared/Managers/NetworkManager.cs:510) — `LoadSceneEvent.EventCode = 15` RaiseEvent 로 명시적 동기화 (호스트 → 모든 클라)
-- [TestManager.EnterGameSceneByMaster](../../Assets/Scripts/Shared/Managers/TestManager.cs:38) 가 `PhotonNetwork.LoadLevel` 대신 RequestLoadGameScene 호출
+- [SceneTransitionManager.EnterGameSceneByMaster](../../Assets/Scripts/Shared/Managers/SceneTransitionManager.cs:38) 가 `PhotonNetwork.LoadLevel` 대신 RequestLoadGameScene 호출 (구 `TestManager`, 2026-05-01 리네임)
 - [GamePlayerSpawner](../../Assets/Scripts/Features/Character/Adapter/GamePlayerSpawner.cs) 정적 instance 가드 (race 안전망 — 같은 frame 에 두 instance 활성화돼도 두번째 Start 는 spawn skip)
 - 부수: [PlayerHealth.Update](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) 의 GameState 가드에 `GameManager.Instance == null` 포함, [ResultManager.OnRetry](../../Assets/Scripts/Shared/Managers/ResultManager.cs:294) 코루틴으로 본인 PV PhotonNetwork.Destroy 후 LoadScene
 

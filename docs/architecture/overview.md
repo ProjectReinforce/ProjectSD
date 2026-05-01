@@ -90,7 +90,7 @@ Assets/Scripts/
 ├── Shared/
 │   ├── Domain/                 ← IDamageable, IPoolable, GameResult
 │   ├── Data/                   ← AudioLibrary, DifficultyData, GameplayConfig
-│   ├── Managers/               ← GameManager, NetworkManager, PoolManager, SpawnManager, AudioManager, DifficultyManager, HostMigrationHandler, ResultManager, GameStatTracker, TestManager, GameAudioConnector
+│   ├── Managers/               ← GameManager, NetworkManager, PoolManager, SpawnManager, AudioManager, DifficultyManager, HostMigrationHandler, ResultManager, GameStatTracker, SceneTransitionManager, GameAudioConnector
 │   └── Network/                ← NetworkAdapter
 ├── BootStrap/, Editor/, Testing/, WFC/    ← 유지
 ```

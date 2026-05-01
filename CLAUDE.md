@@ -73,7 +73,7 @@ Assets/Scripts/
 ├── Shared/                  ← Feature 경계를 넘는 공유 코드
 │   ├── Domain/              ← 순수 C# (GameResult, PlayerBuildData, IDamageable, IPoolable)
 │   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
-│   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, TestManager
+│   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, SceneTransitionManager
 │   ├── Network/             ← NetworkAdapter
 │   └── Localization/        ← Domain(ILocalizationService, Locale) + Adapter(LocalizationManager, LocalizationTable, LocaleFontMap, LocalizedText, Bootstrap) + Editor(SheetImporter). 설계만 — [docs/systems/localization.md](docs/systems/localization.md)
 ├── Editor/                  ← 에디터 전용 (SkillDataEditor 등)
