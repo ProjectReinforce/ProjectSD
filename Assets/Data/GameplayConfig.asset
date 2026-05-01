@@ -33,7 +33,7 @@ MonoBehaviour:
   choiceCount: 3
   evolutionChance: 0.7
   chaosLevels: 0a000000140000001e000000
-  bossSpawnTime: 9
+  bossSpawnTime: 90
   bossWarningDuration: 3
   respawnDelay: 10
   respawnHPRatio: 0.5

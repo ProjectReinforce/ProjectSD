@@ -180,6 +180,21 @@ namespace SwDreams.Shared.Managers
         }
 
         /// <summary>
+        /// ESC 인게임 메뉴가 솔로 정지 시 set 하는 보조 플래그.
+        /// GameState=Paused 만으로는 LevelUpManager 자기참조 문제(자기가 만든 Paused 에 자기가 묶임)
+        /// 때문에 LevelUp 타이머가 안 멈춤. 이 플래그로 외부 정지원을 구분한다.
+        ///
+        /// 솔로 한정 (멀티는 set 안 함 — ESC 메뉴 정책상 게임 흐름 유지).
+        /// LevelUpManager 등 시간 기반 시스템이 가드용으로 본다.
+        /// </summary>
+        public bool IsMenuPaused { get; private set; }
+
+        public void SetMenuPaused(bool paused)
+        {
+            IsMenuPaused = paused;
+        }
+
+        /// <summary>
         /// 네트워크 상태 전환. 호스트에서만 호출.
         /// 모든 클라이언트에서 동시에 상태 변경.
         /// </summary>

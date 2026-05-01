@@ -30,9 +30,9 @@
 | **중도 입장** | ❌ 게임 룰상 없음 | "정지 중 외부 입장자" 케이스 처리 불필요 |
 | **메뉴 항목** | Resume / 설정 / 룸 나가기 / 게임 종료 | 4개 고정 |
 | **설정 UI** | 메뉴 씬의 기존 설정 패널 재활용 | 중복 작성 방지. 재활용 방식은 구현 단계 결정 (§ 9) |
-| **호출 가능 상태** | `Playing`, `BossFight`, `Paused`(레벨업 중) | `Loading` / `GameClear` / `GameOver` 시만 ESC 무시 |
+| **호출 가능 상태** | **열기**: `Playing` / `BossFight` / `Paused`(레벨업 중) — 그 외(`Loading`/`GameClear`/`GameOver`)는 ESC 무시. **닫기**: 이미 열려있으면 GameState 무관하게 항상 허용 | 열린 채 GameOver 진입해도 ESC 로 닫고 결과창 접근 가능 |
 | **다른 UI 와 우선순위** | ESC 메뉴가 **최상단** | 레벨업 패널 떠 있어도 그 위에 표시 |
-| **레벨업 중 + ESC** | ESC 메뉴를 레벨업 패널 위에 띄움. 레벨업 타이머는 그대로 흐름(멀티). 솔로면 이미 Paused 라 자연 정지 | ESC 떠있는 동안 시간 놓치는 건 사용자 책임(멀티 한정) |
+| **레벨업 중 + ESC** | ESC 메뉴를 레벨업 패널 위에 띄움. **솔로**: LevelUp 타이머도 정지 (`GameManager.IsMenuPaused` 가드). **멀티**: 타이머 그대로 흐름 | ESC 떠있는 동안 시간 놓치는 건 사용자 책임(멀티 한정) |
 | **룸 나가기 행선지** | 메뉴 씬 → **룸 리스트 패널** | 호스트는 leave 시 마이그레이션, 게스트는 단순 leave (양쪽 동일 행선지) |
 | **게임 종료** | `Application.Quit()` | 에디터에선 `EditorApplication.isPlaying = false` 로 분기 |
 
@@ -77,8 +77,8 @@ public class InGameMenuController : MonoBehaviour
 
 ESC 입력 처리:
 - `Update()` 에서 `Keyboard.current.escapeKey.wasPressedThisFrame` 감지
-- 호출 가능 상태(`Playing` / `BossFight` / `Paused`)일 때만 `Toggle()`
-- 그 외(`Loading` / `GameClear` / `GameOver`)는 무시
+- **이미 열려있으면 GameState 무관하게 닫기** (GameOver/GameClear 진입 후에도 결과창 접근 가능하도록)
+- 닫혀있을 때 새로 열기는 호출 가능 상태(`Playing` / `BossFight` / `Paused`) 한정. 그 외(`Loading` / `GameClear` / `GameOver`)는 ESC 무시
 
 ## 6. 정지 분기 로직
 
@@ -102,6 +102,24 @@ ESC 입력 처리:
 **주의:**
 - 보스전 중 ESC → Paused → 닫을 때 BossFight 로 복원. Playing 으로 잘못 복원하면 보스 페이즈 매니저 쪽 버그 가능. 직전 상태 캐싱 필수.
 - **레벨업 중 ESC** 케이스는 GameState 안 건드린다 — 이미 Paused 이고, 그 상태 권한은 LevelUpManager 에 있음. ESC 메뉴는 UI 만 띄움.
+
+**보조 정지 플래그 — `GameManager.IsMenuPaused`:**
+GameState=Paused 만으로는 LevelUpManager 의 자기참조 문제(자기가 만든 Paused 에 자기가 묶임 → `Update` 에서 무시) 때문에 LevelUp 타이머가 안 멈춤. 이를 해결하기 위해 별도 플래그를 둔다.
+
+```
+[ESC 누름] (Open)
+  if 솔로:
+    GameManager.SetMenuPaused(true)   // didMenuPause=true 캐싱
+    if cachedPrevState in (Playing, BossFight):
+      GameManager.ChangeState(Paused)  // 적/투사체/스폰 정지
+[ESC 다시 누름] (Close)
+  if didMenuPause: GameManager.SetMenuPaused(false)
+  if didPauseGame: GameManager.ChangeState(cachedPrevState)
+```
+
+- `IsMenuPaused` 는 **솔로 한정** — 멀티는 set 안 함 (게임 흐름 유지 정책).
+- `LevelUpManager.Update` 가 이 플래그를 가드로 사용 → 솔로 + 레벨업 중 ESC 시 타이머 정지 ✅
+- 향후 다른 시간 기반 시스템(보스 페이즈 타이머 등)도 동일 가드 패턴 사용 가능.
 
 ## 7. 메뉴 항목별 동작
 
@@ -167,3 +185,5 @@ ESC 입력 처리:
 
 - 2026-05-01: 초안. UI 형태(중앙 모달) / 솔로 정지 정책 / 메뉴 항목 4개 / 룸 리스트 행선지 / 멀티 레벨업 타이머 흐름 유지 결정.
 - 2026-05-01: 호출 가능 상태에 `Paused`(레벨업 중) 포함하도록 수정. 레벨업 패널 위에 ESC 메뉴 띄우는 결정 반영. 설정 메뉴 재활용 옵션에서 Additive 씬 로드 방식 제거.
+- 2026-05-01: `GameManager.IsMenuPaused` 보조 정지 플래그 도입. 솔로 + 레벨업 중 ESC 에서도 LevelUp 타이머 정지하도록 정책 정정. `LevelUpManager.Update` 에 가드 추가.
+- 2026-05-01: 닫기 ESC 는 GameState 무관하게 허용. 메뉴 떠있는 채로 GameOver/GameClear 진입 시 결과창 접근 불가 버그 수정 (열기/닫기 분기 — `CanOpenNow`).

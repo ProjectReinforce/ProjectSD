@@ -843,6 +843,11 @@ namespace SwDreams.Features.Progression.Adapter
         {
             if (!isLevelUpActive) return;
 
+            // ESC 인게임 메뉴 솔로 정지: LevelUpManager 가 만든 GameState=Paused 와 별개로
+            // 외부(메뉴) 정지원 발동 시 타이머도 정지 (in-game-menu.md § 6).
+            // 멀티에서는 set 되지 않으므로 자동으로 흐름 유지.
+            if (GameManager.Instance != null && GameManager.Instance.IsMenuPaused) return;
+
             // 타이머 갱신 (모든 클라이언트)
             if (timeoutTimer > 0f)
             {

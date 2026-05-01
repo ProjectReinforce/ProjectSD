@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-01 (R14 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-5 B 승격)
+최종 업데이트: 2026-05-01 (R6 + U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,19 +16,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰 (마이그레이션 SSOT):** R/U/Phase 항목이 ✅ 처리되는 순간 → 본문은 [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. 절차: ① completed-work 카테고리 섹션에 bullet 추가 (R→`시스템/아키텍처`, U→`메뉴/UI`) ② roadmap 본문을 `### R{N}. {제목} ✅ (YYYY-MM-DD) → [completed-work.md](completed-work.md)` 1줄로 교체 ③ Top 5 큐에서 제거 + 다음 후보 1개 승격 ④ 시스템 spec 헤더(있으면) ⬜/🟡 → ✅ 갱신 ⑤ 진행 요약 표 갱신 (Phase 단위 변동 시) ⑥ 본 문서 최종 업데이트 라인 갱신. 모든 변경은 사용자 승인 diff 후 일괄 적용. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-05-01** (R14/R13 최상단으로 승격 — 사용자 우선순위)
+> 마지막 갱신: **2026-05-01** (R6/U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
 | 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
-| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
-| 5 | [§ Phase 8-5 B](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization UI 키 매핑** | Phase A (코어+임포터) ✅ 완료된 상태. 점진 적용 가능. 출시 인프라 진척 | Phase 8-5 A ✅ | 수일~1주 (점진) |
+| 2 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 3 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
+| 4 | [§ Phase 8-5 B](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization UI 키 매핑** | Phase A (코어+임포터) ✅ 완료된 상태. 점진 적용 가능. 출시 인프라 진척 | Phase 8-5 A ✅ | 수일~1주 (점진) |
+| 5 | [§ Phase 8-1](#8-1-platform-추상화-phase-a--선행-가능) **Platform 추상화 (Phase A)** | 컨텐츠와 병행 가능. 코드 변경 최소, 게임 동작 변화 없음. Stove/Steam 출시 인프라 선행 | 없음 | 0.5~1일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R6, Phase 5-2/5-3, R4, Phase 8-5 B 모두 독립.
-**병렬 가능 그룹**: R10 + R6 + Phase 5 + Phase 8-5 B 가 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): U4 ESC 메뉴 (Frame_PopUp 선행 필요), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, Phase 5-2/5-3, R4, Phase 8-5 B, Phase 8-1 A 모두 독립.
+**병렬 가능 그룹**: R10 + Phase 5 + Phase 8-5 B + Phase 8-1 A 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-5 C (스킬 SO 통합), Phase 3-4 화면 밖 적 간소화 AI.
 
 ---
 
@@ -242,8 +242,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - 현재 연쇄폭발/단결 등 글로벌 효과는 캐릭터 프리팹의 Skills 오브젝트에 설정됨.
 - 게임 설정(`GameplayConfig.asset`) 으로 이전이 적절한지 검토. **일단 기록만** (의사결정 보류).
 
-### R6. 회오리/끌어당김 `pullRadius` 패시브 반응
-- [known-issues.md B1](known-issues.md) 과 같은 코드 수정 단위. SkillRange 패시브에 영향 받도록 `pullRadius * (1 + ctx.skillRangeBonus)`.
+### R6. 회오리/끌어당김 `pullRadius` 패시브 반응 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
+
+`TrajectoryFactory.Create` 에 `skillRangeBonus` 인자 추가, `effectivePullRadius = data.pullRadius + ctx.skillRangeBonus`. 회오리/나선/부메랑 trajectory 전부 적용. 곱셈 안(`*(1+bonus)`) 대신 다른 spawner 와 일관된 덧셈 패턴 채택.
 
 ### R7. 플레이어 무적 시간 (i-frame) ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
@@ -317,29 +318,9 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 ### U3. 혼자하기에서 나가기 → 방 리스트로
 - 솔로 모드 LeaveRoom 시 `MenuSceneManager.ShowRoomList()` 라우팅.
 
-### U4. ESC 인게임 일시정지 메뉴
+### U4. ESC 인게임 일시정지 메뉴 ✅ (2026-05-01) → [completed-work.md](completed-work.md)
 
-**spec:** [systems/in-game-menu.md](../systems/in-game-menu.md) (2026-05-01 작성)
-
-**확정 결정사항 (spec 참조):**
-- UI: 반투명 dim + **중앙 모달**
-- 메뉴 항목: Resume / 설정 / 룸 나가기 / 게임 종료
-- 정지 정책: **솔로(PlayerCount == 1) 한정** `GameState.Paused` 진정 정지 / **멀티는 로컬 UI 토글만** (게임 흐름 유지)
-- 호출 가능 상태: `Playing` / `BossFight` / `Paused`(레벨업 중) — ESC 메뉴는 레벨업 패널 위에 띄움
-- 룸 나가기 행선지: 메뉴 씬 → **룸 리스트 패널** (호스트는 마이그레이션, 게스트는 단순 leave)
-- 메인씬: ESC = 뒤로가기 (별건)
-
-**의존성:**
-- **Frame_PopUp 미작성** ([ui-frame.md § 3.2](../systems/ui-frame.md)) — 룸 나가기/게임 종료 **확인 다이얼로그** 가 모달 필요. ESC 메뉴 구현 들어가기 전에 Frame_PopUp 먼저 작성하거나 임시 모달로 진행 후 마이그레이션
-- 메뉴 씬 설정 패널 재활용 — § 7 옵션 A(같은 프리팹 인스턴스화) / B(공통 프리팹 분리) 중 구현 단계 결정
-
-**잔여 작업:**
-- [ ] `InGameMenuController` (ESC 입력 + Toggle + 정지 분기 캐싱)
-- [ ] `InGameMenuCanvas` 프리팹 (sortOrder=100, 중앙 모달 카드, 4 버튼)
-- [ ] 솔로 판정 + GameState 분기 (Playing/BossFight 캐싱 → 닫을 때 복원, Paused 면 건드리지 않음)
-- [ ] 룸 나가기 → `MenuSceneManager` 룸 리스트 진입점 호출 (HostMigrationHandler 기존 인프라 활용)
-- [ ] 게임 종료 (`Application.Quit()` + 에디터 분기)
-- [ ] **R14 Phase 4 팀원 보이스 슬라이더 섹션** 동반 (R14 와 합쳐 진행 권장)
+`InGameMenuController` + 임시 `ConfirmDialog` (Frame_PopUp 작성 시 이관) + `InGameMenuCanvas.prefab` (sortOrder=100). 솔로 한정 `GameState.Paused` 진정 정지 + `GameManager.IsMenuPaused` 보조 플래그(LevelUpManager 자기참조 회피용 외부 정지원 가드). 멀티는 로컬 UI 토글. 호출 가능 상태 = Playing/BossFight/Paused 한정 + 닫기는 GameOver/GameClear 에서도 허용. 후속 별건: R14 § 팀원 보이스 슬라이더 섹션, GameOver 자동 닫기 (보류).
 
 ### U5. 결과창 "나가기" → 방 리스트로
 - 현재 Title 경유. RoomList 직행으로 라우팅 (`ResultManager.OnExit` → `ShowRoomList`).

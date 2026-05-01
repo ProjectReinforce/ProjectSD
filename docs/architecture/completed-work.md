@@ -148,6 +148,7 @@ ProjectSD(Sweepin' Dreams) 의 완료된 작업 회고/추적용 ledger.
 - 보스 UI 클라 동기화
 - 클라 경험치/레벨 디버그 텍스트 동기화
 - 호스트 마이그레이션 시 호스트 연결 대기 UI
+- **U4 ESC 인게임 메뉴** (2026-05-01) — `Features/UI/Adapter/InGameMenu/{InGameMenuController, ConfirmDialog}` 신규 + `InGameMenuCanvas.prefab` (sortOrder=100). 4 메뉴 항목(Resume/설정/룸 나가기/게임 종료). 솔로(PlayerCount<=1) 한정 `GameState.Paused` 진정 정지 + `GameManager.IsMenuPaused` 보조 플래그(LevelUpManager 자기참조 회피용 외부 정지원 가드 — 솔로+레벨업 ESC 도 타이머 정지). 멀티는 로컬 UI 토글만(게임 흐름 유지). 호출 가능 상태 = `Playing/BossFight/Paused`(레벨업 중) 한정 + 이미 열려있으면 GameOver/GameClear 에서도 닫기 허용(결과창 접근). 룸 나가기 = `MenuSceneManager.ReturnToRoomList=true` + `NetworkManager.LeaveRoom` (`ResultManager.OnExit` 패턴 재사용, 호스트는 마이그레이션). 게임 종료 = `Application.Quit` + 에디터 분기. 설정 패널은 사용자 prefab(SettingsPanel) 인스펙터 연결 — DontDestroyOnLoad 의 `SettingsManager.Instance` 공유로 GameScene 동작. 임시 `ConfirmDialog` (Frame_PopUp 미작성 stand-in, 작성 시 일괄 이관). 자식 Canvas + Override Sorting + GraphicRaycaster 패턴(메인 Canvas 안 분리). unity-reviewer H/M 반영(OnDestroy 리스너+LeftRoom 구독 해제, EventSystem.SetSelectedGameObject(null), 씬 전환 1프레임 잔재 방지). 인게임 검증: 솔로 정지/멀티 흐름/레벨업 타이머/룸 나가기/게임 종료 모두 통과. 후속 별건: GameOver 자동 닫기(보류 — 사용자 수동 ESC 충분), R14 § 팀원 보이스 슬라이더 섹션 동반(별건). 상세 [in-game-menu.md](../systems/in-game-menu.md).
 
 ---
 
