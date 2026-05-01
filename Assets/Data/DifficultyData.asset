@@ -38,6 +38,58 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  damageStart: 1
+  damageEnd: 3
+  damageCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  moveSpeedStart: 1
+  moveSpeedEnd: 1.6
+  moveSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   intervalStart: 1.5
   intervalEnd: 0.3
   intervalCurve:
@@ -157,18 +209,26 @@ MonoBehaviour:
     healthMultiplier: 0.6
     maxEnemyMultiplier: 0.6
     expMultiplier: 1
+    damageMultiplier: 0.7
+    moveSpeedMultiplier: 1
   - playerCount: 2
     healthMultiplier: 1
     maxEnemyMultiplier: 1
     expMultiplier: 1
+    damageMultiplier: 1
+    moveSpeedMultiplier: 1
   - playerCount: 3
     healthMultiplier: 1.4
     maxEnemyMultiplier: 1.3
     expMultiplier: 0.95
+    damageMultiplier: 1.15
+    moveSpeedMultiplier: 1.05
   - playerCount: 4
     healthMultiplier: 1.8
     maxEnemyMultiplier: 1.6
     expMultiplier: 0.9
+    damageMultiplier: 1.3
+    moveSpeedMultiplier: 1.1
   swarmGroupMin: 5
   swarmGroupMax: 20
   spawnOffsetMin: 0.5
