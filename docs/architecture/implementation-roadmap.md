@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-01 (R13 ✅ 마이그레이션 — completed-work 로 이동, Top 5 재정렬)
+최종 업데이트: 2026-05-01 (R14 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-5 B 승격)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -20,15 +20,15 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | [§ R14](#r14-인게임-마이크-민감도--유저별-보이스-볼륨-조절) **유저별 보이스 + 인게임 마이크 민감도** | 사용자 우선순위. 멀티 게임 UX 핵심 — 트롤 마이크 / 음량 차이 즉시 대응 | **[U4 ESC 메뉴](#u4-esc-인게임-일시정지-메뉴) 동반 작업 권장** ([spec](../systems/in-game-menu.md)). Phase 8-2 ✅ 해제됨 | 1.5~2일 (U4 포함) |
-| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 3 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
-| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
+| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 2 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
+| 3 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 4 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
+| 5 | [§ Phase 8-5 B](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization UI 키 매핑** | Phase A (코어+임포터) ✅ 완료된 상태. 점진 적용 가능. 출시 인프라 진척 | Phase 8-5 A ✅ | 수일~1주 (점진) |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R6, Phase 5-2/5-3 모두 독립. R14 는 U4 ESC 메뉴 작업과 묶음.
-**병렬 가능 그룹**: R10 + R6 + Phase 5 가 서로 다른 파일 영역이라 동시 진행 OK. R14+U4 도 별도 영역이라 위 그룹과 병렬 가능.
-**다음 진입 후보** (Top 5 다 끝났을 때): Phase 8-5 B (Localization UI 키 매핑), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R6, Phase 5-2/5-3, R4, Phase 8-5 B 모두 독립.
+**병렬 가능 그룹**: R10 + R6 + Phase 5 + Phase 8-5 B 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): U4 ESC 메뉴 (Frame_PopUp 선행 필요), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
 
 ---
 
@@ -299,72 +299,9 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 
 데미지/이속 시간 곡선(1.0→3.0 / 1.0→1.6) + 타입별 sensitivity(Tank 0/Chaser 0.5/Swarm 0.7/Runner 1.0/Ranged 0.3) + PlayerScaling 확장(damageMul/moveSpeedMul). 호스트 권위 + 스폰 1회 캐싱. photon-sync-auditor 통과. 사용자 후속(별건): EnemyData 12개 .asset sensitivity 인스펙터 채우기(현재 default 0.5 단일). 상세 [enemy-stat-scaling.md](../systems/enemy-stat-scaling.md).
 
-### R14. 인게임 마이크 민감도 + 유저별 보이스 볼륨 조절 🟡 코드 완료, 인스펙터/검증 잔여
+### R14. 인게임/대기실 보이스 HUD ✅ (2026-05-01, 커밋 `0b1b23ff1`) → [completed-work.md](completed-work.md)
 
-**개요:** R12 (설정 패널) 의 글로벌 Voice/MicSens 외에 **유저별 개별 보이스 볼륨** 슬라이더 + **마이크 민감도 빠른 접근 UI (대기실/인게임 HUD)** 노출. "쟤만 시끄러워서 작게" 케이스 + 게임 중 마이크 민감도 즉시 조절.
-
-**확정 결정사항 (2026-05-01 사용자 확정):**
-- **대기실 음성 채팅 활성화** — Phase 8-2 1차 통합 시 `PlayerStub.prefab` (인게임) 만 보이스 컴포넌트 부착돼 있던 것을 본 작업에서 `LobbyPlayer.prefab` (대기실 월드 캐릭터) 도 동일 패턴으로 보완. 즉 대기실에서도 음성 송수신 + 좌측 VoicePanel 로 즉시 조절 가능
-- **최종 볼륨:** `master(AudioMixer "VoiceGain" dB) × perUser(audioSource.volume)` — **AudioMixer 가 master 처리, PerUserVoiceApplier 가 perUser 처리.** 즉 Applier 에서 master 안 곱함 (이중 곱셈 회피). spec 초안의 `master_linear × perUser` 직접 곱은 AudioMixer 미사용 가정이라 정정.
-- **유저별 슬라이더 노출 위치 3곳 (모두 좌측 별도 `VoicePanel` 패턴 통일):**
-  - **대기실 — `VoicePanel` 좌측 배치** (대기실 패널 내부)
-  - **인게임 HUD — `VoicePanel` 좌측 배치** (GameScene Canvas)
-  - U4 ESC 메뉴 팀원 섹션 — **U4 의존, 본 R14 작업 범위 외**. PerUserVoiceSettings 싱글턴 공유로 자동 정합
-  - 시각: 평소 흐림(alpha 0.5 + 핸들 alpha 0 + 트랙 alpha 0.4) → 호버 시 또렷(alpha 1). 인터랙션 가드 X (Slider default)
-  - **`LobbyPlayerEntry` 행 슬라이더는 도입하지 않음** — 좌측 VoicePanel 로 통일 (인게임 ↔ 대기실 일관성 + 시각 단순)
-- **유저별 볼륨 값은 같은 클라 안에서 룸 내내 유지** (대기실 ↔ 인게임 씬 전환 횡단). **룸 나가면 휘발**. PlayerPrefs 저장 X. 키는 **ActorNumber** (룸 내 유일). 동기화 X (클라이언트 로컬)
-- **마이크 민감도 UI 3곳 (값 공유):**
-  - R12 설정 패널 (기존) / 대기실 `VoicePanel` 안 / 인게임 `VoicePanel` 안
-  - **3곳 모두 R12 의 `SettingsManager.MicSensitivity` 와 양방향 바인딩.** PlayerPrefs 저장은 R12 가 담당 (영구 보존)
-- **슬라이더 범위:** 유저별 볼륨 **0~2** (boost 지원). 1.0 default + 1.0 노치 마커 권장. AudioSource.volume 의 0~1 cap 우회를 위해 `AudioGainBoost` (OnAudioFilterRead 후처리) 컴포넌트로 sample-level gain 곱. 1 초과는 마이크 작은 유저 보정용 boost. 2 초과 시 clipping 위험으로 차단
-
-**선결 조건:**
-- R12 ✅ (Master Voice 슬라이더 + AudioMixer + MicSensitivity SettingsManager)
-- Phase 8-2 ✅ (Photon Voice 2 통합 — Speaker/Recorder/PhotonVoiceView)
-- U4 (ESC 일시정지 메뉴) — 팀원 슬라이더 진입 경로. **본 R14 와 분리 진행** (PerUserVoiceSettings 싱글턴 공유로 U4 도 동일 데이터 자동 사용)
-
-**코드 작업 ✅ (2026-05-01, 미커밋):**
-- ✅ `Features/Voice/Adapter/PerUserVoiceSettings.cs` — 싱글턴, OnLeftRoom→Clear, OnVolumeChanged 이벤트
-- ✅ `Features/Voice/Adapter/PerUserVoiceApplier.cs` — Speaker 측 audioSource.volume 갱신, IsMine 가드, Owner null 대기 코루틴 (OnDisable 정리 포함)
-- ✅ `Features/UI/Adapter/Voice/PerUserVoiceSliderEntry.cs` — 슬라이더 ↔ Settings 양방향 (대기실/HUD 행 공통)
-- ✅ `Features/UI/Adapter/Voice/MicSensitivitySlider.cs` — 슬라이더 ↔ SettingsManager 양방향 (3곳 공통)
-- ✅ `Features/UI/Adapter/Voice/VoicePanelHover.cs` — 호버 상태 + root CanvasGroup alpha lerp
-- ✅ `Features/UI/Adapter/Voice/SliderHoverFade.cs` — 자식 슬라이더의 핸들/트랙 Image 알파 lerp
-- ✅ `Features/UI/Adapter/Voice/VoicePanelController.cs` — 인게임 좌측 패널, OnPlayerEntered/Left/Joined 콜백으로 행 동적 추가/제거
-- ✅ `LobbyPlayerEntry.cs` 수정 — Bind() 안에서 voiceSliderEntry.Bind/Unbind + voiceSliderRoot SetActive(!isYou)
-- unity-reviewer Critical 2건 (PerUserVoiceApplier 코루틴 정리 / VoicePanelController Start+OnEnable 중복 빌드) 수정 완료
-
-**사용자 인스펙터 작업 ⬜:**
-- [ ] `PlayerStub.prefab` Speaker(또는 자식 AudioSource) GameObject 에 `AudioGainBoost` + `PerUserVoiceApplier` 부착. PerUserVoiceApplier 의 `gainBoost` 슬롯에 AudioGainBoost 드래그 (Awake 자동 탐색도 됨)
-- [ ] **신규: `LobbyPlayer.prefab` 보이스 셋업 (Phase 8-2 보완)** — `PlayerStub.prefab` 과 동일 패턴:
-  - `PhotonVoiceView` (PhotonView 와 동일 GameObject)
-  - `Recorder` (TransmitEnabled=false, MicrophoneType=Photon)
-  - `Speaker` (playOnAwake=false)
-  - AudioSource (Speaker 가 자동 생성 또는 수동 부착, Output → MasterMixer/Voice 그룹)
-  - `VoiceController` (자기 측 마이크 제어, IsMine 가드)
-  - **`AudioGainBoost`** (AudioSource 와 같은 GameObject — `OnAudioFilterRead` 가 동작하려면 필수)
-  - `PerUserVoiceApplier` (Speaker 측, 다른 사용자 볼륨 적용 — gainBoost 슬롯 자동 탐색 OK)
-- [ ] **신규 `VoicePanel.prefab`** 작성 — 좌측 코너 패널, root 에 `CanvasGroup` + `VoicePanelHover` + `VoicePanelController` + `Image`(raycastTarget=true, 호버 hit). 자식에 자기 마이크 슬라이더(`MicSensitivitySlider` + `SliderHoverFade`) + 팀원 컨테이너
-- [ ] **신규 `TeammateVoiceRow.prefab`** 작성 — 팀원 한 줄 (마이크 아이콘 Image + 이름 TMP_Text + 슬라이더). 컴포넌트: `PerUserVoiceSliderEntry` + `SliderHoverFade` + **`MicActivityIndicator`** (Discord 패턴, `Speaker.IsPlaying` 으로 자동 색 토글). `VoicePanelController.memberRowPrefab` 슬롯에 연결
-- [ ] **GameScene Canvas 에 `VoicePanel.prefab` 좌측 인스턴스 배치**
-- [ ] **MenuScene 의 대기실 패널에도 `VoicePanel.prefab` 좌측 인스턴스 배치** (인게임과 동일 prefab — VoicePanelController 가 PhotonNetwork.PlayerList 기반이라 씬 무관 동작)
-
-**Phase 5 — 검증 ⬜:**
-- [ ] ParrelSync 2~4 인스턴스 — A 가 B 볼륨 0 → A 측 B 음소거, 다른 인스턴스 영향 없음
-- [ ] 대기실 A 볼륨 0.5 → 인게임 씬 전환 후 0.5 유지
-- [ ] 룸 나가기 → 재입장 → 모든 볼륨 1.0 초기화
-- [ ] 마이크 민감도 3곳 중 한 곳 변경 → 다른 2곳 즉시 갱신
-- [ ] R12 Master Voice = 0 → PerUser 무관 무음
-- [ ] 호버 알파: 패널 평소 흐림, 마우스 진입 시 또렷, 슬라이더 핸들 사라짐/등장
-- [ ] 마이크 활성도: 송신 중 유저 행 마이크 아이콘 활성 색 / 음소거·없음·PTT 미발화 시 회색
-
-**범위 외:**
-- 보이스 음소거 전용 토글 — 슬라이더 0 으로 충분
-- spatial audio / 거리 감쇠 — 별건
-- 다른 유저가 "쟤가 날 음소거함" 알림 — 표준 X
-- 유저별 볼륨 동기화 (다른 클라 전파) — 클라이언트 로컬 유지
-
-**관련:** R12 (Master Voice / MicSensitivity), U4 (ESC 메뉴 팀원 섹션은 별도), Phase 8-2 (Photon Voice 2), [voice-chat.md](../systems/voice-chat.md)
+좌측 별도 VoicePanel(대기실/인게임 동일 prefab) + 호버 알파 + AudioGainBoost(0~2 boost) + 마이크 민감도 3곳 양방향 + Discord 패턴 마이크 활성도 아이콘. LobbyPlayer.prefab Phase 8-2 보이스 셋업 보완 — 대기실 음성 송수신 활성화. 후속 별건: U4 ESC 메뉴 팀원 섹션(PerUserVoiceSettings 싱글턴 공유로 자동 정합) / LobbyPlayerEntry.prefab 잔존 빈 VoiceSlider 자식 정리. 상세 [voice-chat.md](../systems/voice-chat.md).
 
 ---
 

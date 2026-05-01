@@ -10,8 +10,8 @@ Sweepin' Dreams 의 Co-op 보이스챗 시스템. 본 문서는 **다음 세션�
 | 분류 | 네트워크 / UX |
 | 의존 레이어 | Adapter (Voice), Presentation (UI) |
 | 의존 외부 패키지 | Photon Voice 2 (Asset Store 무료) |
-| 최종 업데이트 | 2026-04-27 |
-| 구현 상태 | ✅ 1차 통합 완료 (Phase 8-2) — 송수신 / PTT / OpenMic / 마이크 자체 테스트 동작. R3 마이크 필터 드랍은 후행 |
+| 최종 업데이트 | 2026-05-01 |
+| 구현 상태 | ✅ 1차 통합 (Phase 8-2, 2026-04-27) + R3 마이크 필터 드랍 (2026-04-29) + R14 보이스 HUD/대기실 음성/유저별 볼륨 boost (2026-05-01). 송수신/PTT/OpenMic/마이크 자체 테스트/유저별 볼륨/마이크 활성도 인디케이터 모두 동작 |
 
 ## 2. 결정 근거
 
@@ -53,34 +53,55 @@ Photon Voice 2 는 직접 코드 작성보다 **컴포넌트 부착 중심**이�
 | (Inspector) `Use Pun Auth Values` | ✓ 기본값 |
 | `PhotonAppSettings.asset` | `App Id Voice` 칸에 발급받은 Voice AppId. `Fixed Region` 은 PUN 과 동일 (예: `kr`, `jp`). PUN 룸 follow 자동 (`LeaderInRoom => PhotonNetwork.InRoom`) — `_voice_` suffix 룸명 |
 
-### 4-2. Player 프리팹 변경
+### 4-2. Player 프리팹 변경 (PlayerStub + LobbyPlayer 둘 다)
 
-기존 Player 프리팹(이미 `PhotonView` 부착)에 **추가**:
+기존 Player 프리팹(이미 `PhotonView` 부착)에 **추가**. **R14 (2026-05-01) 부터 인게임 `PlayerStub.prefab` + 대기실 `LobbyPlayer.prefab` 둘 다 동일 패턴 적용** — 대기실에서도 음성 송수신 동작:
 
 | 컴포넌트 | 설정 |
 |---|---|
 | `PhotonVoiceView` | 기존 `PhotonView` 와 동일 GameObject. **ViewID 자동 공유** |
 | `Recorder` | `TransmitEnabled = false` (시작 시 음소거). `MicrophoneType = Photon` 권장 (Unity Mic 보다 안정) |
-| `Speaker` | `playOnAwake = false`. AudioSource 함께 부착 (자동 생성 가능) |
+| `Speaker` | `playOnAwake = false`. AudioSource 함께 부착 (자동 생성 가능). AudioSource Output → `MasterMixer/Voice` 그룹 (R12 master gain 동작 조건) |
+| `VoiceController` | 자기 측 마이크 제어 (Mute/PTT/OpenMic). IsMine 가드 |
+| `AudioGainBoost` (R14) | AudioSource 와 **같은 GameObject** 에 부착 — `OnAudioFilterRead` 가 호출되려면 필수. PerUserVoiceApplier 가 0~2 gain 동적 조절 (마이크 작은 유저 boost 보정용, AudioSource.volume 0~1 cap 우회) |
+| `PerUserVoiceApplier` (R14) | Speaker 측, 다른 사용자 볼륨 적용. IsMine 가드(자기 자신은 자기 목소리 재생 안 하므로 비활성). gainBoost 슬롯 자동 탐색 |
 
 **왜 `TransmitEnabled = false` 시작:** 입장 직후 의도치 않은 마이크 송출 방지. UI에서 명시적 토글로 켠다.
 
-### 4-3. 작성된 C# (Phase 8-2 1차)
+### 4-3. 작성된 C#
 
-`Assets/Scripts/Features/Voice/` (실제 파일):
+`Assets/Scripts/Features/Voice/` 와 `Assets/Scripts/Features/UI/Adapter/Voice/` (실제 파일):
 
 ```
 Features/Voice/
 ├── Adapter/
-│   ├── VoiceController.cs       ← Recorder 제어 (Mute/PTT/OpenMic). 자기 PhotonView (IsMine) 만 제어. SettingsManager.OnMicChanged 구독해서 모드/감도 자동 반영. 새 Input System (Keyboard.current[Key.V]) 사용. 정적 LocalInstance 로 UI 가 인스펙터 드래그 없이 호출
-│   └── MicTestService.cs         ← UnityEngine.Microphone 으로 직접 캡처 → AudioSource.loop 재생. Photon voice 룸 의존성 0 — 룸 미가입/메뉴씬/ParrelSync 무관. 설정 패널 "내 마이크 테스트" 토글이 호출
+│   ├── VoiceController.cs              ← Recorder 제어 (Mute/PTT/OpenMic). 자기 PV(IsMine) 만 제어. SettingsManager.OnMicChanged 구독으로 모드/감도 자동 반영. 새 Input System(Keyboard.current[Key.V]) PTT. 정적 LocalInstance
+│   ├── MicTestService.cs                ← UnityEngine.Microphone 직접 캡처 → AudioSource.loop 재생. Photon voice 룸 의존성 0
+│   ├── MicFilterController.cs (R3)       ← 5종 필터 적용/만료. 클라 자체 코루틴
+│   ├── MicFilterPickup.cs (R3)           ← 드랍 픽업 — 호스트 권위 RPC
+│   ├── PerUserVoiceSettings.cs (R14)     ← Dictionary<int actorNumber, float volume> 싱글턴 (룸 메모리 + DDoL + RuntimeInit AfterSceneLoad 자동 부트). OnLeftRoom→Clear, OnVolumeChanged 이벤트
+│   ├── PerUserVoiceApplier.cs (R14)      ← Speaker 측. PerUserVoiceSettings 변경 구독 → AudioGainBoost.gain 갱신. IsMine 가드 + Owner null 대기 코루틴(OnDisable 정리)
+│   └── AudioGainBoost.cs (R14)           ← AudioSource 옆 OnAudioFilterRead 후처리 sample-level gain. AudioSource.volume 0~1 cap 우회로 0~2 boost 지원. 1.0 일 때 early-out
 └── Presentation/
-    └── MicToggleButton.cs       ← InGameHUD 의 마이크 ON/OFF 버튼 브리지. VoiceController.LocalInstance.ToggleMute() + 음소거 상태에 따라 sprite/색 자동 토글
+    └── MicToggleButton.cs                ← HUD 마이크 ON/OFF 버튼 브리지
+
+Features/UI/Adapter/Voice/ (R14, 2026-05-01)
+├── PerUserVoiceSliderEntry.cs            ← 슬라이더 ↔ PerUserVoiceSettings 양방향 (대기실/HUD 행 공통). SetValueWithoutNotify 순환 가드
+├── MicSensitivitySlider.cs               ← 슬라이더 ↔ SettingsManager.SetMicSensitivity 양방향 (3곳 공통). PlayerPrefs 저장은 R12 가 담당
+├── VoicePanelHover.cs                    ← IPointerEnter/Exit + root CanvasGroup alpha lerp (idle 흐림 → hover 또렷). OnHoverChanged 이벤트
+├── SliderHoverFade.cs                    ← 자식 슬라이더의 핸들/트랙 Image alpha lerp. panelHover 인스펙터 슬롯 노출(GetComponentInParent 함정 회피)
+├── VoicePanelController.cs               ← 좌측 패널 컨트롤러 — OnPlayerEntered/Left/Joined 콜백으로 행 동적 추가/제거. 자기 제외. 대기실/인게임 동일 prefab 으로 씬 무관 동작
+└── MicActivityIndicator.cs               ← Discord 패턴 — Speaker.IsPlaying 기반 마이크 아이콘 색 자동 토글. PhotonViewCollection 순회로 actor → Speaker lookup. 동기화 X
 ```
 
-**보류 (필요 시 추후):**
-- `VoiceIndicatorUI` — 누가 말하는 중인지 시각화 (Speaker.IsPlaying 구독). 현재 미작성
-- 빌드 환경에서 송수신 검증 + R3 마이크 필터 드랍과 함께 후행
+**프리팹:** `VoicePanel.prefab` (좌측 패널, 대기실/인게임 양쪽 인스턴스 배치) + `TeammateVoiceRow.prefab` (팀원 한 줄).
+
+**보류 해제 (R14 흡수):**
+- ~~`VoiceIndicatorUI` — 누가 말하는 중인지 시각화~~ → R14 의 `MicActivityIndicator` 가 Discord 패턴으로 대체 ✅ (2026-05-01)
+
+**후행 별건:**
+- 빌드 환경 송수신 검증
+- U4 ESC 메뉴 팀원 보이스 섹션 (PerUserVoiceSettings 싱글턴 공유로 자동 정합)
 
 **`VoiceController.cs` 스켈레톤:**
 
