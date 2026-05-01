@@ -29,7 +29,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private Transform[] spawnPoints;
 
         [Tooltip("spawnPoints가 비어있을 때 원형으로 배치할 반경.")]
-        [SerializeField] private float fallbackRadius = 1.5f;
+        [SerializeField] private float fallbackRadius = 2.5f;
+
+        [Tooltip("스폰 위치에 더해질 랜덤 흔들림 반경. 같은 슬롯/각도에 매핑돼도 겹치지 않게 살짝 퍼뜨림. 0이면 비활성.")]
+        [SerializeField] private float spawnJitter = 0.5f;
 
         private GameObject localInstance;
 
@@ -118,16 +121,29 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private Vector3 ResolveSpawnPosition(int actorNumber)
         {
+            Vector3 basePos;
+
             if (spawnPoints != null && spawnPoints.Length > 0)
             {
                 int idx = Mathf.Abs(actorNumber) % spawnPoints.Length;
                 var sp = spawnPoints[idx];
-                if (sp != null) return sp.position;
+                basePos = sp != null ? sp.position : Vector3.zero;
+            }
+            else
+            {
+                // 폴백: 4인 코옵 기준 4분면 분산. ActorNumber 누적값(5,6,...)도 1~4 슬롯으로 cycle.
+                int slot = ((Mathf.Abs(actorNumber) - 1) % 4 + 4) % 4;
+                float angle = (slot * 90f) * Mathf.Deg2Rad;
+                basePos = new Vector3(Mathf.Cos(angle) * fallbackRadius, Mathf.Sin(angle) * fallbackRadius, 0f);
             }
 
-            // 폴백: ActorNumber를 각도로 사용해 원형 배치.
-            float angle = (actorNumber * 90f) * Mathf.Deg2Rad;
-            return new Vector3(Mathf.Cos(angle) * fallbackRadius, Mathf.Sin(angle) * fallbackRadius, 0f);
+            if (spawnJitter > 0f)
+            {
+                Vector2 jitter = Random.insideUnitCircle * spawnJitter;
+                basePos += new Vector3(jitter.x, jitter.y, 0f);
+            }
+
+            return basePos;
         }
     }
 }

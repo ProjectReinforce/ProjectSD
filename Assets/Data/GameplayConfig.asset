@@ -22,16 +22,18 @@ MonoBehaviour:
   - 9
   - 1
   maxSkillSlots: 6
+  baseSkillRefreshCharges: 2
   projectileSpreadAngle: 15
   baseKnockbackForce: 0.9
+  critMultBase: 1.5
+  critChanceBase: 0.05
   damagePopupPrefab: {fileID: 3592730811667847698, guid: e4f05311935ceb341a05096caa40fa50, type: 3}
   hitEffectPrefab: {fileID: 4748681987041982144, guid: e3fae2b483b7e1640adbdd6fdb97e265, type: 3}
   selectionTimeout: 15
   choiceCount: 3
   evolutionChance: 0.7
   chaosLevels: 0a000000140000001e000000
-  totalGameTime: 900
-  bossSpawnTime: 900
+  bossSpawnTime: 9
   bossWarningDuration: 3
   respawnDelay: 10
   respawnHPRatio: 0.5
