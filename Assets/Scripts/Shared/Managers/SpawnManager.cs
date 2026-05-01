@@ -283,7 +283,9 @@ namespace SwDreams.Shared.Managers
                     if (nonBarrier < maxEnemies)
                     {
                         float hpMul = difficulty.GetHealthMultiplier(gameTime, playerCount);
-                        SpawnElite(hpMul);
+                        float damageMul = difficulty.GetDamageMultiplier(gameTime, playerCount);
+                        float speedMul = difficulty.GetMoveSpeedMultiplier(gameTime, playerCount);
+                        SpawnElite(hpMul, damageMul, speedMul);
                     }
                     else
                     {
@@ -303,6 +305,8 @@ namespace SwDreams.Shared.Managers
         {
             int spawnCount = difficulty.GetSpawnPerTick(gameTime);
             float hpMultiplier = difficulty.GetHealthMultiplier(gameTime, playerCount);
+            float damageMul = difficulty.GetDamageMultiplier(gameTime, playerCount);
+            float speedMul = difficulty.GetMoveSpeedMultiplier(gameTime, playerCount);
 
             for (int i = 0; i < spawnCount; i++)
             {
@@ -316,7 +320,7 @@ namespace SwDreams.Shared.Managers
 
                 if (type == EnemyType.Swarm)
                 {
-                    SpawnSwarmGroup(hpMultiplier, maxEnemies);
+                    SpawnSwarmGroup(hpMultiplier, damageMul, speedMul, maxEnemies);
                 }
                 else if (type == EnemyType.Ranged)
                 {
@@ -324,7 +328,7 @@ namespace SwDreams.Shared.Managers
                     Vector2 pos = GetSpawnPosition();
                     int id = nextEnemyId++;
                     photonView.RPC(nameof(RPC_SpawnRanged), RpcTarget.All,
-                        id, variantIdx, pos, hpMultiplier);
+                        id, variantIdx, pos, hpMultiplier, damageMul, speedMul);
                 }
                 else
                 {
@@ -332,12 +336,12 @@ namespace SwDreams.Shared.Managers
                     int id = nextEnemyId++;
                     int typeInt = (int)type;
                     photonView.RPC(nameof(RPC_SpawnEnemy), RpcTarget.All,
-                        id, typeInt, pos, hpMultiplier);
+                        id, typeInt, pos, hpMultiplier, damageMul, speedMul);
                 }
             }
         }
 
-        private void SpawnSwarmGroup(float hpMultiplier, int maxEnemies)
+        private void SpawnSwarmGroup(float hpMultiplier, float damageMul, float speedMul, int maxEnemies)
         {
             int groupSize = difficulty.GetSwarmGroupSize();
             Vector2 groupPos = GetSpawnPosition();
@@ -349,7 +353,7 @@ namespace SwDreams.Shared.Managers
 
                 int id = nextEnemyId++;
                 photonView.RPC(nameof(RPC_SpawnSwarm), RpcTarget.All,
-                    id, groupPos, hpMultiplier, baseAngle);
+                    id, groupPos, hpMultiplier, baseAngle, damageMul, speedMul);
             }
         }
 
@@ -587,6 +591,12 @@ namespace SwDreams.Shared.Managers
                 Enemy enemy = kvp.Value;
                 if (enemy != null && enemy.IsAlive)
                 {
+                    // R13: 호스트가 보관한 raw 배율을 그대로 전달.
+                    // hpMul=1f 는 기존 동작 유지 (HP 는 이미 호스트 측 결정값으로 사용 중).
+                    // damageMul/speedMul 은 신규 적이 호스트와 동일한 final 스탯으로 초기화되도록 실제 값 사용.
+                    float dmgMul = enemy.DamageMul;
+                    float spdMul = enemy.SpeedMul;
+
                     // 엘리트 우선 판정 — 타입과 무관하게 eliteVariants 역인덱스로 재스폰
                     if (enemy.IsElite)
                     {
@@ -596,7 +606,7 @@ namespace SwDreams.Shared.Managers
                         if (idx >= 0)
                         {
                             photonView.RPC(nameof(RPC_SpawnElite), newPlayer,
-                                enemy.EnemyId, idx, (Vector2)enemy.transform.position, 1f);
+                                enemy.EnemyId, idx, (Vector2)enemy.transform.position, 1f, dmgMul, spdMul);
                         }
                         else
                         {
@@ -609,7 +619,7 @@ namespace SwDreams.Shared.Managers
                     {
                         // Swarm은 위치만 동기화 (이미 이동 중이라 방향은 달라질 수 있음)
                         photonView.RPC(nameof(RPC_SpawnSwarm), newPlayer,
-                            enemy.EnemyId, (Vector2)enemy.transform.position, 1f, 0f);
+                            enemy.EnemyId, (Vector2)enemy.transform.position, 1f, 0f, dmgMul, spdMul);
                     }
                     else if (enemy.EnemyType == EnemyType.Ranged)
                     {
@@ -619,14 +629,14 @@ namespace SwDreams.Shared.Managers
                         if (variantIdx >= 0)
                         {
                             photonView.RPC(nameof(RPC_SpawnRanged), newPlayer,
-                                enemy.EnemyId, variantIdx, (Vector2)enemy.transform.position, 1f);
+                                enemy.EnemyId, variantIdx, (Vector2)enemy.transform.position, 1f, dmgMul, spdMul);
                         }
                     }
                     else
                     {
                         int typeInt = (int)enemy.EnemyType;
                         photonView.RPC(nameof(RPC_SpawnEnemy), newPlayer,
-                            enemy.EnemyId, typeInt, (Vector2)enemy.transform.position, 1f);
+                            enemy.EnemyId, typeInt, (Vector2)enemy.transform.position, 1f, dmgMul, spdMul);
                     }
                 }
             }
@@ -637,7 +647,8 @@ namespace SwDreams.Shared.Managers
         // ===== RPC =====
 
         [PunRPC]
-        private void RPC_SpawnEnemy(int enemyId, int enemyTypeInt, Vector2 position, float hpMultiplier)
+        private void RPC_SpawnEnemy(int enemyId, int enemyTypeInt, Vector2 position, float hpMultiplier,
+            float damageMul, float speedMul)
         {
             if (activeEnemies.ContainsKey(enemyId)) return;
             if (enemyPrefab == null) return;
@@ -660,7 +671,7 @@ namespace SwDreams.Shared.Managers
                 return;
             }
 
-            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier);
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier, damageMul, speedMul);
             activeEnemies[enemyId] = enemy;
 
             if (PhotonNetwork.IsMasterClient)
@@ -671,7 +682,8 @@ namespace SwDreams.Shared.Managers
         }
 
         [PunRPC]
-        private void RPC_SpawnSwarm(int enemyId, Vector2 position, float hpMultiplier, float baseAngle)
+        private void RPC_SpawnSwarm(int enemyId, Vector2 position, float hpMultiplier, float baseAngle,
+            float damageMul, float speedMul)
         {
             if (activeEnemies.ContainsKey(enemyId)) return;
             if (enemyPrefab == null || swarmData == null) return;
@@ -685,7 +697,7 @@ namespace SwDreams.Shared.Managers
                 return;
             }
 
-            enemy.Initialize(enemyId, swarmData, position, damageService, hpMultiplier);
+            enemy.Initialize(enemyId, swarmData, position, damageService, hpMultiplier, damageMul, speedMul);
 
             var movement = obj.GetComponent<EnemyMovement>();
             movement?.InitializeSwarm(baseAngle, 30f, swarmLifetime);
@@ -700,7 +712,8 @@ namespace SwDreams.Shared.Managers
         }
 
         [PunRPC]
-        private void RPC_SpawnRanged(int enemyId, int variantIdx, Vector2 position, float hpMultiplier)
+        private void RPC_SpawnRanged(int enemyId, int variantIdx, Vector2 position, float hpMultiplier,
+            float damageMul, float speedMul)
         {
             if (activeEnemies.ContainsKey(enemyId)) return;
             if (enemyPrefab == null) return;
@@ -718,7 +731,7 @@ namespace SwDreams.Shared.Managers
                 return;
             }
 
-            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier);
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier, damageMul, speedMul);
             activeEnemies[enemyId] = enemy;
 
             if (PhotonNetwork.IsMasterClient)
@@ -730,7 +743,7 @@ namespace SwDreams.Shared.Managers
 
         // ===== 엘리트 스폰 (Phase C) =====
 
-        private void SpawnElite(float hpMultiplier)
+        private void SpawnElite(float hpMultiplier, float damageMul, float speedMul)
         {
             // 비어있는 슬롯 스킵
             int candidates = 0;
@@ -759,11 +772,12 @@ namespace SwDreams.Shared.Managers
             int id = nextEnemyId++;
             Debug.Log($"[SpawnManager] 엘리트 스폰: {eliteVariants[eliteIdx].enemyName} (idx={eliteIdx}, id={id}, pos={pos})");
             photonView.RPC(nameof(RPC_SpawnElite), RpcTarget.All,
-                id, eliteIdx, pos, hpMultiplier);
+                id, eliteIdx, pos, hpMultiplier, damageMul, speedMul);
         }
 
         [PunRPC]
-        private void RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier)
+        private void RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier,
+            float damageMul, float speedMul)
         {
             if (activeEnemies.ContainsKey(enemyId)) return;
             if (enemyPrefab == null) return;
@@ -781,7 +795,7 @@ namespace SwDreams.Shared.Managers
                 return;
             }
 
-            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier);
+            enemy.Initialize(enemyId, data, position, damageService, hpMultiplier, damageMul, speedMul);
             activeEnemies[enemyId] = enemy;
 
             if (PhotonNetwork.IsMasterClient)

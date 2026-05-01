@@ -64,6 +64,33 @@ namespace SwDreams.Shared.Managers
             return base_ * scaling.healthMultiplier;
         }
 
+        // R13: 데미지 시간 배율 (raw, sensitivity 미적용 — 데미지는 전 타입 동일).
+        public float GetDamageMultiplier(float gameTime)
+        {
+            float t = GetT(gameTime);
+            return Eval(data.damageStart, data.damageEnd, data.damageCurve, t);
+        }
+
+        public float GetDamageMultiplier(float gameTime, int playerCount)
+        {
+            var scaling = GetPlayerScaling(playerCount);
+            return GetDamageMultiplier(gameTime) * scaling.damageMultiplier;
+        }
+
+        // R13: 이속 시간 배율 (raw, EnemyData.moveSpeedScaleSensitivity 적용 전).
+        // sensitivity 적용은 Enemy.Initialize 측 책임 (Lerp(1, mul, sens)).
+        public float GetMoveSpeedMultiplier(float gameTime)
+        {
+            float t = GetT(gameTime);
+            return Eval(data.moveSpeedStart, data.moveSpeedEnd, data.moveSpeedCurve, t);
+        }
+
+        public float GetMoveSpeedMultiplier(float gameTime, int playerCount)
+        {
+            var scaling = GetPlayerScaling(playerCount);
+            return GetMoveSpeedMultiplier(gameTime) * scaling.moveSpeedMultiplier;
+        }
+
         public float GetExpMultiplier(float gameTime, int playerCount)
         {
             float t = GetT(gameTime);
@@ -178,7 +205,9 @@ namespace SwDreams.Shared.Managers
                 playerCount = playerCount,
                 healthMultiplier = 1f,
                 maxEnemyMultiplier = 1f,
-                expMultiplier = 1f
+                expMultiplier = 1f,
+                damageMultiplier = 1f,
+                moveSpeedMultiplier = 1f
             };
         }
     }

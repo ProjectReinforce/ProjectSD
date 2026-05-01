@@ -46,8 +46,20 @@ namespace SwDreams.Features.Enemy.Adapter
         public int MaxHP { get; private set; }
         public bool IsAlive => CurrentHP > 0;
         public int ExpValue => enemyData != null ? enemyData.expValue : 0;
-        public float MoveSpeed => enemyData != null ? enemyData.moveSpeed : 0f;
-        public int ContactDamage => enemyData != null ? enemyData.contactDamage : 0;
+
+        // R13: 스폰 시 1회 계산된 final 값. base × 시간 배율 × 인원 배율 (이속은 sensitivity 추가).
+        // EnemyContact / EnemyAttack / EnemyMovement 호출부는 이 final 값만 본다.
+        private int finalContactDamage;
+        private int finalAttackDamage;
+        private float finalMoveSpeed;
+        // 중도 참가자 RPC 재전송용 — 호스트가 받은 raw 배율을 그대로 보관.
+        private float damageMulCached = 1f;
+        private float speedMulCached = 1f;
+
+        public float MoveSpeed => finalMoveSpeed;
+        public int ContactDamage => finalContactDamage;
+        public float DamageMul => damageMulCached;
+        public float SpeedMul => speedMulCached;
 
         // Phase 3: 타입 + 넉백 저항
         public EnemyType EnemyType => enemyData != null ? enemyData.enemyType : EnemyType.Chaser;
@@ -59,7 +71,7 @@ namespace SwDreams.Features.Enemy.Adapter
         public RangedAttack RangedAttackType => enemyData != null ? enemyData.rangedAttack : RangedAttack.Projectile;
         public float AttackRange => enemyData != null ? enemyData.attackRange : 0f;
         public float AttackInterval => enemyData != null ? enemyData.attackInterval : 0f;
-        public int AttackDamage => enemyData != null ? enemyData.attackDamage : 0;
+        public int AttackDamage => finalAttackDamage;
         public float ProjectileSpeed => enemyData != null ? enemyData.projectileSpeed : 0f;
         public float ProjectileLifetime => enemyData != null ? enemyData.projectileLifetime : 0f;
         public float TelegraphDuration => enemyData != null ? enemyData.telegraphDuration : 0f;
@@ -110,9 +122,12 @@ namespace SwDreams.Features.Enemy.Adapter
 
         /// <summary>
         /// 스폰 시 초기화. SpawnManager에서 호출.
+        /// damageMul/speedMul 은 R13 시간/인원 배율 (raw, sensitivity 미적용).
+        /// 격리 몹 등 시간 스케일링 무관 케이스는 default 1f 사용.
         /// </summary>
         public void Initialize(int id, EnemyData data, Vector2 position,
-            DamageService dmgService, float hpMultiplier = 1f)
+            DamageService dmgService, float hpMultiplier = 1f,
+            float damageMul = 1f, float speedMul = 1f)
         {
             EnemyId = id;
             enemyData = data;
@@ -122,6 +137,16 @@ namespace SwDreams.Features.Enemy.Adapter
             CurrentHP = MaxHP;
             transform.position = position;
             gameObject.tag = "Enemy";
+
+            // R13: final 스탯을 스폰 1회 계산해 캐싱. 런타임 재계산 없음.
+            damageMulCached = damageMul;
+            speedMulCached = speedMul;
+            finalContactDamage = Mathf.RoundToInt(data.contactDamage * damageMul);
+            finalAttackDamage = Mathf.RoundToInt(data.attackDamage * damageMul);
+            // 이속은 1 과 speedMul 사이를 sensitivity 만큼 보간 (sens=0 → 시간배율 영향 0%, sens=1 → 100%).
+            // 직접 곱하면 sens=0 시 이속이 0 이 되는 함정 회피.
+            float effectiveSpdMul = Mathf.Lerp(1f, speedMul, data.moveSpeedScaleSensitivity);
+            finalMoveSpeed = data.moveSpeed * effectiveSpdMul;
 
             // SO 의 visualScaleMultiplier 반영 (엘리트는 보통 >1 로 커 보이게)
             float mul = data.visualScaleMultiplier > 0.0001f ? data.visualScaleMultiplier : 1f;

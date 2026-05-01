@@ -38,6 +38,12 @@ namespace SwDreams.Features.Enemy.Adapter.Data
         public float moveSpeed = 0.48f;
         public int contactDamage = 10;
 
+        [Header("R13 이속 시간 스케일링 민감도")]
+        [Tooltip("이속 시간 배율의 반영 비율. 0=시간 영향 없음(Tank), 1=완전 반영(Runner).\n" +
+                 "권장: Tank 0.0 / Chaser 0.5 / Swarm 0.7 / Runner 1.0 / Ranged 0.3 / Elite 0.3~0.5")]
+        [Range(0f, 1f)]
+        public float moveSpeedScaleSensitivity = 0.5f;
+
         [Header("보상")]
         public int expValue = 5;
 

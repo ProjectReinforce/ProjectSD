@@ -27,6 +27,22 @@ namespace SwDreams.Shared.Data
         [Tooltip("X: 게임 진행(0~1), Y: 보간(0~1). S자 권장.")]
         public AnimationCurve hpCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        // ===== 적 데미지 =====
+        [Header("적 데미지 배율 (R13)")]
+        [Tooltip("게임 시작 시 데미지 배율. 1.0 = base 그대로.")]
+        public float damageStart = 1.0f;
+        [Tooltip("보스 직전 데미지 배율. 권장 3.0 (HP 25× 대비 보수적).")]
+        public float damageEnd = 3.0f;
+        public AnimationCurve damageCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+        // ===== 적 이속 =====
+        [Header("적 이속 배율 (R13, 타입별 sensitivity 적용 전 raw)")]
+        [Tooltip("게임 시작 시 이속 배율. 1.0 = base 그대로.")]
+        public float moveSpeedStart = 1.0f;
+        [Tooltip("보스 직전 이속 배율. 권장 1.6 (2.0+ 면 Runner 추격 불가).")]
+        public float moveSpeedEnd = 1.6f;
+        public AnimationCurve moveSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
         // ===== 스폰 간격 =====
         [Header("스폰 간격 (초)")]
         public float intervalStart = 1.5f;
@@ -74,10 +90,10 @@ namespace SwDreams.Shared.Data
         [Header("인원수별 스케일링")]
         public PlayerScaling[] playerScalings = new PlayerScaling[]
         {
-            new PlayerScaling { playerCount = 1, healthMultiplier = 0.6f, maxEnemyMultiplier = 0.6f, expMultiplier = 1.0f },
-            new PlayerScaling { playerCount = 2, healthMultiplier = 1.0f, maxEnemyMultiplier = 1.0f, expMultiplier = 1.0f },
-            new PlayerScaling { playerCount = 3, healthMultiplier = 1.4f, maxEnemyMultiplier = 1.3f, expMultiplier = 0.95f },
-            new PlayerScaling { playerCount = 4, healthMultiplier = 1.8f, maxEnemyMultiplier = 1.6f, expMultiplier = 0.9f }
+            new PlayerScaling { playerCount = 1, healthMultiplier = 0.6f, maxEnemyMultiplier = 0.6f, expMultiplier = 1.0f, damageMultiplier = 0.7f, moveSpeedMultiplier = 1.0f },
+            new PlayerScaling { playerCount = 2, healthMultiplier = 1.0f, maxEnemyMultiplier = 1.0f, expMultiplier = 1.0f, damageMultiplier = 1.0f, moveSpeedMultiplier = 1.0f },
+            new PlayerScaling { playerCount = 3, healthMultiplier = 1.4f, maxEnemyMultiplier = 1.3f, expMultiplier = 0.95f, damageMultiplier = 1.15f, moveSpeedMultiplier = 1.05f },
+            new PlayerScaling { playerCount = 4, healthMultiplier = 1.8f, maxEnemyMultiplier = 1.6f, expMultiplier = 0.9f, damageMultiplier = 1.3f, moveSpeedMultiplier = 1.1f }
         };
 
         // ===== Swarm =====
@@ -99,5 +115,8 @@ namespace SwDreams.Shared.Data
         public float healthMultiplier;
         public float maxEnemyMultiplier;
         public float expMultiplier;
+        // R13: 데미지/이속은 한 명에게 그대로 꽂히는 차원이라 HP 비율의 절반 ~ 1/3 만 적용.
+        public float damageMultiplier;
+        public float moveSpeedMultiplier;
     }
 }
