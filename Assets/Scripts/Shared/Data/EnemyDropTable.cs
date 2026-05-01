@@ -27,6 +27,9 @@ namespace SwDreams.Shared.Data
         [Tooltip("물약 드랍 확률.")]
         [Range(0f, 1f)] public float potionChance = 0f;
 
+        [Tooltip("마이크 필터 드랍 확률 (R3, 카오스 재미 요소). 매우 낮게 권장 (0.005 수준).")]
+        [Range(0f, 1f)] public float micFilterChance = 0f;
+
         [Header("정수 속성 가중치 (EssenceType 순서: Ice / Fire / Lightning)")]
         [Tooltip("정수 드랍 시 어느 속성이 떨어질지 결정. 배열 길이 3 권장. 정수는 등급 체계 없음.")]
         public float[] essenceTypeWeights = { 1f, 1f, 1f };

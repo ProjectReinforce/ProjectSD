@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-26 (R9 ✅ 마이그레이션 + Top 5 갱신)
+최종 업데이트: 2026-05-01 (R6 + U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -14,21 +14,21 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 ## 🎯 지금 추천 작업 (Top 5) — 사용자가 "다음 뭐 할까?" 물으면 이 섹션만 보고 답변
 
-> **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
+> **운영 룰 (마이그레이션 SSOT):** R/U/Phase 항목이 ✅ 처리되는 순간 → 본문은 [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. 절차: ① completed-work 카테고리 섹션에 bullet 추가 (R→`시스템/아키텍처`, U→`메뉴/UI`) ② roadmap 본문을 `### R{N}. {제목} ✅ (YYYY-MM-DD) → [completed-work.md](completed-work.md)` 1줄로 교체 ③ Top 5 큐에서 제거 + 다음 후보 1개 승격 ④ 시스템 spec 헤더(있으면) ⬜/🟡 → ✅ 갱신 ⑤ 진행 요약 표 갱신 (Phase 단위 변동 시) ⑥ 본 문서 최종 업데이트 라인 갱신. 모든 변경은 사용자 승인 diff 후 일괄 적용. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-04-26**
+> 마지막 갱신: **2026-05-01** (R6/U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
 | 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ R12](#r12-설정-패널--video--audio--language) **설정 패널 — Phase 1 AudioMixer 셋업** | TitleSettings TODO 해소 + 출시 인프라. AudioMixer 만 먼저 끝내면 Voice·언어 작업 모두 unblock | 없음 (Phase 1 선행 가능, Phase 2~5 는 후속) | Phase 1 만 0.5일 |
-| 3 | [§ R11](#r11-파티원--보스-위치-인디케이터--world-indicator-ui) **World Indicator UI** | 4인 Co-op UX 개선. 명세 완비 (world-indicator.md). 보스 추적도 개선 | 없음 (선행 가능) | 1.5~2일 |
-| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 2 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 3 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
+| 4 | [§ Phase 8-5 B](#8-5-localization--다국어-텍스트-koenjazh-cn) **Localization UI 키 매핑** | Phase A (코어+임포터) ✅ 완료된 상태. 점진 적용 가능. 출시 인프라 진척 | Phase 8-5 A ✅ | 수일~1주 (점진) |
+| 5 | [§ Phase 8-1](#8-1-platform-추상화-phase-a--선행-가능) **Platform 추상화 (Phase A)** | 컨텐츠와 병행 가능. 코드 변경 최소, 게임 동작 변화 없음. Stove/Steam 출시 인프라 선행 | 없음 | 0.5~1일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R11, R12, R4 모두 독립.
-**병렬 가능 그룹**: R12 Phase 1 (AudioMixer) + R11 + R10 셋이 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R3 (마이크 필터 — Phase 8-2 동반), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 A (Localization 코어).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, Phase 5-2/5-3, R4, Phase 8-5 B, Phase 8-1 A 모두 독립.
+**병렬 가능 그룹**: R10 + Phase 5 + Phase 8-5 B + Phase 8-1 A 가 서로 다른 파일 영역이라 동시 진행 OK.
+**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-5 C (스킬 SO 통합), Phase 3-4 화면 밖 적 간소화 AI.
 
 ---
 
@@ -44,7 +44,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
 | 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
-| 8. 출시 인프라 (Voice / Platform SDK / Localization) | ⬜ 대기 (설계만) | [voice-chat.md](../systems/voice-chat.md), [platform-integration.md](../systems/platform-integration.md), [localization.md](../systems/localization.md). R3 마이크 필터 아이템 8-2 와 함께 |
+| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-2 ✅, 8-5 A ✅) | 8-2 Voice 1차 ✅ (2026-04-27). 8-5 A 코어+임포터 ✅ (2026-04-28). 8-1/8-3/8-4/8-5 B~D ⬜ |
 | 드랍/장비/퀘스트 (Phase 0~7) | 🟡 코드 거의 완료 | 코드 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md). HUD/유저 Unity 배선/Quest 핸들러 잔여 — 본 문서 § DQ |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
@@ -230,11 +230,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 ### R2. 체력 자연회복 패시브 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
-### R3. 마이크 필터 드랍 아이템 (재미 요소)
-- 드랍 시 랜덤 플레이어의 마이크에 일정 시간 필터(LowPass / Distortion 등) 적용.
-- **Photon Voice 2 가능 확인됨**: 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 컴포넌트 부착. 적용 대상은 RPC 동기화.
-- **Phase 8-2 보이스챗 도입과 함께 진행**.
-- 관련 SSOT: [../systems/voice-chat.md](../systems/voice-chat.md), [../game-design/items.md](../game-design/items.md)
+### R3. 마이크 필터 드랍 아이템 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+5종 필터(LowPass/Distortion/Echo/PitchHelium/PitchDemon) + 호스트 권위 RPC + 클라 자체 만료 + 본인 포함 랜덤 1명 + 새 필터로 즉시 교체 + 시각 표시 없음(카오스 재미). ParrelSync 2 인스턴스 검증 통과. 빌드 환경 송수신 종합 검증은 Phase 8-2 후행과 별건.
 
 ### R4. 캐릭터/적 아웃라인 — 스프라이트 애니메이션 호환성 + 퍼포먼스 검토
 - 현재 아웃라인은 적용됐으나, 스프라이트 애니메이션이 적용된 상태에서도 정상 반영되는지 검증 필요.
@@ -244,8 +242,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - 현재 연쇄폭발/단결 등 글로벌 효과는 캐릭터 프리팹의 Skills 오브젝트에 설정됨.
 - 게임 설정(`GameplayConfig.asset`) 으로 이전이 적절한지 검토. **일단 기록만** (의사결정 보류).
 
-### R6. 회오리/끌어당김 `pullRadius` 패시브 반응
-- [known-issues.md B1](known-issues.md) 과 같은 코드 수정 단위. SkillRange 패시브에 영향 받도록 `pullRadius * (1 + ctx.skillRangeBonus)`.
+### R6. 회오리/끌어당김 `pullRadius` 패시브 반응 ✅ (2026-04-25) → [completed-work.md](completed-work.md)
+
+`TrajectoryFactory.Create` 에 `skillRangeBonus` 인자 추가, `effectivePullRadius = data.pullRadius + ctx.skillRangeBonus`. 회오리/나선/부메랑 trajectory 전부 적용. 곱셈 안(`*(1+bonus)`) 대신 다른 spawner 와 일관된 덧셈 패턴 채택.
 
 ### R7. 플레이어 무적 시간 (i-frame) ✅ (2026-04-25) → [completed-work.md](completed-work.md)
 
@@ -287,113 +286,23 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 **관련:** [network-sync.md § 8.1](../systems/network-sync.md), [EnemyMovement.cs](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs)
 
-### R11. 파티원 / 보스 위치 인디케이터 — World Indicator UI
+### R11. 파티원 / 보스 위치 인디케이터 — World Indicator UI ✅ (2026-04-26) → [completed-work.md](completed-work.md)
 
-**개요:** 화면 안에 있을 때는 머리 위 이름표만, 화면 밖으로 나가면 가장자리 인디케이터(화살표 + 테두리색 + 아래 이름)로 전환. 4인 Co-op 파티원 위치 추적 + 보스 페이즈 이동 시 추적 끊김 해소. 상세 [../systems/world-indicator.md](../systems/world-indicator.md).
+랜덤 퀘스트 인디케이터까지 R11 범위에 흡수해 어댑터 3종 + Manager pending drain 패턴으로 완료. 후속:
+- [ ] **Localization** (Phase 8-5 C) — Boss `DisplayName` "Boss" 및 QuestData displayName 을 키로 교체
+- [ ] **인접 인디케이터 오프셋 분산** (별건) — 모서리 4명 밀집 시 색만으로 구분 어려운 케이스 발견되면
 
-**확정 결정사항:**
-- In-Screen: 머리 위 이름 텍스트만 (마커/아이콘 없음)
-- Off-Screen: 작은 화살표 + 테두리색 + 아래 이름
-- 히스테리시스 β 표준 — 두 임계값 (`viewport ∈ [0,1]` 진입 / `[-ε, 1+ε]` 이탈, ε=0.05)
-- 표시 정책 카테고리별: 파티원 `AlwaysShow` / 보스 `OffScreenOnly` / 퀘스트 `WhileActive` (보류)
-- 색상: ActorNumber 기준 슬롯 팔레트 4색
+### R12. 설정 패널 — Video / Audio / Language ✅ (2026-04-27) → [completed-work.md](completed-work.md)
 
-**Phase 1 — 코어 시스템:**
-- [ ] 폴더 생성: `Features/UI/Adapter/Indicator/`, `Features/UI/Presentation/Indicator/`
-- [ ] `IWorldIndicatorTarget` 인터페이스 + `IndicatorPolicy` enum (Adapter)
-- [ ] `PlayerColorPalette` 정적 클래스 (Adapter, 슬롯 4색)
-- [ ] `WorldIndicatorManager` 싱글턴 — `Register`/`Unregister` + View 풀 (Adapter)
-- [ ] `WorldIndicatorView` 히스테리시스 상태머신 + 가장자리 클램프 (Presentation)
-- [ ] 프리팹 `Assets/Resources/Prefabs/UI/WorldIndicator.prefab` — 자식 `OnScreenRoot`/`OffScreenRoot` 토글 구조
-- [ ] GameScene 진입점에 Manager + Canvas 2종(WorldSpace / ScreenSpaceOverlay) 배치
+Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 메뉴 진입점. 후행: Voice/Mic 실효 = Phase 8-2, Locale 실효 = Phase 8-5 A, 클라우드 마이그레이션 = Phase 8-1.
 
-**Phase 2 — 등록/해제 어댑터:**
-- [ ] `Features/Character/Adapter/PartyMemberIndicatorAdapter.cs` — Player 프리팹에 부착, `pv.IsMine==false` 일 때만 등록
-- [ ] `Features/Boss/Adapter/BossIndicatorAdapter.cs` — Boss 프리팹에 부착, `IsActive` 는 `boss.IsAlive && GameState==BossFight`
-- [ ] Player / Boss 프리팹에 컴포넌트 추가 (인스펙터 작업)
-- [ ] `GamePlayerSpawner` / `BossSpawner` 가 어댑터 컴포넌트 부착되어 있는지 검증
+### R13. 적 스탯 스케일링 ✅ (2026-05-01, 커밋 `1e4c373fb`) → [completed-work.md](completed-work.md)
 
-**Phase 3 — 검증:**
-- [ ] ParrelSync 4 인스턴스 — 4인 동시 화면 밖 시나리오, 모서리 색상 4종 구분
-- [ ] 화면 경계 진동 시 깜빡임 없는지 (히스테리시스)
-- [ ] 보스 페이즈 이동 패턴 시 인디케이터 표시 / 화면 안 복귀 시 숨김 (`OffScreenOnly`)
-- [ ] 카메라 뒤(`z<0`) 안전 가드 동작
-- [ ] `architecture-guardian` 호출 — Domain 위반 없음 확인 (본 시스템은 Domain 레이어 없음)
+데미지/이속 시간 곡선(1.0→3.0 / 1.0→1.6) + 타입별 sensitivity(Tank 0/Chaser 0.5/Swarm 0.7/Runner 1.0/Ranged 0.3) + PlayerScaling 확장(damageMul/moveSpeedMul). 호스트 권위 + 스폰 1회 캐싱. photon-sync-auditor 통과. 사용자 후속(별건): EnemyData 12개 .asset sensitivity 인스펙터 채우기(현재 default 0.5 단일). 상세 [enemy-stat-scaling.md](../systems/enemy-stat-scaling.md).
 
-**Phase 4 — Localization 후속 (Phase 8-5 C 시점):**
-- [ ] Boss `DisplayName` 의 "Boss" 문자열을 키로 교체 (`boss.indicator.name` 등)
+### R14. 인게임/대기실 보이스 HUD ✅ (2026-05-01, 커밋 `0b1b23ff1`) → [completed-work.md](completed-work.md)
 
-**범위 외 (별건 작업):**
-- 퀘스트 인디케이터 실 등록 — `IndicatorPolicy.WhileActive` enum 만 추가, 어댑터는 퀘스트 시스템 구현 시점에 작성
-- 인접 인디케이터 오프셋 분산
-- 화면 short-side 기준 padding 정규화
-- 미니맵 (별도 시스템)
-
-**관련:** [world-indicator.md](../systems/world-indicator.md), [waiting-room.md](../systems/waiting-room.md) (LobbyPlayer 오버헤드 UI 패턴)
-
-### R12. 설정 패널 — Video / Audio / Language
-
-**개요:** TitlePanelController 의 설정 버튼(현재 TODO)과 ESC 인게임 일시정지 메뉴(U4) 양쪽에서 호출되는 통합 설정 패널. 비디오·오디오·언어 카테고리. **U6 (설정창 구조잡기) 를 본 R12 로 흡수.**
-
-**확정 결정사항:**
-- **비디오:** 창모드 토글(Fullscreen Borderless / Windowed) + 해상도 드롭다운(코드 작성, 1차 빌드는 FHD 16:9 강제 — 베타 테스트 후 토글 결정)
-- **오디오:** 5 슬라이더 (Master / BGM / SFX / Voice / MicSensitivity)
-  - **Voice 만 0~2 범위** + AudioMixer dB 변환 (`Mathf.Log10(v)*20`) → 1.0 = 0dB, 2.0 = +6dB 부스트
-  - BGM/SFX/Master 는 0~1 (게임 사운드 클리핑 방지)
-  - **MicSensitivity 는 볼륨 슬라이더 아님** — Photon Voice 2 의 `Recorder.VoiceDetectionThreshold` (게이트 임계값, 0~1)
-- **언어:** 4개 드롭다운 (KO/EN/JA/ZH-CN), `LocalizationBootstrap.Service?.SetLocale(...)` 풀 구현
-- **저장:** 1차 PlayerPrefs. Phase 8-1 PlatformService 도입 후 `settings.video` / `settings.audio` / `settings.input` 키로 클라우드 마이그레이션
-- **진입 경로:** TitlePanelController.OnClickSettings + ESC 일시정지 메뉴 (U4 별건 유지)
-
-**Phase 1 — AudioMixer 셋업 (사전 작업):**
-- [ ] `Assets/Audio/MasterMixer.mixer` 생성
-- [ ] Group: Master → BGM, SFX, Voice (3 자식)
-- [ ] Exposed Parameters: `MasterVol`, `BGMVol`, `SFXVol`, `VoiceGain` (dB)
-- [ ] 기존 `AudioManager` / `AudioLibrary` 의 AudioSource Output 을 해당 Mixer Group 으로 라우팅
-- [ ] Photon Voice 2 도입 시(Phase 8-2) `Speaker` 프리팹 Output → Voice Group 명시 (8-2 체크리스트에 추가 메모)
-
-**Phase 2 — 설정 데이터 모델:**
-- [ ] `Features/UI/Adapter/Settings/SettingsModel.cs` — 직렬화 가능 VO (창모드 enum, 해상도 width/height, 5 볼륨 float, locale enum)
-- [ ] `Features/UI/Adapter/Settings/SettingsManager.cs` 싱글턴 — Load/Save (PlayerPrefs), 변경 시 즉시 적용 (Apply 버튼 vs 즉시? **즉시 적용** 권장 — 슬라이더 미리듣기)
-- [ ] PlayerPrefs 키: `settings.video.windowMode`, `settings.video.resWidth`, `settings.video.resHeight`, `settings.audio.master`, `settings.audio.bgm`, `settings.audio.sfx`, `settings.audio.voice`, `settings.audio.micSens`, `settings.locale`
-
-**Phase 3 — 설정 UI 패널:**
-- [ ] `Assets/Resources/Prefabs/UI/SettingsPanel.prefab` 신규
-- [ ] 탭 3개 (Video / Audio / Language) — 또는 단일 스크롤 패널 (디자인 결정)
-- [ ] **Video:** 창모드 Toggle + 해상도 Dropdown (16:9 비율만 필터)
-- [ ] **Audio:** 슬라이더 5개. Voice 슬라이더 1.0 위치에 노치 마커 (UI Image)
-- [ ] **Language:** Dropdown 4개 옵션
-- [ ] 닫기 버튼 — 자동 저장 (PlayerPrefs.Save)
-- [ ] `Features/UI/Presentation/SettingsPanelUI.cs` — 슬라이더 onValueChanged → SettingsManager 즉시 적용
-
-**Phase 4 — 진입 경로 연결:**
-- [ ] [TitlePanelController.OnClickSettings](../../Assets/Scripts/Features/UI/Adapter/Menu/TitlePanelController.cs) — TODO 해소, SettingsPanel 호출
-- [ ] ESC 일시정지 메뉴(U4) 의 "설정" 버튼 → SettingsPanel 호출 (U4 자체는 별건 유지)
-- [ ] SettingsPanel 은 `Frame_PopUp` 프레임워크 사용 (모달, 일시정지 가능 — 멀티에선 GameState.Paused 패턴 메모리 룰)
-
-**Phase 5 — 검증:**
-- [ ] 설정 변경 후 게임 재시작 시 값 복원
-- [ ] 슬라이더 즉시 적용 (미리듣기 동작)
-- [ ] Voice 슬라이더 1.5 → 보이스 1.5배 들리는지 (Photon Voice 2 도입 후 검증, 8-2 단계)
-- [ ] 언어 변경 시 모든 `LocalizedText` 즉시 갱신 (Phase 8-5 A 도입 후 검증)
-- [ ] 창모드 토글 시 즉시 전환 (재시작 불필요)
-- [ ] `architecture-guardian` 통과
-
-**Phase 6 — 클라우드 세이브 마이그레이션 (Phase 8-1 후):**
-- [ ] `SettingsManager` 의 PlayerPrefs Read/Write 를 `PlatformBootstrap.Service.LoadData/SaveData("settings.*")` 로 변경
-- [ ] PlayerPrefs 는 fallback 으로만 유지 (오프라인 / Local 플랫폼)
-
-**범위 외:**
-- 키바인딩 (별도 작업 — `settings.input` 키만 미리 예약)
-- 그래픽 품질 옵션 (Bloom on/off 등 — 7-3 비주얼 작업과 함께)
-- 접근성 옵션 (색약 모드, 자막 등) — 출시 후 검토
-- ExclusiveFullScreen 모드 (모니터 충돌 위험으로 제외)
-
-**관련:**
-- [platform-integration.md](../systems/platform-integration.md) — 클라우드 세이브 키 규약
-- [localization.md](../systems/localization.md) — 언어 드롭다운 동작
-- [voice-chat.md](../systems/voice-chat.md) — Voice/MicSens 적용 대상
-- [ui-frame.md](../systems/ui-frame.md) — Frame_PopUp 프레임워크
+좌측 별도 VoicePanel(대기실/인게임 동일 prefab) + 호버 알파 + AudioGainBoost(0~2 boost) + 마이크 민감도 3곳 양방향 + Discord 패턴 마이크 활성도 아이콘. LobbyPlayer.prefab Phase 8-2 보이스 셋업 보완 — 대기실 음성 송수신 활성화. 후속 별건: U4 ESC 메뉴 팀원 섹션(PerUserVoiceSettings 싱글턴 공유로 자동 정합) / LobbyPlayerEntry.prefab 잔존 빈 VoiceSlider 자식 정리. 상세 [voice-chat.md](../systems/voice-chat.md).
 
 ---
 
@@ -409,9 +318,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 ### U3. 혼자하기에서 나가기 → 방 리스트로
 - 솔로 모드 LeaveRoom 시 `MenuSceneManager.ShowRoomList()` 라우팅.
 
-### U4. ESC 인게임 일시정지 메뉴
-- 인게임: ESC → `GameState.Paused` + 메뉴 UI (재개/설정/방 나가기). 메인씬: ESC = 뒤로가기.
-- 멀티플레이 정지 정책 결정 필요 (혼자 정지 vs 전원 정지 vs 메뉴만 표시).
+### U4. ESC 인게임 일시정지 메뉴 ✅ (2026-05-01) → [completed-work.md](completed-work.md)
+
+`InGameMenuController` + 임시 `ConfirmDialog` (Frame_PopUp 작성 시 이관) + `InGameMenuCanvas.prefab` (sortOrder=100). 솔로 한정 `GameState.Paused` 진정 정지 + `GameManager.IsMenuPaused` 보조 플래그(LevelUpManager 자기참조 회피용 외부 정지원 가드). 멀티는 로컬 UI 토글. 호출 가능 상태 = Playing/BossFight/Paused 한정 + 닫기는 GameOver/GameClear 에서도 허용. 후속 별건: R14 § 팀원 보이스 슬라이더 섹션, GameOver 자동 닫기 (보류).
 
 ### U5. 결과창 "나가기" → 방 리스트로
 - 현재 Title 경유. RoomList 직행으로 라우팅 (`ResultManager.OnExit` → `ShowRoomList`).
@@ -419,6 +328,14 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 ### U6. 설정창 구조잡기 → **R12 로 통합 (2026-04-26)**
 - ~~`TitlePanelController.OnClickSettings()` TODO~~ → [§ R12](#r12-설정-패널--video--audio--language) 로 흡수. Video/Audio/Language 카테고리로 확정.
 - 키바인딩은 R12 범위 외 — 별건 작업으로 보류 (`settings.input` PlayerPrefs 키만 예약).
+
+### U7. 스킬 카드에 적용 패시브 + multiplier 표시 (N18 후속, 옵션)
+- 현재 [SkillCardDescriptionFormatter](../../Assets/Scripts/Features/UI/Presentation/SkillCardDescriptionFormatter.cs) 가 SO base 수치만 표시 (Survivors-like 표준). N18 도입으로 스킬마다 패시브 영향력 차등 가능해진 후, 카드에서 "이 스킬은 SkillRange 50% 만 적용" 같은 정보가 노출되지 않음.
+- 우선순위: 낮음 (Vampire Survivors 등도 동일 패턴, 데미지 팝업으로 실효 확인). 후속 UX 향상 필요 시 추가.
+- 구현 후보:
+  - 카드 하단 작은 영역에 적용 패시브 리스트 (예: `SkillRange ×50%, ProjectileSpeed ×100%`) — 빈 리스트(전부 적용) 인 경우 미표시
+  - `PlayerStats.ApplyAttackTo(data.GetDamageForLevel(level), data)` 호출로 실제 적용 데미지 부가 표시
+- 0.5일.
 
 ---
 
@@ -493,17 +410,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 > **컨텐츠 작업과 병행 가능.** 코드 변경 최소, 게임 동작 변화 없음. 상세 [../systems/platform-integration.md § 12](../systems/platform-integration.md)
 
-### 8-2. Photon Voice 2 통합
-- [ ] Photon 대시보드에서 Voice AppId 발급
-- [ ] Asset Store 에서 "Photon Voice 2" 임포트
-- [ ] `PhotonVoiceNetwork` 컴포넌트 씬 배치
-- [ ] Player 프리팹에 `PhotonVoiceView` + `Recorder` + `Speaker` 추가
-- [ ] `Features/Voice/Adapter/VoiceController.cs` 작성 (PTT / Open Mic)
-- [ ] 인게임 HUD 에 마이크 토글 UI 추가
-- [ ] ParrelSync 4인스턴스 테스트
-- [ ] **마이크 필터 드랍 아이템 ([§ R3](#r3-마이크-필터-드랍-아이템-재미-요소))** — 수신 측 `Speaker` AudioSource 에 Unity AudioFilter 부착 + RPC 동기화
+### 8-2. Photon Voice 2 통합 ✅ 1차 (2026-04-27) → [completed-work.md](completed-work.md)
 
-> 상세 [../systems/voice-chat.md](../systems/voice-chat.md)
+PunVoiceClient + PlayerStub 4컴포넌트 + VoiceController/MicToggleButton/MicTestService + SettingsPanel 통합 완료. micSensitivity = 0 함정 floor 클램프. 후행: 빌드 환경 송수신 검증 + R3 마이크 필터 드랍 ([§ R3](#r3-마이크-필터-드랍-아이템-재미-요소)). 상세 [../systems/voice-chat.md](../systems/voice-chat.md).
 
 ### 8-3. Stove Indie 출시 (Phase B)
 - [ ] Stove 인디 개발자 등록 + AppId 발급
@@ -527,15 +436,7 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 자체 구현 (Unity Localization Package 미사용). Google Sheets 가 작업용 SSOT, 빌드타임에 SO 임포트. 상세 [../systems/localization.md](../systems/localization.md).
 
-**Phase A — 코어 시스템 + 임포터** (1.5~2일, 컨텐츠 독립 / 선행 가능)
-- [ ] `Assets/Scripts/Shared/Localization/{Domain,Adapter,Editor}/` 폴더 생성
-- [ ] `ILocalizationService` + `Locale` enum + (선택) `LocalizationKey` 상수 (Domain)
-- [ ] `LocalizationManager` (동기 API) + `LocalizationTable` (SO) + `LocaleFontMap` (SO) + `LocalizedText` (TMP 컴포넌트) + `LocalizationBootstrap` (싱글턴, DontDestroyOnLoad) (Adapter)
-- [ ] `LocalizationSheetImporter` 에디터 윈도우 — public CSV export URL 기반 (Service Account JSON 불필요)
-- [ ] 빈 `Assets/Data/Localization/LocalizationTable.asset` + `LocaleFontMap.asset` 생성
-- [ ] Google Sheet 템플릿 작성 (헤더: `key`, `ko_auto`, `en_auto`, `ja_auto`, `zh_auto`, `ko_final`, `en_final`, `ja_final`, `zh_final`, `note`)
-- [ ] 1~2개 키로 임포트 동작 확인
-- [ ] `architecture-guardian` 통과 (Domain 3 파일에 `UnityEngine`/`Photon`/`TMPro` import 없음)
+**Phase A — 코어 시스템 + 임포터** ✅ (2026-04-28) → [completed-work.md](completed-work.md)
 
 **Phase B — UI 키 매핑** (수일~1주, 점진적)
 - [ ] MenuScene UI(Title/RoomList/WaitingRoom/CharacterSelect)에 `LocalizedText` + 키 매핑

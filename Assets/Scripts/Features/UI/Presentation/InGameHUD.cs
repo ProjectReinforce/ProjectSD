@@ -303,12 +303,15 @@ namespace SwDreams.Features.UI.Presentation
 
         // ===== 팀원 상태 =====
 
+        private static readonly HashSet<int> aliveViewIds = new HashSet<int>();
+
         private void UpdateTeammates()
         {
             if (teammateContainer == null || teammatePrefab == null) return;
 
             var players = GameObject.FindGameObjectsWithTag("Player");
 
+            aliveViewIds.Clear();
             foreach (var p in players)
             {
                 var pv = p.GetComponent<PhotonView>();
@@ -317,6 +320,8 @@ namespace SwDreams.Features.UI.Presentation
                 int viewId = pv.ViewID;
                 var damageable = p.GetComponent<IDamageable>();
                 if (damageable == null) continue;
+
+                aliveViewIds.Add(viewId);
 
                 if (!teammateEntries.ContainsKey(viewId))
                 {
@@ -343,7 +348,23 @@ namespace SwDreams.Features.UI.Presentation
                     tm.hpSlider.value = damageable.CurrentHP;
                 }
             }
+
+            // disconnect / 풀 반환 등으로 사라진 팀원 entry 정리
+            staleViewIds.Clear();
+            foreach (var kv in teammateEntries)
+            {
+                if (!aliveViewIds.Contains(kv.Key)) staleViewIds.Add(kv.Key);
+            }
+            for (int i = 0; i < staleViewIds.Count; i++)
+            {
+                int id = staleViewIds[i];
+                if (teammateEntries.TryGetValue(id, out var stale) && stale.obj != null)
+                    Destroy(stale.obj);
+                teammateEntries.Remove(id);
+            }
         }
+
+        private static readonly List<int> staleViewIds = new List<int>();
 
         // ===== 내부 구조체 =====
 

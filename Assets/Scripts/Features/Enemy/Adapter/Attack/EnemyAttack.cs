@@ -52,6 +52,9 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
                 state != GameManager.GameState.BossFight)
                 return;
 
+            // GameState 가드 통과한 프레임만 쿨다운 진행 — LevelUp 등 일시정지 동안 정지 보장.
+            cooldown.Tick(Time.deltaTime);
+
             if (!cooldown.CanFire()) return;
 
             Transform target = targeter.FindClosestAlivePlayer();

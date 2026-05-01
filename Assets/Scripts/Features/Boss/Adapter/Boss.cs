@@ -29,7 +29,7 @@ namespace SwDreams.Features.Boss.Adapter
     /// - SpriteRenderer
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
-    public class Boss : MonoBehaviourPun, IDamageable
+    public class Boss : MonoBehaviourPun, IDamageable, IEnemyEntity
     {
         [SerializeField] private BossData bossData;
 

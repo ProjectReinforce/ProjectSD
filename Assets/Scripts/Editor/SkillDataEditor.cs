@@ -195,7 +195,8 @@ namespace SwDreams.Editor
                     if (firingMode == SwDreams.Features.Skill.Domain.ValueObjects.FiringMode.TwoPhase)
                     {
                         EditorGUILayout.Space();
-                        EditorGUILayout.LabelField("TwoPhase — Phase2 투사체", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField("TwoPhase — Phase1 회전 + Phase2 투사체", EditorStyles.boldLabel);
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("phase1RotationCount"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("projectilePrefab"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileSpeed"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("projectileCount"));
@@ -240,7 +241,6 @@ namespace SwDreams.Editor
                 {
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("공통 효과", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("maxInstances"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("effectPrefab"));
                 }
 
@@ -251,7 +251,7 @@ namespace SwDreams.Editor
                     "비어있으면 모든 패시브가 이 스킬에 적용됩니다.\n" +
                     "특정 스탯만 선택하면 해당 스탯 보너스만 적용됩니다.",
                     MessageType.Info);
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("applicableStats"), true);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("statOverrides"), true);
 
                 // Trigger+Effect 조합 (액티브만)
                 EditorGUILayout.Space();

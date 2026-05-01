@@ -16,6 +16,10 @@ namespace SwDreams.Features.Quest.Adapter.Data
         public string displayName;
         [TextArea] public string description;
 
+        [Header("배치 분류")]
+        [Tooltip("true 면 런타임 랜덤 스폰 — World Indicator 표시 대상. false(맵 고정) 은 미니맵 영역.")]
+        public bool isRandom = false;
+
         [Header("진행")]
         public QuestType questType = QuestType.KillTarget;
 

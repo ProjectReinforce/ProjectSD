@@ -40,8 +40,9 @@ namespace SwDreams.Features.Skill.Adapter
         private float rotationSpeed;
         private float currentAngle;
 
-        // TwoPhase: 1바퀴 회전 완료 시 Phase2 트리거
+        // TwoPhase: N바퀴 회전 완료 시 Phase2 트리거 (N = SkillData.phase1RotationCount, 인스펙터 조정).
         private bool fireOnOneRotation;
+        private float phase1TargetAngle; // 360 * rotationCount
         private float angleTraveled;
         private bool phase1Fired;
 
@@ -83,11 +84,13 @@ namespace SwDreams.Features.Skill.Adapter
 
         /// <summary>
         /// OrbitalSpawner에서 호출. 궤도 파라미터 포함.
-        /// fireOnOneRotation=true이면 duration 대신 1바퀴 완주 후 콜백 + 소멸(TwoPhase 전용).
+        /// fireOnOneRotation=true이면 duration 대신 N바퀴 완주 후 콜백 + 소멸(TwoPhase 전용).
+        /// phase1RotationCount = 회전 횟수 (1.0=한바퀴, 2.0=두바퀴, ...). SkillData.phase1RotationCount 인스펙터 조정.
         /// </summary>
         public void Initialize(int damage, float knockbackForce, float duration,
             Transform playerTransform, float baseAngle, float orbitRadius, float rotationSpeed,
             Transform ownerTransform, bool fireOnOneRotation = false,
+            float phase1RotationCount = 1f,
             SkillTriggerSystem triggerSystem = null)
         {
             this.damage = damage;
@@ -99,6 +102,7 @@ namespace SwDreams.Features.Skill.Adapter
             this.rotationSpeed = rotationSpeed;
             this.triggerSystem = triggerSystem;
             this.ownerTransformRef = ownerTransform;
+            this.phase1TargetAngle = 360f * Mathf.Max(0.1f, phase1RotationCount);
 
             // 소유자 판별
             isLocalPlayerOwned = false;
@@ -149,11 +153,11 @@ namespace SwDreams.Features.Skill.Adapter
                 if (currentAngle >= 360f) currentAngle -= 360f;
                 else if (currentAngle < 0f) currentAngle += 360f;
 
-                // TwoPhase: 1바퀴 누적되면 Phase2로 전환
+                // TwoPhase: N바퀴 누적되면 Phase2로 전환 (N = SkillData.phase1RotationCount).
                 if (fireOnOneRotation && !phase1Fired)
                 {
                     angleTraveled += Mathf.Abs(delta);
-                    if (angleTraveled >= 360f)
+                    if (angleTraveled >= phase1TargetAngle)
                     {
                         phase1Fired = true;
                         TriggerPhase1Complete();

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
 using UnityEngine;
@@ -10,33 +9,31 @@ namespace SwDreams.Features.Skill.Adapter
     /// <summary>
     /// 장판(지대) 스폰 담당. ISkillSpawner 구현.
     ///
-    /// 기존 AreaEffect의 장판 생성 + activeZones 관리 로직을 이전.
-    /// Executor가 Spawn()을 호출하면 장판 1개를 생성.
-    /// maxInstances 초과 시 가장 오래된 장판을 제거.
+    /// 기존 AreaEffect의 장판 생성 로직 이전.
+    /// Executor가 Spawn()을 호출하면 장판 1개를 생성. AreaZone 자체 duration 으로 자연 소멸.
+    ///
+    /// maxInstances 인공 한도는 제거됨 (2026-04-29) — Survivors-like 화면 도배가 컨셉.
+    /// 자연 한도(duration / cooldown 비율) + PoolManager 동적 확장으로 충분.
+    /// 극단 케이스(duration 패시브 무한 누적) 보호망이 필요해지면 GameplayConfig 글로벌 한도 도입.
     ///
     /// 스킬: 번개(DelayedBurst), 개미지옥(DelayedBurst), 성역(Single),
     ///       장풍, 별똥별, 뇌전역(진화) 등
-    ///
-    /// [Phase 7 리팩토링] Step 4-4
     /// </summary>
     public class AreaSpawner : ISkillSpawner
     {
+        private const int InitialPrewarmCount = 8;
+
         private readonly GameObject zonePrefab;
-        private readonly int maxInstances;
 
-        // 활성 장판 추적 (maxInstances 관리). 상태 유지 필요.
-        private readonly List<GameObject> activeZones = new List<GameObject>();
-
-        public AreaSpawner(GameObject prefab, int maxInstances)
+        public AreaSpawner(GameObject prefab)
         {
             this.zonePrefab = prefab;
-            this.maxInstances = maxInstances;
         }
 
         public void Prewarm(SkillData data)
         {
             if (zonePrefab != null)
-                PoolManager.Instance?.Prewarm(zonePrefab, maxInstances + 2);
+                PoolManager.Instance?.Prewarm(zonePrefab, InitialPrewarmCount);
         }
 
         public void Cleanup()
@@ -44,18 +41,30 @@ namespace SwDreams.Features.Skill.Adapter
             // 장판은 자체 duration으로 소멸 — 강제 정리 불필요
         }
 
+        /// <summary>
+        /// [N15] 자기 클라가 발사 결정 시 Random.insideUnitCircle 한 번만 호출.
+        /// 결정한 spawnPos 가 RPC 인자로 모든 클라에 전파 → 동일 위치 보장.
+        /// </summary>
+        public bool TryGenerateSpawnPos(SpawnContext ctx, out Vector2 spawnPos)
+        {
+            SkillData data = ctx.skillData;
+            if (data.spawnAtRandomPosition)
+            {
+                float spawnRadius = data.randomSpawnRadius + ctx.skillRangeBonus;
+                Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
+                spawnPos = ctx.playerPosition + randomOffset;
+                return true;
+            }
+            // 성역 등 비랜덤은 player 위치 그대로 — override 불필요.
+            spawnPos = ctx.playerPosition;
+            return true;
+        }
+
         public void Spawn(SpawnContext ctx)
         {
             if (zonePrefab == null) return;
 
             SkillData data = ctx.skillData;
-
-            // 오래된 장판 정리
-            CleanupDestroyedZones();
-
-            // 최대 개수 초과 시 가장 오래된 장판 제거
-            while (activeZones.Count >= maxInstances)
-                RemoveOldestZone();
 
             // 풀에서 장판 가져오기
             GameObject zoneObj = PoolManager.Instance.Get(zonePrefab);
@@ -80,17 +89,21 @@ namespace SwDreams.Features.Skill.Adapter
                 damage = ctx.damage;
 
             // ── 스폰 위치 결정 ──
+            // [N15] hasSpawnPosOverride 가 true 면 자기 클라가 결정한 위치 그대로 사용 (호스트 권위 동기화).
+            // false 인 경우는 fallback — 자기 클라가 직접 spawner.Spawn 호출(prediction 미경유) 시.
             Vector2 spawnPos;
-            if (data.spawnAtRandomPosition)
+            if (ctx.hasSpawnPosOverride)
             {
-                // 번개/개미지옥: 플레이어 주변 랜덤 위치
+                spawnPos = ctx.spawnPosOverride;
+            }
+            else if (data.spawnAtRandomPosition)
+            {
                 float spawnRadius = data.randomSpawnRadius + ctx.skillRangeBonus;
                 Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
                 spawnPos = ctx.playerPosition + randomOffset;
             }
             else
             {
-                // 성역: 플레이어 위치
                 spawnPos = ctx.playerPosition;
             }
 
@@ -110,49 +123,6 @@ namespace SwDreams.Features.Skill.Adapter
             // 치명타 파라미터 (R9). 회복 장판은 critChance=0 으로 (회복 치명타는 별건 결정).
             float critChanceForZone = data.isHealingEffect ? 0f : ctx.critChance;
             zone.SetCritStats(critChanceForZone, ctx.critDamageMultiplier);
-
-            activeZones.Add(zoneObj);
-        }
-
-        // ===== activeZones 관리 =====
-
-        private void CleanupDestroyedZones()
-        {
-            for (int i = activeZones.Count - 1; i >= 0; i--)
-            {
-                if (activeZones[i] == null || !activeZones[i].activeInHierarchy)
-                    activeZones.RemoveAt(i);
-            }
-        }
-
-        private void RemoveOldestZone()
-        {
-            if (activeZones.Count == 0) return;
-
-            // 최소 1틱을 발동한 장판부터 제거 (아직 데미지 못 준 장판 보호)
-            for (int i = 0; i < activeZones.Count; i++)
-            {
-                GameObject zoneObj = activeZones[i];
-                if (zoneObj == null || !zoneObj.activeInHierarchy)
-                {
-                    activeZones.RemoveAt(i);
-                    return;
-                }
-
-                var zone = zoneObj.GetComponent<AreaZone>();
-                if (zone == null || zone.HasTicked)
-                {
-                    activeZones.RemoveAt(i);
-                    PoolManager.Instance?.Return(zoneObj);
-                    return;
-                }
-            }
-
-            // 모든 장판이 아직 틱 안 했으면 어쩔 수 없이 가장 오래된 것 제거
-            GameObject fallback = activeZones[0];
-            activeZones.RemoveAt(0);
-            if (fallback != null && fallback.activeInHierarchy)
-                PoolManager.Instance?.Return(fallback);
         }
     }
 }

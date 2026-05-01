@@ -39,6 +39,12 @@ namespace SwDreams.Features.Skill.Adapter
             // DebuffMark는 적에 부착되어 자체 소멸
         }
 
+        public bool TryGenerateSpawnPos(SpawnContext ctx, out Vector2 spawnPos)
+        {
+            spawnPos = ctx.playerPosition;
+            return false; // 결정성 있음 — override 불필요.
+        }
+
         public void Spawn(SpawnContext ctx)
         {
             // 호스트에서만 대상 선정 + 디버프 적용

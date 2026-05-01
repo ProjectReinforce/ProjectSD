@@ -3,10 +3,10 @@
 Sweepin' Dreams 에 등장하는 적과 보스 목록.
 
 > **SSOT:** 수치는 각 적별 SO(`Assets/Data/Enemy/**/*.asset`)와 `Assets/Data/DifficultyData.asset` 의 복제본이다.
-> 최종 동기화: 2026-04-24
+> 최종 동기화: 2026-05-01
 
 **템플릿:** [docs/templates/enemy-spec.md](../../templates/enemy-spec.md)
-**관련 시스템:** [systems/spawn-rules.md](../../systems/spawn-rules.md), [systems/network-sync.md](../../systems/network-sync.md)
+**관련 시스템:** [systems/spawn-rules.md](../../systems/spawn-rules.md), [systems/enemy-stat-scaling.md](../../systems/enemy-stat-scaling.md), [systems/network-sync.md](../../systems/network-sync.md)
 
 ## 설계 원칙
 
@@ -54,6 +54,20 @@ Sweepin' Dreams 에 등장하는 적과 보스 목록.
 | 2 (기준) | 1.0× | 1.0× | 1.0× |
 | 3 | 1.4× | 1.3× | 0.95× |
 | 4 | 1.8× | 1.6× | 0.9× |
+
+> 데미지/이속 인원 배율(R13 미구현)은 [systems/enemy-stat-scaling.md § 5.3](../../systems/enemy-stat-scaling.md) 참조.
+
+## 시간 스케일링 (R13 — 설계만, 미구현)
+
+후반부 단조로움 완화를 위해 데미지·이속 시간 곡선과 타입별 sensitivity 도입 예정. 자세한 수식·곡선·적별 sensitivity 권장값은 [systems/enemy-stat-scaling.md](../../systems/enemy-stat-scaling.md). 요약:
+
+| 적 | 이속 sensitivity | timeMul=1.6 후반 effect |
+|---|---|---|
+| Tank | **0.0** | 변화 없음 (둔함 유지) |
+| Chaser | 0.5 | 1.30× |
+| Swarm | 0.7 | 1.42× |
+| Runner | **1.0** | 1.60× (전부 반영) |
+| Ranged | 0.3 | 1.18× |
 
 ## 성능 최적화 원칙
 

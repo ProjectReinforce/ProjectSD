@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 879b7bf70f3355c4e9f445842380e140, type: 3}
+  m_Name: MicFilterDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Voice.Adapter.Data.MicFilterDatabase
+  filters:
+  - {fileID: 11400000, guid: 45adc4af9ae5f574c826942fd5554ab5, type: 2}
+  - {fileID: 11400000, guid: 941ec40737217d042ba08ec53fae78f6, type: 2}
+  - {fileID: 11400000, guid: 37155ee19a4298444bb45b0df8e4f177, type: 2}
+  - {fileID: 11400000, guid: 4efbdb8698571fd438e0c64d95f6c76e, type: 2}
+  - {fileID: 11400000, guid: d476ea97af0a50548a94fd24039e097e, type: 2}

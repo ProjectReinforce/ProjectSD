@@ -40,6 +40,12 @@ namespace SwDreams.Features.Skill.Adapter
             // 투사체는 독립 생명주기 — 정리 불필요
         }
 
+        public bool TryGenerateSpawnPos(SpawnContext ctx, out Vector2 spawnPos)
+        {
+            spawnPos = ctx.playerPosition;
+            return false; // 결정성 있음 — override 불필요. baseDirection 만 RPC 동기화 (N17).
+        }
+
         public void Spawn(SpawnContext ctx)
         {
             if (projectilePrefab == null) return;

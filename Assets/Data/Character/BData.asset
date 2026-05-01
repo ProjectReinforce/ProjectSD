@@ -26,6 +26,7 @@ MonoBehaviour:
   cooldownReduction: 0
   knockback: 1
   critDamage: 1.5
+  critChance: 0.05
   expMultiplier: 1
   defenseBonus: 0
   healMultiplier: 1

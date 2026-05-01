@@ -11,11 +11,53 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 - **B (기존 미체크)**: 두 원본 문서에 있었던 버그 중 잔존
 - **V (검증 필요)**: 코드상 완료로 보이지만 실 동작 미확인. 검증 후 fix 또는 ledger 이동
 
-마지막 정리: 2026-04-25
+마지막 정리: 2026-04-29 (N15+N17 ✅ 호스트 권위 RPC 인프라로 해소 — 이중 발사 fix 포함)
 
 ---
 
 ## N — 신규 추가
+
+### N19. TwoPhase 스킬 (장검 진화 검광 등) 호스트 권위 RPC 미지원 — Phase 2 후행
+
+**증상:** N15/N17 호스트 권위 RPC 인프라가 TwoPhase 스킬에는 미적용. 자기 클라 자체 시뮬레이션 그대로 유지 → 다른 클라 측에서 보면 Phase2 검광 발사 desync 가능.
+
+**원인:** `SkillExecutor.BeginFromNetwork` 가 firingMode = Single 강제. 자기 클라만 SkillExecutor 활성이라 다른 클라 측에선 NotifyPhase1Complete 호출 자체가 안 되어 Phase2 발사 안 됨.
+
+**처리 (Phase 1):** `SkillExecutor.FireOnce` 가 firingMode == TwoPhase 면 RPC 송신 차단. 송신/수신 모두 자기 클라 자체 시뮬레이션 (기존 동작).
+
+**해결 방향 (Phase 2+, 사용자 제안):** Phase2 RPC 추가가 아니라 **각 클라 자체 처리** — Phase1 Orbital 만 RPC 동기화 (이미 됨), 회전 속도가 결정적(SO 동일)이라 자체 시뮬레이션 결과 일치. `BeginFromNetwork` 가 firingMode = TwoPhase 보존 + 다른 클라 측에서도 SkillExecutor + Phase1 N발 spawn + Orbital 회전 + NotifyPhase1Complete → Phase2 자체 발사. 0.5일.
+
+### N20. RPC drop (LevelUp 도중) — 사실상 무시 가능
+
+**증상:** PauseAllSkills 윈도우 (LevelUp UI 도중) 에 도착한 RPC 가 silently drop (`Skill.FireFromNetwork` 의 `if (!isActive) return;`). PUN buffered RPC 미사용이라 단발 시각 유실.
+
+**규모:** 매우 미미. ProjectSD 는 매치메이킹 모델이라 **게임 진행 중 늦은 join 자체가 없음** (R8 와 동기화로 보장). 남은 시나리오는 LevelUp 도중 + 호스트 마이그레이션 중 reconnect 정도. 둘 다 단발 1~2개 시각 유실 + 데미지는 호스트 처리 → 게임플레이 영향 0.
+
+**처리 (Phase 1):** silently 무시 — 영향 미미. 추가 작업 불필요.
+
+### N21. RPC 송신 트래픽 측정 필요 — 메모
+
+DelayedBurst (번개 0.05s × N발) × 4인 동시 = 초당 수백 RPC. PUN reliable channel ordering 보장이지만 네트워크 부하 측정 필요. PhotonView serialize 압축 0 — short fixed-point 같은 packing 검토 (Phase 2+).
+
+### N15. 번개(Area) 스킬 위치 클라 간 desync ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+호스트 권위 RPC 인프라 (Client-decided + Host-trusted 패턴) 로 해소. PlayerStub.RPC_RequestSkillSpawn / RPC_BroadcastSkillSpawn + ISkillSpawner.TryGenerateSpawnPos + SpawnContext.spawnPosOverride. AreaSpawner 가 자기 클라 측에서 Random.insideUnitCircle 한 번만 결정 → RPC 인자로 모든 클라에 전파 → 동일 위치 보장. **부산물 fix:** Skill.Update 의 IsMine 가드 추가 — 모든 클라 자체 시뮬레이션이 RPC 인프라와 중복돼 이중 발사 버그 발생 → 자기 PlayerStub 만 자체 cooldown+Fire.
+
+### N16. AreaZone VFX 분리 시 코드 수정 필요 — 메모
+
+**증상:** 현재 `AreaZone` 한 prefab 에 떨어지는 시각 + 폭발 + (진화 후) 감전 지역 다 들어가있음. VFX 작업 시 단계별 prefab 분리 필요.
+
+**처리 방향:** `PrefabSequence` SO (Stage 별 prefab 리스트: Drop → Explode → Lingering) 또는 `AreaZone.OnStageStart` 이벤트 + 외부 VFX 컨트롤러 구독. Phase 7-3 비주얼 + 사운드 작업 시 함께.
+
+### N17. 스킬 발사 방향 핑 어긋남 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+N15 와 같은 호스트 권위 RPC 인프라로 동시 해소. SkillExecutor.FireOnce 가 자기 PhotonView.IsMine 일 때만 RPC 송신 → 모든 클라에 baseDirection 전파 → ProjectileSpawner.ComputeDirection 이 ctx.baseDirection 사용 → 토네이도 등 방향 의존 스킬도 클라가 누른 시점 방향 그대로 호스트가 신뢰 + 다른 클라 broadcast.
+
+### N18. applicableStats 패시브별 계수 ✅ (2026-04-29) → [completed-work.md](completed-work.md)
+
+`statOverrides` (List<StatModifierEntry>) 로 변경. 예외 override 모델 — 빈 리스트 = 모든 스탯 100%, 명시 항목만 multiplier 차등. PlayerStats GetFiltered* 8개 모두 multiplier 적용 (보너스만 곱). audit/검증 통과.
+
+
 
 ### N3. 플레이어 피격 후 빨간색에서 원래대로 안 돌아옴 — 수정 완료
 
@@ -196,21 +238,15 @@ Ev Destroy Failed. Could not find PhotonView with instantiationId 2012. Sent by 
 
 ---
 
-### B3. 플레이어 나가도 팀원 상태 패널에 사라지지 않음
+### B3. 플레이어 나가도 팀원 상태 패널에 사라지지 않음 — 수정 완료
 
-**증상**: HUD 의 TeammateEntry 가 OnPlayerLeftRoom 시 제거되지 않음.
-
-**처리 방향**: `InGameHUD` 의 TeammateEntry 관리부에 `OnPlayerLeftRoom` 콜백 등록 → 해당 entry destroy.
+**수정 완료** (R11 World Indicator 작업 시 부산물 — 2026-04-26): [InGameHUD.UpdateTeammates](../../Assets/Scripts/Features/UI/Presentation/InGameHUD.cs#L308) 가 매 호출마다 `aliveViewIds` 와 비교해 stale entry destroy + Remove. 별도 `OnPlayerLeftRoom` 콜백 등록 불필요 (poll 기반).
 
 ---
 
-### B4. 스웜 타입은 다른 모든 적과 겹쳐도 됨 (현재 충돌함)
+### B4. 스웜 타입은 다른 모든 적과 겹쳐도 됨 — 수정 완료
 
-**증상**: 스웜 적이 다른 적 타입과도 충돌 처리됨.
-
-**원인**: `EnemyData.resolveOverlap = false` 는 있으나 Collider2D Layer 분리 미적용.
-
-**처리 방향**: Layer "EnemySwarm" 신설 + Physics2D Matrix 에서 EnemySwarm ↔ 다른 Enemy 충돌 무시.
+**수정 완료** (2026-05-01): Layer 분리 대신 코드 가드로 처리 — [EnemyMovement.ResolveEnemyOverlap](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L333) 진입부에 `if (enemy != null && !enemy.ResolveOverlap) return;` (자기 측 보정 X) + for-loop 다른 적 분기에 `if (!otherMovement.enemy.ResolveOverlap) continue;` (상대가 swarm 이면 무시) 양방향 가드. `EnemyData.resolveOverlap` 플래그 실효화. Layer/Physics2D Matrix 셋업 불필요.
 
 ---
 

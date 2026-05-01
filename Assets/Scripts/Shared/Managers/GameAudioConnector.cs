@@ -26,6 +26,10 @@ namespace SwDreams.Shared.Managers
 
         private Boss trackedBoss;
 
+        // 보스전 진입 SFX/BGM 1회성 가드.
+        // GameState 가 LevelUp 등으로 잠시 빠졌다 BossFight 로 돌아올 때마다 매번 재트리거되는 것 방지.
+        private bool bossFightAudioStarted;
+
         private void Start()
         {
             // GameManager 이벤트
@@ -71,8 +75,12 @@ namespace SwDreams.Shared.Managers
             switch (newState)
             {
                 case GameManager.GameState.BossFight:
-                    AudioManager.Instance.PlayBossBGM();
-                    AudioManager.Instance.PlaySFX(lib.bossWarning);
+                    if (!bossFightAudioStarted)
+                    {
+                        AudioManager.Instance.PlayBossBGM();
+                        AudioManager.Instance.PlaySFX(lib.bossWarning);
+                        bossFightAudioStarted = true;
+                    }
                     break;
 
                 case GameManager.GameState.GameClear:

@@ -38,6 +38,12 @@ namespace SwDreams.Features.Skill.Adapter
             // OrbitalObject는 자체 duration으로 소멸
         }
 
+        public bool TryGenerateSpawnPos(SpawnContext ctx, out Vector2 spawnPos)
+        {
+            spawnPos = ctx.playerPosition;
+            return false; // 결정성 있음 — override 불필요.
+        }
+
         public void Spawn(SpawnContext ctx)
         {
             if (orbitalPrefab == null) return;
@@ -68,8 +74,9 @@ namespace SwDreams.Features.Skill.Adapter
             // 균등 각도 배치 (360° / totalCount)
             float baseAngle = (360f / ctx.totalCount) * ctx.fireIndex;
 
-            // TwoPhase: duration 대신 1바퀴 완주 시 Phase2 전환
-            bool fireOnOneRotation = data.firingMode == FiringMode.TwoPhase;
+            // TwoPhase: duration 대신 N바퀴 완주 시 Phase2 전환. N = data.phase1RotationCount (인스펙터 조정).
+            bool fireOnRotation = data.firingMode == FiringMode.TwoPhase;
+            float rotationCount = fireOnRotation ? Mathf.Max(0.1f, data.phase1RotationCount) : 0f;
 
             orbital.Initialize(
                 damage: ctx.damage,
@@ -80,7 +87,8 @@ namespace SwDreams.Features.Skill.Adapter
                 orbitRadius: radius,
                 rotationSpeed: data.rotationSpeed,
                 ownerTransform: ctx.playerTransform,
-                fireOnOneRotation: fireOnOneRotation,
+                fireOnOneRotation: fireOnRotation,
+                phase1RotationCount: rotationCount,
                 triggerSystem: ctx.triggerSystem
             );
 

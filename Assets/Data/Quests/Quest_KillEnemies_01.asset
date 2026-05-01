@@ -15,6 +15,7 @@ MonoBehaviour:
   questId: 0
   displayName: "\uC801 \uCC98\uCE58 \uD14C\uC2A4\uD2B8"
   description: 
+  isRandom: 1
   questType: 0
   triggerRadius: 1
   waitTime: 3

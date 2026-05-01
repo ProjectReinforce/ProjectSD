@@ -339,6 +339,26 @@ namespace SwDreams.Features.UI.Presentation
             canvasGroup.DOFade(0.4f, 0.2f).SetUpdate(true);
         }
 
+        /// <summary>
+        /// 키보드 ←/→ 로 이 카드가 현재 focus 인지 표시. 클릭 확정(PlaySelected)과 분리된 가벼운 강조.
+        /// 빠른 ←→ 연타로 0.1초 트윈이 중첩되지 않도록 진입 시 같은 타깃의 기존 트윈을 정리.
+        /// </summary>
+        public void SetFocused(bool focused)
+        {
+            DOTween.Kill(transform);
+            float scale = focused ? 1.04f : 1f;
+            transform.DOScale(scale, 0.1f).SetUpdate(true);
+
+            if (cardBackground != null)
+            {
+                DOTween.Kill(cardBackground);
+                Color target = focused
+                    ? Color.Lerp(defaultCardColor, Color.white, 0.3f)
+                    : defaultCardColor;
+                cardBackground.DOColor(target, 0.1f).SetUpdate(true);
+            }
+        }
+
         // ===== 유틸 =====
 
         private SkillManager FindLocalSkillManager()

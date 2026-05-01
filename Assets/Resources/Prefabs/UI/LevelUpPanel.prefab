@@ -1036,6 +1036,8 @@ GameObject:
   - component: {fileID: 4680454931440442838}
   - component: {fileID: 5825293568109680297}
   - component: {fileID: 944093797704556822}
+  - component: {fileID: 8637782480954967801}
+  - component: {fileID: 6299766335008399378}
   m_Layer: 5
   m_Name: LevelUpPanel
   m_TagString: Untagged
@@ -1097,10 +1099,52 @@ MonoBehaviour:
   timerBarFill: {fileID: 1530846246835373963}
   refreshButton: {fileID: 7869754517313414240}
   refreshCountText: {fileID: 3614940103314984673}
+  refreshHoldFill: {fileID: 0}
+  refreshHoldDuration: 0.5
   fadeDuration: 0.3
   scaleDuration: 0.4
   cardDelay: 0.1
   cardSlideDuration: 0.3
+--- !u!223 &8637782480954967801
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1531320032205753959}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 50
+  m_TargetDisplay: 0
+--- !u!114 &6299766335008399378
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1531320032205753959}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1834356909985677302
 GameObject:
   m_ObjectHideFlags: 0

@@ -104,7 +104,7 @@ namespace SwDreams.Features.Skill.Adapter
             {
                 if (data.effectPrefab == null)
                     Debug.LogWarning($"[SkillSpawnerFactory] {data.skillName}: effectPrefab 미설정!");
-                var spawner = new AreaSpawner(data.effectPrefab, data.maxInstances);
+                var spawner = new AreaSpawner(data.effectPrefab);
                 spawner.Prewarm(data);
                 return spawner;
             });
@@ -124,7 +124,7 @@ namespace SwDreams.Features.Skill.Adapter
             {
                 if (data.effectPrefab == null)
                     Debug.LogWarning($"[SkillSpawnerFactory] {data.skillName}: effectPrefab 미설정!");
-                var spawner = new PlacedSpawner(data.effectPrefab, data.maxInstances);
+                var spawner = new PlacedSpawner(data.effectPrefab);
                 spawner.Prewarm(data);
                 return spawner;
             });

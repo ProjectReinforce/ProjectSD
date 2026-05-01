@@ -35,7 +35,17 @@ namespace SwDreams.Features.Boss.Adapter
         [SerializeField] private GameObject bossPrefab;
 
         [Header("스폰 위치")]
-        [SerializeField] private float spawnDistance = 10f; // 플레이어로부터의 거리
+        [Tooltip("일반 몹 스폰 정책(centroid + 카메라 시야 4면 + offset)에 추가로 더 두는 보스 전용 마진(unit).\n" +
+                 "보스 콜라이더가 크므로 시야 가장자리에서 더 멀리 등장시키기 위함.")]
+        [SerializeField] private float bossSpawnMargin = 2.5f;
+
+        [Header("맵 경계 가드 (선택)")]
+        [Tooltip("맵 외곽 Collider2D. 후보 위치가 이 콜라이더 bounds 안에 들어가면 reject.\n" +
+                 "맵 사이즈가 확정되면 맵 외곽 콜라이더를 연결. 비워두면 가드 비활성.")]
+        [SerializeField] private Collider2D mapBoundsCollider;
+
+        [Tooltip("맵 외부 가드를 적용할지 여부. mapBoundsCollider 가 연결돼도 false 면 무시.")]
+        [SerializeField] private bool enforceOutsideMap = false;
 
         // 상태
         private bool bossSpawned = false;
@@ -203,21 +213,78 @@ namespace SwDreams.Features.Boss.Adapter
             Debug.Log("[BossSpawner] 마이그레이션 리셋 완료 — GameTime 기준 보스 재트리거 대기");
         }
 
+        /// <summary>
+        /// 보스 스폰 위치 결정. 일반 몹 정책(SpawnManager.GetSpawnPosition)과 동일하게
+        /// 플레이어 centroid + 카메라 시야 4면(상/하/좌/우) + 보스 전용 마진 위치에서 등장.
+        /// 멀티에서 플레이어가 멀리 퍼져 있을 때도 centroid 기준이라 한쪽 플레이어에 치우치지 않음.
+        ///
+        /// 맵 경계 가드: enforceOutsideMap=true && mapBoundsCollider 연결 시,
+        /// 후보 위치가 맵 콜라이더 bounds 안이면 reject 후 다른 면으로 재시도.
+        /// 시도 한도 초과 시 fallback(centroid 기준 대각선 + 큰 마진)으로 폴백.
+        /// </summary>
         private Vector2 CalculateSpawnPosition()
         {
-            // 간단 구현: 플레이어 평균 위치에서 spawnDistance만큼 떨어진 랜덤 방향
-            var players = GameObject.FindGameObjectsWithTag("Player");
-            Vector2 center = Vector2.zero;
+            Vector2 center = GetPlayerCentroid();
+            Camera cam = Camera.main;
 
-            if (players.Length > 0)
+            float camHalfH = cam != null ? cam.orthographicSize : 5f;
+            float camHalfW = cam != null ? camHalfH * cam.aspect : camHalfH * 1.78f;
+
+            for (int attempt = 0; attempt < 10; attempt++)
             {
-                foreach (var p in players)
-                    center += (Vector2)p.transform.position;
-                center /= players.Length;
+                Vector2 candidate = PickSideCandidate(center, camHalfW, camHalfH, bossSpawnMargin);
+
+                // 맵 경계 가드: 콜라이더가 연결되고 enforce 가 켜져 있으면 맵 안 후보는 reject.
+                if (enforceOutsideMap && mapBoundsCollider != null &&
+                    mapBoundsCollider.bounds.Contains(candidate))
+                {
+                    continue;
+                }
+
+                return candidate;
             }
 
-            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            return center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * spawnDistance;
+            // fallback: centroid 에서 대각선 + 큰 마진. 맵 가드는 무시(무한 루프 방지).
+            float diagonal = Mathf.Sqrt(camHalfW * camHalfW + camHalfH * camHalfH) + bossSpawnMargin * 2f;
+            float fallbackAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            return center + new Vector2(
+                Mathf.Cos(fallbackAngle) * diagonal,
+                Mathf.Sin(fallbackAngle) * diagonal);
+        }
+
+        private static Vector2 PickSideCandidate(Vector2 center, float camHalfW, float camHalfH, float margin)
+        {
+            int side = Random.Range(0, 4);
+            switch (side)
+            {
+                case 0: // 위
+                    return center + new Vector2(
+                        Random.Range(-camHalfW, camHalfW),
+                        camHalfH + margin);
+                case 1: // 아래
+                    return center + new Vector2(
+                        Random.Range(-camHalfW, camHalfW),
+                        -(camHalfH + margin));
+                case 2: // 오른쪽
+                    return center + new Vector2(
+                        camHalfW + margin,
+                        Random.Range(-camHalfH, camHalfH));
+                default: // 왼쪽
+                    return center + new Vector2(
+                        -(camHalfW + margin),
+                        Random.Range(-camHalfH, camHalfH));
+            }
+        }
+
+        private static Vector2 GetPlayerCentroid()
+        {
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            if (players.Length == 0) return Vector2.zero;
+
+            Vector2 sum = Vector2.zero;
+            foreach (var p in players)
+                sum += (Vector2)p.transform.position;
+            return sum / players.Length;
         }
 
         // ===== RPC =====

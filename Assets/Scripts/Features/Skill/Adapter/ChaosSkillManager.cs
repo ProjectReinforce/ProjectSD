@@ -139,6 +139,12 @@ namespace SwDreams.Features.Skill.Adapter
                 maxChainPerFrame,
                 explosionDamage,
                 explosionRadius));
+
+            // 4인 동시 적 사망 시 폭발 spike 방지 prewarm. 자기 PlayerStub 만 1회.
+            // ChainExplosion 혼돈 스킬 미선택 시 낭비지만 16 GameObject 메모리 미미 + 4명 중 누군가는 거의 픽함.
+            var localPV = GetComponentInParent<Photon.Pun.PhotonView>();
+            if (localPV != null && localPV.IsMine && explosionEffectPrefab != null)
+                PoolManager.Instance?.Prewarm(explosionEffectPrefab, 16);
         }
 
         private void CachePlayerStats()

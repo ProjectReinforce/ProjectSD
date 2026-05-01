@@ -10,7 +10,7 @@
 | 분류 | UI |
 | 의존 레이어 | Adapter (Manager, Interface, Policy) + Presentation (View) |
 | 최종 업데이트 | 2026-04-26 |
-| 구현 상태 | ⬜ 미구현 — 진행 체크리스트 [implementation-roadmap.md § R11](../architecture/implementation-roadmap.md) |
+| 구현 상태 | ✅ 구현 완료 (2026-04-26) — ledger [completed-work.md](../architecture/completed-work.md). 랜덤 퀘스트 인디케이터까지 흡수, Manager pending drain 패턴으로 Awake race 차단 |
 
 ## 2. 목적
 
@@ -517,3 +517,4 @@ ParrelSync 4 인스턴스 기준. **체크리스트화 된 작업 항목은 [imp
 ## 19. 변경 이력
 
 - **2026-04-26:** 초안 작성. 사용자 결정 — In-Screen 은 이름표만(마커 없음), Off-Screen 은 화살표+테두리색+아래이름. 히스테리시스 β 표준. 파티원=AlwaysShow / 보스=OffScreenOnly. 색은 ActorNumber 슬롯 팔레트 4색. 퀘스트는 인터페이스만 깔고 실 등록 보류.
+- **2026-04-26 (구현 완료):** 랜덤 퀘스트 인디케이터까지 R11 범위에 흡수 — `QuestData.isRandom` 플래그 + `QuestIndicatorAdapter` (OffScreenOnly, 자주색). `WorldIndicatorManager` 가 정적 `pendingTargets` 큐 + `RegisterTarget`/`UnregisterTarget` 정적 메서드로 Awake race 구조적 차단(어댑터가 Manager Awake 전에 호출해도 큐에 적재 → Manager Awake 시 drain). 인디케이터 어댑터 3종은 폴링 없이 단순 호출 패턴.

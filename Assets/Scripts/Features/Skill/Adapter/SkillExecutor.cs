@@ -5,6 +5,7 @@ using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
 using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Domain.Interfaces;
@@ -60,6 +61,10 @@ namespace SwDreams.Features.Skill.Adapter
         // ===== 공통 상태 =====
         private bool isActive;
 
+        // [N15/N17] RPC 도착 경로(BeginFromNetwork)는 자기측 발사가 아니므로 RPC 송신 금지.
+        // 자기 발사(Begin)만 송신.
+        private bool isFromNetwork;
+
         // ===== 발사 기록 (stub — 메아리 구현 시 확장) =====
         // TODO: [Phase 5+] IFireRecord 인터페이스로 분리
         // 현재는 기록 구조만 정의, 실제 저장 로직은 메아리 구현 시 추가
@@ -86,6 +91,7 @@ namespace SwDreams.Features.Skill.Adapter
             this.triggerSystem = triggerSystem;
 
             isActive = true;
+            isFromNetwork = false; // 자기 발사 — RPC 송신 흐름 활성
             firedCount = 0;
             waitingForPhase2 = false;
             phase2Spawner = null;
@@ -241,17 +247,104 @@ namespace SwDreams.Features.Skill.Adapter
         /// <summary>
         /// SpawnContext를 구성하고 Spawner에 전달.
         /// applicableStats 필터가 여기서 적용됨.
+        /// [N15/N17] 자기 발사 시 spawnPos override 결정 + RPC 송신.
         /// </summary>
         private void FireOnce(int index)
         {
             if (!isActive || spawner == null || playerTransform == null) return;
 
             SpawnContext context = BuildContext(index);
+
+            // [N15] 비결정적 spawnPos 자기 클라가 한 번 결정 → ctx.spawnPosOverride
+            if (spawner.TryGenerateSpawnPos(context, out Vector2 generatedPos))
+            {
+                context.spawnPosOverride = generatedPos;
+                context.hasSpawnPosOverride = true;
+            }
+
+            // 자기측 prediction Spawn (시각 + 호스트면 데미지 권위)
             spawner.Spawn(context);
 
+            // [N15/N17] RPC 송신 — 자기 PhotonView (IsMine) 만 송신.
+            // TwoPhase (장검 진화 등) 는 Phase 1 범위에서 제외 — Phase1 결과 집계 후 Phase2 발사 RPC 미설계.
+            // TwoPhase 는 자기 클라 자체 시뮬레이션 유지 (기존 desync 허용, Phase 2+ 처리).
+            if (!isFromNetwork && firingMode != FiringMode.TwoPhase)
+                BroadcastNetworkSpawn(context, index);
+
             // TODO: [Phase 5+] 발사 기록 — 메아리 스킬용
-            // fireRecorder?.Record(skillData.skillId, context.playerPosition,
-            //     context.baseDirection, Time.time);
+        }
+
+        /// <summary>
+        /// [N15/N17] FireOnce 직후 호출. 자기 PhotonView 가 IsMine 일 때만 RPC 송신.
+        /// 자기 = 호스트 → Others 에 broadcast / 자기 ≠ 호스트 → MasterClient 에 request.
+        /// </summary>
+        private void BroadcastNetworkSpawn(SpawnContext ctx, int index)
+        {
+            if (playerTransform == null || skillData == null) return;
+            var pv = playerTransform.GetComponent<PhotonView>();
+            if (pv == null || !pv.IsMine) return;
+
+            int skillId = skillData.skillId;
+            Vector2 dir = ctx.baseDirection;
+            Vector2 pos = ctx.hasSpawnPosOverride ? ctx.spawnPosOverride : Vector2.zero;
+            bool hasOverride = ctx.hasSpawnPosOverride;
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                // 자기 = 호스트. Others 에 broadcast (자기 송신자 제외).
+                pv.RPC("RPC_BroadcastSkillSpawn", RpcTarget.Others,
+                    skillId, dir, pos, hasOverride, index, totalCount);
+            }
+            else
+            {
+                // 자기 = 클라. MasterClient 에 request → 호스트가 자기측 spawn + Others broadcast.
+                pv.RPC("RPC_RequestSkillSpawn", RpcTarget.MasterClient,
+                    skillId, dir, pos, hasOverride, index, totalCount);
+            }
+        }
+
+        /// <summary>
+        /// [N15/N17] 다른 클라가 RPC 로 보낸 발사 정보로 자기측 단발 spawn.
+        /// 호스트 측은 데미지 권위, 다른 클라 측은 시각만. RPC 송신 X.
+        /// firingMode 별 timing (DelayedBurst burstDelay, TwoPhase 등) 우회 — 송신자 측에서
+        /// 이미 timing 처리 후 매 발사마다 RPC 가 도착하므로.
+        /// </summary>
+        public void BeginFromNetwork(
+            Skill skill,
+            ISkillSpawner spawner,
+            PlayerStats stats,
+            Transform playerTransform,
+            SkillTriggerSystem triggerSystem,
+            Vector2 baseDir,
+            Vector2 spawnPos,
+            bool hasSpawnPosOverride,
+            int fireIndex,
+            int totalCountFromNetwork)
+        {
+            this.sourceSkill = skill;
+            this.skillData = skill.Data;
+            this.spawner = spawner;
+            this.playerStats = stats;
+            this.playerTransform = playerTransform;
+            this.triggerSystem = triggerSystem;
+            this.totalCount = totalCountFromNetwork;
+            this.firedCount = totalCountFromNetwork; // Update 진입 안 함
+            this.firingMode = FiringMode.Single;     // 단발 처리
+            this.isFromNetwork = true;               // RPC 송신 차단
+            this.isActive = true;
+            this.waitingForPhase2 = false;
+            this.phase2Spawner = null;
+            this.phase1Results.Clear();
+            this.phase1ExpectedCount = 0;
+
+            // SpawnContext 구성 (BuildContext 와 동일하지만 외부 결정 spawnPos / baseDir override)
+            SpawnContext ctx = BuildContext(fireIndex);
+            ctx.baseDirection = baseDir;
+            ctx.spawnPosOverride = spawnPos;
+            ctx.hasSpawnPosOverride = hasSpawnPosOverride;
+
+            spawner.Spawn(ctx);
+            Complete();
         }
 
         // ===== SpawnContext 구성 (applicableStats 필터 적용) =====
@@ -315,21 +408,35 @@ namespace SwDreams.Features.Skill.Adapter
             else
                 ctx.healMultiplier = 1f;
 
-            // ── 치명타 데미지 배율 (필터 적용) ──
+            // ── 치명타 데미지 배율 (필터 적용 + N18 multiplier) ──
             var cfgForCrit = GameManager.Instance?.Config;
             float critMultDefault = cfgForCrit != null ? cfgForCrit.critMultBase : 1.5f;
             float critChanceDefault = cfgForCrit != null ? cfgForCrit.critChanceBase : 0.05f;
 
-            if (playerStats != null && data.IsStatApplicable(StatType.CritDamage))
-                ctx.critDamageMultiplier = playerStats.CritDamageMultiplier;
+            if (playerStats != null)
+            {
+                float critDmgMult = data.GetStatMultiplier(StatType.CritDamage);
+                // critDamageMultiplier 의 base = critMultDefault. 보너스 = (CritDamageMultiplier - default).
+                ctx.critDamageMultiplier = critMultDefault
+                    + (playerStats.CritDamageMultiplier - critMultDefault) * critDmgMult;
+            }
             else
+            {
                 ctx.critDamageMultiplier = critMultDefault;
+            }
 
-            // ── 치명타 확률 (필터 적용) ──
-            if (playerStats != null && data.IsStatApplicable(StatType.CritChance))
-                ctx.critChance = playerStats.CritChanceProbability;
+            // ── 치명타 확률 (필터 적용 + N18 multiplier) ──
+            if (playerStats != null)
+            {
+                float critChMult = data.GetStatMultiplier(StatType.CritChance);
+                ctx.critChance = critChanceDefault
+                    + (playerStats.CritChanceProbability - critChanceDefault) * critChMult;
+                ctx.critChance = Mathf.Clamp01(ctx.critChance);
+            }
             else
+            {
                 ctx.critChance = critChanceDefault;
+            }
 
             // ── 발사 방향 ──
             ctx.baseDirection = GetBaseDirection(data.aimType);
@@ -461,6 +568,7 @@ namespace SwDreams.Features.Skill.Adapter
             isActive = false;
             firedCount = 0;
             waitingForPhase2 = false;
+            isFromNetwork = false;
             phase1Results.Clear();
             phase1ExpectedCount = 0;
         }
@@ -469,6 +577,7 @@ namespace SwDreams.Features.Skill.Adapter
         {
             gameObject.SetActive(false);
             isActive = false;
+            isFromNetwork = false;
             spawner = null;
             phase2Spawner = null;
             skillData = null;

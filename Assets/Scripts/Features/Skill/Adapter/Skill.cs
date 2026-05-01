@@ -3,6 +3,7 @@ using SwDreams.Features.Character.Adapter;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.Data;
 using SwDreams.Features.Skill.Adapter;
+using Photon.Pun;
 using UnityEngine;
 using SwDreams.Shared.Data;
 using SwDreams.Shared.Managers;
@@ -47,6 +48,9 @@ namespace SwDreams.Features.Skill.Adapter
         // PlayerStats 캐시 (CDR 적용용)
         private PlayerStats cachedStats;
 
+        // [N15/N17] 자기 PlayerStub PhotonView 캐시. 자기측만 자체 fire(cooldown+Fire), 다른 클라 측은 RPC 만 받아 처리.
+        private PhotonView cachedPV;
+
         // TriggerSystem 캐시
         private SkillTriggerSystem triggerSystem;
 
@@ -56,6 +60,7 @@ namespace SwDreams.Features.Skill.Adapter
         private void Awake()
         {
             cachedStats = GetComponentInParent<PlayerStats>();
+            cachedPV = GetComponentInParent<PhotonView>();
         }
 
         /// <summary>
@@ -96,6 +101,10 @@ namespace SwDreams.Features.Skill.Adapter
 
             // 패시브/혼돈은 spawner가 없음 — 쿨다운 체크 불필요
             if (spawner == null) return;
+
+            // [N15/N17] 자기 PlayerStub 만 자체 cooldown+Fire. 다른 클라 측은 RPC 만 수신.
+            // 이 가드 없으면 모든 클라가 자체 시뮬레이션 + RPC 도착 → 이중 spawn (다른 사람 스킬 2번 발사 버그).
+            if (cachedPV != null && !cachedPV.IsMine) return;
 
             if (GameManager.Instance != null &&
                 GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
@@ -170,6 +179,35 @@ namespace SwDreams.Features.Skill.Adapter
             Level++;
             OnLevelChanged?.Invoke(this);
             Debug.Log($"[Skill] {skillData.skillName} → Lv.{Level}");
+        }
+
+        // ===== [N15/N17] 네트워크 발사 (RPC 수신 측) =====
+
+        /// <summary>
+        /// PlayerStub.RPC 가 도착해 SkillManager.HandleNetworkSkillSpawn 가 호출.
+        /// 단발 발사 (cooldown 무관, RPC 송신 없음 — 이미 RPC 도착).
+        /// 호스트 측은 데미지 권위, 다른 클라 측은 시각만.
+        /// </summary>
+        public void FireFromNetwork(Vector2 baseDir, Vector2 spawnPos, bool hasSpawnPosOverride, int fireIndex, int totalCount)
+        {
+            if (skillData == null || spawner == null || executorPrefab == null) return;
+            if (!isActive) return;
+
+            // TriggerSystem lazy cache
+            if (triggerSystem == null)
+                triggerSystem = GetComponent<SkillTriggerSystem>();
+
+            GameObject executorObj = PoolManager.Instance.Get(executorPrefab);
+            var executor = executorObj.GetComponent<SkillExecutor>();
+            if (executor == null)
+            {
+                Debug.LogError($"[Skill] {skillData.skillName}: SkillExecutor 컴포넌트 없음 (FireFromNetwork)");
+                PoolManager.Instance.Return(executorObj);
+                return;
+            }
+
+            executor.BeginFromNetwork(this, spawner, cachedStats, transform.root, triggerSystem,
+                baseDir, spawnPos, hasSpawnPosOverride, fireIndex, totalCount);
         }
     }
 }
