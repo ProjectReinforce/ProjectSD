@@ -334,6 +334,10 @@ namespace SwDreams.Features.Enemy.Adapter
         {
             if (enemyCollider == null) return;
 
+            // B4: 자기가 ResolveOverlap=false (스웜 등) 면 자기 측 보정 안 함.
+            // 다른 적 처리 분기에서도 상대가 ResolveOverlap=false 면 continue 로 무시 → 양방향 차단.
+            if (enemy != null && !enemy.ResolveOverlap) return;
+
             // Update에서 transform.position을 직접 변경하므로,
             // 같은 프레임의 Collider 위치를 물리 쿼리에 반영.
             if (lastPhysicsSyncFrame != Time.frameCount)
@@ -368,6 +372,8 @@ namespace SwDreams.Features.Enemy.Adapter
                 {
                     if (otherMovement.enemy == null || !otherMovement.enemy.IsAlive) continue;
                     if (!otherMovement.enabled || !otherMovement.gameObject.activeInHierarchy) continue;
+                    // B4: 상대가 ResolveOverlap=false (스웜) 면 충돌 무시.
+                    if (!otherMovement.enemy.ResolveOverlap) continue;
                 }
                 else
                 {

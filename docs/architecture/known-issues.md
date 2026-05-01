@@ -238,21 +238,15 @@ Ev Destroy Failed. Could not find PhotonView with instantiationId 2012. Sent by 
 
 ---
 
-### B3. 플레이어 나가도 팀원 상태 패널에 사라지지 않음
+### B3. 플레이어 나가도 팀원 상태 패널에 사라지지 않음 — 수정 완료
 
-**증상**: HUD 의 TeammateEntry 가 OnPlayerLeftRoom 시 제거되지 않음.
-
-**처리 방향**: `InGameHUD` 의 TeammateEntry 관리부에 `OnPlayerLeftRoom` 콜백 등록 → 해당 entry destroy.
+**수정 완료** (R11 World Indicator 작업 시 부산물 — 2026-04-26): [InGameHUD.UpdateTeammates](../../Assets/Scripts/Features/UI/Presentation/InGameHUD.cs#L308) 가 매 호출마다 `aliveViewIds` 와 비교해 stale entry destroy + Remove. 별도 `OnPlayerLeftRoom` 콜백 등록 불필요 (poll 기반).
 
 ---
 
-### B4. 스웜 타입은 다른 모든 적과 겹쳐도 됨 (현재 충돌함)
+### B4. 스웜 타입은 다른 모든 적과 겹쳐도 됨 — 수정 완료
 
-**증상**: 스웜 적이 다른 적 타입과도 충돌 처리됨.
-
-**원인**: `EnemyData.resolveOverlap = false` 는 있으나 Collider2D Layer 분리 미적용.
-
-**처리 방향**: Layer "EnemySwarm" 신설 + Physics2D Matrix 에서 EnemySwarm ↔ 다른 Enemy 충돌 무시.
+**수정 완료** (2026-05-01): Layer 분리 대신 코드 가드로 처리 — [EnemyMovement.ResolveEnemyOverlap](../../Assets/Scripts/Features/Enemy/Adapter/EnemyMovement.cs#L333) 진입부에 `if (enemy != null && !enemy.ResolveOverlap) return;` (자기 측 보정 X) + for-loop 다른 적 분기에 `if (!otherMovement.enemy.ResolveOverlap) continue;` (상대가 swarm 이면 무시) 양방향 가드. `EnemyData.resolveOverlap` 플래그 실효화. Layer/Physics2D Matrix 셋업 불필요.
 
 ---
 
