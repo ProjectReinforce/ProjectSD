@@ -29,7 +29,7 @@ namespace SwDreams.Features.Enemy.Adapter
     /// </summary>
     [RequireComponent(typeof(EnemyMovement))]
     [RequireComponent(typeof(EnemyContact))]
-    public class Enemy : MonoBehaviour, IDamageable, IPoolable
+    public class Enemy : MonoBehaviour, IDamageable, IPoolable, IEnemyEntity
     {
         // 네트워크 식별용
         public int EnemyId { get; private set; }

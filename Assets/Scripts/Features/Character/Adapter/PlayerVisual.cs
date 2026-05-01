@@ -91,19 +91,17 @@ namespace SwDreams.Features.Character.Adapter
             }
             else
             {
-                // 긴 i-frame: 첫 빨간 플래시 (피격 인지) + 그 후 alpha 깜빡임 (무적 표현).
-                // i-frame 패시브로 길어진 경우에도 피격 자체가 명확히 인지되도록 첫 한 번은 빨간색.
+                // 긴 i-frame: 전체 시간 동안 빨간색을 유지한 채 alpha 만 깜빡임.
+                // 빨간 깜빡임 시간 == i-frame 시간 (피격 인지 + 무적 표현 통합).
                 Color hitColor = new Color(1f, 0.4f, 0.4f, originColor.a);
-                spriteRenderer.color = hitColor;
-                yield return new WaitForSeconds(singleFlash);
+                Color hitColorDim = new Color(1f, 0.4f, 0.4f, 0.4f);
 
-                float elapsed = singleFlash;
+                float elapsed = 0f;
                 bool dim = false;
-                Color dimColor = new Color(originColor.r, originColor.g, originColor.b, 0.4f);
 
                 while (elapsed < iFrameDuration)
                 {
-                    spriteRenderer.color = dim ? dimColor : originColor;
+                    spriteRenderer.color = dim ? hitColorDim : hitColor;
                     dim = !dim;
                     yield return new WaitForSeconds(singleFlash);
                     elapsed += singleFlash;

@@ -115,6 +115,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 **UI / 네트워크**
 - **Frame:** UI 팝업/토스트 프레임워크. `Frame_PopUp` (모달·일시정지 가능), `FrameToast` (비모달·짧은 알림). [docs/systems/ui-frame.md](docs/systems/ui-frame.md).
 - **MenuScene / GameScene:** 2개 씬 구조. [docs/systems/scene-structure.md](docs/systems/scene-structure.md).
+- **맵 경계 (Map Bounds) / 안개:** 플레이 가능 영역 정의 + 외곽을 스타크래프트형 안개로 차단. **안개는 플레이어만 막고 적/보스/투사체는 자유 통과.** 보스 스폰의 맵 외부 가드 hook(`BossSpawner.mapBoundsCollider` + `enforceOutsideMap`)이 이 영역을 참조. [docs/systems/map-bounds.md](docs/systems/map-bounds.md).
 - **호스트-클라이언트:** Photon MasterClient 가 권위. 투사체는 로컬 렌더, 히트는 호스트. [docs/systems/network-sync.md](docs/systems/network-sync.md).
 - **런타임 Effect source prefix:** `essence_*` / `weapon_*` / `chaos_*` / `buff_*`.
 - **Voice (보이스챗):** Photon Voice 2 사용 예정. 무료 티어 20 CCU. 미구현 — 설계만 [docs/systems/voice-chat.md](docs/systems/voice-chat.md).
@@ -159,7 +160,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, **enemy-stat-scaling**, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**, **map-bounds**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -172,6 +173,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **Steam/Stove SDK 통합 →** [docs/systems/platform-integration.md](docs/systems/platform-integration.md). Phase A(추상화) → B(Stove) → C(Steam) 순
 - **다국어/번역 →** [docs/systems/localization.md](docs/systems/localization.md). 1차 KO/EN/JA/ZH-CN. Google Sheets → 빌드타임 SO 임포트. Key 기반
 - **파티원/보스/랜덤 퀘스트 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11 ✅
+- **맵 경계 / 안개 →** [docs/systems/map-bounds.md](docs/systems/map-bounds.md). 안개 = 플레이어만 차단(적/보스 자유 통과). `BossSpawner.mapBoundsCollider`/`enforceOutsideMap` hook 보유. 맵 사이즈 미확정 — 맵 확정 시 활성
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

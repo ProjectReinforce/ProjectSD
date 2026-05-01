@@ -85,14 +85,12 @@ namespace SwDreams.Shared.Data
         [Tooltip("혼돈 스킬이 등장하는 레벨 목록")]
         public int[] chaosLevels = { 10, 20, 30 };
 
-        // ===== 게임 진행 =====
-        [Header("게임 진행")]
-        [Tooltip("총 게임 시간 (초). 15분 = 900초")]
-        public float totalGameTime = 900f;
-        
         // ===== 보스 =====
         [Header("보스")]
-        [Tooltip("보스 등장 시간 (초). 15분 = 900초")]
+        [Tooltip("보스 등장 시간 (초). 15분 = 900초.\n" +
+                 "이 값은 동시에 난이도 곡선(DifficultyData)의 정규화 기준(t=1.0)으로도 사용된다.\n" +
+                 "즉 이 값을 줄이면 적 HP·스폰량 상승 곡선도 그만큼 빠르게 진행된다.\n" +
+                 "HUD 카운트다운, 호스트 마이그레이션 보스 재트리거 판단도 이 값을 따른다.")]
         public float bossSpawnTime = 900f;
 
         [Tooltip("보스 등장 경고 연출 시간 (초)")]

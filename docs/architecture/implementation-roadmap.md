@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-04-29 (N18 패시브 계수 ✅ + 디테일 fix 묶음 + Top 5 갱신)
+최종 업데이트: 2026-05-01 (R13 적 스탯 스케일링 spec 추가 — 미구현)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -294,6 +294,41 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 ### R12. 설정 패널 — Video / Audio / Language ✅ (2026-04-27) → [completed-work.md](completed-work.md)
 
 Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 메뉴 진입점. 후행: Voice/Mic 실효 = Phase 8-2, Locale 실효 = Phase 8-5 A, 클라우드 마이그레이션 = Phase 8-1.
+
+### R13. 적 스탯 스케일링 — 데미지/이속 시간 곡선 + 타입별 sensitivity
+
+**증상/동기:** 시간에 따라 곡선 적용되는 적 스탯이 HP 단 하나라 후반이 단조로움. "맞아도 안 죽는다" 만 강해질 뿐 더 빠르게/더 아프게 때리지 않음.
+
+**정책 (확정):** [systems/enemy-stat-scaling.md](../systems/enemy-stat-scaling.md) 가 SSOT. spawn-rules 와 분리.
+- 데미지 시간 곡선 (`damageStart=1.0` → `damageEnd=3.0`, EaseInOut)
+- 이속 시간 곡선 (`moveSpeedStart=1.0` → `moveSpeedEnd=1.6`, EaseInOut) + **타입별 sensitivity** (Tank=0.0, Chaser=0.5, Swarm=0.7, Runner=1.0, Ranged=0.3)
+- `PlayerScaling` 에 `damageMultiplier`/`moveSpeedMultiplier` 추가 (HP 비율의 절반 ~ 1/3, 4인 일격사 페널티 완화)
+- 방어력/속성 저항은 **보류** (Survivors-like 다중 약공격 빌드 잠식 위험 / 정수 종류 적음)
+
+**잔여 작업:**
+- [ ] **`DifficultyData` 필드 추가:** `damageStart/End/Curve`, `moveSpeedStart/End/Curve` (사용자가 SO 직접 수정)
+- [ ] **`PlayerScaling` 구조체 확장:** `damageMultiplier`, `moveSpeedMultiplier` 신규 (기본 1.0 → 4인 1.3/1.1)
+- [ ] **`EnemyData` 필드 추가:** `[Range(0,1)] moveSpeedScaleSensitivity = 0.5f` (기본 0.5)
+- [ ] **`DifficultyManager` 메서드 추가:** `GetDamageMultiplier(t [, playerCount])`, `GetMoveSpeedMultiplier(t [, playerCount])`
+- [ ] **`SpawnManager` 스폰 경로:** 스폰 시각 + 인원에서 배율 조회 → `Enemy.Initialize` 인자로 전달
+- [ ] **`Enemy.Initialize` 시그니처 확장:** `damageMul`/`speedMul` 인자 추가, sensitivity 적용 후 final 값 캐싱 (런타임 재계산 없음)
+- [ ] **네트워크 권위:** 호스트 측 final 배율을 RPC 페이로드에 포함 — 클라 자체 평가 금지 (호스트/클라 발산 회피)
+- [ ] **개별 EnemyData asset 의 sensitivity 채우기** (사용자가 Unity 에디터에서):
+  - Tank `MeleeTank.asset`: 0.0
+  - Chaser `MeleeChaser.asset`: 0.5
+  - Swarm `MeleeSwarm.asset`: 0.7
+  - Runner `MeleeRunner.asset`: 1.0
+  - Ranged 4종: 0.3
+  - Elite 4종: base 동일 (개별 결정 — 권장 0.3~0.5)
+- [ ] **검증:**
+  - [ ] `photon-sync-auditor` 호출 (RPC 페이로드 변경)
+  - [ ] 0/450/900s 시점 스폰된 같은 적의 final 스탯 비교
+  - [ ] Tank 가 후반에도 base 이속 유지 (sens=0)
+  - [ ] Runner 가 후반 1.6배 이속 (sens=1.0)
+  - [ ] 4인 파티에서 인원 배율 곱 적용
+  - [ ] 보스 본체에 영향 없는지 (`BossSpawner` 우회 확인)
+
+**관련:** [systems/enemy-stat-scaling.md](../systems/enemy-stat-scaling.md), [systems/spawn-rules.md](../systems/spawn-rules.md)
 
 ---
 

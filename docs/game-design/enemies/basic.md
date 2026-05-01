@@ -34,7 +34,7 @@
 | `visualScaleMultiplier` | 1 |
 | `resolveOverlap` | true |
 
-**시간 경과 체력 배율:** `DifficultyData.hpStart` **0.8** → `hpEnd` **15** (0~`totalGameTime` 900s, curve에 따른 보간).
+**시간 경과 체력 배율:** `DifficultyData.hpStart` **0.8** → `hpEnd` **15** (0~`bossSpawnTime` 900s, curve에 따른 보간).
 **인원 스케일링:** 1인 ×0.6 / 2인 ×1.0 / 3인 ×1.4 / 4인 ×1.8 (DifficultyData.playerScalings). 상세 [systems/spawn-rules.md](../../systems/spawn-rules.md).
 
 ## 4. 이동 패턴

@@ -14,8 +14,7 @@
 | 프로젝트명 | Sweepin' Dreams |
 | 장르 | Survivors-like / 멀티플레이어 액션 |
 | 플레이 인원 | 1~4명 Co-op (솔로 공식 지원) |
-| 단일 게임 시간 | **15분** (`GameplayConfig.totalGameTime = 900s`) |
-| 보스 등장 | 15분 (`bossSpawnTime = 900s`) |
+| 단일 게임 시간 / 보스 등장 | **15분** (`GameplayConfig.bossSpawnTime = 900s`. 난이도 곡선 정규화 기준 겸용) |
 | 대상 플랫폼 | PC (Stove Indie → Steam) |
 | 엔진 | Unity 2D URP + Photon PUN 2 |
 | 개발 규모 | 개발자 2명 + UI 디자이너 1명 |

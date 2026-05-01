@@ -4,6 +4,7 @@ using SwDreams.Features.Enemy.Adapter.Data;
 using SwDreams.Features.Enemy.Adapter;
 using Photon.Pun;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Domain.ValueObjects;
 
 namespace SwDreams.Features.Enemy.Adapter
@@ -359,10 +360,25 @@ namespace SwDreams.Features.Enemy.Adapter
                 Collider2D hit = overlapResults[i];
                 if (hit == null || hit == enemyCollider) continue;
 
-                EnemyMovement other = hit.GetComponentInParent<EnemyMovement>();
-                if (other == null || other == this) continue;
-                if (other.enemy == null || !other.enemy.IsAlive) continue;
-                if (!other.enabled || !other.gameObject.activeInHierarchy) continue;
+                // 1차: 다른 일반 적(EnemyMovement) — 자기 자신 제외 + 살아있고 활성 상태인지 검사.
+                EnemyMovement otherMovement = hit.GetComponentInParent<EnemyMovement>();
+                if (otherMovement == this) continue;
+
+                if (otherMovement != null)
+                {
+                    if (otherMovement.enemy == null || !otherMovement.enemy.IsAlive) continue;
+                    if (!otherMovement.enabled || !otherMovement.gameObject.activeInHierarchy) continue;
+                }
+                else
+                {
+                    // 2차: EnemyMovement 가 없는 적 계열(보스 등) 도 IEnemyEntity 마커로 인식.
+                    // 본인은 보정되지만 보스는 별도로 분리되지 않음 — 보스는 자기 길을 진행.
+                    var otherEntity = hit.GetComponentInParent<IEnemyEntity>();
+                    if (otherEntity == null) continue;
+                    if (!otherEntity.IsAlive) continue;
+                    var otherGo = (otherEntity as Component)?.gameObject;
+                    if (otherGo == null || !otherGo.activeInHierarchy) continue;
+                }
 
                 ColliderDistance2D distance = enemyCollider.Distance(hit);
                 if (!distance.isOverlapped) continue;

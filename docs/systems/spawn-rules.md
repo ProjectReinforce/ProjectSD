@@ -3,9 +3,11 @@
 > **SSOT:** 이 문서의 수치는 `Assets/Data/DifficultyData.asset` 과 `Assets/Data/GameplayConfig.asset` (SO)의 복제본이다.
 > 밸런싱 수정은 **SO에서 먼저** 하고 이 문서는 그 결과를 반영한다.
 > 참조 SO: `Assets/Data/DifficultyData.asset`, `Assets/Data/GameplayConfig.asset`
-> 최종 동기화: 2026-04-24
+> 최종 동기화: 2026-05-01
 
-적 스폰 타이밍/수량/스케일링의 SSOT. [../game-design/enemies/INDEX.md](../game-design/enemies/INDEX.md) 와 [../game-design/rules.md § 4](../game-design/rules.md) 에서 본 문서를 참조한다.
+적 스폰 타이밍/수량/타입 비율의 SSOT. [../game-design/enemies/INDEX.md](../game-design/enemies/INDEX.md) 와 [../game-design/rules.md § 4](../game-design/rules.md) 에서 본 문서를 참조한다.
+
+> **분리 규칙 (2026-05-01):** 적의 **스탯 스케일링**(데미지·이속 시간 배율, 타입별 sensitivity, 인원수 데미지/이속 배율) 은 [enemy-stat-scaling.md](enemy-stat-scaling.md) 가 SSOT. 본 문서는 **스폰 타이밍/수량/타입 비율**만 다룬다. HP 곡선은 두 시스템 모두 참조하므로 본 문서 § 3 에 유지.
 
 ## 1. 메타
 
@@ -32,7 +34,7 @@
 | 틱당 스폰 수 (`spawnPerTick`) | **2** | **10** | `spawnPerTickCurve` | 한 번의 스폰 틱에서 생성하는 마릿수 |
 | 경험치 시간 배율 (`expTime`) | **1.2** | **0.4** | `expTimeCurve` | 초반 EXP 후함, 후반 박함 |
 
-**게임 시간 0 ~ `GameplayConfig.totalGameTime`(900s) 을 `t ∈ [0,1]` 로 정규화** 하고 각 커브로 값을 보간한다. 곡선은 모두 linear(time=0→0, time=1→1) 가 기본. 튜닝 시 커브 편집으로 비선형화.
+**게임 시간 0 ~ `GameplayConfig.bossSpawnTime`(900s) 을 `t ∈ [0,1]` 로 정규화** 하고 각 커브로 값을 보간한다. 곡선은 모두 linear(time=0→0, time=1→1) 가 기본. 튜닝 시 커브 편집으로 비선형화.
 
 ## 4. 적 타입별 등장 비율 (`DifficultyData`, 시작 → 종료)
 
@@ -68,6 +70,8 @@
 | 3 | 1.4× | 1.3× | 0.95× |
 | 4 | 1.8× | 1.6× | 0.9× |
 
+> 데미지·이속 인원수 배율(`damageMultiplier`, `moveSpeedMultiplier`)은 [enemy-stat-scaling.md § 5.3](enemy-stat-scaling.md) 에서 신규 정의 (미구현). 본 표는 기존 3개 필드만.
+
 ## 7. 스폰 위치 규칙
 
 - 맵 경계의 랜덤 위치에서 스폰.
@@ -78,7 +82,7 @@
 ## 8. 수식
 
 ```
-tNorm        = gameTime / GameplayConfig.totalGameTime          (clamp 0..1)
+tNorm        = gameTime / GameplayConfig.bossSpawnTime          (clamp 0..1)
 interval(t)  = lerp(intervalStart, intervalEnd, intervalCurve(tNorm))
 maxEnemy(t,n)= lerp(maxEnemyStart, maxEnemyEnd, maxEnemyCurve(tNorm))
                × playerScaling[n].maxEnemyMultiplier
@@ -89,10 +93,12 @@ enemyExp(t,n)= enemy.expValue × playerScaling[n].expMultiplier
                × (expTime 은 시간 보상 주기 보정용, 별도 산식)
 ```
 
+> 적 데미지/이속의 시간·인원 스케일링 수식은 [enemy-stat-scaling.md § 4](enemy-stat-scaling.md) 참조.
+
 ## 9. 데이터 출처
 
 - `Assets/Data/DifficultyData.asset` — 곡선/인원 스케일링/Swarm 그룹
-- `Assets/Data/GameplayConfig.asset` — `totalGameTime` 정규화 기준, `baseKnockbackForce` 등
+- `Assets/Data/GameplayConfig.asset` — `bossSpawnTime` 정규화 기준, `baseKnockbackForce` 등
 - `Assets/Data/Enemy/**/*.asset` — 적별 base 스탯
 - `Assets/Data/EnemyDropTable.asset` / `EliteDropTable.asset` — 드랍 확률
 
