@@ -17,6 +17,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
     /// 어떻게: WaitingRoomPanelController가 PlayerList를 순회하며 이 프리팹을 재사용 풀로
     ///        Bind(Player)하고, 로컬이 마스터이면 KickButton을 활성화한다.
     ///        Kick 버튼은 NetworkManager.KickPlayer로 위임.
+    ///
+    /// R14 보이스 슬라이더는 본 행이 아니라 대기실 좌측 별도 VoicePanel 에서 처리 (인게임과 통일).
     /// </summary>
     public class LobbyPlayerEntry : MonoBehaviour
     {

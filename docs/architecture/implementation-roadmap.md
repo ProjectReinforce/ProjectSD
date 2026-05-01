@@ -299,69 +299,72 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 
 데미지/이속 시간 곡선(1.0→3.0 / 1.0→1.6) + 타입별 sensitivity(Tank 0/Chaser 0.5/Swarm 0.7/Runner 1.0/Ranged 0.3) + PlayerScaling 확장(damageMul/moveSpeedMul). 호스트 권위 + 스폰 1회 캐싱. photon-sync-auditor 통과. 사용자 후속(별건): EnemyData 12개 .asset sensitivity 인스펙터 채우기(현재 default 0.5 단일). 상세 [enemy-stat-scaling.md](../systems/enemy-stat-scaling.md).
 
-### R14. 인게임 마이크 민감도 + 유저별 보이스 볼륨 조절
+### R14. 인게임 마이크 민감도 + 유저별 보이스 볼륨 조절 🟡 코드 완료, 인스펙터/검증 잔여
 
 **개요:** R12 (설정 패널) 의 글로벌 Voice/MicSens 외에 **유저별 개별 보이스 볼륨** 슬라이더 + **마이크 민감도 빠른 접근 UI (대기실/인게임 HUD)** 노출. "쟤만 시끄러워서 작게" 케이스 + 게임 중 마이크 민감도 즉시 조절.
 
 **확정 결정사항 (2026-05-01 사용자 확정):**
-- **최종 볼륨 =** `MasterVoice (R12) × PerUserVolume[i]` 곱연산. Discord 동일 패턴
-- **유저별 슬라이더 노출 위치 2곳:**
-  - 대기실: `LobbyPlayerEntry` 옆에 작은 슬라이더 (자기 자신은 미표시)
-  - 인게임: ESC 일시정지 메뉴 (U4) 의 팀원 리스트 → 각 행에 슬라이더
-- **유저별 볼륨 값은 같은 클라 안에서 룸 내내 유지** (대기실 ↔ 인게임 씬 전환 횡단). **룸 나가면 휘발**. PlayerPrefs 저장 X — 어차피 매 룸마다 유저 다름. 키는 **ActorNumber** (룸 내 유일). 동기화 X (네가 다른 유저 볼륨 어떻게 조절했는지 그 사람은 모름)
+- **대기실 음성 채팅 활성화** — Phase 8-2 1차 통합 시 `PlayerStub.prefab` (인게임) 만 보이스 컴포넌트 부착돼 있던 것을 본 작업에서 `LobbyPlayer.prefab` (대기실 월드 캐릭터) 도 동일 패턴으로 보완. 즉 대기실에서도 음성 송수신 + 좌측 VoicePanel 로 즉시 조절 가능
+- **최종 볼륨:** `master(AudioMixer "VoiceGain" dB) × perUser(audioSource.volume)` — **AudioMixer 가 master 처리, PerUserVoiceApplier 가 perUser 처리.** 즉 Applier 에서 master 안 곱함 (이중 곱셈 회피). spec 초안의 `master_linear × perUser` 직접 곱은 AudioMixer 미사용 가정이라 정정.
+- **유저별 슬라이더 노출 위치 3곳 (모두 좌측 별도 `VoicePanel` 패턴 통일):**
+  - **대기실 — `VoicePanel` 좌측 배치** (대기실 패널 내부)
+  - **인게임 HUD — `VoicePanel` 좌측 배치** (GameScene Canvas)
+  - U4 ESC 메뉴 팀원 섹션 — **U4 의존, 본 R14 작업 범위 외**. PerUserVoiceSettings 싱글턴 공유로 자동 정합
+  - 시각: 평소 흐림(alpha 0.5 + 핸들 alpha 0 + 트랙 alpha 0.4) → 호버 시 또렷(alpha 1). 인터랙션 가드 X (Slider default)
+  - **`LobbyPlayerEntry` 행 슬라이더는 도입하지 않음** — 좌측 VoicePanel 로 통일 (인게임 ↔ 대기실 일관성 + 시각 단순)
+- **유저별 볼륨 값은 같은 클라 안에서 룸 내내 유지** (대기실 ↔ 인게임 씬 전환 횡단). **룸 나가면 휘발**. PlayerPrefs 저장 X. 키는 **ActorNumber** (룸 내 유일). 동기화 X (클라이언트 로컬)
 - **마이크 민감도 UI 3곳 (값 공유):**
-  - R12 설정 패널 (기존)
-  - 대기실 HUD — `Panel_Lobby` 하단 또는 사이드에 마이크 아이콘 + 작은 슬라이더
-  - 인게임 HUD — 화면 모서리(우상단 권장) 마이크 아이콘 + 슬라이더 (또는 아이콘 클릭 → popup 슬라이더)
-  - **3곳 모두 R12 의 `SettingsManager.MicSensitivity` 와 양방향 바인딩** — 한 곳에서 바꾸면 즉시 모든 UI 갱신. PlayerPrefs 저장은 R12 가 담당 (본인 설정이라 룸 무관, 영구 보존이 합리적)
-- **클라이언트 로컬, 동기화 X:** `Speaker.AudioSource.volume` 로컬만 변경
-- **슬라이더 범위:** 유저별 볼륨 0~2. 최종 적용은 `Speaker.AudioSource.volume = clamp(MasterVoice_linear × perUser, 0, 1)` — 유저별은 곱셈 인자, 클램프는 최종에서
+  - R12 설정 패널 (기존) / 대기실 `VoicePanel` 안 / 인게임 `VoicePanel` 안
+  - **3곳 모두 R12 의 `SettingsManager.MicSensitivity` 와 양방향 바인딩.** PlayerPrefs 저장은 R12 가 담당 (영구 보존)
+- **슬라이더 범위:** 유저별 볼륨 **0~2** (boost 지원). 1.0 default + 1.0 노치 마커 권장. AudioSource.volume 의 0~1 cap 우회를 위해 `AudioGainBoost` (OnAudioFilterRead 후처리) 컴포넌트로 sample-level gain 곱. 1 초과는 마이크 작은 유저 보정용 boost. 2 초과 시 clipping 위험으로 차단
 
 **선결 조건:**
 - R12 ✅ (Master Voice 슬라이더 + AudioMixer + MicSensitivity SettingsManager)
-- Phase 8-2 (Photon Voice 2 통합) — `Speaker` / `Recorder` 도입 후 실 동작
-- U4 (ESC 일시정지 메뉴) — 팀원 슬라이더 진입 경로. **U4 작업과 합쳐 진행 권장**
+- Phase 8-2 ✅ (Photon Voice 2 통합 — Speaker/Recorder/PhotonVoiceView)
+- U4 (ESC 일시정지 메뉴) — 팀원 슬라이더 진입 경로. **본 R14 와 분리 진행** (PerUserVoiceSettings 싱글턴 공유로 U4 도 동일 데이터 자동 사용)
 
-**Phase 1 — 유저별 볼륨 데이터 모델 (룸 메모리만):**
-- [ ] `Features/UI/Adapter/Voice/PerUserVoiceSettings.cs` 싱글턴 — `Dictionary<int actorNumber, float volume>` (메모리만)
-- [ ] `GetVolumeFor(actorNumber)` / `SetVolumeFor(actorNumber, vol)` — 기본 1.0
-- [ ] `event Action<int actorNumber> OnVolumeChanged` (구독자 = 해당 Speaker)
-- [ ] `OnLeftRoom` Photon 콜백 → `Clear()` 호출 (룸 나갈 때 휘발)
-- [ ] `DontDestroyOnLoad` — 대기실 ↔ 인게임 씬 전환 횡단
+**코드 작업 ✅ (2026-05-01, 미커밋):**
+- ✅ `Features/Voice/Adapter/PerUserVoiceSettings.cs` — 싱글턴, OnLeftRoom→Clear, OnVolumeChanged 이벤트
+- ✅ `Features/Voice/Adapter/PerUserVoiceApplier.cs` — Speaker 측 audioSource.volume 갱신, IsMine 가드, Owner null 대기 코루틴 (OnDisable 정리 포함)
+- ✅ `Features/UI/Adapter/Voice/PerUserVoiceSliderEntry.cs` — 슬라이더 ↔ Settings 양방향 (대기실/HUD 행 공통)
+- ✅ `Features/UI/Adapter/Voice/MicSensitivitySlider.cs` — 슬라이더 ↔ SettingsManager 양방향 (3곳 공통)
+- ✅ `Features/UI/Adapter/Voice/VoicePanelHover.cs` — 호버 상태 + root CanvasGroup alpha lerp
+- ✅ `Features/UI/Adapter/Voice/SliderHoverFade.cs` — 자식 슬라이더의 핸들/트랙 Image 알파 lerp
+- ✅ `Features/UI/Adapter/Voice/VoicePanelController.cs` — 인게임 좌측 패널, OnPlayerEntered/Left/Joined 콜백으로 행 동적 추가/제거
+- ✅ `LobbyPlayerEntry.cs` 수정 — Bind() 안에서 voiceSliderEntry.Bind/Unbind + voiceSliderRoot SetActive(!isYou)
+- unity-reviewer Critical 2건 (PerUserVoiceApplier 코루틴 정리 / VoicePanelController Start+OnEnable 중복 빌드) 수정 완료
 
-**Phase 2 — Photon Voice 2 적용:**
-- [ ] Player 프리팹의 `Speaker` 컴포넌트 reference 캐싱 (Phase 8-2 도입 후)
-- [ ] 신규 `PerUserVoiceApplier` 컴포넌트 — Speaker 옆 부착. `OnVolumeChanged` 구독 + R12 `SettingsManager.OnMasterVoiceChanged` 구독 → `Speaker.AudioSource.volume = master_linear × perUser` 즉시 갱신
-- [ ] 본인 `Speaker` 는 자기 목소리 재생 안 하므로 가드 (PhotonView.IsMine 시 컴포넌트 비활성)
+**사용자 인스펙터 작업 ⬜:**
+- [ ] `PlayerStub.prefab` Speaker(또는 자식 AudioSource) GameObject 에 `AudioGainBoost` + `PerUserVoiceApplier` 부착. PerUserVoiceApplier 의 `gainBoost` 슬롯에 AudioGainBoost 드래그 (Awake 자동 탐색도 됨)
+- [ ] **신규: `LobbyPlayer.prefab` 보이스 셋업 (Phase 8-2 보완)** — `PlayerStub.prefab` 과 동일 패턴:
+  - `PhotonVoiceView` (PhotonView 와 동일 GameObject)
+  - `Recorder` (TransmitEnabled=false, MicrophoneType=Photon)
+  - `Speaker` (playOnAwake=false)
+  - AudioSource (Speaker 가 자동 생성 또는 수동 부착, Output → MasterMixer/Voice 그룹)
+  - `VoiceController` (자기 측 마이크 제어, IsMine 가드)
+  - **`AudioGainBoost`** (AudioSource 와 같은 GameObject — `OnAudioFilterRead` 가 동작하려면 필수)
+  - `PerUserVoiceApplier` (Speaker 측, 다른 사용자 볼륨 적용 — gainBoost 슬롯 자동 탐색 OK)
+- [ ] **신규 `VoicePanel.prefab`** 작성 — 좌측 코너 패널, root 에 `CanvasGroup` + `VoicePanelHover` + `VoicePanelController` + `Image`(raycastTarget=true, 호버 hit). 자식에 자기 마이크 슬라이더(`MicSensitivitySlider` + `SliderHoverFade`) + 팀원 컨테이너
+- [ ] **신규 `TeammateVoiceRow.prefab`** 작성 — 팀원 한 줄 (마이크 아이콘 Image + 이름 TMP_Text + 슬라이더). 컴포넌트: `PerUserVoiceSliderEntry` + `SliderHoverFade` + **`MicActivityIndicator`** (Discord 패턴, `Speaker.IsPlaying` 으로 자동 색 토글). `VoicePanelController.memberRowPrefab` 슬롯에 연결
+- [ ] **GameScene Canvas 에 `VoicePanel.prefab` 좌측 인스턴스 배치**
+- [ ] **MenuScene 의 대기실 패널에도 `VoicePanel.prefab` 좌측 인스턴스 배치** (인게임과 동일 prefab — VoicePanelController 가 PhotonNetwork.PlayerList 기반이라 씬 무관 동작)
 
-**Phase 3 — 대기실 UI:**
-- [ ] `LobbyPlayerEntry.prefab` 에 작은 유저별 보이스 슬라이더 추가 (자기 자신은 SetActive(false), `pv.IsMine` 가드)
-- [ ] 슬라이더 onValueChanged → `PerUserVoiceSettings.SetVolumeFor(actorNumber, ...)`
-- [ ] 슬라이더 1.0 위치 노치 마커 (R12 패턴 재사용)
-- [ ] `Panel_Lobby` 하단 또는 사이드에 **마이크 민감도 슬라이더** + 마이크 아이콘 — `SettingsManager.MicSensitivity` 양방향 바인딩
-
-**Phase 4 — 인게임 UI:**
-- [ ] **인게임 HUD 마이크 민감도** — `InGameHUD.prefab` 우상단 코너에 마이크 아이콘 + 슬라이더 (또는 아이콘 클릭 → popup). `SettingsManager.MicSensitivity` 양방향 바인딩
-- [ ] **U4 ESC 일시정지 메뉴 팀원 보이스 섹션** — 팀원 리스트 (NickName + 슬라이더), 자기 제외
-- [ ] disconnect 한 유저는 즉시 행 제거 (`OnPlayerLeftRoom` 구독)
-- [ ] 슬라이더 onValueChanged → `PerUserVoiceSettings.SetVolumeFor(actorNumber, ...)` (Phase 3 와 동일 싱글턴 공유)
-
-**Phase 5 — 검증:**
-- [ ] ParrelSync 4 인스턴스 — A 가 B 의 볼륨을 0 으로 하면 A 측 B 음소거, 다른 인스턴스는 영향 없음
-- [ ] 대기실에서 A 의 볼륨 0.5 설정 → 게임 시작(씬 전환) → 인게임에서 A 의 볼륨 여전히 0.5 (룸 메모리 유지)
-- [ ] 룸 나가기 → 다시 입장 → 모든 유저 볼륨 1.0 으로 초기화 (휘발 검증)
-- [ ] 마이크 민감도 — 설정 패널/대기실 HUD/인게임 HUD 3곳 중 한 곳에서 변경 → 다른 2곳 즉시 갱신 (양방향 바인딩)
-- [ ] R12 Master Voice = 0 일 때 PerUser 무관 무음
-- [ ] 슬라이더 드래그 중 즉시 반영
+**Phase 5 — 검증 ⬜:**
+- [ ] ParrelSync 2~4 인스턴스 — A 가 B 볼륨 0 → A 측 B 음소거, 다른 인스턴스 영향 없음
+- [ ] 대기실 A 볼륨 0.5 → 인게임 씬 전환 후 0.5 유지
+- [ ] 룸 나가기 → 재입장 → 모든 볼륨 1.0 초기화
+- [ ] 마이크 민감도 3곳 중 한 곳 변경 → 다른 2곳 즉시 갱신
+- [ ] R12 Master Voice = 0 → PerUser 무관 무음
+- [ ] 호버 알파: 패널 평소 흐림, 마우스 진입 시 또렷, 슬라이더 핸들 사라짐/등장
+- [ ] 마이크 활성도: 송신 중 유저 행 마이크 아이콘 활성 색 / 음소거·없음·PTT 미발화 시 회색
 
 **범위 외:**
-- 보이스 음소거 전용 토글 버튼 — 슬라이더 0 으로 충분
-- 보이스 우선순위 / spatial audio (거리 기반 감쇠) — 별건 검토
-- 보이스 녹음/재생
-- 다른 유저가 "쟤가 날 음소거함" 알림 (표준은 알림 X)
-- 유저별 볼륨 동기화 (네 설정이 다른 클라에 전파) — 클라이언트 로컬 유지
+- 보이스 음소거 전용 토글 — 슬라이더 0 으로 충분
+- spatial audio / 거리 감쇠 — 별건
+- 다른 유저가 "쟤가 날 음소거함" 알림 — 표준 X
+- 유저별 볼륨 동기화 (다른 클라 전파) — 클라이언트 로컬 유지
 
-**관련:** R12 (설정 패널 — Master Voice / MicSensitivity SettingsManager), U4 (ESC 메뉴 — 팀원 슬라이더 진입 경로), Phase 8-2 (Photon Voice 2), [voice-chat.md](../systems/voice-chat.md)
+**관련:** R12 (Master Voice / MicSensitivity), U4 (ESC 메뉴 팀원 섹션은 별도), Phase 8-2 (Photon Voice 2), [voice-chat.md](../systems/voice-chat.md)
 
 ---
 
