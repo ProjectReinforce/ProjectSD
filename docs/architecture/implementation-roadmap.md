@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-01 (R13 적 스탯 스케일링 spec 추가 — 미구현)
+최종 업데이트: 2026-05-01 (Top 5 재배치 — R14/R13 최상단 승격)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,19 +16,19 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰:** finalize-work §2.5 가 ✅ 처리 시 큐에서 자동 제거 + 다음 후보 제안. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-04-29**
+> 마지막 갱신: **2026-05-01** (R14/R13 최상단으로 승격 — 사용자 우선순위)
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
-| 1 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 2 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
-| 3 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **캐릭터/적 아웃라인 검증** | 단독 가능. 스프라이트 애니메이션 호환성 + 90마리 동시 퍼포먼스 측정 | 없음 | 0.5~1일 |
+| 1 | [§ R14](#r14-인게임-마이크-민감도--유저별-보이스-볼륨-조절) **유저별 보이스 + 인게임 마이크 민감도** | 사용자 우선순위. 멀티 게임 UX 핵심 — 트롤 마이크 / 음량 차이 즉시 대응 | **[U4 ESC 메뉴](#u4-esc-인게임-일시정지-메뉴) 동반 작업 권장** ([spec](../systems/in-game-menu.md)). Phase 8-2 ✅ 해제됨 | 1.5~2일 (U4 포함) |
+| 2 | [§ R13](#r13-적-스탯-스케일링--데미지이속-시간-곡선--타입별-sensitivity) **적 스탯 스케일링** (데미지/이속 시간 곡선) | 사용자 우선순위. 후반 단조로움 해소 ("맞아도 안 죽는다" 만 강해지는 문제). spec 완비 ([enemy-stat-scaling.md](../systems/enemy-stat-scaling.md)) | 없음 (선행 가능). 사용자가 SO 직접 수정 필요 | 1~1.5일 |
+| 3 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
 | 4 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
-| 5 | [§ Phase 8-5 B](#phase-8--출시-인프라--대기-설계만-완료) **Localization Phase B (UI 키 매핑)** | Phase 8-5 A ✅ 후속. 점진적 — MenuScene UI / HUD / LevelUp / Result 의 한국어 라벨에 LocalizedText 부착 + 시트 ko_final 채우기 | Phase 8-5 A ✅ 해제됨 | 수일~1주 |
+| 5 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R4, Phase 8-5 B, R6 모두 독립.
-**병렬 가능 그룹**: R10 + R4 + Phase 8-5 B + R6 가 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R13, R10, R6, Phase 5-2/5-3 모두 독립. R14 는 U4 ESC 메뉴 작업과 묶음.
+**병렬 가능 그룹**: R13 + R10 + R6 + Phase 5 가 서로 다른 파일 영역이라 동시 진행 OK. R14+U4 도 별도 영역이라 위 그룹과 병렬 가능.
+**다음 진입 후보** (Top 5 다 끝났을 때): R4 (아웃라인 검증), Phase 8-5 B (Localization UI 키 매핑), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
 
 ---
 
@@ -330,6 +330,70 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 
 **관련:** [systems/enemy-stat-scaling.md](../systems/enemy-stat-scaling.md), [systems/spawn-rules.md](../systems/spawn-rules.md)
 
+### R14. 인게임 마이크 민감도 + 유저별 보이스 볼륨 조절
+
+**개요:** R12 (설정 패널) 의 글로벌 Voice/MicSens 외에 **유저별 개별 보이스 볼륨** 슬라이더 + **마이크 민감도 빠른 접근 UI (대기실/인게임 HUD)** 노출. "쟤만 시끄러워서 작게" 케이스 + 게임 중 마이크 민감도 즉시 조절.
+
+**확정 결정사항 (2026-05-01 사용자 확정):**
+- **최종 볼륨 =** `MasterVoice (R12) × PerUserVolume[i]` 곱연산. Discord 동일 패턴
+- **유저별 슬라이더 노출 위치 2곳:**
+  - 대기실: `LobbyPlayerEntry` 옆에 작은 슬라이더 (자기 자신은 미표시)
+  - 인게임: ESC 일시정지 메뉴 (U4) 의 팀원 리스트 → 각 행에 슬라이더
+- **유저별 볼륨 값은 같은 클라 안에서 룸 내내 유지** (대기실 ↔ 인게임 씬 전환 횡단). **룸 나가면 휘발**. PlayerPrefs 저장 X — 어차피 매 룸마다 유저 다름. 키는 **ActorNumber** (룸 내 유일). 동기화 X (네가 다른 유저 볼륨 어떻게 조절했는지 그 사람은 모름)
+- **마이크 민감도 UI 3곳 (값 공유):**
+  - R12 설정 패널 (기존)
+  - 대기실 HUD — `Panel_Lobby` 하단 또는 사이드에 마이크 아이콘 + 작은 슬라이더
+  - 인게임 HUD — 화면 모서리(우상단 권장) 마이크 아이콘 + 슬라이더 (또는 아이콘 클릭 → popup 슬라이더)
+  - **3곳 모두 R12 의 `SettingsManager.MicSensitivity` 와 양방향 바인딩** — 한 곳에서 바꾸면 즉시 모든 UI 갱신. PlayerPrefs 저장은 R12 가 담당 (본인 설정이라 룸 무관, 영구 보존이 합리적)
+- **클라이언트 로컬, 동기화 X:** `Speaker.AudioSource.volume` 로컬만 변경
+- **슬라이더 범위:** 유저별 볼륨 0~2. 최종 적용은 `Speaker.AudioSource.volume = clamp(MasterVoice_linear × perUser, 0, 1)` — 유저별은 곱셈 인자, 클램프는 최종에서
+
+**선결 조건:**
+- R12 ✅ (Master Voice 슬라이더 + AudioMixer + MicSensitivity SettingsManager)
+- Phase 8-2 (Photon Voice 2 통합) — `Speaker` / `Recorder` 도입 후 실 동작
+- U4 (ESC 일시정지 메뉴) — 팀원 슬라이더 진입 경로. **U4 작업과 합쳐 진행 권장**
+
+**Phase 1 — 유저별 볼륨 데이터 모델 (룸 메모리만):**
+- [ ] `Features/UI/Adapter/Voice/PerUserVoiceSettings.cs` 싱글턴 — `Dictionary<int actorNumber, float volume>` (메모리만)
+- [ ] `GetVolumeFor(actorNumber)` / `SetVolumeFor(actorNumber, vol)` — 기본 1.0
+- [ ] `event Action<int actorNumber> OnVolumeChanged` (구독자 = 해당 Speaker)
+- [ ] `OnLeftRoom` Photon 콜백 → `Clear()` 호출 (룸 나갈 때 휘발)
+- [ ] `DontDestroyOnLoad` — 대기실 ↔ 인게임 씬 전환 횡단
+
+**Phase 2 — Photon Voice 2 적용:**
+- [ ] Player 프리팹의 `Speaker` 컴포넌트 reference 캐싱 (Phase 8-2 도입 후)
+- [ ] 신규 `PerUserVoiceApplier` 컴포넌트 — Speaker 옆 부착. `OnVolumeChanged` 구독 + R12 `SettingsManager.OnMasterVoiceChanged` 구독 → `Speaker.AudioSource.volume = master_linear × perUser` 즉시 갱신
+- [ ] 본인 `Speaker` 는 자기 목소리 재생 안 하므로 가드 (PhotonView.IsMine 시 컴포넌트 비활성)
+
+**Phase 3 — 대기실 UI:**
+- [ ] `LobbyPlayerEntry.prefab` 에 작은 유저별 보이스 슬라이더 추가 (자기 자신은 SetActive(false), `pv.IsMine` 가드)
+- [ ] 슬라이더 onValueChanged → `PerUserVoiceSettings.SetVolumeFor(actorNumber, ...)`
+- [ ] 슬라이더 1.0 위치 노치 마커 (R12 패턴 재사용)
+- [ ] `Panel_Lobby` 하단 또는 사이드에 **마이크 민감도 슬라이더** + 마이크 아이콘 — `SettingsManager.MicSensitivity` 양방향 바인딩
+
+**Phase 4 — 인게임 UI:**
+- [ ] **인게임 HUD 마이크 민감도** — `InGameHUD.prefab` 우상단 코너에 마이크 아이콘 + 슬라이더 (또는 아이콘 클릭 → popup). `SettingsManager.MicSensitivity` 양방향 바인딩
+- [ ] **U4 ESC 일시정지 메뉴 팀원 보이스 섹션** — 팀원 리스트 (NickName + 슬라이더), 자기 제외
+- [ ] disconnect 한 유저는 즉시 행 제거 (`OnPlayerLeftRoom` 구독)
+- [ ] 슬라이더 onValueChanged → `PerUserVoiceSettings.SetVolumeFor(actorNumber, ...)` (Phase 3 와 동일 싱글턴 공유)
+
+**Phase 5 — 검증:**
+- [ ] ParrelSync 4 인스턴스 — A 가 B 의 볼륨을 0 으로 하면 A 측 B 음소거, 다른 인스턴스는 영향 없음
+- [ ] 대기실에서 A 의 볼륨 0.5 설정 → 게임 시작(씬 전환) → 인게임에서 A 의 볼륨 여전히 0.5 (룸 메모리 유지)
+- [ ] 룸 나가기 → 다시 입장 → 모든 유저 볼륨 1.0 으로 초기화 (휘발 검증)
+- [ ] 마이크 민감도 — 설정 패널/대기실 HUD/인게임 HUD 3곳 중 한 곳에서 변경 → 다른 2곳 즉시 갱신 (양방향 바인딩)
+- [ ] R12 Master Voice = 0 일 때 PerUser 무관 무음
+- [ ] 슬라이더 드래그 중 즉시 반영
+
+**범위 외:**
+- 보이스 음소거 전용 토글 버튼 — 슬라이더 0 으로 충분
+- 보이스 우선순위 / spatial audio (거리 기반 감쇠) — 별건 검토
+- 보이스 녹음/재생
+- 다른 유저가 "쟤가 날 음소거함" 알림 (표준은 알림 X)
+- 유저별 볼륨 동기화 (네 설정이 다른 클라에 전파) — 클라이언트 로컬 유지
+
+**관련:** R12 (설정 패널 — Master Voice / MicSensitivity SettingsManager), U4 (ESC 메뉴 — 팀원 슬라이더 진입 경로), Phase 8-2 (Photon Voice 2), [voice-chat.md](../systems/voice-chat.md)
+
 ---
 
 ## 메뉴 / UI 잔여 (U)
@@ -345,8 +409,28 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 - 솔로 모드 LeaveRoom 시 `MenuSceneManager.ShowRoomList()` 라우팅.
 
 ### U4. ESC 인게임 일시정지 메뉴
-- 인게임: ESC → `GameState.Paused` + 메뉴 UI (재개/설정/방 나가기). 메인씬: ESC = 뒤로가기.
-- 멀티플레이 정지 정책 결정 필요 (혼자 정지 vs 전원 정지 vs 메뉴만 표시).
+
+**spec:** [systems/in-game-menu.md](../systems/in-game-menu.md) (2026-05-01 작성)
+
+**확정 결정사항 (spec 참조):**
+- UI: 반투명 dim + **중앙 모달**
+- 메뉴 항목: Resume / 설정 / 룸 나가기 / 게임 종료
+- 정지 정책: **솔로(PlayerCount == 1) 한정** `GameState.Paused` 진정 정지 / **멀티는 로컬 UI 토글만** (게임 흐름 유지)
+- 호출 가능 상태: `Playing` / `BossFight` / `Paused`(레벨업 중) — ESC 메뉴는 레벨업 패널 위에 띄움
+- 룸 나가기 행선지: 메뉴 씬 → **룸 리스트 패널** (호스트는 마이그레이션, 게스트는 단순 leave)
+- 메인씬: ESC = 뒤로가기 (별건)
+
+**의존성:**
+- **Frame_PopUp 미작성** ([ui-frame.md § 3.2](../systems/ui-frame.md)) — 룸 나가기/게임 종료 **확인 다이얼로그** 가 모달 필요. ESC 메뉴 구현 들어가기 전에 Frame_PopUp 먼저 작성하거나 임시 모달로 진행 후 마이그레이션
+- 메뉴 씬 설정 패널 재활용 — § 7 옵션 A(같은 프리팹 인스턴스화) / B(공통 프리팹 분리) 중 구현 단계 결정
+
+**잔여 작업:**
+- [ ] `InGameMenuController` (ESC 입력 + Toggle + 정지 분기 캐싱)
+- [ ] `InGameMenuCanvas` 프리팹 (sortOrder=100, 중앙 모달 카드, 4 버튼)
+- [ ] 솔로 판정 + GameState 분기 (Playing/BossFight 캐싱 → 닫을 때 복원, Paused 면 건드리지 않음)
+- [ ] 룸 나가기 → `MenuSceneManager` 룸 리스트 진입점 호출 (HostMigrationHandler 기존 인프라 활용)
+- [ ] 게임 종료 (`Application.Quit()` + 에디터 분기)
+- [ ] **R14 Phase 4 팀원 보이스 슬라이더 섹션** 동반 (R14 와 합쳐 진행 권장)
 
 ### U5. 결과창 "나가기" → 방 리스트로
 - 현재 Title 경유. RoomList 직행으로 라우팅 (`ResultManager.OnExit` → `ShowRoomList`).

@@ -64,6 +64,7 @@ Sweepin' Dreams 의 씬 구조와 각 씬 내부 패널 구성.
 |---|---|---|
 | **GameHUDPanel** | 체력/경험치 바, 타이머, 스킬 슬롯, 팀원 상태, 보스 체력, 레벨업/혼돈 선택 카드, 부활 타이머 | 씬 로드 시 활성. 게임 중 항상 표시 |
 | **ResultPanel** (오버레이) | 결과 타이틀, 게임 통계, 빌드 요약, 보스 혼돈, 다시 하기/나가기 | 보스 처치 또는 전멸 시 GameHUD 위에 오버레이 |
+| **InGameMenuPanel** (오버레이, ⬜ 미구현) | 반투명 dim + 중앙 모달 카드: Resume / 설정 / 룸 나가기 / 게임 종료 | ESC 입력 시 토글. 호출 가능 상태 = `Playing` / `BossFight` / `Paused`(레벨업 중). 솔로(PlayerCount==1) 한정 진정 정지 — 상세 [in-game-menu.md](in-game-menu.md) |
 
 UI 요소 상세는 [../game-design/flow-design.md § 2.4](../game-design/flow-design.md).
 

@@ -74,7 +74,9 @@ docs/
 │   ├── ui-frame.md                    ← FrameToast / Frame_PopUp
 │   ├── managers.md                    ← 매니저 싱글톤 레이어
 │   ├── scene-structure.md             ← MenuScene / GameScene
-│   └── spawn-rules.md                 ← 스폰 타이밍·난이도 곡선
+│   ├── spawn-rules.md                 ← 스폰 타이밍·난이도 곡선
+│   ├── map-bounds.md                  ← 맵 경계·안개
+│   └── in-game-menu.md                ← 인게임 ESC 메뉴·일시정지 정책
 └── templates/
     ├── skill-spec.md
     ├── enemy-spec.md

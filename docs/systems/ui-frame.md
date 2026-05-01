@@ -75,6 +75,7 @@ public interface IPopupHandle
 | 플레이어 연결 끊김 알림 | `ReconnectUI` | FrameToast |
 | 결과 화면 | `ResultPanelUI` | Frame_PopUp (오버레이) |
 | 사망 오버레이 | `DeathOverlayUI` | Frame_PopUp |
+| **인게임 ESC 메뉴 — 룸 나가기/게임 종료 확인** | (미구현) | **Frame_PopUp** (모달 확인창) — [in-game-menu.md](in-game-menu.md) 의존 |
 
 기존 `LevelUpPanel.cs` / `DeathOverlayUI.cs` / `ResultPanelUI.cs` / `ReconnectUI.cs` 등이 단계적으로 본 프레임을 사용하도록 이관 예정.
 
@@ -106,7 +107,7 @@ public interface IPopupHandle
 
 ## 10. 알려진 제약 / 남은 작업
 
-- [ ] **Frame_PopUp.prefab 미작성** — 모달 팝업 통합 프레임. 도입 시 LevelUpPanel/ResultPanel/DeathOverlay 등 이관
+- [ ] **Frame_PopUp.prefab 미작성** — 모달 팝업 통합 프레임. 도입 시 LevelUpPanel/ResultPanel/DeathOverlay 등 이관. **[in-game-menu.md](in-game-menu.md) (ESC 메뉴) 가 룸 나가기/게임 종료 확인 다이얼로그를 위해 본 프레임 의존** — ESC 메뉴 구현 들어가기 전 또는 함께 작성 필요
 - [ ] **`Frame` 정적 API 클래스 미작성** — `ShowToast` / `ShowPopup` 진입점
 - [ ] **FrameToast 호출하는 컴포넌트 미작성** — 현재는 프리팹만 있고 인스턴스화 코드 없음
 - [ ] 모달 중첩 정책 확정 필요 (큐 vs 최상위만)
