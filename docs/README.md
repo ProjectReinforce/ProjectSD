@@ -18,7 +18,7 @@ Claude 는 **필요한 순간에만** `docs/` 를 읽는다. 모든 작업이 �
 **작업 흐름:**
 1. 사용자 "다음 뭐 할까?" → roadmap.md § 지금 추천 작업 (Top 5) 만 보고 답변
 2. 특정 항목 결정 → 해당 R 항목 본문 + 연결된 시스템 spec 문서로 drill down
-3. 작업 종료 → finalize-work skill 자동 호출 (✅ 마이그레이션 + 작업 순서 큐 갱신)
+3. 작업 종료 → CLAUDE.md § 6.9 "커밋 전 관련 문서 갱신" 따라 docs 동기화 후 커밋. ✅ 마이그레이션 절차는 [implementation-roadmap.md](architecture/implementation-roadmap.md) 헤더 운영 룰을 SSOT 로 따름.
 
 ---
 

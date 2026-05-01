@@ -2,9 +2,9 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.6 (2026-04-26) — § 6 작업 규칙에 "ScriptableObject 인스턴스(.asset) 직접 수정 금지" 추가.
+> **버전:** v2.7 (2026-05-01) — `finalize-work` 스킬 제거. § 6 작업 규칙에 "커밋 전 관련 문서 갱신" 추가 (스킬의 핵심 로직 흡수).
 >
-> **이전:** v2.5 (2026-04-26) — 폴더 지도 미스매치 수정(Skill/Progression 입혀쓰기, Essence/Pickup/Quest/StatBoost/Weapon/Enemy.Attack 추가, EffectActionType 12종 갱신). 최상단 4종 진입점 명문화. spec↔roadmap 분리 룰 도입.
+> **이전:** v2.6 (2026-04-26) — § 6 작업 규칙에 "ScriptableObject 인스턴스(.asset) 직접 수정 금지" 추가.
 
 ---
 
@@ -198,6 +198,17 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 8. **ScriptableObject 인스턴스(.asset) 직접 수정 절대 금지:** SO `.asset` 파일(인스펙터에서 채우는 데이터)은 **사용자가 Unity 에디터에서 직접 수정한다.** Claude는 어떤 경우에도 `.asset` 파일을 `Edit`/`Write` 하지 않는다 (YAML 직편집·`fileID`·`guid` 변경 포함 일체 금지).
    - 데이터 변경이 필요하면 **어떤 SO의 어떤 필드에 어떤 값을 넣어야 하는지 안내만** 하고 멈춘다 (예: "`Skill_Sword_Lv3.asset` 의 `damage` 를 25 → 30").
    - SO 클래스 정의 `.cs` 파일(필드 추가/제거 등 코드 작업)은 본 규칙의 적용 대상이 아니다 — 단, 필드 추가 시 메모리 [Custom Editor Sync](feedback_custom_editor_sync.md)에 따라 `SkillDataEditor` 등 커스텀 에디터도 함께 업데이트할 것.
+9. **커밋 전 관련 문서 갱신:** 코드 변경을 커밋하기 전에 관련 docs 도 함께 갱신했는지 확인하고, 갱신이 필요하면 같은 작업 단위에서 처리한 뒤 커밋한다.
+   - **변경 경로 → 연관 문서 매핑**:
+     - `Features/Skill/` ↔ [docs/systems/skill-executor.md](docs/systems/skill-executor.md) · [trigger-effects.md](docs/systems/trigger-effects.md) · `docs/game-design/skills/`
+     - `Features/Enemy/` · `Features/Boss/` ↔ `docs/game-design/enemies/` · [docs/systems/spawn-rules.md](docs/systems/spawn-rules.md)
+     - `Features/UI/Adapter/Menu/` 또는 `Resources/Prefabs/UI/Frame_*` ↔ [docs/systems/ui-frame.md](docs/systems/ui-frame.md) · [scene-structure.md](docs/systems/scene-structure.md)
+     - `Shared/Network/` 또는 `NetworkManager.cs` ↔ [docs/systems/network-sync.md](docs/systems/network-sync.md)
+     - R/U/Phase 항목 완료(✅) ↔ [implementation-roadmap.md](docs/architecture/implementation-roadmap.md) + [completed-work.md](docs/architecture/completed-work.md). **마이그레이션 절차(✅ 항목 → completed-work 이전, roadmap 1줄 압축, Top 5 큐 갱신)는 `implementation-roadmap.md` 헤더 운영 룰을 SSOT 로 따른다.**
+   - **순서:** 문서를 먼저 **읽고** → 변경 제안을 사용자에게 diff 형태로 제시 → 승인 후 `Edit` 적용. 무응답 자동 적용 금지.
+   - **사소한 정리**(typo, 1~2줄 주석)는 적용 대상 아님.
+   - **커밋 메시지:** 한국어 prefix(`feat:` / `fix:` / `docs:` / `refactor:` / `chore:`) 사용. 코드+문서 복합 변경이면 주된 의도의 prefix + 본문에 문서 변경 한 줄 명시. 분리 커밋이 자연스러우면 분리 (예: 가이드 갱신은 `docs:`, SO 밸런싱은 `chore:`).
+   - **금지:** `git add -A` / `git add .` (반드시 경로 명시), `--no-verify` / `--amend` / `push --force`, `Library/`·`Temp/`·`obj/`·`Logs/`·`UserSettings/` 스테이징, `.env`·`credentials*`·`*.keystore` 등 민감 파일 커밋. push 는 사용자 명시 요청 시에만.
 
 ---
 
