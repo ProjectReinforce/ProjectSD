@@ -11,7 +11,7 @@
 | 시스템 ID | `enemy-stat-scaling` |
 | 분류 | 전투 / 밸런싱 |
 | 의존 레이어 | Adapter (SpawnManager, Enemy, EnemyMovement) + Data (DifficultyData, EnemyData) |
-| 상태 | ⬜ 설계만 (미구현) |
+| 상태 | ✅ 구현 완료 (2026-05-01, 커밋 `1e4c373fb`) — 사용자 후속: EnemyData 12개 .asset 의 sensitivity 인스펙터 채우기(현재 default 0.5 단일) |
 | 최종 업데이트 | 2026-05-01 |
 
 ## 2. 목적
@@ -157,3 +157,4 @@ finalAttackDmg  = EnemyData.attackDamage  × dmgMul(t) × PlayerScaling.damageMu
 ## 10. 변경 이력
 
 - 2026-05-01: 초안 작성 (Hyeon-Woo 브랜치). 미구현, spec only.
+- 2026-05-01: 구현 완료 (커밋 `1e4c373fb`). 5파일(DifficultyData/DifficultyManager/EnemyData/Enemy/SpawnManager) 122줄+ / 29줄−. 코드 default 가 spec § 5 권장값과 일치 → runtime 즉시 동작. 사용자 후속(별건): 적별 sensitivity 차별화 (Tank 0 / Runner 1.0 등) 인스펙터 채우기.

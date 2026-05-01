@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-01 (Top 5 재배치 — R14/R13 최상단 승격)
+최종 업데이트: 2026-05-01 (R13 ✅ 마이그레이션 — completed-work 로 이동, Top 5 재정렬)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -21,14 +21,14 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
 | 1 | [§ R14](#r14-인게임-마이크-민감도--유저별-보이스-볼륨-조절) **유저별 보이스 + 인게임 마이크 민감도** | 사용자 우선순위. 멀티 게임 UX 핵심 — 트롤 마이크 / 음량 차이 즉시 대응 | **[U4 ESC 메뉴](#u4-esc-인게임-일시정지-메뉴) 동반 작업 권장** ([spec](../systems/in-game-menu.md)). Phase 8-2 ✅ 해제됨 | 1.5~2일 (U4 포함) |
-| 2 | [§ R13](#r13-적-스탯-스케일링--데미지이속-시간-곡선--타입별-sensitivity) **적 스탯 스케일링** (데미지/이속 시간 곡선) | 사용자 우선순위. 후반 단조로움 해소 ("맞아도 안 죽는다" 만 강해지는 문제). spec 완비 ([enemy-stat-scaling.md](../systems/enemy-stat-scaling.md)) | 없음 (선행 가능). 사용자가 SO 직접 수정 필요 | 1~1.5일 |
-| 3 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
-| 4 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
-| 5 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 2 | [§ R10](#r10-클라이언트-적-위치-수렴--convergence-damping) **클라 적 위치 수렴** | 사용자 직접 보고한 떨림 이슈. 명세 + 정책 확정 완료 (network-sync.md § 8.1) | 없음 (선행 가능) | 0.5~1일 |
+| 3 | [§ R6](#r6-회오리끌어당김-pullradius-패시브-반응) **회오리 pullRadius 패시브 반응** | 작은 코드 단위 (1~2시간), 단독 가능. SkillRange 패시브 영향 받도록 | 없음 | 1~2시간 |
+| 4 | [§ Phase 5-2/5-3](#phase-5--나머지-스킬--혼돈-스킬--진행-중-현재-브랜치-hyeon-woo) **신규 액티브/혼돈 스킬 #11~24, 13종** | 현재 브랜치 본업. 컨텐츠 양 절대량 큼 | Phase 5-1~5-5 의 SO 패턴 정착 완료 | 항목당 0.5~1일 |
+| 5 | [§ R4](#r4-캐릭터적-아웃라인--스프라이트-애니메이션-호환성--퍼포먼스-검토) **아웃라인 검증 + 퍼포먼스** | 동시 90마리 적 + 아웃라인 셰이더 부하 측정 + 스프라이트 애니메이션 호환성 | 없음 | 0.5일 |
 
-**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R13, R10, R6, Phase 5-2/5-3 모두 독립. R14 는 U4 ESC 메뉴 작업과 묶음.
-**병렬 가능 그룹**: R13 + R10 + R6 + Phase 5 가 서로 다른 파일 영역이라 동시 진행 OK. R14+U4 도 별도 영역이라 위 그룹과 병렬 가능.
-**다음 진입 후보** (Top 5 다 끝났을 때): R4 (아웃라인 검증), Phase 8-5 B (Localization UI 키 매핑), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
+**선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, R6, Phase 5-2/5-3 모두 독립. R14 는 U4 ESC 메뉴 작업과 묶음.
+**병렬 가능 그룹**: R10 + R6 + Phase 5 가 서로 다른 파일 영역이라 동시 진행 OK. R14+U4 도 별도 영역이라 위 그룹과 병렬 가능.
+**다음 진입 후보** (Top 5 다 끝났을 때): Phase 8-5 B (Localization UI 키 매핑), R5 (혼돈 글로벌 설정 이전), Phase 8-1 A (Platform 추상화), Phase 8-5 C (스킬 SO 통합).
 
 ---
 
@@ -295,40 +295,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 
 Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 메뉴 진입점. 후행: Voice/Mic 실효 = Phase 8-2, Locale 실효 = Phase 8-5 A, 클라우드 마이그레이션 = Phase 8-1.
 
-### R13. 적 스탯 스케일링 — 데미지/이속 시간 곡선 + 타입별 sensitivity
+### R13. 적 스탯 스케일링 ✅ (2026-05-01, 커밋 `1e4c373fb`) → [completed-work.md](completed-work.md)
 
-**증상/동기:** 시간에 따라 곡선 적용되는 적 스탯이 HP 단 하나라 후반이 단조로움. "맞아도 안 죽는다" 만 강해질 뿐 더 빠르게/더 아프게 때리지 않음.
-
-**정책 (확정):** [systems/enemy-stat-scaling.md](../systems/enemy-stat-scaling.md) 가 SSOT. spawn-rules 와 분리.
-- 데미지 시간 곡선 (`damageStart=1.0` → `damageEnd=3.0`, EaseInOut)
-- 이속 시간 곡선 (`moveSpeedStart=1.0` → `moveSpeedEnd=1.6`, EaseInOut) + **타입별 sensitivity** (Tank=0.0, Chaser=0.5, Swarm=0.7, Runner=1.0, Ranged=0.3)
-- `PlayerScaling` 에 `damageMultiplier`/`moveSpeedMultiplier` 추가 (HP 비율의 절반 ~ 1/3, 4인 일격사 페널티 완화)
-- 방어력/속성 저항은 **보류** (Survivors-like 다중 약공격 빌드 잠식 위험 / 정수 종류 적음)
-
-**잔여 작업:**
-- [ ] **`DifficultyData` 필드 추가:** `damageStart/End/Curve`, `moveSpeedStart/End/Curve` (사용자가 SO 직접 수정)
-- [ ] **`PlayerScaling` 구조체 확장:** `damageMultiplier`, `moveSpeedMultiplier` 신규 (기본 1.0 → 4인 1.3/1.1)
-- [ ] **`EnemyData` 필드 추가:** `[Range(0,1)] moveSpeedScaleSensitivity = 0.5f` (기본 0.5)
-- [ ] **`DifficultyManager` 메서드 추가:** `GetDamageMultiplier(t [, playerCount])`, `GetMoveSpeedMultiplier(t [, playerCount])`
-- [ ] **`SpawnManager` 스폰 경로:** 스폰 시각 + 인원에서 배율 조회 → `Enemy.Initialize` 인자로 전달
-- [ ] **`Enemy.Initialize` 시그니처 확장:** `damageMul`/`speedMul` 인자 추가, sensitivity 적용 후 final 값 캐싱 (런타임 재계산 없음)
-- [ ] **네트워크 권위:** 호스트 측 final 배율을 RPC 페이로드에 포함 — 클라 자체 평가 금지 (호스트/클라 발산 회피)
-- [ ] **개별 EnemyData asset 의 sensitivity 채우기** (사용자가 Unity 에디터에서):
-  - Tank `MeleeTank.asset`: 0.0
-  - Chaser `MeleeChaser.asset`: 0.5
-  - Swarm `MeleeSwarm.asset`: 0.7
-  - Runner `MeleeRunner.asset`: 1.0
-  - Ranged 4종: 0.3
-  - Elite 4종: base 동일 (개별 결정 — 권장 0.3~0.5)
-- [ ] **검증:**
-  - [ ] `photon-sync-auditor` 호출 (RPC 페이로드 변경)
-  - [ ] 0/450/900s 시점 스폰된 같은 적의 final 스탯 비교
-  - [ ] Tank 가 후반에도 base 이속 유지 (sens=0)
-  - [ ] Runner 가 후반 1.6배 이속 (sens=1.0)
-  - [ ] 4인 파티에서 인원 배율 곱 적용
-  - [ ] 보스 본체에 영향 없는지 (`BossSpawner` 우회 확인)
-
-**관련:** [systems/enemy-stat-scaling.md](../systems/enemy-stat-scaling.md), [systems/spawn-rules.md](../systems/spawn-rules.md)
+데미지/이속 시간 곡선(1.0→3.0 / 1.0→1.6) + 타입별 sensitivity(Tank 0/Chaser 0.5/Swarm 0.7/Runner 1.0/Ranged 0.3) + PlayerScaling 확장(damageMul/moveSpeedMul). 호스트 권위 + 스폰 1회 캐싱. photon-sync-auditor 통과. 사용자 후속(별건): EnemyData 12개 .asset sensitivity 인스펙터 채우기(현재 default 0.5 단일). 상세 [enemy-stat-scaling.md](../systems/enemy-stat-scaling.md).
 
 ### R14. 인게임 마이크 민감도 + 유저별 보이스 볼륨 조절
 
