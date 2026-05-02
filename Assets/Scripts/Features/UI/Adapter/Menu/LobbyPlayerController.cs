@@ -43,6 +43,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
         private Animator animator;
         private int appliedCharacterId = -1;
 
+        // 리모트 velocity 추정용. PhotonTransformView 가 transform 만 동기화하므로 차분으로 속도 추정.
+        private Vector3 lastRemotePos;
+        private bool hasLastRemotePos;
+
         private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
         private static readonly int MoveXHash = Animator.StringToHash("MoveX");
         private static readonly int MoveYHash = Animator.StringToHash("MoveY");
@@ -98,7 +102,12 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private void Update()
         {
-            if (!photonView.IsMine) return;
+            if (!photonView.IsMine)
+            {
+                // 리모트: 입력은 받지 않지만, 동기화된 위치 차분으로 velocity 추정해 같은 애니메이터 토글.
+                UpdateRemoteAnimator();
+                return;
+            }
 
             var kb = Keyboard.current;
             if (kb == null)
@@ -120,8 +129,29 @@ namespace SwDreams.Features.UI.Adapter.Menu
         }
 
         /// <summary>
-        /// IsMoving + MoveX/Y 토글 + flipX. 본인(IsMine) 만 호출 — 원격은 PhotonTransformView 가
-        /// transform 만 동기화하므로 자체 위치 차분 폴링이 필요. 추후 별도 처리 가능 (현재는 본인만).
+        /// 리모트 인스턴스용: PhotonTransformView 가 보간한 transform.position 을 프레임 차분해
+        /// velocity 를 추정한 뒤 UpdateAnimatorParams 로 IsMoving / flipX 를 동일하게 갱신.
+        /// </summary>
+        private void UpdateRemoteAnimator()
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+
+            Vector3 cur = transform.position;
+            Vector2 v = Vector2.zero;
+            if (hasLastRemotePos)
+            {
+                float dt = Time.deltaTime;
+                if (dt > 0f) v = ((Vector2)(cur - lastRemotePos)) / dt;
+            }
+            lastRemotePos = cur;
+            hasLastRemotePos = true;
+
+            UpdateAnimatorParams(v);
+        }
+
+        /// <summary>
+        /// IsMoving + MoveX/Y 토글 + flipX. 본인(IsMine) 은 입력→rb.linearVelocity 로,
+        /// 리모트는 위치 차분 추정값으로 호출. 양쪽 모두 같은 파라미터 셋 사용.
         /// </summary>
         private void UpdateAnimatorParams(Vector2 velocity)
         {

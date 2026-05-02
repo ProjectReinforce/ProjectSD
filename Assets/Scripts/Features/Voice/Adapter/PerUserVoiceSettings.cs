@@ -37,7 +37,7 @@ namespace SwDreams.Features.Voice.Adapter
         private static void AutoCreate()
         {
             if (Instance != null) return;
-            if (FindObjectOfType<PerUserVoiceSettings>() != null) return;
+            if (FindAnyObjectByType<PerUserVoiceSettings>() != null) return;
 
             var go = new GameObject("[Auto] PerUserVoiceSettings");
             DontDestroyOnLoad(go);

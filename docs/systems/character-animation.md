@@ -152,7 +152,7 @@ Idle/Walk state 를 Blend Tree 로 교체. MoveX/MoveY parameter 활용. flipX �
 ## 11. 알려진 제약
 
 - [ ] **부활 클립 미정** — sanctum 에 revive 전용 anim 없음. Stand 복귀 + 별도 ParticleSystem 으로 처리 예정 (사용자 부활 이펙트 결정 대기)
-- [ ] **원격 LobbyPlayer 의 IsMoving** — 현재 본인(IsMine) 만 토글. 원격은 위치 차분 폴링 추가 필요 (다음 단계)
+- [x] **원격 IsMoving (인게임 + 로비)** — PlayerAnimator/LobbyPlayerController 모두 IsMine 분기 + transform.position 프레임 차분으로 velocity 추정. PhotonTransformView 가 보간한 위치를 사용하므로 자연스러움 (RPC/직렬화 추가 없음).
 - [ ] **PlayerStub 의 OnDestroy 미작성** — Health 람다 dangling 이론상 가능. 같은 GO 라 실무 영향 작음
 - [ ] **Animator.runtimeAnimatorController = null 일 때 Update 비용** — 매 프레임 null 체크만 하지만 수백 마리 적 일 때 누적. 향후 `enabled = false` 토글 검토 (성능 nit)
 

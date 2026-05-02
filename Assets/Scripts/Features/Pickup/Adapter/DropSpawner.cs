@@ -55,6 +55,13 @@ namespace SwDreams.Features.Pickup.Adapter
         [Header("풀 Prewarm")]
         [SerializeField] private int prewarmPerType = 16;
 
+        [Header("겹침 방지 (상호작용 픽업)")]
+        [Tooltip("같은 카테고리(현재 무기/정수)의 다른 픽업이 이 거리보다 가까우면 약간 옆으로 옮긴다. 0 이하면 비활성.")]
+        [SerializeField] private float pickupMinSpacing = 0.5f;
+
+        [Tooltip("겹침 회피 재시도 횟수. 시도마다 임의 방향으로 minSpacing 만큼 밀어내고 반경을 약간씩 확장.")]
+        [SerializeField] private int overlapMaxAttempts = 4;
+
         private readonly List<(PickupType type, Vector2 pos, Rarity rarity, int dataIdHash)> dropQueue
             = new();
         private readonly System.Random rng = new System.Random();
@@ -102,7 +109,8 @@ namespace SwDreams.Features.Pickup.Adapter
             if (isElite && Roll(table.essenceChance))
             {
                 int essenceTypeIdx = RollWeightedIndex(table.essenceTypeWeights);
-                dropQueue.Add((PickupType.Essence, ScatterFrom(position), Rarity.Common, essenceTypeIdx));
+                Vector2 pos = AvoidOverlap(ScatterFrom(position), PickupType.Essence);
+                dropQueue.Add((PickupType.Essence, pos, Rarity.Common, essenceTypeIdx));
             }
 
             // 무기: 4등급 체계 롤.
@@ -117,7 +125,10 @@ namespace SwDreams.Features.Pickup.Adapter
                     var picked = db.GetRandomByRarity(r, rng);
                     int idx = ResolveWeaponIndex(db, picked);
                     if (picked != null && idx >= 0)
-                        dropQueue.Add((PickupType.Weapon, ScatterFrom(position), r, idx));
+                    {
+                        Vector2 pos = AvoidOverlap(ScatterFrom(position), PickupType.Weapon);
+                        dropQueue.Add((PickupType.Weapon, pos, r, idx));
+                    }
                     // 해당 등급에 무기가 없으면 드랍 생략 (null 스폰 방지).
                 }
             }
@@ -148,6 +159,59 @@ namespace SwDreams.Features.Pickup.Adapter
             float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
             float r = (float)rng.NextDouble() * radius;
             return origin + new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
+        }
+
+        /// <summary>
+        /// 사용자 상호작용으로 획득하는 픽업(현재 무기/정수)에 대해 같은 카테고리 픽업이 가까이
+        /// 있으면 약간 옆으로 옮긴다. 자동 흡수 대상(자석/물약/MicFilter/경험치)은 검사 대상 아님.
+        /// 호스트에서 결정 후 RPC 로 전파되므로 클라 일관성 유지.
+        /// </summary>
+        private Vector2 AvoidOverlap(Vector2 pos, PickupType type)
+        {
+            if (pickupMinSpacing <= 0f) return pos;
+            if (type != PickupType.Weapon && type != PickupType.Essence) return pos;
+
+            float minSqr = pickupMinSpacing * pickupMinSpacing;
+            Vector2 candidate = pos;
+
+            for (int attempt = 0; attempt <= overlapMaxAttempts; attempt++)
+            {
+                if (!HasNearbyPickupOfType(candidate, type, minSqr)
+                    && !HasQueuedNearbyOfType(candidate, type, minSqr))
+                    return candidate;
+
+                // 임의 방향으로 minSpacing 만큼 밀고, 시도마다 반경을 25%씩 확장 — 빽빽한 무더기 회피.
+                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dist = pickupMinSpacing * (1f + 0.25f * attempt);
+                candidate = pos + new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
+            }
+            // 끝까지 회피 실패 시 마지막 후보라도 반환 — 최소 한 칸은 밀린 위치라 완전 동좌표보다는 나음.
+            return candidate;
+        }
+
+        private bool HasNearbyPickupOfType(Vector2 pos, PickupType type, float minSqr)
+        {
+            var pickups = FindObjectsByType<PickupItemBase>(FindObjectsSortMode.None);
+            for (int i = 0; i < pickups.Length; i++)
+            {
+                var p = pickups[i];
+                if (p == null || !p.gameObject.activeInHierarchy) continue;
+                if (p.Type != type) continue;
+                if (Vector2.SqrMagnitude((Vector2)p.transform.position - pos) < minSqr) return true;
+            }
+            return false;
+        }
+
+        /// <summary>같은 LateUpdate flush 사이클 안에 적재됐지만 아직 spawn 전인 큐 항목까지 검사.</summary>
+        private bool HasQueuedNearbyOfType(Vector2 pos, PickupType type, float minSqr)
+        {
+            for (int i = 0; i < dropQueue.Count; i++)
+            {
+                var q = dropQueue[i];
+                if (q.type != type) continue;
+                if (Vector2.SqrMagnitude(q.pos - pos) < minSqr) return true;
+            }
+            return false;
         }
 
         /// <summary>

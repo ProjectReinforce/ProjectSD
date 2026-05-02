@@ -1,4 +1,5 @@
 using UnityEngine;
+using Photon.Pun;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Shared.Managers;
 
@@ -9,7 +10,8 @@ namespace SwDreams.Features.Character.Adapter
     ///
     /// 책임:
     /// - CharacterData.animatorController 주입 (캐릭터 base 적용 시점)
-    /// - Rigidbody2D.linearVelocity 폴링으로 IsMoving + MoveX/MoveY 토글
+    /// - 본인(IsMine) 은 Rigidbody2D.linearVelocity 폴링, 리모트는 transform 위치 차분으로
+    ///   velocity 를 추정해 IsMoving + MoveX/MoveY 토글 (PhotonTransformView 가 위치만 동기화하므로)
     /// - PlayerHealth.OnDeadStateChanged 구독 → Die / Revive 트리거
     ///
     /// AnimatorController parameters (표준):
@@ -42,7 +44,12 @@ namespace SwDreams.Features.Character.Adapter
         private static readonly int MoveYHash = Animator.StringToHash("MoveY");
 
         private Rigidbody2D rb;
+        private PhotonView pv;
         private PlayerHealth boundHealth;
+
+        // 리모트 velocity 추정용. PhotonTransformView 가 transform 만 동기화하므로 차분으로 속도 추정.
+        private Vector3 lastRemotePos;
+        private bool hasLastRemotePos;
 
         private void Awake()
         {
@@ -50,6 +57,8 @@ namespace SwDreams.Features.Character.Adapter
             if (animator == null) animator = GetComponentInChildren<Animator>(true);
             if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
             rb = GetComponent<Rigidbody2D>();
+            // PhotonView 없으면(솔로/테스트 씬) IsMine=true 로 간주 — 기존 rb 폴링.
+            pv = GetComponent<PhotonView>();
         }
 
         private void OnDestroy()
@@ -98,7 +107,7 @@ namespace SwDreams.Features.Character.Adapter
 
         private void Update()
         {
-            if (animator == null || rb == null) return;
+            if (animator == null) return;
             if (animator.runtimeAnimatorController == null) return;
 
             // 레벨업 / ESC 솔로 정지 (GameState=Paused) 시 Animator 도 정지.
@@ -112,7 +121,7 @@ namespace SwDreams.Features.Character.Adapter
             }
             if (animator.speed != 1f) animator.speed = 1f;
 
-            Vector2 v = rb.linearVelocity;
+            Vector2 v = ResolveVelocity();
             bool moving = v.sqrMagnitude > moveThreshold * moveThreshold;
 
             animator.SetBool(IsMovingHash, moving);
@@ -129,6 +138,30 @@ namespace SwDreams.Features.Character.Adapter
                 if (Mathf.Abs(v.x) > 0.01f && spriteRenderer != null)
                     spriteRenderer.flipX = defaultFacingRight ? v.x < 0f : v.x > 0f;
             }
+        }
+
+        /// <summary>
+        /// 본인은 Rigidbody2D.linearVelocity, 리모트는 transform 위치 차분으로 속도 추정.
+        /// PhotonTransformView 가 위치를 보간 적용하므로 차분 결과도 충분히 부드럽다.
+        /// </summary>
+        private Vector2 ResolveVelocity()
+        {
+            bool isLocal = pv == null || pv.IsMine;
+            if (isLocal)
+            {
+                return rb != null ? rb.linearVelocity : Vector2.zero;
+            }
+
+            Vector3 cur = transform.position;
+            Vector2 v = Vector2.zero;
+            if (hasLastRemotePos)
+            {
+                float dt = Time.deltaTime;
+                if (dt > 0f) v = ((Vector2)(cur - lastRemotePos)) / dt;
+            }
+            lastRemotePos = cur;
+            hasLastRemotePos = true;
+            return v;
         }
 
         // ===== Health 이벤트 핸들러 =====
