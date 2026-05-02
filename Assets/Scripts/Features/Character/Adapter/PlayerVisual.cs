@@ -123,18 +123,11 @@ namespace SwDreams.Features.Character.Adapter
                 hitFlashCoroutine = null;
             }
 
-            // 반투명 처리 — RGB 도 originColor 로 복원해 빨간색 잔여 방지.
+            // 사망/부활 시 색상은 originColor 로 복원 (빨간색 hit flash 잔여 방지).
+            // 이전엔 dead 시 alpha=0.3 반투명 처리 — 사망 애니 도입 후 Die 클립이 흐릿하게 재생되는
+            // 충돌 + 부활 대기 UI(DeathOverlayUI) 가 별도 시각 표시 담당이라 redundant. 제거.
             if (spriteRenderer != null)
-            {
-                if (dead)
-                {
-                    spriteRenderer.color = new Color(originColor.r, originColor.g, originColor.b, 0.3f);
-                }
-                else
-                {
-                    spriteRenderer.color = originColor;
-                }
-            }
+                spriteRenderer.color = originColor;
 
             // 스킬 일시정지/재개
             if (skillManager != null)

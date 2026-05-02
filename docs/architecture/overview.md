@@ -68,7 +68,7 @@ Assets/Scripts/
 │   │   │   └── Data/           ← SkillData + SkillSubTypes (7종)
 │   │   └── Presentation/       (현재 비어 있음, UI Feature 로 이동)
 │   ├── Enemy/
-│   │   └── Adapter/            ← Enemy, EnemyMovement, EnemyContact, Movement/
+│   │   └── Adapter/            ← Enemy, EnemyMovement, EnemyContact, EnemyAnimator, Movement/
 │   │       └── Data/           ← EnemyData
 │   ├── Boss/
 │   │   ├── Domain/             ← BossPhase, Interfaces (IBossAttackPattern, IBossChaosEffect)
@@ -78,7 +78,7 @@ Assets/Scripts/
 │   │   └── Presentation/       ← BossHealthBarUI, BossWarningUI
 │   ├── Character/              ← Player
 │   │   ├── Domain/             ← ValueObjects (StatModifier, StatModifierCollection, StatType)
-│   │   └── Adapter/            ← Player, PlayerMovement/Health/Stats/Visual/Spawner/Stub, Camerafollow, HitEffect, GamePlayerSpawner, RespawnManager
+│   │   └── Adapter/            ← Player, PlayerMovement/Health/Stats/Visual/Animator/Spawner/Stub, Camerafollow, HitEffect, GamePlayerSpawner, RespawnManager
 │   │       └── Data/           ← CharacterData, CharacterDatabase
 │   ├── Progression/            ← 경험치 · 레벨업
 │   │   ├── Domain/             ← Formulas (LevelTable)

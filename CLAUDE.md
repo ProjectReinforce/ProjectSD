@@ -56,9 +56,9 @@ Assets/Scripts/
 │   │   ├── Domain/          ← FiringMode, TriggerType, EffectActionType (12종), TrajectoryType (7종), SkillTriggerEffect, TriggerContext, DamageFormula
 │   │   ├── Adapter/         ← SkillExecutor, SkillManager, ChaosSkillManager, SkillSpawnerFactory, ISkillSpawner + {Projectile|Area|Orbital|Placed|Debuff}Spawner, Trajectories/, TriggerEffects/Handlers/(11종), Spread/, IFireRecorder
 │   │   └── Adapter/Data/    ← SkillData (+ ProjectileSkillData/AreaSkillData 등 서브타입)
-│   ├── Enemy/               ← Adapter (Enemy, EnemyContact, ChaseMovement, KiteMovement, StationaryMovement, SwarmMovement, EnemyMovement) + Adapter/Attack/ (EnemyAttack, EnemyAttackCooldown, EnemyProjectile, EnemyTargeter, TelegraphZone) + Adapter/Movement/ + Adapter/Data
+│   ├── Enemy/               ← Adapter (Enemy, EnemyContact, EnemyAnimator, ChaseMovement, KiteMovement, StationaryMovement, SwarmMovement, EnemyMovement) + Adapter/Attack/ (EnemyAttack, EnemyAttackCooldown, EnemyProjectile, EnemyTargeter, TelegraphZone) + Adapter/Movement/ + Adapter/Data
 │   ├── Boss/                ← Domain(Formulas) + Application(BossPhaseService) + Adapter(Boss, BossChaosApplicator, BossPhaseManager, BossSpawner)
-│   ├── Character/           ← Adapter (Player/PlayerStub, PlayerStats, PlayerMovement, PlayerHealth, PlayerVisual, RespawnManager, GamePlayerSpawner, Camerafollow, HitEffect) + Adapter/Data (CharacterData)
+│   ├── Character/           ← Adapter (Player/PlayerStub, PlayerStats, PlayerMovement, PlayerHealth, PlayerVisual, PlayerAnimator, RespawnManager, GamePlayerSpawner, Camerafollow, HitEffect) + Adapter/Data (CharacterData)
 │   ├── Progression/         ← Domain + Application + Adapter (Levelupmanager, ExperienceOrb)
 │   ├── Essence/             ← Domain + Adapter (EssencePickup, PlayerEssenceInventory) + Adapter/Data
 │   ├── Weapon/              ← Domain + Adapter (WeaponPickup, PlayerWeaponInventory) + Adapter/Data
@@ -76,7 +76,7 @@ Assets/Scripts/
 │   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, SceneTransitionManager
 │   ├── Network/             ← NetworkAdapter
 │   └── Localization/        ← Domain(ILocalizationService, Locale) + Adapter(LocalizationManager, LocalizationTable, LocaleFontMap, LocalizedText, Bootstrap) + Editor(SheetImporter). 설계만 — [docs/systems/localization.md](docs/systems/localization.md)
-├── Editor/                  ← 에디터 전용 (SkillDataEditor 등)
+├── Editor/                  ← 에디터 전용 (SkillDataEditor, AnimationClipValidator 등)
 ├── Testing/                 ← 테스트 엔트리 (Phase2TestEntry 등)
 └── WFC/                     ← 맵 Wave Function Collapse
 ```
@@ -160,7 +160,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, **enemy-stat-scaling**, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**, **map-bounds**, **in-game-menu**
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, **enemy-stat-scaling**, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**, **map-bounds**, **in-game-menu**, **character-animation**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -175,6 +175,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **파티원/보스/랜덤 퀘스트 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11 ✅
 - **맵 경계 / 안개 →** [docs/systems/map-bounds.md](docs/systems/map-bounds.md). 안개 = 플레이어만 차단(적/보스 자유 통과). `BossSpawner.mapBoundsCollider`/`enforceOutsideMap` hook 보유. 맵 사이즈 미확정 — 맵 확정 시 활성
 - **인게임 ESC 메뉴 / 일시정지 →** [docs/systems/in-game-menu.md](docs/systems/in-game-menu.md). 중앙 모달 + 솔로(PlayerCount==1) 한정 GameState.Paused 진정 정지 / 멀티는 로컬 UI 토글만. 메뉴 항목 4개(Resume/설정/룸 나가기/게임 종료). Frame_PopUp 의존(확인 다이얼로그). **roadmap U4** ⬜
+- **캐릭터/적 애니메이션 →** [docs/systems/character-animation.md](docs/systems/character-animation.md). base AnimatorController + 캐릭터별 AnimatorOverrideController. PlayerAnimator/EnemyAnimator 핸들러. Phase 1: 2방향(flipX) → Phase 2: 4방향(Blend Tree). GameState.Paused 시 `animator.speed=0` 정지. 풀링 적은 OnReturnToPool 시 Animator.Rebind. 깨진 sprite 검증 = `Tools → Validate AnimationClip Sprites`. CharacterData/EnemyData 의 animatorController 비어있으면 정적 sprite 동작 (점진 도입)
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

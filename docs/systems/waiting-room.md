@@ -60,9 +60,12 @@ Assets/Resources/Prefabs/UI/
    - `Rigidbody2D` — Gravity Scale 0, Freeze Rotation Z, Interpolation: Interpolate
    - `CircleCollider2D` — 반지름 0.25 정도 (충돌 없길 원하면 Is Trigger 체크)
    - `SpriteRenderer` — 임시 스프라이트
+   - `Animator` — Controller 슬롯 비워두기 (런타임에 `CharacterData.animatorController` 가 채움). Apply Root Motion: OFF
    - `LobbyPlayerController.cs`
 3. `PhotonView.ObservedComponents`에 `PhotonTransformView` 드래그.
 4. `LobbyPlayerController`의 `characterDB` 필드에 `Assets/Data/CharacterDatabase.asset` 연결.
+   - `Default Facing Right` 토글 — sprite 의 기본 향. sanctum 측면 sprite 가 보통 우향이라 default true. 좌향이면 false.
+   - 애니메이션 시스템 상세 = [character-animation.md](character-animation.md)
 5. 자식 오브젝트 `Overhead` (Canvas, Render Mode: **WorldSpace**) 생성.
    - Canvas.scale ≈ 0.01
    - 자식: `NameText` (TMP_Text), `HostIcon` (Image), `ReadyIcon` (Image)
@@ -147,7 +150,7 @@ MenuScene Start
 [캐릭터 변경]
  └─ B가 CharacterSelectUI 확인 → SetLocalCharacter(1)
      └─ 모든 클라의 LobbyPlayerController.OnPlayerPropertiesUpdate
-         └─ SpriteRenderer 교체 (재스폰 없음)
+         └─ SpriteRenderer 교체 + AnimatorController swap (재스폰 없음)
 
 [강퇴]
  └─ A가 B행의 Kick 클릭 → NetworkManager.KickPlayer(B)

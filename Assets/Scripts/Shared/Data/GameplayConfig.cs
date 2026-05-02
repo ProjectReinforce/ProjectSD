@@ -101,6 +101,9 @@ namespace SwDreams.Shared.Data
         [Tooltip("사망 후 부활까지 대기 시간 (초)")]
         public float respawnDelay = 10f;
 
+        [Tooltip("게임오버/클리어 시 결과창 표시까지 대기 시간 (초). 사망/클리어 애니메이션 클립 길이에 맞춰 조정. 0 이면 즉시 표시.")]
+        public float resultPanelDelay = 1.5f;
+
         [Tooltip("부활 시 HP 비율 (0.5 = 50%)")]
         [Range(0f, 1f)]
         public float respawnHPRatio = 0.5f;

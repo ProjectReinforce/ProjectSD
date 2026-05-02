@@ -241,7 +241,23 @@ namespace SwDreams.Shared.Managers
             Debug.Log($"[ResultManager] 결과 수신: {(isCleared ? "클리어" : "실패")} " +
                       $"Time:{playTime:F1}s Lv:{teamLevel} Kills:{totalKills}");
 
-            // UI 표시
+            // UI 표시 — 사망/클리어 애니메이션 클립 길이만큼 지연 후 패널 띄움.
+            // 즉각 표시하면 Die 클립 재생 도중에 결과창이 가려져 시각적으로 어색.
+            // GameplayConfig.resultPanelDelay 로 인스펙터에서 튜닝 가능 (default 1.5s).
+            float delay = GameManager.Instance?.Config != null
+                ? Mathf.Max(0f, GameManager.Instance.Config.resultPanelDelay)
+                : 0f;
+
+            if (delay <= 0f)
+                UIManager.Instance?.ShowResult(localResult);
+            else
+                StartCoroutine(ShowResultDelayed(delay));
+        }
+
+        private System.Collections.IEnumerator ShowResultDelayed(float delay)
+        {
+            // unscaledDeltaTime — GameOver 상태에서도 정상 카운트.
+            yield return new WaitForSecondsRealtime(delay);
             UIManager.Instance?.ShowResult(localResult);
         }
 

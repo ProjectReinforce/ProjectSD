@@ -52,6 +52,11 @@ namespace SwDreams.Features.Enemy.Adapter.Data
                  "엘리트는 1.3~1.5 로 커 보이게, 작은 적은 0.8 등으로 축소 가능.")]
         public float visualScaleMultiplier = 1f;
 
+        [Tooltip("적 AnimatorController. AnimatorOverrideController 권장 (공통 base + 클립 override).\n" +
+                 "Parameters 표준: IsMoving(Bool), Die(Trigger), MoveX/MoveY(Float, 4방향용).\n" +
+                 "비어있으면 Animator 미사용 — 정적 sprite (기존 동작 유지).")]
+        public RuntimeAnimatorController animatorController;
+
         [Header("특수 (Phase 3)")]
         [Range(0f, 1f)]
         public float knockbackResistance = 0f;

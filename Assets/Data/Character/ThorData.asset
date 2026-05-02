@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6dc9260732e3cd9478475c45718b94e0, type: 3}
-  m_Name: BData
+  m_Name: ThorData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.CharacterData
   id: 1
   displayName: B
   portrait: {fileID: 0}
+  animatorController: {fileID: 22100000, guid: bc43e311997af65459ca55e1ebc2f6c1, type: 2}
   startingActiveSkill: {fileID: 11400000, guid: 8312309ff3ce52e408b5876bf1e4414c, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: f314ed8711d24fc47bbe78a32cc21ac6, type: 2}
   maxHP: 110

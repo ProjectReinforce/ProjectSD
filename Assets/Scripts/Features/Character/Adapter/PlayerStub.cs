@@ -46,6 +46,7 @@ namespace SwDreams.Features.Character.Adapter
         private PlayerHealth playerHealth;
         private PlayerMovement playerMovement;
         private PlayerVisual playerVisual;
+        private PlayerAnimator playerAnimator;
         private SkillManager skillManager;
 
         // ===== 초기화 상태 =====
@@ -71,6 +72,7 @@ namespace SwDreams.Features.Character.Adapter
             playerHealth = GetComponent<PlayerHealth>();
             playerMovement = GetComponent<PlayerMovement>();
             playerVisual = GetComponent<PlayerVisual>();
+            playerAnimator = GetComponent<PlayerAnimator>(); // 옵션 — 없으면 정적 sprite
             skillManager = GetComponentInChildren<SkillManager>();
             gameObject.tag = "Player";
         }
@@ -82,6 +84,7 @@ namespace SwDreams.Features.Character.Adapter
             playerHealth.BindToStats(stats);
             playerMovement.Bind(playerHealth, stats);
             playerVisual.Bind(playerHealth);
+            if (playerAnimator != null) playerAnimator.Bind(playerHealth);
 
             // PlayerHealth 이벤트 → PlayerStub 이벤트 전달 (외부 호환)
             playerHealth.OnHealthChanged += (cur, max) => OnHealthChanged?.Invoke(cur, max);
@@ -256,6 +259,10 @@ namespace SwDreams.Features.Character.Adapter
             var stats = GetComponent<PlayerStats>();
             if (stats != null)
                 stats.ApplyCharacterBase(data);
+
+            // PlayerAnimator 에 controller 주입 — 컴포넌트 또는 SO 필드 비어있으면 no-op (정적 sprite).
+            if (playerAnimator != null)
+                playerAnimator.ApplyCharacter(data);
 
             Debug.Log($"[PlayerStub] 캐릭터 초기화: {data.displayName} (HP:{data.maxHP}, Speed:{data.moveSpeed})");
         }

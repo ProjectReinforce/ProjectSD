@@ -27,6 +27,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [Header("이동")]
         [SerializeField] private float moveSpeed = 3f;
 
+        [Header("애니메이션")]
+        [Tooltip("sprite 의 기본 향. true=오른쪽, false=왼쪽. 좌/우 입력 시 flipX 분기 기준.")]
+        [SerializeField] private bool defaultFacingRight = true;
+
         [Header("외관")]
         [Tooltip("CharacterData.portrait를 대기실 스프라이트로 사용. 프리팹 Inspector에서 연결.")]
         [SerializeField] private CharacterDatabase characterDB;
@@ -36,7 +40,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private Rigidbody2D rb;
         private SpriteRenderer spriteRenderer;
+        private Animator animator;
         private int appliedCharacterId = -1;
+
+        private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
+        private static readonly int MoveXHash = Animator.StringToHash("MoveX");
+        private static readonly int MoveYHash = Animator.StringToHash("MoveY");
+        private const float MoveThreshold = 0.05f;
 
         private void Awake()
         {
@@ -55,6 +65,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
             rb.freezeRotation = true;
 
             spriteRenderer = GetComponent<SpriteRenderer>();
+            // Animator 는 own GO 또는 자식 — 둘 다 잡아주는 InChildren 사용 (자기 GO 도 포함).
+            // includeInactive=true — 자식 GO 가 비활성으로 시작해도 잡도록.
+            animator = GetComponentInChildren<Animator>(true);
         }
 
         /// <summary>
@@ -102,6 +115,31 @@ namespace SwDreams.Features.UI.Adapter.Menu
             input = input.normalized;
 
             rb.linearVelocity = input * moveSpeed;
+
+            UpdateAnimatorParams(rb.linearVelocity);
+        }
+
+        /// <summary>
+        /// IsMoving + MoveX/Y 토글 + flipX. 본인(IsMine) 만 호출 — 원격은 PhotonTransformView 가
+        /// transform 만 동기화하므로 자체 위치 차분 폴링이 필요. 추후 별도 처리 가능 (현재는 본인만).
+        /// </summary>
+        private void UpdateAnimatorParams(Vector2 velocity)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+
+            bool moving = velocity.sqrMagnitude > MoveThreshold * MoveThreshold;
+            animator.SetBool(IsMovingHash, moving);
+
+            if (moving)
+            {
+                Vector2 dir = velocity.normalized;
+                animator.SetFloat(MoveXHash, dir.x);
+                animator.SetFloat(MoveYHash, dir.y);
+
+                // 좌우 flipX — 입력의 x 부호로만 판정 (위/아래만 누르면 마지막 facing 유지).
+                if (Mathf.Abs(velocity.x) > 0.01f && spriteRenderer != null)
+                    spriteRenderer.flipX = defaultFacingRight ? velocity.x < 0f : velocity.x > 0f;
+            }
         }
 
         // ===================================================================
@@ -133,6 +171,18 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (next != null && spriteRenderer != null)
             {
                 spriteRenderer.sprite = next;
+            }
+
+            // CharacterData.animatorController 주입 — DB 가 있을 때만.
+            if (animator != null && characterDB != null)
+            {
+                var data = characterDB.GetById(characterId);
+                if (data != null && data.animatorController != null)
+                {
+                    animator.runtimeAnimatorController = data.animatorController;
+                    // controller swap 후 stale state/trigger 정리. 캐릭터 변경 직후 1프레임 잔류 방지.
+                    animator.Rebind();
+                }
             }
         }
 

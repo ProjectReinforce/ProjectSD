@@ -25,6 +25,10 @@ namespace SwDreams.Features.Character.Adapter
         private Rigidbody2D rb;
         private float slowMultiplier = 1f;
 
+        // 부활 시퀀스 등 외부 입력 차단 게이트.
+        // RespawnManager 가 부활 시퀀스 동안 true 로 설정 → 시퀀스 종료 시 false.
+        private bool inputLocked;
+
         // 외부 참조: 사망 상태 체크용
         private PlayerHealth playerHealth;
         // PlayerStats 연동 (MoveSpeed 동기화)
@@ -67,6 +71,13 @@ namespace SwDreams.Features.Character.Adapter
         private void Update()
         {
             if (!photonView.IsMine) return;
+
+            // 부활 시퀀스 등 외부 입력 차단.
+            if (inputLocked)
+            {
+                rb.linearVelocity = Vector2.zero;
+                return;
+            }
 
             // 사망 시 정지
             if (playerHealth != null && playerHealth.IsDead)
@@ -113,6 +124,19 @@ namespace SwDreams.Features.Character.Adapter
             slowMultiplier = 1f;
             Debug.Log("[PlayerMovement] 슬로우 해제");
         }
+
+        // ===== 입력 차단 (부활 시퀀스용) =====
+
+        /// <summary>
+        /// 외부 입력 차단 토글. RespawnManager 가 부활 시퀀스 시작 시 true,
+        /// 시퀀스 종료 시 false 호출. 본인(IsMine) 만 영향 받음.
+        /// </summary>
+        public void SetInputLocked(bool locked)
+        {
+            inputLocked = locked;
+        }
+
+        public bool IsInputLocked => inputLocked;
 
         // ===== PlayerStats 연동 =====
 

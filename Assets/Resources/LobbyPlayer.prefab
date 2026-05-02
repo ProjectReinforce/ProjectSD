@@ -176,6 +176,7 @@ GameObject:
   - component: {fileID: 4397150196827518369}
   - component: {fileID: 4925980060002051203}
   - component: {fileID: 3209998397338091476}
+  - component: {fileID: 9133213682703611657}
   m_Layer: 10
   m_Name: LobbyPlayer
   m_TagString: Player
@@ -373,6 +374,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.UI.Adapter.Menu.LobbyPlayerController
   moveSpeed: 0.5
+  defaultFacingRight: 1
   characterDB: {fileID: 11400000, guid: 7e9c656564fa07a44848e42fb3552c71, type: 2}
   characterSprites: []
 --- !u!114 &5695838317700636074
@@ -586,6 +588,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Voice.Adapter.AudioGainBoost
   gain: 1
+--- !u!95 &9133213682703611657
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 0}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &6281747773734961266
 GameObject:
   m_ObjectHideFlags: 0

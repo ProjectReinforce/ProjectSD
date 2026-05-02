@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6dc9260732e3cd9478475c45718b94e0, type: 3}
-  m_Name: AData
+  m_Name: MagicianData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.CharacterData
   id: 0
   displayName: A
   portrait: {fileID: 0}
+  animatorController: {fileID: 22100000, guid: e702626e69f637d49abfbf1f81a5a6e4, type: 2}
   startingActiveSkill: {fileID: 11400000, guid: a165f0a803805c545b94452b53bf7964, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: 8a0132335e42e2245914bf8d658e9614, type: 2}
   maxHP: 100
@@ -26,6 +27,7 @@ MonoBehaviour:
   cooldownReduction: 0
   knockback: 1
   critDamage: 1.5
+  critChance: 0.05
   expMultiplier: 1
   defenseBonus: 0
   healMultiplier: 1

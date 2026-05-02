@@ -24,6 +24,12 @@ namespace SwDreams.Features.Character.Adapter.Data
         public string displayName;
         public Sprite portrait;
 
+        [Header("애니메이션")]
+        [Tooltip("캐릭터 AnimatorController. AnimatorOverrideController 권장 (공통 base + 클립 override).\n" +
+                 "Parameters 표준: IsMoving(Bool), Die(Trigger), Revive(Trigger), MoveX/MoveY(Float, 4방향용).\n" +
+                 "비어있으면 Animator 미사용 — 정적 sprite 동작 (기존 동작 유지).")]
+        public RuntimeAnimatorController animatorController;
+
         [Header("시작 스킬")]
         [Tooltip("게임 시작 시 자동 획득하는 액티브 스킬")]
         public SkillData startingActiveSkill;

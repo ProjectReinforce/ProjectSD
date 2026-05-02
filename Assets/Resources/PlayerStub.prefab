@@ -176,6 +176,8 @@ GameObject:
   - component: {fileID: 3034519361243767251}
   - component: {fileID: 6699726922568447233}
   - component: {fileID: 6406853612658553229}
+  - component: {fileID: 5593707893222274080}
+  - component: {fileID: -518018803653983206}
   m_Layer: 10
   m_Name: PlayerStub
   m_TagString: Player
@@ -688,6 +690,44 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Voice.Adapter.AudioGainBoost
   gain: 1
+--- !u!95 &5593707893222274080
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 0}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-518018803653983206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5107877303657427623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 055db650e4137434c914e3affbbf9ead, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Features.Character.Adapter.PlayerAnimator
+  animator: {fileID: 0}
+  moveThreshold: 0.05
+  defaultFacingRight: 1
+  spriteRenderer: {fileID: 0}
 --- !u!1 &5449631014595424917
 GameObject:
   m_ObjectHideFlags: 0

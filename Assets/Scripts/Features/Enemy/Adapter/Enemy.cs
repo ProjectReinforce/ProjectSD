@@ -101,6 +101,7 @@ namespace SwDreams.Features.Enemy.Adapter
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
         private EnemyAttack enemyAttack;
+        private EnemyAnimator enemyAnimator;
 
         // 프리팹 기본 스케일 (visualScaleMultiplier 적용 시 기준)
         private Vector3 initialLocalScale;
@@ -117,6 +118,7 @@ namespace SwDreams.Features.Enemy.Adapter
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             mpb = new MaterialPropertyBlock();
             enemyAttack = GetComponent<EnemyAttack>();
+            enemyAnimator = GetComponent<EnemyAnimator>();
             initialLocalScale = transform.localScale;
         }
 
@@ -169,6 +171,10 @@ namespace SwDreams.Features.Enemy.Adapter
                 enemyAttack.enabled = isRanged;
                 if (isRanged) enemyAttack.ConfigureFromEnemy();
             }
+
+            // EnemyAnimator 바인딩 (controller 주입 + OnDied 구독). 컴포넌트 없으면 no-op.
+            if (enemyAnimator != null)
+                enemyAnimator.Bind(this, data);
         }
 
         public void TakeDamage(int damage) => TakeDamage(damage, false);
@@ -297,6 +303,10 @@ namespace SwDreams.Features.Enemy.Adapter
 
             if (enemyAttack != null)
                 enemyAttack.enabled = false;
+
+            // Animator state 초기화 — 사망 state 가 다음 스폰에 잔류하지 않도록.
+            if (enemyAnimator != null)
+                enemyAnimator.OnReturnToPool();
 
             // 스케일 리셋 — 다음 스폰 전 잔상 방지
             transform.localScale = initialLocalScale;
