@@ -108,6 +108,13 @@ InitTestScene*.unity*
 # Visual Studio .slnx 파일 무시
 *.slnx
 
+# Unity Performance Testing Extension — 빌드/Test Runner 시 자동 생성되는 부산물.
+# Resources 안에 있으면 런타임 번들에 포함되므로 무시 처리 (빌드 노이즈 방지).
+Assets/Resources/PerformanceTestRunInfo.json
+Assets/Resources/PerformanceTestRunInfo.json.meta
+Assets/Resources/PerformanceTestRunSettings.json
+Assets/Resources/PerformanceTestRunSettings.json.meta
+
 # Claude Code — personal (non-shared) settings
 .claude/settings.local.json
 
