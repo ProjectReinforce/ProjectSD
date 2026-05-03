@@ -21,7 +21,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
     [RequireComponent(typeof(Rigidbody2D))]
-    [RequireComponent(typeof(SpriteRenderer))]
     public class LobbyPlayerController : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     {
         [Header("이동")]
@@ -47,6 +46,12 @@ namespace SwDreams.Features.UI.Adapter.Menu
         private Vector3 lastRemotePos;
         private bool hasLastRemotePos;
 
+        // 피벗 보정용 — PlayerAnimator 와 동일 패턴. SR 자식 transform.localPosition 시프트.
+        private Transform spriteTransform;
+        private Vector3 spriteBaseLocalPosition;
+        private float pivotOffsetX;
+        private bool? lastFlipState;
+
         private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
         private static readonly int MoveXHash = Animator.StringToHash("MoveX");
         private static readonly int MoveYHash = Animator.StringToHash("MoveY");
@@ -68,10 +73,17 @@ namespace SwDreams.Features.UI.Adapter.Menu
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
 
-            spriteRenderer = GetComponent<SpriteRenderer>();
-            // Animator 는 own GO 또는 자식 — 둘 다 잡아주는 InChildren 사용 (자기 GO 도 포함).
+            // SpriteRenderer/Animator 는 own GO 또는 자식 — InChildren 으로 둘 다 커버 (자기 GO 도 포함).
             // includeInactive=true — 자식 GO 가 비활성으로 시작해도 잡도록.
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
             animator = GetComponentInChildren<Animator>(true);
+
+            // 피벗 보정은 SR 이 자식 GO 에 있을 때만 활성. root 면 본체 transform 이 통째로 움직이므로 무력화.
+            if (spriteRenderer != null && spriteRenderer.transform != transform)
+            {
+                spriteTransform = spriteRenderer.transform;
+                spriteBaseLocalPosition = spriteTransform.localPosition;
+            }
         }
 
         /// <summary>
@@ -168,8 +180,32 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
                 // 좌우 flipX — 입력의 x 부호로만 판정 (위/아래만 누르면 마지막 facing 유지).
                 if (Mathf.Abs(velocity.x) > 0.01f && spriteRenderer != null)
-                    spriteRenderer.flipX = defaultFacingRight ? velocity.x < 0f : velocity.x > 0f;
+                {
+                    bool flipped = defaultFacingRight ? velocity.x < 0f : velocity.x > 0f;
+                    spriteRenderer.flipX = flipped;
+                    ApplyPivotOffset(flipped);
+                }
             }
+        }
+
+        /// <summary>
+        /// PlayerAnimator.ApplyPivotOffset 와 동일 컨벤션. flip 상태 변화 시에만 갱신.
+        /// </summary>
+        private void ApplyPivotOffset(bool flipped)
+        {
+            if (spriteTransform == null) return;
+            if (lastFlipState.HasValue && lastFlipState.Value == flipped) return;
+            lastFlipState = flipped;
+
+            if (Mathf.Approximately(pivotOffsetX, 0f))
+            {
+                spriteTransform.localPosition = spriteBaseLocalPosition;
+                return;
+            }
+
+            var p = spriteBaseLocalPosition;
+            p.x += flipped ? -pivotOffsetX : +pivotOffsetX;
+            spriteTransform.localPosition = p;
         }
 
         // ===================================================================
@@ -203,15 +239,24 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 spriteRenderer.sprite = next;
             }
 
-            // CharacterData.animatorController 주입 — DB 가 있을 때만.
-            if (animator != null && characterDB != null)
+            // CharacterData 주입 — DB 가 있을 때만.
+            if (characterDB != null)
             {
                 var data = characterDB.GetById(characterId);
-                if (data != null && data.animatorController != null)
+                if (data != null)
                 {
-                    animator.runtimeAnimatorController = data.animatorController;
-                    // controller swap 후 stale state/trigger 정리. 캐릭터 변경 직후 1프레임 잔류 방지.
-                    animator.Rebind();
+                    // 피벗 보정값 갱신 — 캐릭터 swap 시 매번 재적용.
+                    pivotOffsetX = data.pivotOffsetX;
+                    lastFlipState = null;
+                    if (spriteTransform != null && spriteRenderer != null)
+                        ApplyPivotOffset(spriteRenderer.flipX);
+
+                    if (animator != null && data.animatorController != null)
+                    {
+                        animator.runtimeAnimatorController = data.animatorController;
+                        // controller swap 후 stale state/trigger 정리. 캐릭터 변경 직후 1프레임 잔류 방지.
+                        animator.Rebind();
+                    }
                 }
             }
         }
