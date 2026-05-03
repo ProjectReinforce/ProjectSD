@@ -2557,6 +2557,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4331882385692859961, guid: 8382370814b73884482e7f5a4530ebf5, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4180307150273281006}
+    - targetCorrespondingSourceObject: {fileID: 4331882385692859961, guid: 8382370814b73884482e7f5a4530ebf5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8466106805097685454}
   m_SourcePrefab: {fileID: 100100000, guid: 8382370814b73884482e7f5a4530ebf5, type: 3}
 --- !u!1 &1268396816955481758 stripped
 GameObject:
@@ -2570,7 +2573,7 @@ Canvas:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1268396816955481758}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
   m_RenderMode: 2
   m_Camera: {fileID: 0}
@@ -2586,6 +2589,23 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 10
   m_TargetDisplay: 0
+--- !u!114 &8466106805097685454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1268396816955481758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!224 &8487053969145060861 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6363483628174138714, guid: 8382370814b73884482e7f5a4530ebf5, type: 3}
