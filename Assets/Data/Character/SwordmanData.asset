@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: C
   portrait: {fileID: 0}
   animatorController: {fileID: 22100000, guid: ceacde9fe2b16f04b81fd044c414f668, type: 2}
-  pivotOffsetX: 10
+  pivotOffsetX: 0.05
   startingActiveSkill: {fileID: 11400000, guid: 9df42b5317752984da71bf347d04019d, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: e75ec2b6288cf2940bcec948194bf37e, type: 2}
   maxHP: 100
