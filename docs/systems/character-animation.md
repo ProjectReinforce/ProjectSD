@@ -104,6 +104,24 @@ if (Mathf.Abs(velocity.x) > 0.01f && spriteRenderer != null)
 - 위/아래만 입력 시 마지막 facing 유지
 - 4방향 Blend Tree 마이그레이션 시 flipX 제거 + MoveX 음수도 정상 분기
 
+### 7.1 피벗 보정 (`CharacterData.pivotOffsetX`)
+
+비대칭 패딩 PNG 가 flip 시 좌우로 튕겨 보이는 현상 보정. PlayerAnimator /
+LobbyPlayerController 양쪽이 flip 토글마다 SpriteRenderer 자식
+`transform.localPosition.x` 로 ±보정 적용.
+
+- **부호 컨벤션:** 기본 facing 상태에서 캐릭터를 시각 중심으로 옮기려면 어느
+  방향으로 얼마나 밀어야 하는가. `defaultFacingRight=true` 이고 캐릭터가
+  피벗보다 왼쪽으로 치우쳐 있으면 양수. flip 시 부호 자동 반전.
+- **전제:** SpriteRenderer 가 root 가 아닌 자식 GO 에 있어야 함 — 보정으로
+  본체(Rigidbody2D/Collider/Photon 동기화 transform) 가 통째로 움직이는 사고
+  방지 가드. PlayerStub.prefab / LobbyPlayer.prefab 모두 `Visual` 자식 GO 에
+  SR + Animator 배치.
+- 0 입력 시 보정 비활성화 (기존 동작).
+- 근본 해결 대안: 원본 PNG 재export 또는 Sprite Editor Custom Pivot. 런타임
+  보정은 외부 패키지/도트 작가 자산을 그대로 쓰면서 해결할 때 유용.
+- 현재값: 3캐릭터(Magician/Swordman/Thor) 모두 `0.05`.
+
 ## 8. 풀링 함정 (적 전용)
 
 `Enemy.OnReturnToPool` 호출 순서:
@@ -180,3 +198,4 @@ Idle/Walk state 를 Blend Tree 로 교체. MoveX/MoveY parameter 활용. flipX �
 ## 13. 변경 이력
 
 - 2026-05-02: 초안. Phase 1 코드 인프라 완료. base controller 패턴 + flipX + GameState.Paused 시 정지 + 풀링 Rebind + 결과창 지연 명세.
+- 2026-05-03: § 7.1 피벗 보정 메커니즘 추가 (`CharacterData.pivotOffsetX` + PlayerStub/LobbyPlayer Visual 자식 분리). PlayerAnimator/LobbyPlayerController 양쪽 적용.
