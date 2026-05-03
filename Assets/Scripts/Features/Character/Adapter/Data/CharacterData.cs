@@ -30,6 +30,13 @@ namespace SwDreams.Features.Character.Adapter.Data
                  "비어있으면 Animator 미사용 — 정적 sprite 동작 (기존 동작 유지).")]
         public RuntimeAnimatorController animatorController;
 
+        [Tooltip("스프라이트 피벗 보정 (월드 단위 X). 원본 PNG 의 캐릭터가 텍스처 정중앙에서 비대칭으로 어긋나 있을 때\n" +
+                 "flipX 시 좌우로 튕겨 보이는 현상을 보정. 부호는 \"기본 facing 상태에서 캐릭터를 시각적 중심으로 옮기려면\n" +
+                 "어느 방향으로 얼마나 밀어야 하는가\" 로 정함. 예: defaultFacingRight=true 인데 캐릭터가 피벗보다\n" +
+                 "왼쪽으로 치우쳐 있으면 양수(예: 0.06) 입력. 런타임에 SpriteRenderer 자식 transform.localPosition.x 로\n" +
+                 "보정하며 flipX 토글 시 자동으로 부호 반전. 0 이면 보정 없음.")]
+        public float pivotOffsetX = 0f;
+
         [Header("시작 스킬")]
         [Tooltip("게임 시작 시 자동 획득하는 액티브 스킬")]
         public SkillData startingActiveSkill;

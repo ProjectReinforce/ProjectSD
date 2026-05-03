@@ -51,6 +51,12 @@ namespace SwDreams.Features.Character.Adapter
         private Vector3 lastRemotePos;
         private bool hasLastRemotePos;
 
+        // 피벗 보정용 — spriteRenderer 자식 transform 의 base localPosition 에서 ±pivotOffsetX 만큼 시프트.
+        private Transform spriteTransform;
+        private Vector3 spriteBaseLocalPosition;
+        private float pivotOffsetX;
+        private bool? lastFlipState;
+
         private void Awake()
         {
             // includeInactive=true — 자식 GO 가 비활성으로 시작해도 잡도록.
@@ -59,6 +65,14 @@ namespace SwDreams.Features.Character.Adapter
             rb = GetComponent<Rigidbody2D>();
             // PhotonView 없으면(솔로/테스트 씬) IsMine=true 로 간주 — 기존 rb 폴링.
             pv = GetComponent<PhotonView>();
+
+            // 피벗 보정은 자식 transform 에만 적용 가능. spriteRenderer 가 root 와 같은 GO 면
+            // localPosition 변경 시 플레이어 본체가 통째로 움직이므로 무력화.
+            if (spriteRenderer != null && spriteRenderer.transform != transform)
+            {
+                spriteTransform = spriteRenderer.transform;
+                spriteBaseLocalPosition = spriteTransform.localPosition;
+            }
         }
 
         private void OnDestroy()
@@ -92,7 +106,15 @@ namespace SwDreams.Features.Character.Adapter
         /// </summary>
         public void ApplyCharacter(CharacterData data)
         {
-            if (animator == null || data == null) return;
+            if (data == null) return;
+
+            // 피벗 보정값 주입 — animatorController 유무와 무관하게 적용 (정적 sprite 캐릭터도 flipX 사용).
+            pivotOffsetX = data.pivotOffsetX;
+            lastFlipState = null; // 다음 ApplyPivotOffset 호출에서 무조건 적용
+            if (spriteTransform != null && spriteRenderer != null)
+                ApplyPivotOffset(spriteRenderer.flipX);
+
+            if (animator == null) return;
             if (data.animatorController == null) return; // 미설정 = 정적 sprite (기존 동작)
             animator.runtimeAnimatorController = data.animatorController;
 
@@ -136,8 +158,36 @@ namespace SwDreams.Features.Character.Adapter
 
                 // 좌우 flipX — x 부호로만 판정 (위/아래만 누르면 마지막 facing 유지).
                 if (Mathf.Abs(v.x) > 0.01f && spriteRenderer != null)
-                    spriteRenderer.flipX = defaultFacingRight ? v.x < 0f : v.x > 0f;
+                {
+                    bool flipped = defaultFacingRight ? v.x < 0f : v.x > 0f;
+                    spriteRenderer.flipX = flipped;
+                    ApplyPivotOffset(flipped);
+                }
             }
+        }
+
+        /// <summary>
+        /// 스프라이트 비대칭 보정. flip 상태가 바뀐 경우에만 spriteTransform.localPosition 갱신.
+        /// pivotOffsetX 부호 컨벤션:
+        ///   "기본 facing 상태에서 캐릭터를 시각적 중심으로 옮기려면 어느 방향으로 얼마나 밀어야 하는가."
+        ///   defaultFacingRight=true 이고 캐릭터가 피벗보다 왼쪽으로 치우쳐 있으면 양수.
+        /// flipped=true (반대 방향 보고 있음) 이면 부호 반전.
+        /// </summary>
+        private void ApplyPivotOffset(bool flipped)
+        {
+            if (spriteTransform == null) return;
+            if (lastFlipState.HasValue && lastFlipState.Value == flipped) return;
+            lastFlipState = flipped;
+
+            if (Mathf.Approximately(pivotOffsetX, 0f))
+            {
+                spriteTransform.localPosition = spriteBaseLocalPosition;
+                return;
+            }
+
+            var p = spriteBaseLocalPosition;
+            p.x += flipped ? -pivotOffsetX : +pivotOffsetX;
+            spriteTransform.localPosition = p;
         }
 
         /// <summary>
