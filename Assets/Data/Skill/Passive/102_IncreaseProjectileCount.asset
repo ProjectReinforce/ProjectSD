@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 1
   effectType: 0
   chaosEffectType: 0
-  icon: {fileID: 21300000, guid: ff40be7da3baabd429c36093438428bf, type: 3}
+  icon: {fileID: 21300000, guid: b223170de10937143b3d52b7e7cfb899, type: 3}
   description: "\uD22C\uC0AC\uCCB4 \uAC1C\uC218\uAC00 \uC99D\uAC00\uD569\uB2C8\uB2E4."
   maxLevel: 5
   damagePerLevel: 0f00000012000000160000001a0000001f000000250000002d000000
@@ -29,18 +29,25 @@ MonoBehaviour:
   - 1.1
   - 1
   - 0.9
+  firingMode: 0
+  burstDelay: 0.1
   bonusType: 2
   bonusPerLevel: 1
   projectilePrefab: {fileID: 0}
   projectileSpeed: 5
   projectileCount: 1
   projectileLifetime: 5
+  penetrates: 0
+  subProjectilePrefab: {fileID: 0}
+  aimType: 0
   spreadPattern: 1
   spreadAngle: 15
   trajectoryType: 0
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 300
+  chainFlightCount: 0
+  chainSearchRadius: 5
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
@@ -51,11 +58,11 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 3
-  isDualZone: 0
   orbitRadius: 1.5
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 2
+  phase1RotationCount: 1
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0
@@ -63,9 +70,8 @@ MonoBehaviour:
   damageAmplify: 1.3
   targetCount: 3
   spreadOnDeathCount: 0
-  maxInstances: 3
   effectPrefab: {fileID: 0}
-  applicableStats: 
+  statOverrides: []
   triggerEffects: []
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 2
   effectType: 0
   chaosEffectType: 4
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: d668ce381860d684ea757fc3ae5b384b, type: 3}
   description: "\uC2DC\uAC04\uC5D0 \uB530\uB77C \uC804\uC2A4\uD0EF \uC99D\uAC00 (10\uBD84
     +50%)"
   maxLevel: 7
@@ -63,6 +63,7 @@ MonoBehaviour:
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 2
+  phase1RotationCount: 1
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0
@@ -70,9 +71,8 @@ MonoBehaviour:
   damageAmplify: 1.3
   targetCount: 3
   spreadOnDeathCount: 0
-  maxInstances: 3
   effectPrefab: {fileID: 0}
-  applicableStats: 
+  statOverrides: []
   triggerEffects: []
   evolutionPair: {fileID: 0}
   evolvedSkill: {fileID: 0}

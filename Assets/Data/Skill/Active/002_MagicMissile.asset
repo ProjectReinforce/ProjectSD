@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 0
   effectType: 1
   chaosEffectType: 0
-  icon: {fileID: 21300000, guid: 11c3393039ee84c429ecc59e88771781, type: 3}
+  icon: {fileID: 21300000, guid: 951e705b588aa004ca89a90d21ac301b, type: 3}
   description: "\uB79C\uB364\uACFC \uB79C\uB364"
   maxLevel: 7
   damagePerLevel: 0a0000000d0000001000000014000000180000001d00000023000000
@@ -62,6 +62,7 @@ MonoBehaviour:
   rotationSpeed: 180
   objectCount: 3
   knockbackForce: 2
+  phase1RotationCount: 1
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0

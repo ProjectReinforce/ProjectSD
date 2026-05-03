@@ -17,7 +17,7 @@ MonoBehaviour:
   skillType: 0
   effectType: 1
   chaosEffectType: 0
-  icon: {fileID: 21300000, guid: c95d0d410a27ca04b924f43164c87f87, type: 3}
+  icon: {fileID: 21300000, guid: 9d2dbf434fdc0534f8c43c08aef62a10, type: 3}
   description: "\uC654\uB2E4 \uAC14\uB2E4"
   maxLevel: 7
   damagePerLevel: 0e0000001100000015000000190000001e000000240000002c000000
@@ -29,6 +29,8 @@ MonoBehaviour:
   - 1.95
   - 1.8
   - 1.65
+  firingMode: 0
+  burstDelay: 0.1
   bonusType: 0
   bonusPerLevel: 0
   projectilePrefab: {fileID: 2361586414690528474, guid: 275e103cfdd0f00468aa79206ac99773, type: 3}
@@ -36,6 +38,7 @@ MonoBehaviour:
   projectileCount: 1
   projectileLifetime: 2
   penetrates: 0
+  subProjectilePrefab: {fileID: 0}
   aimType: 1
   spreadPattern: 2
   spreadAngle: 15
@@ -43,6 +46,8 @@ MonoBehaviour:
   waveAmplitude: 0.8
   waveFrequency: 5
   homingRotateSpeed: 100
+  chainFlightCount: 0
+  chainSearchRadius: 5
   pullRadius: 2
   pullForce: 3
   hasPullOnReturn: 0
@@ -53,11 +58,11 @@ MonoBehaviour:
   isHealingEffect: 0
   spawnAtRandomPosition: 0
   randomSpawnRadius: 0.8
-  isDualZone: 0
   orbitRadius: 0.25
   rotationSpeed: 360
   objectCount: 1
   knockbackForce: 0.35
+  phase1RotationCount: 1
   attackRange: 5
   attackCooldown: 0.5
   alwaysCritical: 0
@@ -65,9 +70,8 @@ MonoBehaviour:
   damageAmplify: 1.3
   targetCount: 3
   spreadOnDeathCount: 0
-  maxInstances: 2
   effectPrefab: {fileID: 7830792750639668327, guid: 41d4a302982979640a89462fbc7e7c66, type: 3}
-  applicableStats: 
+  statOverrides: []
   triggerEffects: []
   evolutionPair: {fileID: 11400000, guid: d6619f056d2b46349ad38c514beee0ef, type: 2}
   evolvedSkill: {fileID: 11400000, guid: ebfb7718f453d2d4a93ee5d650b7a12d, type: 2}
