@@ -101,6 +101,8 @@ MonoBehaviour:
   - RPC_ApplyMicFilter
   - RPC_BroadcastSkillSpawn
   - RPC_RequestSkillSpawn
+  - RPC_TriggerAttack
+  - RPC_TriggerEnemyAttack
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

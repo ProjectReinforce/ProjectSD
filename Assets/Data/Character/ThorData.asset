@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ThorData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.CharacterData
   id: 1
-  displayName: B
+  displayName: Thor
   portrait: {fileID: 0}
   animatorController: {fileID: 22100000, guid: bc43e311997af65459ca55e1ebc2f6c1, type: 2}
   pivotOffsetX: 0.05

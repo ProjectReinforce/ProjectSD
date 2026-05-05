@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: MagicianData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.CharacterData
   id: 0
-  displayName: A
+  displayName: Magician
   portrait: {fileID: 0}
   animatorController: {fileID: 22100000, guid: e702626e69f637d49abfbf1f81a5a6e4, type: 2}
   pivotOffsetX: 0.05
   startingActiveSkill: {fileID: 11400000, guid: a165f0a803805c545b94452b53bf7964, type: 2}
   startingPassiveSkill: {fileID: 11400000, guid: 8a0132335e42e2245914bf8d658e9614, type: 2}
-  maxHP: 100
+  maxHP: 10000
   moveSpeed: 0.84
   attackMultiplier: 1
   projectileSpeed: 0
