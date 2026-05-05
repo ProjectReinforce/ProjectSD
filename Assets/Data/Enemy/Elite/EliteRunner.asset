@@ -18,8 +18,11 @@ MonoBehaviour:
   baseHP: 250
   moveSpeed: 0.75
   contactDamage: 15
+  moveSpeedScaleSensitivity: 0.5
   expValue: 9
   visualScaleMultiplier: 1.5
+  animatorController: {fileID: 0}
+  pivotOffsetX: 0.05
   knockbackResistance: 1
   resolveOverlap: 1
   rangedBehavior: 0

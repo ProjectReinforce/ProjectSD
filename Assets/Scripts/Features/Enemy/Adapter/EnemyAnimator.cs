@@ -17,10 +17,12 @@ namespace SwDreams.Features.Enemy.Adapter
     /// AnimatorController parameters (표준):
     ///   IsMoving (Bool)
     ///   Die      (Trigger)
+    ///   Attack   (Trigger, Ranged 전용 — 호스트가 EnemyAttack.FireOnce 직전 SpawnManager 경유로 동기 발화)
     ///   MoveX    (Float, 옵션 — Blend Tree 4방향용)
     ///   MoveY    (Float, 옵션)
     ///
     /// 셋업: Enemy 본체 GO 에 부착. Animator 는 자식 GO (SpriteRenderer 와 같은 곳) 에 부착.
+    /// 자식 GO 분리 권장: SpriteRenderer 가 root 와 같은 GO 에 있으면 피벗 보정이 무력화됨.
     /// </summary>
     public class EnemyAnimator : MonoBehaviour
     {
@@ -38,6 +40,7 @@ namespace SwDreams.Features.Enemy.Adapter
 
         private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
         private static readonly int DieHash = Animator.StringToHash("Die");
+        private static readonly int AttackHash = Animator.StringToHash("Attack");
         private static readonly int MoveXHash = Animator.StringToHash("MoveX");
         private static readonly int MoveYHash = Animator.StringToHash("MoveY");
 
@@ -45,10 +48,24 @@ namespace SwDreams.Features.Enemy.Adapter
         private Vector3 lastPosition;
         private bool hasLastPosition;
 
+        // 피벗 보정용 — PlayerAnimator 와 동일 컨벤션. SR 자식 transform.localPosition 시프트.
+        // SpriteRenderer 가 root 와 같은 GO 면 spriteTransform=null 로 두어 무력화 (root 이동 시 물리/네트워크 영향).
+        private Transform spriteTransform;
+        private Vector3 spriteBaseLocalPosition;
+        private float pivotOffsetX;
+        private bool? lastFlipState;
+
         private void Awake()
         {
             if (animator == null) animator = GetComponentInChildren<Animator>(true);
             if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+
+            // 피벗 보정은 SR 이 자식 GO 에 있을 때만 활성. root 면 본체 transform 이 통째로 움직이므로 무력화.
+            if (spriteRenderer != null && spriteRenderer.transform != transform)
+            {
+                spriteTransform = spriteRenderer.transform;
+                spriteBaseLocalPosition = spriteTransform.localPosition;
+            }
         }
 
         // ===== 외부 진입점 =====
@@ -80,9 +97,60 @@ namespace SwDreams.Features.Enemy.Adapter
 
         private void ApplyData(EnemyData data)
         {
-            if (animator == null || data == null) return;
+            if (data == null) return;
+
+            // 피벗 보정값 주입 — animatorController 유무와 무관하게 적용 (정적 sprite 적도 flipX 사용).
+            pivotOffsetX = data.pivotOffsetX;
+            lastFlipState = null; // 다음 ApplyPivotOffset 호출에서 무조건 적용
+            if (spriteTransform != null && spriteRenderer != null)
+                ApplyPivotOffset(spriteRenderer.flipX);
+
+            if (animator == null) return;
             if (data.animatorController == null) return; // 미설정 = 정적 sprite
             animator.runtimeAnimatorController = data.animatorController;
+        }
+
+        /// <summary>
+        /// 외부에서 명시적으로 공격 트리거 발화. SpawnManager.RPC_TriggerEnemyAttack 경로로 모든 클라가 호출.
+        /// runtimeAnimatorController 또는 Attack 파라미터가 없으면 SetTrigger 가 무시됨 (안전).
+        /// </summary>
+        public void TriggerAttack()
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+            animator.SetTrigger(AttackHash);
+        }
+
+        /// <summary>
+        /// 외부에서 명시적으로 facing 갱신. Stationary Ranged 적이 이동 없이 사거리 안 플레이어를
+        /// 바라봐야 하는 케이스. defaultFacingRight 컨벤션 그대로 적용 + 피벗 보정 동기.
+        /// SpawnManager.RPC_TriggerEnemyAttack 가 모든 클라에서 호출.
+        /// </summary>
+        public void FaceDirection(bool facingLeft)
+        {
+            if (spriteRenderer == null) return;
+            bool flipped = defaultFacingRight ? facingLeft : !facingLeft;
+            spriteRenderer.flipX = flipped;
+            ApplyPivotOffset(flipped);
+        }
+
+        /// <summary>
+        /// PlayerAnimator.ApplyPivotOffset 와 동일 컨벤션. flip 상태 변화 시에만 갱신.
+        /// </summary>
+        private void ApplyPivotOffset(bool flipped)
+        {
+            if (spriteTransform == null) return;
+            if (lastFlipState.HasValue && lastFlipState.Value == flipped) return;
+            lastFlipState = flipped;
+
+            if (Mathf.Approximately(pivotOffsetX, 0f))
+            {
+                spriteTransform.localPosition = spriteBaseLocalPosition;
+                return;
+            }
+
+            var p = spriteBaseLocalPosition;
+            p.x += flipped ? -pivotOffsetX : +pivotOffsetX;
+            spriteTransform.localPosition = p;
         }
 
         /// <summary>
@@ -143,7 +211,11 @@ namespace SwDreams.Features.Enemy.Adapter
 
                 // 좌우 flipX — x 부호로만 판정.
                 if (Mathf.Abs(v.x) > 0.01f && spriteRenderer != null)
-                    spriteRenderer.flipX = defaultFacingRight ? v.x < 0f : v.x > 0f;
+                {
+                    bool flipped = defaultFacingRight ? v.x < 0f : v.x > 0f;
+                    spriteRenderer.flipX = flipped;
+                    ApplyPivotOffset(flipped);
+                }
             }
         }
 

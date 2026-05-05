@@ -60,10 +60,12 @@ namespace SwDreams.Features.Boss.Adapter
 
         // 컴포넌트 캐시
         private SpriteRenderer spriteRenderer;
+        private BossAnimator bossAnimator;
 
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            bossAnimator = GetComponent<BossAnimator>(); // 옵션 — 없으면 정적 sprite
         }
 
         /// <summary>
@@ -86,6 +88,10 @@ namespace SwDreams.Features.Boss.Adapter
             if (spriteRenderer != null && data.sprite != null)
                 spriteRenderer.sprite = data.sprite;
 
+            // BossAnimator 바인딩 (controller 주입 + OnDied 구독). 컴포넌트 없으면 no-op.
+            if (bossAnimator != null)
+                bossAnimator.Bind(this, data);
+
             Debug.Log($"[Boss] 초기화 — {data.bossName}, HP:{MaxHP} ({playerCount}인 스케일링)");
         }
 
@@ -106,6 +112,10 @@ namespace SwDreams.Features.Boss.Adapter
                 currentMoveSpeed = bossData.moveSpeed;
                 if (spriteRenderer != null && bossData.sprite != null)
                     spriteRenderer.sprite = bossData.sprite;
+
+                // BossAnimator 바인딩 — 클라 측도 controller 주입 + OnDied 구독 필요.
+                if (bossAnimator != null)
+                    bossAnimator.Bind(this, bossData);
             }
 
             Debug.Log($"[Boss] 클라이언트 초기화 — HP:{MaxHP}");
@@ -258,6 +268,27 @@ namespace SwDreams.Features.Boss.Adapter
             Debug.Log("[Boss] 보스 처치!");
 
             // 클리어 처리는 BossSpawner 또는 GameManager에서 OnDied 구독
+        }
+
+        // ===== 공격 애니메이션 동기화 =====
+
+        /// <summary>
+        /// BossPhaseManager(호스트) 가 공격 패턴 Execute 시점에 호출.
+        /// 모든 클라가 같은 시점에 보스의 Attack 트리거를 발화하도록 RPC 송신.
+        /// PhaseManager 가 직접 RPC 보내지 않는 이유: 보스가 PhotonView 를 가진 PV 주체라,
+        /// 보스 자신의 PV 로 보내는 것이 ViewID 매칭 / 늦참 클라 안전성 측면에서 자연스러움.
+        /// </summary>
+        public void RaiseAttackAnim()
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            photonView.RPC(nameof(RPC_TriggerAttack), RpcTarget.All);
+        }
+
+        [PunRPC]
+        private void RPC_TriggerAttack()
+        {
+            if (bossAnimator != null)
+                bossAnimator.TriggerAttack();
         }
 
         // ===== 접촉 데미지 =====

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebb1a8d0155f6a047a852887d58943ac, type: 3}
   m_Name: 116_IncreaseCriticalRate
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.PassiveSkillData
-  skillId: 115
+  skillId: 116
   skillName: "\uCE58\uBA85\uD0C0 \uD655\uB960 \uC99D\uAC00"
   skillType: 1
   effectType: 0

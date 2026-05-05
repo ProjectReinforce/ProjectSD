@@ -203,11 +203,18 @@ namespace SwDreams.Features.Boss.Adapter
             foreach (var entry in phaseAttacks[phase])
             {
                 entry.timer += Time.deltaTime;
-                
+
                 // 쿨다운에 multiplier 적용 (폭주 모드 시 0.5배)
                 float effectiveTimer = entry.timer / cooldownMultiplier;
                 if (entry.pattern.CanExecute(effectiveTimer))
                 {
+                    // 공격 애니 트리거를 Execute 보다 먼저 발화.
+                    // 이유: CircleZone/Shockwave 등 Execute 가 내부에서 경고존/투사체 RPC 를 먼저 송신함.
+                    // 모션 → (즉시) 경고/투사체 순서가 의미상 자연스러움 ("보스가 휘두름" 직후 "경고 표시").
+                    // runtimeAnimatorController/Attack 파라미터 미설정 보스는 SetTrigger 가 무시되어 안전.
+                    // 패턴별 다른 모션이 필요해지면 RaiseAttackAnim 에 enum 인자 추가하는 식으로 확장.
+                    currentBoss.RaiseAttackAnim();
+
                     entry.pattern.Execute(currentBoss.transform, target);
                     entry.timer = 0f;
                 }

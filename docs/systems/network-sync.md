@@ -79,6 +79,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier)` | — | 호스트 → 전체. 엘리트 스폰. **⚠ eliteIdx = `SpawnManager.eliteVariants[]` 배열 인덱스. rangedVariants 와 동일 '순서 고정' 계약** |
 | `RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)` | — | 호스트 → 전체. 원거리 적 투사체 스폰. 이동은 각 클라 로컬, 데미지는 호스트 판정 |
 | `RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage)` | — | 호스트 → 전체. 경고존 스폰. Strike(데미지) 판정은 호스트만 |
+| `RPC_TriggerEnemyAttack(int enemyId, bool facingLeft)` | — | 호스트 → 전체. Ranged 적 공격 모션 트리거 + facing 갱신. enemyId 로 `activeEnemies` 매칭 → `EnemyAnimator.FaceDirection` + `TriggerAttack()` 호출. 상세 [character-animation.md § 8.1](character-animation.md) |
 | `RPC_RequestDamage(int enemyId, int damage, int actorNumber)` | 506 | 클라 → 호스트. 적 피해 요청 (C안 데미지 요청) |
 | `RPC_RequestKnockback(int enemyId, Vector2 sourcePos, float force)` | 513 | 클라 → 호스트. 넉백 요청 |
 
@@ -96,6 +97,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `RPC_RequestBossDamage(int damage)` | `Boss.cs:196` | 클라 → 호스트. 보스 피해 요청 |
 | `RPC_SyncHP(int hp, int maxHp, int phaseInt, bool phaseChanged)` | `Boss.cs:217` | 호스트 → 전체. 보스 HP / Phase 동기화 |
 | `RPC_BossDied()` | `Boss.cs:247` | 호스트 → 전체. 보스 처치 |
+| `RPC_TriggerAttack()` | `Boss.cs` | 호스트 → 전체. 보스 공격 모션 트리거. `BossPhaseManager` 가 패턴 Execute 직전 `currentBoss.RaiseAttackAnim()` 호출. 상세 [character-animation.md § 8.2](character-animation.md) |
 | `RPC_SetBossChaosSkill(int chaosTypeInt)` | `BossChaosApplicator.cs:109` | 호스트 → 전체. 보스 혼돈 적용 |
 | `RPC_ShowCircleWarning(float x, float y, float radius, float delay)` | `BossPhaseManager.cs:318` | 호스트 → 전체. 보스 패턴 경고 비주얼 |
 | `RPC_ShowExplosion(float x, float y, float radius)` | `BossPhaseManager.cs:341` | 호스트 → 전체. 폭발 이펙트 |

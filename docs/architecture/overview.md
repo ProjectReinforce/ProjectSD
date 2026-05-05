@@ -73,7 +73,7 @@ Assets/Scripts/
 │   ├── Boss/
 │   │   ├── Domain/             ← BossPhase, Interfaces (IBossAttackPattern, IBossChaosEffect)
 │   │   ├── Application/        ← BossPhaseService
-│   │   ├── Adapter/            ← Boss, Attack/, BossChaosEffects, BossSpawner, BossPhaseManager, BossChaosApplicator
+│   │   ├── Adapter/            ← Boss, BossAnimator, Attack/, BossChaosEffects, BossSpawner, BossPhaseManager, BossChaosApplicator
 │   │   │   └── Data/           ← BossData
 │   │   └── Presentation/       ← BossHealthBarUI, BossWarningUI
 │   ├── Character/              ← Player

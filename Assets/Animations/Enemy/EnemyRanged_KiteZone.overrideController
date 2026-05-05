@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: EnemyRanged_KiteZone
+  m_Controller: {fileID: 9100000, guid: f45ad89abde7f3347ab8723e441e68d4, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: f563da054e9b84db4bcc6f6895cefe62, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: d54c9bc2df2c744ee832e7a15b526f50, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 189af1326d47842fe9785dce0be00ddb, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: d9da6a7ac636a42adb753f02678ce123, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 065db9b888f6a464e9a140d8768d4422, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 8d467a1470afc41f7ba638a81b49f726, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 92962149b45514bae8e6e2cfab78d816, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 77749416350a340d2b3d6305dae0c78a, type: 2}

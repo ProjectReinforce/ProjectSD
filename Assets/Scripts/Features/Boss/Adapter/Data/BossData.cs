@@ -19,6 +19,21 @@ namespace SwDreams.Features.Boss.Adapter.Data
         public string bossName = "드림 이터";
         public Sprite sprite;
 
+        [Header("애니메이션")]
+        [Tooltip("보스 AnimatorController. AnimatorOverrideController 권장.\n" +
+                 "Parameters 표준: IsMoving(Bool), Die(Trigger), Attack(Trigger),\n" +
+                 "MoveX/MoveY(Float, 4방향용).\n" +
+                 "비어있으면 Animator 미사용 — 정적 sprite (기존 동작 유지).")]
+        public RuntimeAnimatorController animatorController;
+
+        [Tooltip("스프라이트 피벗 보정 (월드 단위 X). 캐릭터/적과 동일 컨벤션.\n" +
+                 "원본 PNG 가 텍스처 정중앙에서 비대칭이면 flipX 토글 시 좌우 점프 발생 → 보정.\n" +
+                 "보스 에셋이 캐릭터/적과 같은 톤이면 0.05 정도부터 시작 권장. 0 이면 보정 없음.")]
+        public float pivotOffsetX = 0f;
+
+        [Tooltip("sprite 의 기본 향. true=오른쪽. 좌/우 이동 시 BossAnimator 가 flipX 분기 기준으로 사용.")]
+        public bool defaultFacingRight = true;
+
         [Header("기본 스펙 (2인 기준)")]
         public int baseHP = 8000;
         public float moveSpeed = 0.40f;

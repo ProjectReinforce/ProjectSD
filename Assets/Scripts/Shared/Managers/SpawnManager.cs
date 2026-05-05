@@ -808,6 +808,30 @@ namespace SwDreams.Shared.Managers
         // ===== 원거리 공격 RPC (호스트 → 모든 클라, 로컬 렌더/호스트 판정) =====
 
         /// <summary>
+        /// EnemyAttack(호스트)에서 호출. Ranged 적의 공격 애니메이션 트리거 + facing 갱신을
+        /// 모든 클라에 동기화. facingLeft 는 호스트가 발사 시점에 결정 (target.x - enemy.x 부호).
+        /// EnemyId 기반 — Enemy 는 PhotonView 가 없어 RPC 직송이 불가하므로 SpawnManager 의 PV 경유.
+        /// runtimeAnimatorController 또는 Attack 파라미터가 없는 적은 SetTrigger 가 무시되어 안전.
+        /// </summary>
+        public void RaiseEnemyAttackAnim(int enemyId, bool facingLeft)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            photonView.RPC(nameof(RPC_TriggerEnemyAttack), RpcTarget.All, enemyId, facingLeft);
+        }
+
+        [PunRPC]
+        private void RPC_TriggerEnemyAttack(int enemyId, bool facingLeft)
+        {
+            if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) return;
+            if (enemy == null) return;
+            var anim = enemy.GetComponent<EnemyAnimator>();
+            if (anim == null) return;
+            // Face 먼저 갱신 후 트리거 — Attack 클립 첫 frame 에서 이미 올바른 방향.
+            anim.FaceDirection(facingLeft);
+            anim.TriggerAttack();
+        }
+
+        /// <summary>
         /// EnemyAttack(호스트)에서 호출. 투사체를 모든 클라에 스폰.
         /// </summary>
         public void RaiseEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)

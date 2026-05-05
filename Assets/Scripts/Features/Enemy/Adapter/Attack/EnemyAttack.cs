@@ -75,6 +75,13 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
             Vector2 origin = transform.position;
             Vector2 targetPos = target.position;
 
+            // Attack 애니 트리거 + facing — 모든 클라가 같은 시점에 보도록 SpawnManager 경유 RPC.
+            // 발사 시점과 동기화되도록 RaiseEnemyProjectile / RaiseTelegraph 직전에 호출.
+            // EnemyId 기반이라 PhotonView 없이도 클라가 자기 측 인스턴스 매칭 가능.
+            // facingLeft 는 호스트가 결정 — Stationary Ranged 가 이동 없이도 플레이어 방향 향하도록.
+            bool facingLeft = (targetPos.x - origin.x) < 0f;
+            SpawnManager.Instance.RaiseEnemyAttackAnim(enemy.EnemyId, facingLeft);
+
             if (enemy.RangedAttackType == RangedAttack.Projectile)
             {
                 Vector2 dir = (targetPos - origin);

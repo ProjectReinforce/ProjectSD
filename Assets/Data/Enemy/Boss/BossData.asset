@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.BossData
   bossName: "\uB4DC\uB9BC \uC774\uD130"
   sprite: {fileID: 0}
+  animatorController: {fileID: 9100000, guid: c327d15775bfb9b4c99e6e76f82f82d1, type: 2}
+  pivotOffsetX: 0.05
+  defaultFacingRight: 1
   baseHP: 20000
   moveSpeed: 0.4
   contactDamage: 30
