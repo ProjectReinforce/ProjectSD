@@ -220,6 +220,12 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - [ ] 성능 프로파일링
 - [ ] 빌드 테스트
 
+### 7-5. 메타 진행도 + 결과 화면 통계 ⬜
+- [ ] [`meta-unlock`](../systems/meta-unlock.md) 구현 — 영구 언락 (스킬 / 무기 조합식 / 캐릭터 / 새로고침 +N) — **Phase 8-1 Platform 추상화 선행 의존**, ~6.25일
+- [ ] [`run-statistics`](../systems/run-statistics.md) 구현 — 결과 화면 플레이어별·스킬별 통계 (분산 추적, sourceSkillId 인프라), ~4일
+- [ ] sourceSkillId 인프라 도입 후 [`meta-unlock`](../systems/meta-unlock.md) D1 ("특정 스킬로 처치" 조건) 부활 검토 — 거의 무비용
+- 합계 약 **10.25일**. plan: `~/.claude/plans/synchronous-pondering-taco.md`
+
 ---
 
 ## 신규 잔여 작업 (R) — 2026-04-25 정리
