@@ -2,9 +2,9 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.7 (2026-05-01) — `finalize-work` 스킬 제거. § 6 작업 규칙에 "커밋 전 관련 문서 갱신" 추가 (스킬의 핵심 로직 흡수).
+> **버전:** v2.8 (2026-05-01) — § 8 에이전트 표에 `unity-perf-auditor` 추가 (Survivors-like 핫패스 7개 영역 깊은 성능 감사). `unity-reviewer` 의 깊은 성능 책임 분리.
 >
-> **이전:** v2.6 (2026-04-26) — § 6 작업 규칙에 "ScriptableObject 인스턴스(.asset) 직접 수정 금지" 추가.
+> **이전:** v2.7 (2026-05-01) — `finalize-work` 스킬 제거. § 6 작업 규칙에 "커밋 전 관련 문서 갱신" 추가 (스킬의 핵심 로직 흡수).
 
 ---
 
@@ -229,7 +229,8 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 
 | 에이전트 | 언제 쓰나 |
 |---|---|
-| `unity-reviewer` | C# 코드 수정 직후 일반 품질 리뷰 |
+| `unity-reviewer` | C# 코드 수정 직후 일반 품질 리뷰 (생명주기·null·직렬화 + 표면적 성능 함정) |
+| `unity-perf-auditor` | 핫패스(Update/Trigger 핸들러/투사체/적 군집) 변경 후 깊은 성능 감사 (GC·풀링·배칭·스킬 디스패치 7개 영역) |
 | `skill-architect` | 새 스킬/진화 설계·구현 시 |
 | `architecture-guardian` | 레이어/폴더 간 의존성 변경, 재구성 작업 시 |
 | `photon-sync-auditor` | 네트워크 RPC/동기화 코드 변경 시 |
