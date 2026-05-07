@@ -63,6 +63,11 @@ namespace SwDreams.Features.Skill.Adapter
 
         // ===== 상태 =====
         private List<Skill> equippedSkills = new List<Skill>();
+
+        // 사망 중 신규 스킬 획득 시 자동 활성 회귀 방지용 플래그.
+        // PauseAllSkills 호출 시 true, ResumeAllSkills 호출 시 false.
+        // AcquireSkill / LevelUpSkill (진화 포함) 안에서 신규 Skill.Activate 후 isPaused 면 즉시 Deactivate.
+        private bool isPaused = false;
         private List<EvolutionCandidate> pendingEvolutions = new List<EvolutionCandidate>();
 
         // [Step 4-6] SkillSpawnerFactory. Awake()에서 초기화.
@@ -245,6 +250,11 @@ namespace SwDreams.Features.Skill.Adapter
             // 새 스킬 슬롯 생성
             Skill newSkill = CreateSkillSlot(skillData);
             if (newSkill == null) return false;
+
+            // 사망 등으로 일시정지 중이면 신규 스킬도 즉시 Deactivate (회귀 fix).
+            // CreateSkillSlot 의 skill.Activate() 가 isActive=true 셋팅하므로 여기서 명시 비활성화.
+            if (isPaused)
+                newSkill.Deactivate();
 
             equippedSkills.Add(newSkill);
             RefreshSinkCache();
@@ -458,6 +468,10 @@ namespace SwDreams.Features.Skill.Adapter
             Skill evolvedSkill = CreateSkillSlot(evo.evolvedSkillData);
             if (evolvedSkill != null)
             {
+                // 사망 등으로 일시정지 중이면 신규 스킬도 즉시 Deactivate (회귀 fix).
+                if (isPaused)
+                    evolvedSkill.Deactivate();
+
                 equippedSkills.Add(evolvedSkill);
                 RefreshSinkCache();
 
@@ -783,10 +797,12 @@ namespace SwDreams.Features.Skill.Adapter
         // ===== GameState 연동 =====
 
         /// <summary>
-        /// 모든 스킬 일시정지 (레벨업 UI 표시 중).
+        /// 모든 스킬 일시정지 (사망 / 레벨업 UI 등).
+        /// 이후 신규 스킬 획득 시점도 자동 Deactivate (isPaused 플래그).
         /// </summary>
         public void PauseAllSkills()
         {
+            isPaused = true;
             for (int i = 0; i < equippedSkills.Count; i++)
                 equippedSkills[i].Deactivate();
         }
@@ -796,6 +812,7 @@ namespace SwDreams.Features.Skill.Adapter
         /// </summary>
         public void ResumeAllSkills()
         {
+            isPaused = false;
             for (int i = 0; i < equippedSkills.Count; i++)
             {
                 var skill = equippedSkills[i];

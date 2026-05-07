@@ -152,6 +152,9 @@ namespace SwDreams.Features.Boss.Adapter
             // 상태 전환
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.BossFight);
 
+            // 호스트 측 isReady 복구 — StopSpawning 이후 BossFight 진입 시 자동 복구 안 됨 (호스트만 스킬 차단 회귀).
+            SpawnManager.Instance?.MarkReady();
+
             Debug.Log($"[BossSpawner] 보스 스폰 완료: {spawnPos}");
         }
 
@@ -192,6 +195,9 @@ namespace SwDreams.Features.Boss.Adapter
             }
 
             GameManager.Instance?.ChangeStateNetwork(GameManager.GameState.BossFight);
+
+            // 호스트 측 isReady 복구 (회귀 fix — SpawnManager.MarkReady 주석 참조).
+            SpawnManager.Instance?.MarkReady();
 
             Debug.Log($"[BossSpawner] 비상 보스 스폰 (HP배율: {hpMultiplier})");
         }
