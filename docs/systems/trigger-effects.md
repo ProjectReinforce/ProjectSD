@@ -21,12 +21,21 @@ SkillTriggerSystem
 
 | TriggerType | 발동 시점 | TriggerContext 주요 필드 |
 |---|---|---|
-| `OnFire` | 스킬 발사/시전 시 | position(플레이어), direction(발사 방향), owner |
-| `OnHit` | 적에게 적중 시 | position(적중 위치), target(맞은 적), damage(입힌 데미지), owner |
-| `OnKill` | 적 처치 시 | position(처치 위치), target(죽은 적), damage(마지막 데미지), owner |
-| `OnExpire` | 투사체/장판 소멸 시 | position(소멸 위치), damage, owner |
+| `OnFire` | 스킬 발사/시전 시 | position(플레이어), direction(발사 방향), owner, attackerActorNumber, sourceSkillId |
+| `OnHit` | 적에게 적중 시 | position(적중 위치), target(맞은 적), damage(입힌 데미지), owner, attackerActorNumber, sourceSkillId |
+| `OnKill` | 적 처치 시 | position(처치 위치), target(죽은 적), damage(마지막 데미지), owner, attackerActorNumber, sourceSkillId |
+| `OnExpire` | 투사체/장판 소멸 시 | position(소멸 위치), damage, owner, attackerActorNumber, sourceSkillId |
 | `OnInterval` | 주기적 발동 | position(플레이어), owner |
 | `OnPlayerHit` | 플레이어 피격 시 | position(플레이어), damage(받은 데미지) |
+
+### 2.1 인-런 통계 / 메타 진행도 진입점 필드 (B-1a)
+
+`attackerActorNumber` + `sourceSkillId` 는 [`run-statistics.md` §4](run-statistics.md) 의 자기 PC 통계 누적 + 사망 RPC 페이로드(`killerSkillId`) 진입점.
+
+- **`attackerActorNumber`:** `SkillExecutor.BuildContext` 가 `playerTransform.PhotonView.Owner.ActorNumber` 로 주입. 자기 발사(Begin) / 다른 클라 발사 RPC 도착(BeginFromNetwork) 모두 동일 owner 매핑. 핸들러는 `enemy.LastDamagerActorNumber = context.attackerActorNumber` 로 사망 시 막타 가해자 추적.
+- **`sourceSkillId`:** `SkillExecutor.BuildContext` 가 `ctx.skillData.skillId` 로 주입. 핸들러는 `enemy.LastDamagerSkillId = context.sourceSkillId` 로 사망 시 막타 스킬 추적 → 결과 화면 스킬별 차트 + meta-unlock D1 ("특정 스킬로 처치") 진입점.
+- **흐름:** Spawner → 인스턴스(Projectile/AreaZone/OrbitalObject/PlacedTurret) `SetSourceSkillId` 주입 → 인스턴스가 `TriggerContext` 만들 때 `attackerActorNumber = ownerActorNumber, sourceSkillId = sourceSkillId` 채움 → 7개 핸들러(Deal/DamageNearby/Explode/Chain/ApplyDoT/SpawnProjectile/Execute) 가 enemy.LastDamager* 채우기.
+- **풀링 안전성:** 4개 인스턴스 `OnReturnToPool` 에서 `sourceSkillId = 0` 리셋 (다음 풀 사이클 stale 값 방지).
 
 ## 3. EffectActionType 상세
 

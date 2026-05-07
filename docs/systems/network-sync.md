@@ -66,8 +66,8 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 |---|---|---|
 | `RPC_SyncExp(int currentExp, int requiredExp, int level, int levelUpCount)` | `Shared/Managers/GameManager.cs:117` | 호스트 → 전체. 팀 경험치/레벨 동기화 |
 | `RPC_ChangeState(int stateInt)` | `Shared/Managers/GameManager.cs:151` | 호스트 → 전체. `GameState` 전이 (Playing/Paused/BossFight/GameClear/GameOver) |
-| `RPC_SendBuildToHost(int actorNumber, string playerName, int characterId, int[] skillIds, int[] skillLevels, int[] chaosIds)` | `Shared/Managers/ResultManager.cs:139` | 클라 → 호스트. 종료 시 로컬 빌드 데이터 전송 |
-| `RPC_ShowResult(bool isCleared, float playTime, int teamLevel, int totalKills, int totalDeaths, int bossChaos, int[] buildPayload)` | `Shared/Managers/ResultManager.cs:222` | 호스트 → 전체. 결과 화면 표시 |
+| `RPC_SendBuildToHost(int actorNumber, string playerName, int characterId, int[] skillIds, int[] skillLevels, int[] chaosIds, int runKills, int runDeaths, float damageDealt, float damageTaken, int[] skillFireCounts, int[] skillKillCounts, float[] skillDamageDealt)` | `Shared/Managers/ResultManager.cs` | 클라 → 호스트. 종료 시 로컬 빌드 + 인-런 통계(B-1a) 전송. SkillIds 와 동일 길이 통계 배열 3개 |
+| `RPC_ShowResult(bool isCleared, float playTime, int teamLevel, int totalKills, int totalDeaths, int bossChaos, int[] buildPayload)` | `Shared/Managers/ResultManager.cs` | 호스트 → 전체. 결과 화면 표시. `buildPayload` 형식 = int[] flatten + float 은 `BitConverter.SingleToInt32Bits` packing. 스킬별 통계(fireCounts/killCounts/damageDealt) + 플레이어별 통계(runKills/runDeaths/damageDealt/damageTaken) 포함 |
 
 ### 5-2. 스폰 / 데미지 (Shared/Managers/SpawnManager.cs)
 
@@ -77,8 +77,8 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `RPC_SpawnSwarm(int enemyId, Vector2 position, float hpMultiplier, float baseAngle)` | 443 | 호스트 → 전체. 무리형 스폰 |
 | `RPC_SpawnRanged(int enemyId, int variantIdx, Vector2 position, float hpMultiplier)` | — | 호스트 → 전체. 원거리형 스폰. **⚠ variantIdx = `SpawnManager.rangedVariants[]` 배열 인덱스. 배열 순서 변경 금지 (리모트 간 variant 불일치). 요소는 말미에만 추가** |
 | `RPC_SpawnElite(int enemyId, int eliteIdx, Vector2 position, float hpMultiplier)` | — | 호스트 → 전체. 엘리트 스폰. **⚠ eliteIdx = `SpawnManager.eliteVariants[]` 배열 인덱스. rangedVariants 와 동일 '순서 고정' 계약** |
-| `RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)` | — | 호스트 → 전체. 원거리 적 투사체 스폰. 이동은 각 클라 로컬, 데미지는 호스트 판정 |
-| `RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage)` | — | 호스트 → 전체. 경고존 스폰. Strike(데미지) 판정은 호스트만 |
+| `RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime, int sourceEnemyId)` | — | 호스트 → 전체. 원거리 적 투사체 스폰. 이동은 각 클라 로컬, 데미지는 호스트 판정. **`sourceEnemyId`(B-1a):** 자기 사망 시 PlayerHealth.LastDamagerEnemyId 진입점 — meta-unlock DeathByEnemy 조건용 |
+| `RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage, int sourceEnemyId)` | — | 호스트 → 전체. 경고존 스폰. Strike(데미지) 판정은 호스트만. **`sourceEnemyId`(B-1a):** 동일 |
 | `RPC_TriggerEnemyAttack(int enemyId, bool facingLeft)` | — | 호스트 → 전체. Ranged 적 공격 모션 트리거 + facing 갱신. enemyId 로 `activeEnemies` 매칭 → `EnemyAnimator.FaceDirection` + `TriggerAttack()` 호출. 상세 [character-animation.md § 8.1](character-animation.md) |
 | `RPC_RequestDamage(int enemyId, int damage, int actorNumber)` | 506 | 클라 → 호스트. 적 피해 요청 (C안 데미지 요청) |
 | `RPC_RequestKnockback(int enemyId, Vector2 sourcePos, float force)` | 513 | 클라 → 호스트. 넉백 요청 |
@@ -87,8 +87,16 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 
 | 명칭 | 라인 | 용도 |
 |---|---|---|
-| `RPC_NotifySkillTriggered(int actorNumber, int skillId)` | 19 | 호스트 → 전체. 스킬 발동 통지 (이펙트/사운드용) |
-| `RPC_NotifyDamageApplied(int targetViewId, float damage)` | 25 | 호스트 → 전체. 데미지 적용 통지 (DamagePopup 표시용) |
+| `RPC_NotifySkillTriggered(int actorNumber, int skillId)` | 19 | 호스트 → 전체. 스킬 발동 통지 (이펙트/사운드용). **현재 Stub (호출자 없음)** |
+| `RPC_NotifyDamageApplied(int targetViewId, float damage)` | 25 | 호스트 → 전체. 데미지 적용 통지. **현재 Stub (호출자 없음)** — 인-런 통계 B-1a 채택 (2026-05-06) 후 매 데미지 RPC 흐름 폐기, 사망 RPC 페이로드 확장으로 대체. 향후 제거 후보 |
+
+### 5-3a. 사망 RPC (인-런 통계 B-1a 진입점, [run-statistics.md §4](run-statistics.md))
+
+| 명칭 | 정의 위치 | 용도 |
+|---|---|---|
+| `EventCode_EnemyDeathBatch` (RaiseEvent) | `SpawnManager.FlushDeathQueue` | 호스트 → 전체. 일반 적 사망 배치 (LateUpdate 1프레임 묶음). **stride 6** = `[enemyId, posX, posY, exp, killerActorNumber, killerSkillId]`. **`killerSkillId`(B-1a):** 자기 ActorNumber 매칭 시 `LocalStatsRecorder.OnKill(skillId, enemyId)` 진입점 — 결과 화면 스킬별 차트 + meta-unlock D1 부활용 |
+| `RPC_BossDied(int bossId)` | `Boss.cs` | 호스트 → 전체 (RpcTarget.All). 보스 처치. **모든 파티원 무조건 `OnBossDefeat(bossId)` 자기 PC 카운트** (D13 — 가해자 매칭 안 함, 협동 보스전 정책). `bossId` 는 `BossData.bossId` (사용자가 .asset 에서 채움) |
+| `RPC_TakeDamage(int damage, int attackerEnemyId)` | `PlayerHealth.cs` | 호스트 → 전체 (RpcTarget.All). 플레이어 피해. **`attackerEnemyId`(B-1a):** 자기 viewId 매칭 시 `LastDamagerEnemyId` 기록 + `LocalStatsRecorder.AddDamageTaken/OnDeath` 호출 — meta-unlock DeathByEnemy 조건용 |
 
 ### 5-4. 보스 (Features/Boss/Adapter/)
 
@@ -96,7 +104,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 |---|---|---|
 | `RPC_RequestBossDamage(int damage)` | `Boss.cs:196` | 클라 → 호스트. 보스 피해 요청 |
 | `RPC_SyncHP(int hp, int maxHp, int phaseInt, bool phaseChanged)` | `Boss.cs:217` | 호스트 → 전체. 보스 HP / Phase 동기화 |
-| `RPC_BossDied()` | `Boss.cs:247` | 호스트 → 전체. 보스 처치 |
+| `RPC_BossDied(int bossId)` | `Boss.cs` | 호스트 → 전체. 보스 처치. **인-런 통계 B-1a / 메타 D13 진입점** — § 5-3a 참조. 모든 파티원 무조건 `OnBossDefeat(bossId)` 카운트 |
 | `RPC_TriggerAttack()` | `Boss.cs` | 호스트 → 전체. 보스 공격 모션 트리거. `BossPhaseManager` 가 패턴 Execute 직전 `currentBoss.RaiseAttackAnim()` 호출. 상세 [character-animation.md § 8.2](character-animation.md) |
 | `RPC_SetBossChaosSkill(int chaosTypeInt)` | `BossChaosApplicator.cs:109` | 호스트 → 전체. 보스 혼돈 적용 |
 | `RPC_ShowCircleWarning(float x, float y, float radius, float delay)` | `BossPhaseManager.cs:318` | 호스트 → 전체. 보스 패턴 경고 비주얼 |

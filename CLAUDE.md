@@ -2,9 +2,9 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.8 (2026-05-01) — § 8 에이전트 표에 `unity-perf-auditor` 추가 (Survivors-like 핫패스 7개 영역 깊은 성능 감사). `unity-reviewer` 의 깊은 성능 책임 분리.
+> **버전:** v2.9 (2026-05-06) — § 3 폴더 지도에 `Stats/` Feature 추가 + § 4 용어집에 인-런 통계 / 분산 추적 / 보스 공유 카운트(D13) 항목 추가. Phase 7-5 run-statistics ✅ 도입.
 >
-> **이전:** v2.7 (2026-05-01) — `finalize-work` 스킬 제거. § 6 작업 규칙에 "커밋 전 관련 문서 갱신" 추가 (스킬의 핵심 로직 흡수).
+> **이전:** v2.8 (2026-05-01) — § 8 에이전트 표에 `unity-perf-auditor` 추가 (Survivors-like 핫패스 7개 영역 깊은 성능 감사). `unity-reviewer` 의 깊은 성능 책임 분리.
 
 ---
 
@@ -64,6 +64,7 @@ Assets/Scripts/
 │   ├── Weapon/              ← Domain + Adapter (WeaponPickup, PlayerWeaponInventory) + Adapter/Data
 │   ├── Quest/               ← Domain + Adapter (QuestZone, QuestRewardDispatcher) + Adapter/Data
 │   ├── StatBoost/           ← Adapter (StatBoostManager, StatBoostChoiceService) + Adapter/Data
+│   ├── Stats/               ← Domain (LocalRunStats, SkillRunStats VO) + Adapter (LocalStatsRecorder MonoBehaviour 싱글톤). 인-런 통계 자기 PC 누적 + 결과 화면 시각화. B-1a 분산 추적 — 호스트 마이그레이션 무관. — [docs/systems/run-statistics.md](docs/systems/run-statistics.md)
 │   ├── Pickup/              ← Domain + Adapter (DropSpawner, PickupItemBase, MagnetPickup, PotionPickup, PlayerPickupInteractor) + Presentation (InteractionPromptUI)
 │   └── UI/
 │       ├── Adapter/Menu/        ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
@@ -122,6 +123,14 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **World Indicator:** 파티원/보스/랜덤 퀘스트 위치 표시 UI. In-Screen 머리 위 이름표 / Off-Screen 가장자리 화살표(테두리색 + 아래 이름). 히스테리시스 β 표준. 클라이언트 로컬 (네트워크 동기화 없음). Manager pending drain 패턴으로 Awake race 차단. — [docs/systems/world-indicator.md](docs/systems/world-indicator.md).
 - **IndicatorPolicy:** `AlwaysShow` (파티원) / `OffScreenOnly` (보스) / `WhileActive` (퀘스트, 보류). 카테고리별 표시 정책.
 
+**통계 / 진행도**
+- **인-런 통계 (Run Statistics):** 한 게임 동안 자기 발사 데미지 / 자기 막타 킬 / 보스 처치 / 자기 받은 데미지 / 자기 사망을 자기 PC 에 누적. 결과 화면에서 플레이어 카드 + 스킬별 막대 차트 + 팀 합계 시각화. 휘발성 (다음 런 시작 시 새 인스턴스). [docs/systems/run-statistics.md](docs/systems/run-statistics.md).
+- **B-1a 분산 추적:** 가해 데미지는 자기 발사 시점 자기 PC 누적 (호스트 적용 결과 무관 — 마이그레이션 안전, 작은 오차 < 1% 감수). 자기 막타 킬은 사망 RPC 페이로드 확장(`SpawnManager.deathQueue +killerSkillId` / `Boss.RPC_BossDied(bossId)` / `PlayerHealth.RPC_TakeDamage(int, attackerEnemyId)`)으로 카운트.
+- **D13 보스 공유 카운트:** 보스 처치 시 모든 파티원이 BossDefeat 카운트 +1 (가해자 매칭 안 함). 협동 보스전 정책 — `RPC_BossDied(bossId)` RpcTarget.All 모든 클라 무조건 카운트.
+- **sourceSkillId 인프라:** 스킬 발사 경로 `TriggerContext.sourceSkillId` + `Enemy.LastDamagerSkillId` 필드. 결과 화면 스킬별 차트 + meta-unlock D1 ("특정 스킬로 처치") 부활 가능 상태.
+- **LocalStatsRecorder:** 자기 PC 1개 인스턴스 (`Features/Stats/Adapter/`). GameScene 마다 새 인스턴스 (DontDestroyOnLoad 안 함). `GameManager.Awake` 의 `GetOrCreate()` 로 timing 안전.
+- **Meta Unlock (메타 언락):** 영구 진행도로 다음 게임 컨텐츠 점진 해금. 미구현 — 설계만 [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 선행 의존.
+
 **플랫폼 / 인프라**
 - **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
 - **Localization:** 다국어 텍스트 시스템. **1차 지원 4개:** KO/EN/JA/ZH-CN. Google Sheets 가 작업용 SSOT, 빌드타임에 `LocalizationTable.asset` 으로 임포트. Key 기반(`ui.menu.start_button` 형식) + 동기 API + `ILocalizationService` 추상화. 자체 구현 — Unity Localization Package 미사용. 상세 [docs/systems/localization.md](docs/systems/localization.md).
@@ -160,7 +169,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 ### 폴더별
 - [docs/architecture/](docs/architecture/) — 레이어·의존성, 구현 로드맵
 - [docs/game-design/](docs/game-design/) — overview, flow-design, rules, skills/ (24종), enemies/ (7종)
-- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, **enemy-stat-scaling**, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**, **map-bounds**, **in-game-menu**, **character-animation**
+- [docs/systems/](docs/systems/) — skill-executor, trigger-effects, network-sync, ui-frame, managers, scene-structure, spawn-rules, **enemy-stat-scaling**, damage-formula, **voice-chat**, **platform-integration**, **localization**, **world-indicator**, **map-bounds**, **in-game-menu**, **character-animation**, **run-statistics**, **meta-unlock**
 - [docs/templates/](docs/templates/) — skill/enemy/system-spec 양식
 
 ### 작업 유형별 참조 우선순위
@@ -176,6 +185,8 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **맵 경계 / 안개 →** [docs/systems/map-bounds.md](docs/systems/map-bounds.md). 안개 = 플레이어만 차단(적/보스 자유 통과). `BossSpawner.mapBoundsCollider`/`enforceOutsideMap` hook 보유. 맵 사이즈 미확정 — 맵 확정 시 활성
 - **인게임 ESC 메뉴 / 일시정지 →** [docs/systems/in-game-menu.md](docs/systems/in-game-menu.md). 중앙 모달 + 솔로(PlayerCount==1) 한정 GameState.Paused 진정 정지 / 멀티는 로컬 UI 토글만. 메뉴 항목 4개(Resume/설정/룸 나가기/게임 종료). Frame_PopUp 의존(확인 다이얼로그). **roadmap U4** ⬜
 - **캐릭터/적 애니메이션 →** [docs/systems/character-animation.md](docs/systems/character-animation.md). base AnimatorController + 캐릭터별 AnimatorOverrideController. PlayerAnimator/EnemyAnimator 핸들러. Phase 1: 2방향(flipX) → Phase 2: 4방향(Blend Tree). GameState.Paused 시 `animator.speed=0` 정지. 풀링 적은 OnReturnToPool 시 Animator.Rebind. 깨진 sprite 검증 = `Tools → Validate AnimationClip Sprites`. CharacterData/EnemyData 의 animatorController 비어있으면 정적 sprite 동작 (점진 도입)
+- **인-런 통계 / 결과 화면 시각화 →** [docs/systems/run-statistics.md](docs/systems/run-statistics.md). B-1a 분산 추적 — 자기 발사 시점 자기 PC 누적, 사망 RPC 페이로드 확장으로 막타 카운트. 호스트 마이그레이션 무관. 보스 처치 D13 모든 파티원 카운트. ✅ 2026-05-06
+- **메타 언락 / 영구 진행도 →** [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 위에 얹힘. sourceSkillId 인프라 ✅ 도입 완료 (D1 부활 가능). MVP = 스킬/무기 조합식/캐릭터/새로고침+N. 미구현
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

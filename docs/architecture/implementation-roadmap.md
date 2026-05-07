@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-01 (R6 + U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
+최종 업데이트: 2026-05-06 (Phase 7-5 run-statistics ✅ 마이그레이션 — 인-런 통계 시스템 도입, sourceSkillId 인프라 ✅)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,7 +16,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰 (마이그레이션 SSOT):** R/U/Phase 항목이 ✅ 처리되는 순간 → 본문은 [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. 절차: ① completed-work 카테고리 섹션에 bullet 추가 (R→`시스템/아키텍처`, U→`메뉴/UI`) ② roadmap 본문을 `### R{N}. {제목} ✅ (YYYY-MM-DD) → [completed-work.md](completed-work.md)` 1줄로 교체 ③ Top 5 큐에서 제거 + 다음 후보 1개 승격 ④ 시스템 spec 헤더(있으면) ⬜/🟡 → ✅ 갱신 ⑤ 진행 요약 표 갱신 (Phase 단위 변동 시) ⑥ 본 문서 최종 업데이트 라인 갱신. 모든 변경은 사용자 승인 diff 후 일괄 적용. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-05-01** (R6/U4 ✅ 마이그레이션 — Top 5 재정렬, Phase 8-1 A 승격)
+> 마지막 갱신: **2026-05-06** (Phase 7-5 run-statistics ✅ 마이그레이션 — Top 5 변동 없음, 7-5 잔여 = meta-unlock 만)
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
@@ -220,11 +220,11 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - [ ] 성능 프로파일링
 - [ ] 빌드 테스트
 
-### 7-5. 메타 진행도 + 결과 화면 통계 ⬜
+### 7-5. 메타 진행도 + 결과 화면 통계 🟡
+- [x] [`run-statistics`](../systems/run-statistics.md) ✅ (2026-05-06) → [completed-work.md](completed-work.md). B-1a 분산 추적 + sourceSkillId 인프라 + 결과 화면 시각화. 보스 D13 모든 파티원 카운트.
 - [ ] [`meta-unlock`](../systems/meta-unlock.md) 구현 — 영구 언락 (스킬 / 무기 조합식 / 캐릭터 / 새로고침 +N) — **Phase 8-1 Platform 추상화 선행 의존**, ~6.25일
-- [ ] [`run-statistics`](../systems/run-statistics.md) 구현 — 결과 화면 플레이어별·스킬별 통계 (분산 추적, sourceSkillId 인프라), ~4일
-- [ ] sourceSkillId 인프라 도입 후 [`meta-unlock`](../systems/meta-unlock.md) D1 ("특정 스킬로 처치" 조건) 부활 검토 — 거의 무비용
-- 합계 약 **10.25일**. plan: `~/.claude/plans/synchronous-pondering-taco.md`
+- [ ] meta-unlock D1 ("특정 스킬로 처치") 부활 — sourceSkillId 인프라 ✅ 도입 완료, 메타 언락 구현 시 거의 무비용으로 동봉
+- 잔여 약 **6.25일** (run-statistics 4일 ✅ 차감). plan: `~/.claude/plans/synchronous-pondering-taco.md`
 
 ---
 
