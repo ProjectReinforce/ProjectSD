@@ -2370,7 +2370,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3324697481947927740, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: -20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3324697481947927740, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0.00079345703
       objectReference: {fileID: 0}
     - target: {fileID: 3371965321489007690, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_SizeDelta.x
@@ -2463,6 +2467,10 @@ PrefabInstance:
     - target: {fileID: 4237605255831814989, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -25
+      objectReference: {fileID: 0}
+    - target: {fileID: 4295403503683977015, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_VerticalScrollbarVisibility
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4551956412599211544, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.y
@@ -2672,6 +2680,10 @@ PrefabInstance:
       propertyPath: passwordToggleOffImage
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5888486434330130704, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_HorizontalFit
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5972036800394430701, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -2741,15 +2753,31 @@ PrefabInstance:
       value: SwDreams.Features.UI.Adapter.Menu.RoomListPanelController, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
       propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044836401326906057, guid: 4b25d09c88a6341bba86ada9a62ff12d, type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

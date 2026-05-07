@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a165e1d7ce6105d498a25d95eec99ed2, type: 3}
   m_Name: BossData
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Data.BossData
+  bossId: 1
   bossName: "\uB4DC\uB9BC \uC774\uD130"
   sprite: {fileID: 0}
   animatorController: {fileID: 9100000, guid: c327d15775bfb9b4c99e6e76f82f82d1, type: 2}
