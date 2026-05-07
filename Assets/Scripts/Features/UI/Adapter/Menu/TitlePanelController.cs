@@ -1,6 +1,7 @@
 using SwDreams.Shared.Managers;
 using SwDreams.Features.UI.Adapter.Menu;
 using Photon.Pun;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,7 +23,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private Button soloPlayButton;
         [SerializeField] private Button multiPlayButton;
         [SerializeField] private Button settingsButton;
+        [SerializeField] private Button quitButton;
         [SerializeField] private GameObject connectingPanel;
+
+        [Header("연결 상태 표시 (connectingPanel 자식)")]
+        [Tooltip("connectingPanel 안의 안내 TMP_Text. 상태별 문구로 갱신.")]
+        [SerializeField] private TMP_Text connectingStatusText;
+        [Tooltip("Failed 상태에서만 활성. 누르면 NetworkManager.RetryConnect() 호출.")]
+        [SerializeField] private Button retryButton;
+        [Tooltip("재시도 버튼 누른 직후 다시 누르기까지 쿨다운(초).")]
+        [SerializeField] private float retryButtonCooldown = 3f;
 
         // R12 설정 패널: 코드 의존 제거 (Adapter→Presentation 역방향 의존 방지).
         // settingsButton.onClick 인스펙터에서 SettingsPanelUI.Show 직접 연결 — Unity-native first 패턴.
@@ -30,18 +40,26 @@ namespace SwDreams.Features.UI.Adapter.Menu
         private bool pendingSoloCreate;
         private bool pendingGoRoomList;
         private bool lastInteractableState;
+        private float retryCooldownRemaining;
 
         private void OnEnable()
         {
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.ConnectionStateChanged += HandleConnectionStateChanged;
+                NetworkManager.Instance.StateChanged += HandleStateChanged;
                 NetworkManager.Instance.JoinedRoom += HandleJoinedRoom;
                 NetworkManager.Instance.CreateRoomFailed += HandleCreateRoomFailed;
                 NetworkManager.Instance.Connect();
             }
 
+            if (retryButton != null)
+            {
+                retryButton.onClick.AddListener(OnClickRetry);
+            }
+
             RefreshMenuButtons();
+            RefreshConnectingPanel();
         }
 
         private void OnDisable()
@@ -49,8 +67,14 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.ConnectionStateChanged -= HandleConnectionStateChanged;
+                NetworkManager.Instance.StateChanged -= HandleStateChanged;
                 NetworkManager.Instance.JoinedRoom -= HandleJoinedRoom;
                 NetworkManager.Instance.CreateRoomFailed -= HandleCreateRoomFailed;
+            }
+
+            if (retryButton != null)
+            {
+                retryButton.onClick.RemoveListener(OnClickRetry);
             }
         }
 
@@ -69,6 +93,20 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (current != lastInteractableState)
             {
                 RefreshMenuButtons();
+            }
+
+            // 재시도 버튼 쿨다운.
+            if (retryCooldownRemaining > 0f)
+            {
+                retryCooldownRemaining -= Time.unscaledDeltaTime;
+                if (retryCooldownRemaining < 0f) retryCooldownRemaining = 0f;
+            }
+
+            // Retrying 카운트다운/쿨다운 등 매 프레임 변하는 부분이 있어 폴링 갱신.
+            // 패널이 켜져 있을 때만 비용 발생.
+            if (connectingPanel != null && connectingPanel.activeSelf)
+            {
+                RefreshConnectingPanel();
             }
         }
 
@@ -126,6 +164,22 @@ namespace SwDreams.Features.UI.Adapter.Menu
             ExecutePendingAction();
         }
 
+        private void HandleStateChanged(ConnectionState state)
+        {
+            RefreshConnectingPanel();
+        }
+
+        private void OnClickRetry()
+        {
+            if (retryCooldownRemaining > 0f) return;
+            if (NetworkManager.Instance == null) return;
+
+            retryCooldownRemaining = retryButtonCooldown;
+            NetworkManager.Instance.RetryConnect();
+            // 즉시 시각 피드백(상태가 Connecting/Retrying 으로 곧 바뀌지만 한 프레임 늦을 수 있음).
+            RefreshConnectingPanel();
+        }
+
         private void ExecutePendingAction()
         {
             if (NetworkManager.Instance == null)
@@ -173,10 +227,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
             var interactable = IsMenuActionReady();
             lastInteractableState = interactable;
 
-            // 연결 완료 전까지 차단 패널 표시
-            if (connectingPanel != null)
-                connectingPanel.SetActive(!interactable);
-
             if (soloPlayButton != null)
             {
                 soloPlayButton.interactable = interactable;
@@ -190,6 +240,73 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (settingsButton != null)
             {
                 settingsButton.interactable = interactable;
+            }
+
+            // 종료 버튼은 연결 상태와 무관하게 항상 누를 수 있어야 한다.
+            // 연결 실패 상태에서 사용자가 게임을 빠져나갈 유일한 길.
+            if (quitButton != null)
+            {
+                quitButton.interactable = true;
+            }
+        }
+
+        /// <summary>
+        /// connectingPanel 표시 + 안내 문구 + 재시도 버튼을 NetworkManager.State 기반으로 갱신.
+        /// 패널 자체의 SetActive 도 여기서 책임지므로 RefreshMenuButtons 와 분리.
+        /// </summary>
+        private void RefreshConnectingPanel()
+        {
+            var nm = NetworkManager.Instance;
+            // NetworkManager 가 없으면 패널은 끔(타이틀씬에 진입은 했지만 매니저 미준비 케이스).
+            var state = nm != null ? nm.State : ConnectionState.Idle;
+            var showPanel = state != ConnectionState.Connected;
+
+            if (connectingPanel != null)
+            {
+                connectingPanel.SetActive(showPanel);
+            }
+
+            if (!showPanel)
+            {
+                return;
+            }
+
+            // 문구 갱신.
+            if (connectingStatusText != null && nm != null)
+            {
+                connectingStatusText.text = BuildStatusMessage(nm);
+            }
+
+            // 재시도 버튼은 Failed 일 때만 활성. 쿨다운 중이면 비활성.
+            if (retryButton != null)
+            {
+                var failed = state == ConnectionState.Failed;
+                retryButton.gameObject.SetActive(failed);
+                retryButton.interactable = failed && retryCooldownRemaining <= 0f;
+            }
+        }
+
+        private string BuildStatusMessage(NetworkManager nm)
+        {
+            switch (nm.State)
+            {
+                case ConnectionState.Connecting:
+                    return "서버 연결 중...";
+                case ConnectionState.Retrying:
+                    var seconds = Mathf.CeilToInt(nm.RetryCountdownSeconds);
+                    return $"연결 실패 — 재시도 중 ({nm.CurrentRetryAttempt}/{nm.MaxRetryAttempts})\n{seconds}초 후 다시 시도";
+                case ConnectionState.Failed:
+                    var causeText = nm.LastFailureCause.HasValue ? nm.LastFailureCause.Value.ToString() : "Unknown";
+                    if (retryCooldownRemaining > 0f)
+                    {
+                        return $"서버 연결 실패\n원인: {causeText}\n재시도 가능까지 {Mathf.CeilToInt(retryCooldownRemaining)}초";
+                    }
+                    return $"서버 연결 실패\n원인: {causeText}";
+                case ConnectionState.Idle:
+                    return "연결 대기 중...";
+                case ConnectionState.Connected:
+                default:
+                    return string.Empty;
             }
         }
     }
