@@ -62,6 +62,15 @@ namespace SwDreams.Features.Skill.Adapter
         private SkillTriggerSystem triggerSystem;
         private Transform ownerTransformRef;
 
+        // 인-런 통계 (B-1a — run-statistics.md §4) — PlacedSpawner 가 SetSourceSkillId 로 주입.
+        private int sourceSkillId;
+
+        /// <summary>발사 스킬 ID 주입. PlacedSpawner에서 호출 (B-1a).</summary>
+        public void SetSourceSkillId(int skillId)
+        {
+            this.sourceSkillId = skillId;
+        }
+
         private void Awake()
         {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -184,7 +193,11 @@ namespace SwDreams.Features.Skill.Adapter
                         if (PhotonNetwork.IsMasterClient)
                         {
                             // 호스트의 자기 터렛: 직접 데미지 + 트리거 발화
-                            if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                            if (enemy != null)
+                            {
+                                enemy.LastDamagerActorNumber = ownerActorNumber;
+                                enemy.LastDamagerSkillId = sourceSkillId;
+                            }
                             var damageable = currentTarget.GetComponent<IDamageable>();
                             if (damageable != null && damageable.IsAlive)
                             {
@@ -199,6 +212,11 @@ namespace SwDreams.Features.Skill.Adapter
                             if (enemy != null && enemy.IsAlive)
                             {
                                 enemy.ShowHitVisuals(finalDamage, isCrit);
+
+                                // B-1a: 비호스트 자기 발사 — 자기 PC 누적.
+                                SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                                    .AddDamage(sourceSkillId, finalDamage);
+
                                 SpawnManager.Instance?.RequestDamage(
                                     enemy.EnemyId, finalDamage, ownerActorNumber, isCrit);
                                 // 로컬 소유자 기준 트리거 발화 — 정수 효과(OnHit)가 로컬에서 동작
@@ -249,7 +267,9 @@ namespace SwDreams.Features.Skill.Adapter
                 damage = dmg,
                 owner = ownerTransformRef,
                 critChance = critChance,
-                critDamageMultiplier = critDamageMultiplier
+                critDamageMultiplier = critDamageMultiplier,
+                attackerActorNumber = ownerActorNumber,
+                sourceSkillId = sourceSkillId
             };
             triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
 
@@ -330,6 +350,7 @@ namespace SwDreams.Features.Skill.Adapter
             StopAllCoroutines();
             if (attackLine != null)
                 attackLine.enabled = false;
+            sourceSkillId = 0; // B-1a
             gameObject.SetActive(false);
         }
     }

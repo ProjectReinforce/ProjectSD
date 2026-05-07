@@ -88,6 +88,16 @@ namespace SwDreams.Features.Skill.Adapter
 
         /// <summary>spawnPosOverride 가 유효한지. Vector2.zero 가 valid 위치라 sentinel 분리 필요.</summary>
         public bool hasSpawnPosOverride;
+
+        // ===== 인-런 통계 / 메타 진행도 (B-1a — run-statistics.md §4) =====
+
+        /// <summary>
+        /// 데미지 가해자 ActorNumber. SkillExecutor.BuildContext 에서
+        /// PhotonNetwork.LocalPlayer.ActorNumber 주입. Spawner → 인스턴스 →
+        /// TriggerContext.attackerActorNumber 로 흘려보냄.
+        /// 자기 ActorNumber 매칭 시 자기 PC 통계 누적, 적/보스 사망 시 LastDamagerActorNumber 전파.
+        /// </summary>
+        public int attackerActorNumber;
     }
 
     /// <summary>

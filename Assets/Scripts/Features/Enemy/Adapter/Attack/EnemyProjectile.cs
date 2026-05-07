@@ -25,13 +25,17 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
         private float aliveTime;
         private bool isActive;
 
-        public void Initialize(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)
+        // B-1a: 발사 적의 EnemyId — Player 사망 시 LastDamagerEnemyId 진입점.
+        private int sourceEnemyId;
+
+        public void Initialize(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime, int sourceEnemyId = 0)
         {
             transform.position = pos;
             this.direction = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector2.right;
             this.speed = speed;
             this.damage = damage;
             this.lifetime = lifetime;
+            this.sourceEnemyId = sourceEnemyId;
             this.aliveTime = 0f;
             this.isActive = true;
 
@@ -67,7 +71,7 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
             {
                 var player = other.GetComponent<PlayerStub>();
                 if (player != null && player.IsAlive)
-                    player.TakeDamage(damage);
+                    player.TakeDamageFromEnemy(damage, sourceEnemyId);
             }
 
             ReturnToPool();

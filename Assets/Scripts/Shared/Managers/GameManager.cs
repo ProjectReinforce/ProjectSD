@@ -128,6 +128,10 @@ namespace SwDreams.Shared.Managers
             if (config == null)
                 Debug.LogWarning("[GameManager] GameplayConfig SO가 연결되지 않았습니다. " +
                                  "Inspector에서 연결하세요. 각 시스템이 기본값으로 동작합니다.");
+
+            // B-1a: 인-런 통계 누적기 인스턴스 보장 (run-statistics.md §5).
+            // 게임 시작 직후 첫 데미지/킬 RPC 가 도착해도 안전하게 카운트되도록.
+            SwDreams.Features.Stats.Adapter.LocalStatsRecorder.GetOrCreate();
         }
 
         private void OnDestroy()

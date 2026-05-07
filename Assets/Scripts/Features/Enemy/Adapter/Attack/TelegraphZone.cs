@@ -40,6 +40,9 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
         private float elapsed;
         private bool isActive;
 
+        // B-1a: 발사 적의 EnemyId — Player 사망 시 LastDamagerEnemyId 진입점.
+        private int sourceEnemyId;
+
         // 기본 원형 스프라이트 (한 번만 생성해서 모든 인스턴스가 공유)
         private static Sprite cachedCircleSprite;
 
@@ -111,12 +114,13 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
             return cachedCircleSprite;
         }
 
-        public void Initialize(Vector2 pos, float duration, float radius, int damage)
+        public void Initialize(Vector2 pos, float duration, float radius, int damage, int sourceEnemyId = 0)
         {
             transform.position = pos;
             this.duration = Mathf.Max(0.01f, duration);
             this.radius = radius;
             this.damage = damage;
+            this.sourceEnemyId = sourceEnemyId;
             this.elapsed = 0f;
             this.isActive = true;
 
@@ -185,7 +189,7 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
 
                 var player = p.GetComponent<PlayerStub>();
                 if (player != null && player.IsAlive)
-                    player.TakeDamage(damage);
+                    player.TakeDamageFromEnemy(damage, sourceEnemyId);
             }
         }
 

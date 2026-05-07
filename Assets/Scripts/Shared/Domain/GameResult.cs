@@ -45,5 +45,28 @@ namespace SwDreams.Shared.Domain
 
         /// <summary>획득한 혼돈 스킬 타입 배열.</summary>
         public int[] ChaosTypeIds { get; set; }
+
+        // ===== 인-런 통계 (B-1a — run-statistics.md §3) =====
+
+        /// <summary>이 플레이어의 자기 막타 카운트 (일반 적 + 보스 D13).</summary>
+        public int RunKills { get; set; }
+
+        /// <summary>이 플레이어의 자기 사망 횟수.</summary>
+        public int RunDeaths { get; set; }
+
+        /// <summary>이 플레이어가 가한 누적 데미지 (자기 발사 시점 누적).</summary>
+        public float DamageDealt { get; set; }
+
+        /// <summary>이 플레이어가 받은 누적 데미지.</summary>
+        public float DamageTaken { get; set; }
+
+        /// <summary>스킬별 발사 횟수. SkillIds와 동일 인덱스.</summary>
+        public int[] SkillFireCounts { get; set; }
+
+        /// <summary>스킬별 막타 카운트. SkillIds와 동일 인덱스.</summary>
+        public int[] SkillKillCounts { get; set; }
+
+        /// <summary>스킬별 누적 데미지. SkillIds와 동일 인덱스.</summary>
+        public float[] SkillDamageDealt { get; set; }
     }
 }

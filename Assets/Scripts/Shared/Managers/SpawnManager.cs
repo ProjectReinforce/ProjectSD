@@ -129,7 +129,8 @@ namespace SwDreams.Shared.Managers
         private const byte EventCode_EnemyRemoveBatch = 12; // Reliable
 
         // ===== 사망/제거 배치 큐 (호스트 전용) =====
-        private readonly List<(int enemyId, Vector2 pos, int exp, int killerActorNumber)> deathQueue = new();
+        // killerSkillId: B-1a (run-statistics.md §4) — 자기 막타 시 LocalStatsRecorder.OnKill(skillId) 진입점.
+        private readonly List<(int enemyId, Vector2 pos, int exp, int killerActorNumber, int killerSkillId)> deathQueue = new();
         private readonly List<int> removeQueue = new();
 
         // ===== 활성 경험치 오브 추적 (FIFO, 모든 클라에서 독립적으로 유지) =====
@@ -364,6 +365,18 @@ namespace SwDreams.Shared.Managers
         {
             isReady = false;
             Debug.Log("[SpawnManager] 스폰 중단 (보스 등장)");
+        }
+
+        /// <summary>
+        /// 호스트 로컬 isReady=true 복구. BossSpawner.SpawnBoss 가 StopSpawning() 으로 isReady=false 만든 후
+        /// 보스 진입(BossFight 상태)에서 SpawnManager.Update 의 isReady 자동 복구 흐름이 동작 안 함
+        /// (라인 203 `if (state != Playing) return;` 가드). 이 상태로 두면 호스트 측 Skill.Update 의
+        /// IsReady 가드에서 영구 차단되어 호스트만 스킬 발사 안 됨. 보스 진입 후 명시 복구.
+        /// 클라는 게임 시작 시 RPC_NotifySpawnReady 로 isReady=true 가 이미 셋팅된 상태라 별도 처리 불필요.
+        /// </summary>
+        public void MarkReady()
+        {
+            isReady = true;
         }
 
         // ===== Phase 6: 퀘스트 격리 몹 =====
@@ -833,27 +846,29 @@ namespace SwDreams.Shared.Managers
 
         /// <summary>
         /// EnemyAttack(호스트)에서 호출. 투사체를 모든 클라에 스폰.
+        /// sourceEnemyId: B-1a — Player 사망 시 LastDamagerEnemyId 기록.
         /// </summary>
-        public void RaiseEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)
+        public void RaiseEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime, int sourceEnemyId)
         {
             if (!PhotonNetwork.IsMasterClient) return;
             photonView.RPC(nameof(RPC_SpawnEnemyProjectile), RpcTarget.All,
-                pos, dir, speed, damage, lifetime);
+                pos, dir, speed, damage, lifetime, sourceEnemyId);
         }
 
         /// <summary>
         /// EnemyAttack(호스트)에서 호출. 경고존을 모든 클라에 스폰.
         /// 만료 시 데미지 판정은 호스트만 (TelegraphZone 내부).
+        /// sourceEnemyId: B-1a — Player 사망 시 LastDamagerEnemyId 기록.
         /// </summary>
-        public void RaiseTelegraph(Vector2 pos, float duration, float radius, int damage)
+        public void RaiseTelegraph(Vector2 pos, float duration, float radius, int damage, int sourceEnemyId)
         {
             if (!PhotonNetwork.IsMasterClient) return;
             photonView.RPC(nameof(RPC_SpawnTelegraph), RpcTarget.All,
-                pos, duration, radius, damage);
+                pos, duration, radius, damage, sourceEnemyId);
         }
 
         [PunRPC]
-        private void RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime)
+        private void RPC_SpawnEnemyProjectile(Vector2 pos, Vector2 dir, float speed, int damage, float lifetime, int sourceEnemyId)
         {
             if (enemyProjectilePrefab == null) return;
 
@@ -864,11 +879,11 @@ namespace SwDreams.Shared.Managers
                 PoolManager.Instance.Return(obj);
                 return;
             }
-            proj.Initialize(pos, dir, speed, damage, lifetime);
+            proj.Initialize(pos, dir, speed, damage, lifetime, sourceEnemyId);
         }
 
         [PunRPC]
-        private void RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage)
+        private void RPC_SpawnTelegraph(Vector2 pos, float duration, float radius, int damage, int sourceEnemyId)
         {
             if (telegraphPrefab == null) return;
 
@@ -879,7 +894,7 @@ namespace SwDreams.Shared.Managers
                 PoolManager.Instance.Return(obj);
                 return;
             }
-            zone.Initialize(pos, duration, radius, damage);
+            zone.Initialize(pos, duration, radius, damage, sourceEnemyId);
         }
 
         // ===== 사망/제거는 OnEvent에서 배치 처리 — 아래 OnEvent 참조 =====
@@ -1023,6 +1038,14 @@ namespace SwDreams.Shared.Managers
             // Phase 7: 킬 카운트 추적
             GameStatTracker.Instance?.RecordKill();
 
+            // B-1a: 호스트 본인이 자기 막타 시 자기 PC 통계 누적 (run-statistics.md §4).
+            // 비호스트는 OnReceiveDeathBatch 진입점에서 카운트.
+            if (enemy.LastDamagerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                    .OnKill(enemy.LastDamagerSkillId, enemy.EnemyId);
+            }
+
             // [Phase 5] 연쇄 폭발 체크 — 킬러만 대상
             NotifyChaosManagers(enemy.transform.position, enemy.LastDamagerActorNumber);
 
@@ -1042,9 +1065,9 @@ namespace SwDreams.Shared.Managers
             if (!questBarrierIds.Contains(enemy.EnemyId))
                 SwDreams.Features.Quest.Adapter.QuestZone.NotifyEnemyKilledToAllActive();
 
-            // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber 포함)
+            // 큐에 적재 → LateUpdate에서 배치 전송 (killerActorNumber + killerSkillId 포함, B-1a)
             deathQueue.Add((enemy.EnemyId, (Vector2)enemy.transform.position,
-                enemy.ExpValue, enemy.LastDamagerActorNumber));
+                enemy.ExpValue, enemy.LastDamagerActorNumber, enemy.LastDamagerSkillId));
         }
 
         /// <summary>
@@ -1112,16 +1135,18 @@ namespace SwDreams.Shared.Managers
         {
             if (deathQueue.Count == 0) return;
 
-            // [enemyId, posX, posY, exp, killerActorNumber, ...]
-            float[] batch = new float[deathQueue.Count * 5];
+            // [enemyId, posX, posY, exp, killerActorNumber, killerSkillId, ...] (B-1a, stride=6)
+            const int Stride = 6;
+            float[] batch = new float[deathQueue.Count * Stride];
             for (int i = 0; i < deathQueue.Count; i++)
             {
                 var d = deathQueue[i];
-                batch[i * 5]     = d.enemyId;
-                batch[i * 5 + 1] = d.pos.x;
-                batch[i * 5 + 2] = d.pos.y;
-                batch[i * 5 + 3] = d.exp;
-                batch[i * 5 + 4] = d.killerActorNumber;
+                batch[i * Stride]     = d.enemyId;
+                batch[i * Stride + 1] = d.pos.x;
+                batch[i * Stride + 2] = d.pos.y;
+                batch[i * Stride + 3] = d.exp;
+                batch[i * Stride + 4] = d.killerActorNumber;
+                batch[i * Stride + 5] = d.killerSkillId;
             }
 
             PhotonNetwork.RaiseEvent(
@@ -1190,12 +1215,15 @@ namespace SwDreams.Shared.Managers
 
         private void OnReceiveDeathBatch(float[] batch)
         {
-            for (int i = 0; i + 4 < batch.Length; i += 5)
+            // B-1a: stride 6 — (enemyId, posX, posY, exp, killerActor, killerSkillId)
+            const int Stride = 6;
+            for (int i = 0; i + (Stride - 1) < batch.Length; i += Stride)
             {
                 int enemyId = (int)batch[i];
                 Vector2 deathPos = new Vector2(batch[i + 1], batch[i + 2]);
                 int expValue = (int)batch[i + 3];
                 int killerActorNumber = (int)batch[i + 4];
+                int killerSkillId = (int)batch[i + 5];
 
                 if (!activeEnemies.TryGetValue(enemyId, out Enemy enemy)) continue;
 
@@ -1211,6 +1239,15 @@ namespace SwDreams.Shared.Managers
                 // 연쇄폭발 비주얼 — 킬러만 (클라이언트 전용, 호스트는 OnEnemyDied에서 처리)
                 if (!PhotonNetwork.IsMasterClient)
                     NotifyChaosManagersVisualOnly(deathPos, killerActorNumber);
+
+                // B-1a: 자기 막타 시 자기 PC 통계 누적 (B 단계 — LocalStatsRecorder).
+                // 호스트는 OnEnemyDied 진입점에서 직접 카운트하므로 여기서는 비호스트만 처리.
+                if (!PhotonNetwork.IsMasterClient
+                    && killerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                {
+                    SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                        .OnKill(killerSkillId, enemyId);
+                }
             }
         }
 

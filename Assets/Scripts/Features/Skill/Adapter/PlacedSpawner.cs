@@ -76,6 +76,9 @@ namespace SwDreams.Features.Skill.Adapter
                 ownerTransform: ctx.playerTransform,
                 triggerSystem: ctx.triggerSystem
             );
+
+            // 인-런 통계: 발사 스킬 ID 주입 (B-1a)
+            turret.SetSourceSkillId(data != null ? data.skillId : 0);
         }
     }
 }

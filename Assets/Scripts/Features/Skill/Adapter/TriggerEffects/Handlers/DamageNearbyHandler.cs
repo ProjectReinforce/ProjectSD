@@ -67,7 +67,13 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
             for (int i = 0; i < applyCount; i++)
             {
                 var enemy = _buffer[i].t.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
-                if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                if (enemy != null)
+                {
+                    // B-1a: 가해자 추적 — 사망 시 RPC 페이로드(killerActor/skillId) 진입점.
+                    enemy.LastDamagerActorNumber = context.attackerActorNumber;
+                    enemy.LastDamagerSkillId = context.sourceSkillId;
+                    enemy.TakeDamage(finalDamage, isCrit);
+                }
                 else _buffer[i].dmg.TakeDamage(finalDamage);
             }
         }

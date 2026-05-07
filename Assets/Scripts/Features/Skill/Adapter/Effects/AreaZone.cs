@@ -53,10 +53,19 @@ namespace SwDreams.Features.Skill.Adapter
         private float critChance;
         private float critDamageMultiplier = 1.5f;
 
+        // 인-런 통계 (B-1a — run-statistics.md §4) — AreaSpawner 가 SetSourceSkillId 로 주입.
+        private int sourceSkillId;
+
         public void SetCritStats(float critChance, float critDamageMultiplier)
         {
             this.critChance = Mathf.Clamp01(critChance);
             this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
+        /// <summary>발사 스킬 ID 주입. AreaSpawner에서 호출 (B-1a).</summary>
+        public void SetSourceSkillId(int skillId)
+        {
+            this.sourceSkillId = skillId;
         }
 
         /// <summary>AreaSpawner에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
@@ -184,13 +193,22 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     if (PhotonNetwork.IsMasterClient)
                     {
-                        if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                        if (enemy != null)
+                        {
+                            enemy.LastDamagerActorNumber = ownerActorNumber;
+                            enemy.LastDamagerSkillId = sourceSkillId;
+                        }
                         if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                         else damageable.TakeDamage(finalDmg);
                     }
                     else if (enemy != null)
                     {
                         enemy.ShowHitVisuals(finalDmg, isCrit);
+
+                        // B-1a: 비호스트 자기 발사 — 자기 PC 누적.
+                        SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                            .AddDamage(sourceSkillId, finalDmg);
+
                         SpawnManager.Instance?.RequestDamage(
                             enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                     }
@@ -205,7 +223,11 @@ namespace SwDreams.Features.Skill.Adapter
                 else
                 {
                     // 남의 장판 (호스트에서만 여기 도달): 직접 데미지
-                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    if (enemy != null)
+                    {
+                        enemy.LastDamagerActorNumber = ownerActorNumber;
+                        enemy.LastDamagerSkillId = sourceSkillId;
+                    }
                     if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                     else damageable.TakeDamage(finalDmg);
                 }
@@ -220,7 +242,9 @@ namespace SwDreams.Features.Skill.Adapter
                         damage = finalDmg,
                         owner = ownerTransform,
                         critChance = critChance,
-                        critDamageMultiplier = critDamageMultiplier
+                        critDamageMultiplier = critDamageMultiplier,
+                        attackerActorNumber = ownerActorNumber,
+                        sourceSkillId = sourceSkillId
                     };
 
                     if (triggerSystem.HasTrigger(TriggerType.OnHit))
@@ -267,7 +291,9 @@ namespace SwDreams.Features.Skill.Adapter
                     damage = damage,
                     owner = ownerTransform,
                     critChance = critChance,
-                    critDamageMultiplier = critDamageMultiplier
+                    critDamageMultiplier = critDamageMultiplier,
+                    attackerActorNumber = ownerActorNumber,
+                    sourceSkillId = sourceSkillId
                 });
             }
 
@@ -296,6 +322,7 @@ namespace SwDreams.Features.Skill.Adapter
             ownerActorNumber = -1;
             critChance = 0f;
             critDamageMultiplier = 1.5f;
+            sourceSkillId = 0; // B-1a
             gameObject.SetActive(false);
         }
     }

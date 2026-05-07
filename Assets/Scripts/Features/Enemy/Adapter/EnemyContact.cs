@@ -46,7 +46,8 @@ namespace SwDreams.Features.Enemy.Adapter
                 var player = other.GetComponent<PlayerStub>();
                 if (player != null && player.IsAlive)
                 {
-                    player.TakeDamage(enemy.ContactDamage);
+                    // B-1a: 가해 적 ID 동봉 — 자기 사망 시 LastDamagerEnemyId 기록 진입점.
+                    player.TakeDamageFromEnemy(enemy.ContactDamage, enemy.EnemyId);
                     lastDamageTime = Time.time;
                     Debug.Log($"[EnemyContact] → Player에게 {enemy.ContactDamage} 데미지");
                 }

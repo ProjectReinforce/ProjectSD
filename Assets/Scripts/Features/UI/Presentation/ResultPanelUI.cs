@@ -149,14 +149,22 @@ namespace SwDreams.Features.UI.Presentation
                     : new Color(1f, 0.3f, 0.3f); // 빨강
             }
 
-            // 통계
+            // 통계 (팀 합계) — 인-런 통계의 ΣDamageDealt 도 표시 (B-1a)
             if (statsText != null)
             {
                 int minutes = Mathf.FloorToInt(result.PlayTime / 60f);
                 int seconds = Mathf.FloorToInt(result.PlayTime % 60f);
+
+                float teamDamage = 0f;
+                if (result.PlayerBuilds != null)
+                {
+                    foreach (var b in result.PlayerBuilds)
+                        teamDamage += b.DamageDealt;
+                }
+
                 statsText.text = $"플레이 타임: {minutes:00}:{seconds:00}\n" +
                                  $"최종 레벨: {result.TeamLevel}\n" +
-                                 $"총 처치 수: {result.TotalKills}\n" +
+                                 $"총 처치 수: {result.TotalKills}    팀 총 데미지: {teamDamage:N0}\n" +
                                  $"총 사망 횟수: {result.TotalDeaths}";
             }
 
@@ -186,6 +194,7 @@ namespace SwDreams.Features.UI.Presentation
                 return "빌드 정보 없음";
 
             var sb = new System.Text.StringBuilder();
+            float playTime = Mathf.Max(1f, result.PlayTime); // DPS 0-div 방지
 
             foreach (var build in result.PlayerBuilds)
             {
@@ -196,18 +205,39 @@ namespace SwDreams.Features.UI.Presentation
                     sb.Append($" (캐릭터 {build.CharacterId})");
                 sb.AppendLine();
 
-                // 스킬 목록
+                // 인-런 통계 (B-1a — run-statistics.md §7)
+                float dps = build.DamageDealt / playTime;
+                sb.Append($"  킬 {build.RunKills}  사망 {build.RunDeaths}  ");
+                sb.Append($"가해 {build.DamageDealt:N0}  받음 {build.DamageTaken:N0}  ");
+                sb.AppendLine($"DPS {dps:N0}");
+
+                // 스킬 목록 + 스킬별 데미지 (텍스트 막대)
                 if (build.SkillIds != null && build.SkillIds.Length > 0)
                 {
-                    sb.Append("  스킬: ");
+                    // 가장 큰 데미지 (스케일 기준)
+                    float maxDmg = 0f;
+                    if (build.SkillDamageDealt != null)
+                    {
+                        for (int i = 0; i < build.SkillDamageDealt.Length; i++)
+                            if (build.SkillDamageDealt[i] > maxDmg) maxDmg = build.SkillDamageDealt[i];
+                    }
+                    if (maxDmg < 1f) maxDmg = 1f; // div-zero 방지
+
                     for (int i = 0; i < build.SkillIds.Length; i++)
                     {
                         string skillName = GetSkillName(build.SkillIds[i]);
                         int level = i < build.SkillLevels.Length ? build.SkillLevels[i] : 1;
-                        if (i > 0) sb.Append(", ");
-                        sb.Append($"{skillName} Lv.{level}");
+                        float dmg = (build.SkillDamageDealt != null && i < build.SkillDamageDealt.Length)
+                            ? build.SkillDamageDealt[i] : 0f;
+                        int kills = (build.SkillKillCounts != null && i < build.SkillKillCounts.Length)
+                            ? build.SkillKillCounts[i] : 0;
+
+                        // 텍스트 막대 — 데미지 비율 기준 (max 12 칸)
+                        int barLen = Mathf.Clamp(Mathf.RoundToInt(dmg / maxDmg * 12f), 0, 12);
+                        string bar = new string('█', barLen) + new string('░', 12 - barLen);
+
+                        sb.AppendLine($"  {skillName} Lv.{level}  {bar}  {dmg:N0}  ({kills} kills)");
                     }
-                    sb.AppendLine();
                 }
 
                 // 혼돈 스킬

@@ -10,8 +10,8 @@
 | 분류 | UI / 게임플레이 |
 | 의존 레이어 | Adapter (Photon RPC, MonoBehaviour) |
 | 의존 시스템 | [`meta-unlock`](meta-unlock.md) — sourceSkillId 인프라 공유, 일부 통계는 영구 누적에도 사용 |
-| 최종 업데이트 | 2026-05-06 |
-| 구현 상태 | ⬜ 미구현 — plan: `~/.claude/plans/synchronous-pondering-taco.md` |
+| 최종 업데이트 | 2026-05-06 (B-1a 흐름 정정 + D13 보스 공유 카운트) |
+| 구현 상태 | 🟡 진행 중 — plan: `~/.claude/plans/synchronous-pondering-taco.md` |
 
 ## 2. 목적
 
@@ -19,7 +19,7 @@
 
 **왜 sourceSkillId 인프라:** "이번 런에서 어떤 스킬이 가장 강했나" 를 보여주려면 데미지 컨텍스트에 발사 스킬 ID 가 실려야 함. 본 인프라는 [`meta-unlock`](meta-unlock.md) 의 D1 ("특정 스킬로 처치" 조건) 도 사실상 거의 무비용으로 가능하게 한다.
 
-**왜 호스트 권위:** 데미지 적용 자체가 호스트 권위(현재 코드) 라 통계도 호스트에 자연스레 모임. 클라 예측 데미지가 있다면 호스트 확정 데미지만 카운트해서 이중 카운트 방지.
+**왜 분산 추적 (B-1a):** 호스트 마이그레이션 시 호스트 단일 dict 손실 위험 회피. 가해 데미지는 자기 발사 시점에 자기 PC 누적(호스트 적용 결과 무관) — 작은 오차(< 1%) 감수하고 트래픽 안전 + 마이그레이션 안전. 자기 막타 킬은 사망 RPC 페이로드 확장으로 모든 클라 매칭. 자세한 흐름은 §4 참조.
 
 ## 3. 데이터 구조
 
@@ -50,6 +50,9 @@ class SkillRunStats
 ### 호스트는 합산만
 호스트가 권위적으로 보유하는 별도 dict 없음. 결과 시점에 각 클라가 보낸 `LocalRunStats` 를 그대로 `PlayerBuildData` 에 합쳐 브로드캐스트.
 
+### 보스 처치 정책 (D13)
+**보스는 모든 파티원이 처치 카운트** (가해자 매칭 안 함). 보스 가한 데미지 통계는 자기 발사분 자기 누적 (일반 적과 동일). 결과 화면에는 모든 플레이어 카드에 "보스 처치 ✓" 동일 표시.
+
 ### RPC 직렬화 (`PlayerBuildData` 확장)
 
 기존 `Assets/Scripts/Shared/Domain/GameResult.cs::PlayerBuildData` 에 다음 필드 추가:
@@ -73,69 +76,70 @@ public class PlayerBuildData
 
 `ResultManager.BroadcastResult` 의 기존 int[] flatten 패턴 그대로 확장. float 은 `BitConverter.SingleToInt32Bits` 로 int 캐스팅 후 packing — Photon 기본 타입 호환.
 
-## 4. sourceSkillId 인프라 (핵심 비용)
+## 4. sourceSkillId 인프라 (B-1a 흐름)
+
+> ⚠ **2026-05-06 정정:** [NetworkAdapter.cs:14-28](../../Assets/Scripts/Shared/Network/NetworkAdapter.cs) 의 `RPC_NotifyDamageApplied` 는 Debug.Log 만 찍는 Stub 으로 호출자 없음. 매 데미지마다 통합 RPC 발화는 90마리 동시 + 다타격 스킬 환경에서 트래픽 부담 → **B-1a (자기 발사 시점 자기 PC 누적 + 사망 RPC 페이로드 확장)** 흐름으로 변경.
 
 ### 데미지 컨텍스트 확장
 
 ```csharp
-// 기존 DealDamageHandler / DealDamageNearbyHandler 류
+// SpawnContext / TriggerContext (DealDamageHandler / DealDamageNearbyHandler 등이 사용)
 public struct DamageContext
 {
     public int attackerActorNumber;
-    public int sourceSkillId;       // ← 신규
+    public int sourceSkillId;       // ← 신규 (skillData.skillId)
     public float damage;
     // ... 기존 필드
 }
 ```
 
-### 발사 경로
+### 발사 경로 (sourceSkillId 전달)
 
 스킬 Executor / Spawner 가 자기 SkillData.skillId 를 컨텍스트에 실어보낸다. 모든 데미지 발사 경로(Projectile / Area / Orbital / Placed / Debuff) 가 일관되게 적용해야 함.
 
-### 통계 누적 (각 클라가 자기 것만)
+### 가해 데미지 누적 (B-1a — 자기 발사 시점 자기 PC)
 
-**기존 인프라 (검증 완료):**
-- `RPC_RequestDamage(enemyId, damage, actorNumber)` ([SpawnManager.cs:506](../../Assets/Scripts/Shared/Managers/SpawnManager.cs)) — 클라 → 호스트
-- `RPC_NotifyDamageApplied(targetViewId, damage)` ([NetworkAdapter.cs:25](../../Assets/Scripts/Shared/Network/NetworkAdapter.cs)) — 호스트 → 전체
-- `RPC_RequestBossDamage(damage)` ([Boss.cs:196](../../Assets/Scripts/Features/Boss/Adapter/Boss.cs)) — 클라 → 호스트 (보스용 별도 흐름)
+**원칙:** 클라가 자기 발사한 스킬이 적과 충돌해 데미지가 산정되는 시점 (DealDamage*Handler 진입 직후) 에 자기 PC 의 `LocalStatsRecorder` 에 누적. 호스트 적용 결과를 기다리지 않음.
 
-**페이로드 확장 (필요):**
 ```csharp
-// 기존
-RPC_NotifyDamageApplied(int targetViewId, float damage)
-
-// 확장
-RPC_NotifyDamageApplied(int targetViewId, float damage,
-                       int attackerActorNumber, int sourceSkillId, bool causedDeath)
-```
-
-**누적 로직 (모든 클라):**
-```csharp
-[PunRPC]
-private void RPC_NotifyDamageApplied(int targetViewId, float damage,
-                                     int attackerActor, int sourceSkillId, bool causedDeath)
+// DealDamageHandler.Execute() 내부 — Enemy.TakeDamage() 호출 직전
+if (context.attackerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
 {
-    // 기존: DamagePopup 등 표시
-
-    // 신규: 자기 통계 누적
-    if (attackerActor == PhotonNetwork.LocalPlayer.ActorNumber)
-    {
-        LocalStatsRecorder.Instance?.AddDamage(sourceSkillId, damage);
-        if (causedDeath)
-            LocalStatsRecorder.Instance?.OnKill(sourceSkillId);
-    }
-
-    // 자기가 받은 데미지면 (targetViewId 가 자기 PlayerHealth 의 viewId 면)
-    if (IsLocalPlayerTarget(targetViewId))
-        LocalStatsRecorder.Instance?.AddDamageTaken(damage);
+    LocalStatsRecorder.Instance?.OnFire(context.sourceSkillId);  // 1회 발사당
+    LocalStatsRecorder.Instance?.AddDamage(context.sourceSkillId, finalDamage);
 }
+enemy.LastDamagerActorNumber = context.attackerActorNumber;
+enemy.LastDamagerSkillId     = context.sourceSkillId;
+enemy.TakeDamage(finalDamage, isCrit);
 ```
 
-**이중 카운트 방지:** 호스트가 확정한 데미지가 RPC 로 한 번 전파되고, 모든 클라에서 한 번씩 발화 → ActorNumber 매칭 시 한 번만 누적. 클라 예측 데미지는 호스트 확정 RPC 가 아니므로 자동 제외.
+**작은 오차 감수:** 호스트가 reject 한 데미지(예: 무적/감면)도 자기 가해분에 카운트. 일반적으로 < 1% 수준이라 결과 화면 시각화 정확성에 영향 미미.
 
-**메타 진행도 통합:** `causedDeath=true` 일 때 메타 진행도(`LocalRunStatsRecorder`) 도 같은 RPC 핸들러에서 자기 ActorNumber 매칭 시 OnKill 호출. 별도 사망 RPC 신설 불필요 — `Enemy.OnDiedWithRef` 직접 구독 대신 이 RPC 핸들러를 진입점으로.
+**WHY:** 호스트 마이그레이션 시 자기 PC 데이터 보존. 매 데미지 RPC 발화로 인한 트래픽 회피.
 
-**WHY 호스트가 아니라 각 클라:** 마이그레이션 시 호스트 측 dict 가 손실되는 위험 회피. 자기 데이터를 자기가 보유 — 각 플레이어 디바이스별 개별 누적([`meta-unlock.md`](meta-unlock.md) D4) 와 일관된 권위 모델.
+### 자기 막타 킬 누적 (사망 RPC 페이로드 확장)
+
+| 사망 주체 | 진입점 RPC | 페이로드 확장 | 누적 로직 |
+|---|---|---|---|
+| 일반 적 | [SpawnManager.cs:1046 `FlushDeathQueue`](../../Assets/Scripts/Shared/Managers/SpawnManager.cs) (이미 batched 사망 RPC) | `(enemyId, posX, posY, exp, killerActor, killerSkillId)` — `killerSkillId` 신규 | `killerActor == self` → `OnKill(killerSkillId, enemyId)` |
+| 보스 | **신규 `RPC_BossDied(int bossId)`** (RpcTarget.All) — `Boss.Die()` 직전 1회 발화 | 가해자 매칭 안 함 | **모든 파티원 무조건** `OnBossDefeat(bossId)` 자기 PC 카운트 (D13) |
+| 자기 사망 | [PlayerHealth.cs:144 `RPC_TakeDamage`](../../Assets/Scripts/Features/Character/Adapter/PlayerHealth.cs) (RpcTarget.All) | `+attackerEnemyId` 신규 | 자기 클라 수신 시 `LastDamagerEnemyId` 기록 → `OnDied` 시 `OnDeath(enemyId)` |
+
+**WHY 보스만 가해자 매칭 안 함 (D13):** 협동 보스전 — 막타 가해자 가릴 필요 없음. 모든 파티원이 처치 카운트 공유. RPC 단순화 + 검증 부담 ↓.
+
+### 자기 받은 데미지 누적
+
+`PlayerHealth.RPC_TakeDamage` 가 이미 `RpcTarget.All` 로 모든 클라에 발화됨. 자기 PC 가 자기 viewId 매칭 시 `LocalStatsRecorder.AddDamageTaken(damage)` 누적. 별도 RPC 불필요.
+
+### 호스트 마이그레이션 안전성
+
+| 시점 | 가해 데미지 | 자기 막타 킬 | 자기 사망 |
+|---|---|---|---|
+| 마이그레이션 전 | 자기 PC 누적 ✓ | 사망 RPC `RpcTarget.All` 발화 완료 → 자기 PC 카운트 ✓ | `RPC_TakeDamage` 페이로드 자기 PC 기록 ✓ |
+| 마이그레이션 도중 (5초) | 발사 RPC 호스트 부재 — 자연 일시정지 | [HostMigrationHandler](../../Assets/Scripts/Shared/Managers/HostMigrationHandler.cs) 가 적/보스 정리. 카운트 일시 중단 | i-frame/respawn 일시 중단. 사망 자체 보존 |
+| 마이그레이션 후 | 새 호스트 흐름으로 정상 누적 | 새 적/보스 스폰 → 정상 RPC → 정상 카운트 | 새 호스트가 처리 이어받음 |
+
+**유일한 손실 케이스:** 마이그레이션 도중 보스가 죽기 직전이었으면 보스가 정리되어 다시 스폰 → 재처치 시 정상 카운트 (단지 한 번 더 잡아야 함). 이미 [`meta-unlock.md` §18](meta-unlock.md) 에 문서화됨.
 
 ## 5. LocalStatsRecorder (신규)
 
@@ -223,13 +227,14 @@ photonView.RPC(nameof(RPC_SendBuildToHost), RpcTarget.MasterClient,
 
 ## 10. 검증
 
-- [ ] 2클라가 동일 적을 같이 잡았을 때 막타 가해자 본인의 KillCount 만 +1.
-- [ ] 데미지는 가해 비율로 분배되어 두 플레이어의 DamageDealt 합 = 적 처치 시점까지 입은 데미지 총합.
+- [ ] 2클라가 동일 일반 적을 같이 잡았을 때 막타 가해자 본인의 KillCount 만 +1.
+- [ ] **보스 처치 시 모든 파티원의 BossDefeat 카운트가 +1** (가해자 매칭 안 함, D13).
+- [ ] 데미지는 자기 발사분 자기 누적 — 두 플레이어의 DamageDealt 합 ≈ 적 처치 시점까지 입은 데미지 총합 (호스트 reject 데미지 < 1% 오차 허용).
 - [ ] 스킬별 차트가 각 플레이어 카드에 표시되고 합계가 `PlayerBuildData.DamageDealt` 와 ±1% 이내 일치.
 - [ ] 팀 합계 패널의 총 데미지 = Σ 각 플레이어 DamageDealt.
-- [ ] sourceSkillId 가 클라이언트 예측 데미지가 아닌 호스트 확정 데미지에서만 카운트 (이중 카운트 X).
+- [ ] sourceSkillId 가 클라이언트 예측 데미지가 아닌 자기 발사 경로에서만 카운트 (이중 카운트 X).
 - [ ] **호스트 마이그레이션 시 통계 보존** — 보스 직전 호스트가 나가서 마이그레이션 → 보스 처치 후 결과 화면에 마이그레이션 전 데미지/킬도 정상 표시.
-- [ ] 동일 데미지 RPC 가 모든 클라에서 발화될 때 ActorNumber 매칭 필터로 한 번만 카운트 (자기 데미지가 자기 PC 에서만 +1).
+- [ ] 사망 RPC 가 모든 클라에 발화될 때 ActorNumber 매칭 필터로 한 번만 카운트 (보스 제외 — 보스는 모든 클라 카운트).
 
 ## 11. 비범위
 
@@ -253,4 +258,4 @@ photonView.RPC(nameof(RPC_SendBuildToHost), RpcTarget.MasterClient,
 - [ ] 클라이언트가 결과 화면 전에 떠나면 그 플레이어의 통계는 결과 RPC 도착 안 함 → 결과 화면에 슬롯 없음 (HostMigrationHandler.HandlePlayerDisconnect 가 비활성 처리)
 - [ ] 데미지 컨텍스트에 sourceSkillId 누락된 경로는 "Unknown" 으로 카운트되어 차트에 표시 안 됨 — 모든 데미지 경로 보강 필요 (구현 직전 grep 으로 누락 경로 확인)
 - [ ] 보스 페이즈 전환 / 보스 사망 페이드아웃 동안의 데미지 — 호스트 데미지 RPC 가 끊기는 시점이 있다면 누락. photon-sync-auditor 로 검사
-- [x] **데미지 RPC 가 모든 클라에 발화되는지 — 검증 완료.** `RPC_NotifyDamageApplied` 가 NetworkAdapter.cs:25 에 존재. 페이로드 확장만으로 분산 추적 가능.
+- [x] **B-1a 흐름 채택 (2026-05-06).** [NetworkAdapter.cs:14-28](../../Assets/Scripts/Shared/Network/NetworkAdapter.cs) 의 `RPC_NotifyDamageApplied` 는 Stub (호출자 없음). 매 데미지마다 통합 RPC 발화는 90마리 동시 + 다타격 스킬 환경에서 트래픽 부담 → 가해 데미지는 자기 발사 시점 자기 PC 누적, 자기 막타 킬은 사망 RPC 페이로드 확장(`SpawnManager.FlushDeathQueue` + 신규 `RPC_BossDied` + `PlayerHealth.RPC_TakeDamage`) 으로 카운트.

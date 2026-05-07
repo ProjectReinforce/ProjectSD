@@ -87,6 +87,14 @@ namespace SwDreams.Features.Enemy.Adapter
         /// </summary>
         public int LastDamagerActorNumber { get; set; } = -1;
 
+        /// <summary>
+        /// 마지막으로 데미지를 준 스킬의 SkillId (B-1a — run-statistics.md §4).
+        /// 사망 시 batched 사망 RPC(SpawnManager.FlushDeathQueue) 페이로드에 첨부 →
+        /// 자기 막타 시 LocalStatsRecorder.OnKill(skillId) 카운트 진입점.
+        /// 0 이면 미상 (적 자해/장판 등 기본 데미지 경로).
+        /// </summary>
+        public int LastDamagerSkillId { get; set; } = 0;
+
         // 이벤트
         public event Action<int, int> OnHealthChanged;
         public event Action OnDied;
@@ -195,6 +203,15 @@ namespace SwDreams.Features.Enemy.Adapter
             var result = damageService.ProcessSkillAttack(damage);
             CurrentHP = Mathf.Max(0, CurrentHP - result.FinalDamage);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+
+            // B-1a: 호스트 측이 자기 ActorNumber 매칭 시 자기 PC 통계 누적.
+            // 비호스트 측 자기 발사분은 RequestDamage 송신 진입점에서 직접 누적.
+            if (Photon.Pun.PhotonNetwork.IsMasterClient
+                && LastDamagerActorNumber == Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                    .AddDamage(LastDamagerSkillId, result.FinalDamage);
+            }
 
             // 피격 플래시 (모든 클라이언트)
             TriggerHitFlash();
@@ -325,6 +342,7 @@ namespace SwDreams.Features.Enemy.Adapter
             CurrentHP = 0;
             EnemyId = -1;
             LastDamagerActorNumber = -1;
+            LastDamagerSkillId = 0;
             gameObject.SetActive(false);
         }
     }

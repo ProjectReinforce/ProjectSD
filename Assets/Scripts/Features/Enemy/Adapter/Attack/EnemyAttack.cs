@@ -88,14 +88,17 @@ namespace SwDreams.Features.Enemy.Adapter.Attack
                 if (dir.sqrMagnitude < 0.0001f) dir = Vector2.right;
                 dir = dir.normalized;
 
+                // B-1a: enemy.EnemyId 동봉 — Player 사망 시 LastDamagerEnemyId 기록 진입점.
                 SpawnManager.Instance.RaiseEnemyProjectile(
-                    origin, dir, enemy.ProjectileSpeed, enemy.AttackDamage, enemy.ProjectileLifetime);
+                    origin, dir, enemy.ProjectileSpeed, enemy.AttackDamage, enemy.ProjectileLifetime,
+                    enemy.EnemyId);
             }
             else
             {
                 // Telegraph: 발사 시점 플레이어 위치를 타겟으로 고정 (예측 샷)
                 SpawnManager.Instance.RaiseTelegraph(
-                    targetPos, enemy.TelegraphDuration, enemy.TelegraphRadius, enemy.AttackDamage);
+                    targetPos, enemy.TelegraphDuration, enemy.TelegraphRadius, enemy.AttackDamage,
+                    enemy.EnemyId);
             }
         }
     }

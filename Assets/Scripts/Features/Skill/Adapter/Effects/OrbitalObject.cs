@@ -61,10 +61,19 @@ namespace SwDreams.Features.Skill.Adapter
         private float critChance;
         private float critDamageMultiplier = 1.5f;
 
+        // 인-런 통계 (B-1a — run-statistics.md §4) — OrbitalSpawner 가 SetSourceSkillId 로 주입.
+        private int sourceSkillId;
+
         public void SetCritStats(float critChance, float critDamageMultiplier)
         {
             this.critChance = Mathf.Clamp01(critChance);
             this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
+        /// <summary>발사 스킬 ID 주입. OrbitalSpawner에서 호출 (B-1a).</summary>
+        public void SetSourceSkillId(int skillId)
+        {
+            this.sourceSkillId = skillId;
         }
 
         // 이미 맞은 적 추적 (1회전 동안 중복 방지)
@@ -192,7 +201,11 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     if (PhotonNetwork.IsMasterClient)
                     {
-                        if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                        if (enemy != null)
+                        {
+                            enemy.LastDamagerActorNumber = ownerActorNumber;
+                            enemy.LastDamagerSkillId = sourceSkillId;
+                        }
                         if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                         else damageable.TakeDamage(finalDmg);
                         if (knockbackForce > 0f && enemy != null)
@@ -204,6 +217,11 @@ namespace SwDreams.Features.Skill.Adapter
                         enemy.ShowHitVisuals(finalDmg, isCrit);
                         if (knockbackForce > 0f)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
+
+                        // B-1a: 비호스트 자기 발사 — 자기 PC 누적.
+                        SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                            .AddDamage(sourceSkillId, finalDmg);
+
                         SwDreams.Shared.Managers.SpawnManager.Instance?.RequestDamage(
                             enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                         if (knockbackForce > 0f)
@@ -226,7 +244,11 @@ namespace SwDreams.Features.Skill.Adapter
                 {
                     // 남의 궤도 무기 (호스트에서만 여기 도달): 직접 데미지.
                     // triggerSystem 은 null (원격 플레이어의 것은 로컬에 없음) → FireTrigger 생략.
-                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    if (enemy != null)
+                    {
+                        enemy.LastDamagerActorNumber = ownerActorNumber;
+                        enemy.LastDamagerSkillId = sourceSkillId;
+                    }
                     if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                     else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
@@ -302,6 +324,7 @@ namespace SwDreams.Features.Skill.Adapter
             hitEnemyIds.Clear();
             critChance = 0f;
             critDamageMultiplier = 1.5f;
+            sourceSkillId = 0; // B-1a
             gameObject.SetActive(false);
         }
 
@@ -320,7 +343,9 @@ namespace SwDreams.Features.Skill.Adapter
                 damage = dmg,
                 owner = ownerTransformRef,
                 critChance = critChance,
-                critDamageMultiplier = critDamageMultiplier
+                critDamageMultiplier = critDamageMultiplier,
+                attackerActorNumber = ownerActorNumber,
+                sourceSkillId = sourceSkillId
             };
             triggerSystem.FireTrigger(TriggerType.OnHit, ctx);
 

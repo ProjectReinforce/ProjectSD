@@ -441,6 +441,17 @@ namespace SwDreams.Features.Skill.Adapter
             // ── 발사 방향 ──
             ctx.baseDirection = GetBaseDirection(data.aimType);
 
+            // ── 데미지 가해자 ActorNumber (B-1a — run-statistics.md §4) ──
+            // playerTransform 의 PhotonView Owner = 이 스킬의 가해자.
+            // 자기 발사(Begin) 와 RPC 도착(BeginFromNetwork) 모두 동일하게 owner 매핑.
+            ctx.attackerActorNumber = 0;
+            if (playerTransform != null)
+            {
+                var ownerPv = playerTransform.GetComponent<PhotonView>();
+                if (ownerPv != null && ownerPv.Owner != null)
+                    ctx.attackerActorNumber = ownerPv.Owner.ActorNumber;
+            }
+
             // ── TwoPhase 완료 콜백 ──
             if (firingMode == FiringMode.TwoPhase)
                 ctx.onSpawnComplete = NotifyPhase1Complete;

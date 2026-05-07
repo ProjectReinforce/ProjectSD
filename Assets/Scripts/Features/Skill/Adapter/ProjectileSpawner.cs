@@ -82,6 +82,9 @@ namespace SwDreams.Features.Skill.Adapter
             // ── 치명타 파라미터 (R9) ──
             projectile.SetCritStats(ctx.critChance, ctx.critDamageMultiplier);
 
+            // ── 인-런 통계: 발사 스킬 ID 주입 (B-1a) ──
+            projectile.SetSourceSkillId(data != null ? data.skillId : 0);
+
             // ── Trajectory 부착 (R6/B1: pullRadius 에 ctx.skillRangeBonus 반영) ──
             ITrajectoryBehavior trajectory = TrajectoryFactory.Create(
                 data.trajectoryType, data, ctx.skillRangeBonus);

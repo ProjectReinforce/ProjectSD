@@ -161,13 +161,32 @@ namespace SwDreams.Features.Skill.Adapter
                 executor.SetPhase2Spawner(phase2Spawner);
 
             // OnFire 트리거
+            // 인-런 통계 (B-1a — run-statistics.md §4): attacker / sourceSkillId 주입
+            int attackerActor = 0;
+            bool isMineFire = false;
+            var rootPv = transform.root.GetComponent<Photon.Pun.PhotonView>();
+            if (rootPv != null && rootPv.Owner != null)
+            {
+                attackerActor = rootPv.Owner.ActorNumber;
+                isMineFire = rootPv.IsMine;
+            }
+
             if (triggerSystem != null && triggerSystem.HasTrigger(TriggerType.OnFire))
             {
                 triggerSystem.FireTrigger(TriggerType.OnFire, new Domain.ValueObjects.TriggerContext
                 {
                     position = transform.root.position,
-                    owner = transform.root
+                    owner = transform.root,
+                    attackerActorNumber = attackerActor,
+                    sourceSkillId = skillData != null ? skillData.skillId : 0
                 });
+            }
+
+            // B-1a: 자기 발사 카운트 — 자기 root PV 만. RPC 도착 경로 (다른 클라 발사) 는 제외.
+            if (isMineFire && skillData != null)
+            {
+                SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                    .OnFire(skillData.skillId);
             }
 
             OnFired?.Invoke(this);

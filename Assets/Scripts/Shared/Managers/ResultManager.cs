@@ -128,18 +128,46 @@ namespace SwDreams.Shared.Managers
             if (string.IsNullOrEmpty(playerName))
                 playerName = $"Player {PhotonNetwork.LocalPlayer.ActorNumber}";
 
+            // B-1a: 자기 PC 의 LocalStatsRecorder 스냅샷을 SkillIds 인덱스 순으로 packing.
+            var statsSnap = SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?.Snapshot();
+            int runKills = statsSnap?.Kills ?? 0;
+            int runDeaths = statsSnap?.Deaths ?? 0;
+            float damageDealt = statsSnap?.DamageDealt ?? 0f;
+            float damageTaken = statsSnap?.DamageTaken ?? 0f;
+
+            int n = skillIds.Length;
+            int[] skillFireCounts = new int[n];
+            int[] skillKillCounts = new int[n];
+            float[] skillDamageDealt = new float[n];
+            if (statsSnap != null)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    if (statsSnap.BySkill.TryGetValue(skillIds[i], out var s))
+                    {
+                        skillFireCounts[i] = s.FireCount;
+                        skillKillCounts[i] = s.KillCount;
+                        skillDamageDealt[i] = s.DamageDealt;
+                    }
+                }
+            }
+
             photonView.RPC(nameof(RPC_SendBuildToHost), RpcTarget.MasterClient,
                 PhotonNetwork.LocalPlayer.ActorNumber,
                 playerName,
                 characterId,
                 skillIds,
                 skillLevels,
-                chaosIds);
+                chaosIds,
+                runKills, runDeaths, damageDealt, damageTaken,
+                skillFireCounts, skillKillCounts, skillDamageDealt);
         }
 
         [PunRPC]
         private void RPC_SendBuildToHost(int actorNumber, string playerName,
-            int characterId, int[] skillIds, int[] skillLevels, int[] chaosIds)
+            int characterId, int[] skillIds, int[] skillLevels, int[] chaosIds,
+            int runKills, int runDeaths, float damageDealt, float damageTaken,
+            int[] skillFireCounts, int[] skillKillCounts, float[] skillDamageDealt)
         {
             if (!PhotonNetwork.IsMasterClient) return;
 
@@ -150,11 +178,18 @@ namespace SwDreams.Shared.Managers
                 CharacterId = characterId,
                 SkillIds = skillIds,
                 SkillLevels = skillLevels,
-                ChaosTypeIds = chaosIds
+                ChaosTypeIds = chaosIds,
+                RunKills = runKills,
+                RunDeaths = runDeaths,
+                DamageDealt = damageDealt,
+                DamageTaken = damageTaken,
+                SkillFireCounts = skillFireCounts,
+                SkillKillCounts = skillKillCounts,
+                SkillDamageDealt = skillDamageDealt
             };
 
             collectedBuilds[actorNumber] = build;
-            Debug.Log($"[ResultManager] 빌드 수신: {playerName} (스킬 {skillIds.Length}개)");
+            Debug.Log($"[ResultManager] 빌드 수신: {playerName} (스킬 {skillIds.Length}개, 킬 {runKills})");
 
             // 모든 플레이어 빌드 수집 완료 → 결과 브로드캐스트
             if (collectedBuilds.Count >= expectedPlayerCount)
@@ -186,8 +221,14 @@ namespace SwDreams.Shared.Managers
             int bossChaos = BossChaosApplicator.Instance != null
                 ? (int)BossChaosApplicator.Instance.BossChaosType : 0;
 
-            // 빌드 데이터를 직렬화 (int[] 배열로 flatten)
-            // 형식: [playerCount, (actorNum, charId, skillCount, ...skillIds, ...skillLevels, chaosCount, ...chaosIds, nameLength, ...nameChars) × N]
+            // 빌드 데이터를 직렬화 (int[] 배열로 flatten). float 은 BitConverter.SingleToInt32Bits.
+            // 형식: [playerCount, (
+            //   actorNum, charId,
+            //   skillCount, ...skillIds, ...skillLevels, ...skillFireCounts, ...skillKillCounts, ...skillDamageDealt(packed),
+            //   chaosCount, ...chaosIds,
+            //   nameLen, ...nameChars,
+            //   runKills, runDeaths, damageDealt(packed), damageTaken(packed)
+            // ) × N]
             List<int> buildPayload = new List<int>
             {
                 collectedBuilds.Count
@@ -198,11 +239,22 @@ namespace SwDreams.Shared.Managers
                 var b = kvp.Value;
                 buildPayload.Add(b.ActorNumber);
                 buildPayload.Add(b.CharacterId);
-                buildPayload.Add(b.SkillIds?.Length ?? 0);
+                int skillCount = b.SkillIds?.Length ?? 0;
+                buildPayload.Add(skillCount);
                 if (b.SkillIds != null)
                 {
                     buildPayload.AddRange(b.SkillIds);
                     buildPayload.AddRange(b.SkillLevels);
+                    // 스킬별 통계 — SkillIds 와 동일 길이 보장.
+                    for (int i = 0; i < skillCount; i++)
+                        buildPayload.Add(i < (b.SkillFireCounts?.Length ?? 0) ? b.SkillFireCounts[i] : 0);
+                    for (int i = 0; i < skillCount; i++)
+                        buildPayload.Add(i < (b.SkillKillCounts?.Length ?? 0) ? b.SkillKillCounts[i] : 0);
+                    for (int i = 0; i < skillCount; i++)
+                    {
+                        float v = i < (b.SkillDamageDealt?.Length ?? 0) ? b.SkillDamageDealt[i] : 0f;
+                        buildPayload.Add(System.BitConverter.SingleToInt32Bits(v));
+                    }
                 }
                 buildPayload.Add(b.ChaosTypeIds?.Length ?? 0);
                 if (b.ChaosTypeIds != null)
@@ -213,6 +265,12 @@ namespace SwDreams.Shared.Managers
                 buildPayload.Add(name.Length);
                 foreach (char c in name)
                     buildPayload.Add(c);
+
+                // 통계 (인-런)
+                buildPayload.Add(b.RunKills);
+                buildPayload.Add(b.RunDeaths);
+                buildPayload.Add(System.BitConverter.SingleToInt32Bits(b.DamageDealt));
+                buildPayload.Add(System.BitConverter.SingleToInt32Bits(b.DamageTaken));
             }
 
             photonView.RPC(nameof(RPC_ShowResult), RpcTarget.All,
@@ -279,10 +337,19 @@ namespace SwDreams.Shared.Managers
                 int skillCount = payload[idx++];
                 b.SkillIds = new int[skillCount];
                 b.SkillLevels = new int[skillCount];
+                b.SkillFireCounts = new int[skillCount];
+                b.SkillKillCounts = new int[skillCount];
+                b.SkillDamageDealt = new float[skillCount];
                 for (int i = 0; i < skillCount; i++)
                     b.SkillIds[i] = payload[idx++];
                 for (int i = 0; i < skillCount; i++)
                     b.SkillLevels[i] = payload[idx++];
+                for (int i = 0; i < skillCount; i++)
+                    b.SkillFireCounts[i] = payload[idx++];
+                for (int i = 0; i < skillCount; i++)
+                    b.SkillKillCounts[i] = payload[idx++];
+                for (int i = 0; i < skillCount; i++)
+                    b.SkillDamageDealt[i] = System.BitConverter.Int32BitsToSingle(payload[idx++]);
 
                 int chaosCount = payload[idx++];
                 b.ChaosTypeIds = new int[chaosCount];
@@ -294,6 +361,12 @@ namespace SwDreams.Shared.Managers
                 for (int i = 0; i < nameLen; i++)
                     nameChars[i] = (char)payload[idx++];
                 b.PlayerName = new string(nameChars);
+
+                // 통계 (인-런)
+                b.RunKills = payload[idx++];
+                b.RunDeaths = payload[idx++];
+                b.DamageDealt = System.BitConverter.Int32BitsToSingle(payload[idx++]);
+                b.DamageTaken = System.BitConverter.Int32BitsToSingle(payload[idx++]);
 
                 builds[p] = b;
             }

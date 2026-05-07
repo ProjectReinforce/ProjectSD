@@ -40,7 +40,13 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                     if (damageable == null || !damageable.IsAlive) continue;
 
                     var enemy = hit.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
-                    if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                    if (enemy != null)
+                    {
+                        // B-1a: 가해자 추적 — 사망 시 RPC 페이로드(killerActor/skillId) 진입점.
+                        enemy.LastDamagerActorNumber = context.attackerActorNumber;
+                        enemy.LastDamagerSkillId = context.sourceSkillId;
+                        enemy.TakeDamage(finalDamage, isCrit);
+                    }
                     else damageable.TakeDamage(finalDamage);
                 }
             }
@@ -50,7 +56,12 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 if (damageable != null && damageable.IsAlive)
                 {
                     var enemy = context.target.GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
-                    if (enemy != null) enemy.TakeDamage(finalDamage, isCrit);
+                    if (enemy != null)
+                    {
+                        enemy.LastDamagerActorNumber = context.attackerActorNumber;
+                        enemy.LastDamagerSkillId = context.sourceSkillId;
+                        enemy.TakeDamage(finalDamage, isCrit);
+                    }
                     else damageable.TakeDamage(finalDamage);
                 }
             }

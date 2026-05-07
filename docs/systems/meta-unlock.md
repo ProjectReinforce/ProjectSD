@@ -10,8 +10,8 @@
 | 분류 | 인프라 + 게임플레이 |
 | 의존 레이어 | Domain (조건/평가), Adapter (저장/이벤트 후크/UI) |
 | 의존 시스템 | [`platform-integration`](platform-integration.md) — `IPlatformService` 위에 얹힘 |
-| 최종 업데이트 | 2026-05-06 |
-| 구현 상태 | ⬜ 미구현 — plan: `~/.claude/plans/synchronous-pondering-taco.md` |
+| 최종 업데이트 | 2026-05-06 (B-1a 흐름 정정 + D13 보스 공유 카운트) |
+| 구현 상태 | ⬜ 미구현 — plan: `~/.claude/plans/synchronous-pondering-taco.md` ([`run-statistics`](run-statistics.md) 인-런 통계가 선행 진행 중 — 공유 인프라) |
 
 ## 2. 목적
 
@@ -212,17 +212,19 @@ namespace SwDreams.Features.Unlock.Adapter.Data
 
 ## 11. 호출 후크
 
-⚠ **`Enemy.OnDiedWithRef` / `Boss.OnDied` 는 호스트에서만 발화** (검증됨 — Enemy.cs 에 `[PunRPC]` 없음). 따라서 자기 클라가 직접 구독해서 막타 카운트 불가. **확장된 `RPC_NotifyDamageApplied` 가 진입점**이 됨 — `causedDeath=true` + `attackerActorNumber == 자기` 일 때 카운트. ([`run-statistics.md`](run-statistics.md) §3 와 동일 RPC 인프라 공유)
+⚠ **`Enemy.OnDiedWithRef` / `Boss.OnDied` 는 호스트에서만 발화** (검증됨 — Enemy.cs 에 `[PunRPC]` 없음). 따라서 자기 클라가 직접 구독해서 막타 카운트 불가. **사망 RPC 3종이 진입점** — [`run-statistics.md` §4](run-statistics.md) 와 동일 인프라 공유 (B-1a 흐름).
 
 | 위치 | 호출 | 목적 |
 |---|---|---|
-| `RPC_NotifyDamageApplied` 핸들러 (확장됨) — 자기 클라 | `causedDeath && attacker==self` → `runStats.OnKill(enemyId)` | 자기 막타 킬 카운트 |
-| `RPC_NotifyDamageApplied` 핸들러 — 보스 죽음 케이스 | `causedDeath && targetIsBoss && attacker==self` → `runStats.OnBossDefeat(bossId)` | 보스 처치 추적 |
-| `PlayerHealth.OnDied` (자기 것, 로컬 발화 OK) | `runStats.OnDeath(lastDamagerEnemyId)` | 자기 사망 + 가해자 추적 (PlayerHealth 에 `LastDamagerEnemyId` 필드 신규 추가) |
+| `SpawnManager.FlushDeathQueue` 핸들러 (확장됨, RpcTarget.All) — 자기 클라 | `killerActor == self` → `runStats.OnKill(enemyId)` | Enemy 자기 막타 킬 (페이로드에 `killerActor` 이미 있음, `killerSkillId` 신규 추가) |
+| **신규 `RPC_BossDied(int bossId)`** (RpcTarget.All) — 모든 클라 | **무조건** → `runStats.OnBossDefeat(bossId)` | 보스 처치 = 모든 파티원 카운트 (D13, 가해자 매칭 안 함) |
+| `PlayerHealth.RPC_TakeDamage` 핸들러 (확장됨, RpcTarget.All) — 자기 사망 | 자기 viewId 매칭 시 `LastDamagerEnemyId` 기록 → `OnDied` 시 `runStats.OnDeath(lastDamagerEnemyId)` | 자기 사망 + 가해자 추적 (페이로드 `attackerEnemyId` 신규 추가, `PlayerHealth.LastDamagerEnemyId` 필드 신규) |
 | `QuestZone`/`AreaZone` OnTriggerEnter (자기 캐릭터) | `runStats.OnZoneVisited(zoneId)` | 위치 도달 |
 | `GameManager.OnStateChanged(GameClear/GameOver)` (모든 클라 동기화) | `UnlockTracker.OnRunEnded(runStats, isCleared)` | 런 종료 일괄 평가 |
 
-**WHY 통합 RPC 진입점:** 메타 진행도와 인-런 통계가 같은 RPC 핸들러에서 진입하면 ① 데미지/사망 정보를 한 번만 전파 ② 두 시스템의 카운트가 절대 어긋날 수 없음 ③ 새 RPC 신설 불필요 (페이로드 확장만).
+**WHY 사망 RPC 진입점 분리 (B-1a):** ① 매 데미지마다 통합 RPC 발화는 90마리 동시 + 다타격 스킬 환경에서 트래픽 부담. ② 사망 시점만 RPC 페이로드 확장 → 트래픽 최소. ③ 메타 진행도와 인-런 통계가 같은 사망 RPC 진입점을 공유하므로 카운트 일관성 보장.
+
+**WHY 보스만 가해자 매칭 안 함 (D13):** 협동 보스전 — 막타 가해자 가릴 필요 없음. 모든 파티원이 처치 카운트 공유. RPC 단순화 + 검증 부담 ↓.
 
 ## 12. AchievementId 와의 매핑
 
@@ -247,8 +249,8 @@ PlayerPrefs 의 `meta.run_stats` 는 백업/조건 평가용으로 유지. SDK �
 - [ ] 토스트 — 마지막 1킬로 KillCountCondition 충족 후 클리어 → 결과 화면 끝부분 "신규 언락" 리스트 노출.
 
 ### 멀티플레이 (D5 핵심)
-- [ ] 2클라가 동일 적을 같이 잡았을 때, 마지막 가해자 본인 PC 에만 킬 카운트.
-- [ ] 클라이언트만 보스 막타 시에도 본인 PC 에 보스 처치 기록.
+- [ ] 2클라가 동일 일반 적을 같이 잡았을 때, 마지막 가해자 본인 PC 에만 킬 카운트.
+- [ ] **보스 처치 시 모든 파티원의 BossDefeatedIds 셋에 추가** (D13 — 가해자 매칭 안 함). 클라이언트만 보스 막타 시에도 호스트 포함 모든 파티원에게 카운트.
 - [ ] **A 가 언락한 스킬이 호스트 B 의 진행도와 무관하게 A 의 레벨업 선택지에 등장.**
 - [ ] **A 가 언락한 무기 조합식이 A 가 픽업해 합성 시 발동.**
 - [ ] 캐릭터 선택 시 각 클라가 자기 진행도로 표시.
@@ -280,6 +282,7 @@ PlayerPrefs 의 `meta.run_stats` 는 백업/조건 평가용으로 유지. SDK �
 | D8 | 알림 UX = 결과 화면 토스트 | 런 종료 직후 보상감 |
 | D9 | 저장 단위 = PC 1대 = 1 진행도 | MVP 단순화. SDK 도입 시 클라우드로 격리 |
 | D11 | 평가 시점 = 런 종료 후 일괄 | 토스트 UX 일관, 비용 ↓ |
+| D13 | 보스 처치 = 모든 파티원 카운트 (가해자 매칭 안 함) | 협동 보스전 — 막타 가해자 가릴 필요 없음. RPC 단순화 (신규 `RPC_BossDied(bossId)` RpcTarget.All 1회 발화) + 검증 부담 ↓ |
 
 ## 16. 외부 참조
 

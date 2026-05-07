@@ -48,6 +48,14 @@ namespace SwDreams.Features.Character.Adapter
         // 비주얼 깜빡임은 OnHit 이벤트에서 PlayerVisual 이 IFrameDuration 만큼 처리.
         private float iFrameTimer;
 
+        /// <summary>
+        /// 마지막으로 자기에게 데미지를 준 적의 EnemyId (B-1a — meta-unlock.md §11).
+        /// RPC_TakeDamage 페이로드에서 자기 viewId 매칭 시 기록 → OnDied 시점에
+        /// LocalStatsRecorder.OnDeath(enemyId) 진입점.
+        /// 0 이면 미상.
+        /// </summary>
+        public int LastDamagerEnemyId { get; private set; } = 0;
+
         private void Awake()
         {
             CurrentHP = maxHP;
@@ -120,7 +128,9 @@ namespace SwDreams.Features.Character.Adapter
         // ===== 데미지 (PlayerStub.TakeDamage에서 호출) =====
 
         /// <summary>호스트에서 호출. 방어력 차감 + i-frame 가드 후 RPC로 전파.</summary>
-        public void ApplyDamage(int damage)
+        /// <param name="damage">기본 데미지.</param>
+        /// <param name="attackerEnemyId">가해 적의 EnemyId (B-1a, 0 = 미상).</param>
+        public void ApplyDamage(int damage, int attackerEnemyId = 0)
         {
             // 데미지 권위 = 호스트. 클라가 직접 호출해도 RPC_TakeDamage(All) 가 N중복 디버프를
             // 일으킬 수 있으므로 진입부에서 호스트 가드.
@@ -141,11 +151,12 @@ namespace SwDreams.Features.Character.Adapter
             float iFrame = playerStats != null ? playerStats.IFrameDuration : 0f;
             if (iFrame > 0f) iFrameTimer = iFrame;
 
-            photonView.RPC(nameof(RPC_TakeDamage), RpcTarget.All, finalDamage);
+            // B-1a: attackerEnemyId 페이로드 — 자기 클라가 자기 viewId 매칭 시 LastDamagerEnemyId 기록.
+            photonView.RPC(nameof(RPC_TakeDamage), RpcTarget.All, finalDamage, attackerEnemyId);
         }
 
         [PunRPC]
-        private void RPC_TakeDamage(int damage)
+        private void RPC_TakeDamage(int damage, int attackerEnemyId)
         {
             if (!IsAlive) return;
 
@@ -157,6 +168,15 @@ namespace SwDreams.Features.Character.Adapter
                 DamagePopup.Spawn(transform.position, damage);
                 HitEffect.Spawn(transform.position);
                 OnHit?.Invoke(damage);
+
+                // B-1a: 자기 클라가 자기 viewId 매칭 시 가해자/통계 기록.
+                // LocalStatsRecorder 누적은 모든 클라에서 일관 (페이로드가 RpcTarget.All).
+                if (photonView.IsMine)
+                {
+                    LastDamagerEnemyId = attackerEnemyId;
+                    SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                        .AddDamageTaken(damage);
+                }
             }
             else if (damage < 0)
             {
@@ -169,6 +189,13 @@ namespace SwDreams.Features.Character.Adapter
                 OnDied?.Invoke();
                 OnDeadStateChanged?.Invoke(true);
                 Debug.Log("[PlayerHealth] 사망!");
+
+                // B-1a: 자기 사망 시 자기 PC 통계 누적 (가해 적 ID 동봉).
+                if (photonView.IsMine)
+                {
+                    SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                        .OnDeath(LastDamagerEnemyId);
+                }
 
                 if (PhotonNetwork.IsMasterClient)
                 {

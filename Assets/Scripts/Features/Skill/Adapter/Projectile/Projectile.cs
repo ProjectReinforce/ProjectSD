@@ -116,11 +116,22 @@ namespace SwDreams.Features.Skill.Adapter
         protected float critChance;
         protected float critDamageMultiplier = 1.5f;
 
+        // ===== 인-런 통계 (B-1a — run-statistics.md §4) =====
+        // ProjectileSpawner 가 SpawnContext.skillData.skillId 를 SetSourceSkillId 로 주입.
+        // TriggerContext.sourceSkillId 로 흘러가 자기 막타 시 사망 RPC 페이로드(killerSkillId) 에 전파.
+        protected int sourceSkillId;
+
         /// <summary>치명타 파라미터 주입. ProjectileSpawner에서 호출.</summary>
         public void SetCritStats(float critChance, float critDamageMultiplier)
         {
             this.critChance = Mathf.Clamp01(critChance);
             this.critDamageMultiplier = Mathf.Max(1f, critDamageMultiplier);
+        }
+
+        /// <summary>발사 스킬 ID 주입. ProjectileSpawner에서 호출 (B-1a).</summary>
+        public void SetSourceSkillId(int skillId)
+        {
+            this.sourceSkillId = skillId;
         }
 
         /// <summary>ProjectileEffect에서 스폰 후 호출. TriggerSystem 연결 + 소유자 판별.</summary>
@@ -211,7 +222,11 @@ namespace SwDreams.Features.Skill.Adapter
                 if (PhotonNetwork.IsMasterClient)
                 {
                     int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
-                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    if (enemy != null)
+                    {
+                        enemy.LastDamagerActorNumber = ownerActorNumber;
+                        enemy.LastDamagerSkillId = sourceSkillId;
+                    }
                     if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                     else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
@@ -224,7 +239,11 @@ namespace SwDreams.Features.Skill.Adapter
                 if (PhotonNetwork.IsMasterClient)
                 {
                     int finalDmg = CritJudgment.Roll(damage, critChance, critDamageMultiplier, out bool isCrit);
-                    if (enemy != null) enemy.LastDamagerActorNumber = ownerActorNumber;
+                    if (enemy != null)
+                    {
+                        enemy.LastDamagerActorNumber = ownerActorNumber;
+                        enemy.LastDamagerSkillId = sourceSkillId;
+                    }
                     if (enemy != null) enemy.TakeDamage(finalDmg, isCrit);
                     else damageable.TakeDamage(finalDmg);
                     if (knockbackForce > 0f && enemy != null)
@@ -239,6 +258,11 @@ namespace SwDreams.Features.Skill.Adapter
                         enemy.ShowHitVisuals(finalDmg, isCrit);
                         if (knockbackForce > 0f)
                             enemy.ApplyKnockback(transform.position, knockbackForce);
+
+                        // B-1a: 비호스트 자기 발사 — 자기 PC 누적 (호스트 측 Enemy.TakeDamage hook 미경유).
+                        SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                            .AddDamage(sourceSkillId, finalDmg);
+
                         SpawnManager.Instance?.RequestDamage(
                             enemy.EnemyId, finalDmg, ownerActorNumber, isCrit);
                         if (knockbackForce > 0f)
@@ -373,7 +397,9 @@ namespace SwDreams.Features.Skill.Adapter
                 owner = ownerTransform,
                 subProjectilePrefab = subProjectilePrefab,
                 critChance = critChance,
-                critDamageMultiplier = critDamageMultiplier
+                critDamageMultiplier = critDamageMultiplier,
+                attackerActorNumber = ownerActorNumber,
+                sourceSkillId = sourceSkillId
             };
 
             if (triggerSystem.HasTrigger(TriggerType.OnHit))
@@ -399,7 +425,9 @@ namespace SwDreams.Features.Skill.Adapter
                 owner = ownerTransform,
                 subProjectilePrefab = subProjectilePrefab,
                 critChance = critChance,
-                critDamageMultiplier = critDamageMultiplier
+                critDamageMultiplier = critDamageMultiplier,
+                attackerActorNumber = ownerActorNumber,
+                sourceSkillId = sourceSkillId
             });
         }
 
@@ -424,6 +452,7 @@ namespace SwDreams.Features.Skill.Adapter
             subProjectilePrefab = null;
             critChance = 0f;
             critDamageMultiplier = 1.5f;
+            sourceSkillId = 0; // B-1a: stale 값 방지 (풀 재사용 시 다음 SetSourceSkillId 까지 0)
         }
     }
 }

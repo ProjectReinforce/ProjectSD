@@ -16,6 +16,9 @@ namespace SwDreams.Features.Boss.Adapter.Data
     public class BossData : ScriptableObject
     {
         [Header("기본 정보")]
+        [Tooltip("보스 식별 ID. meta-unlock 의 BossDefeat 조건 / run-statistics 의 보스 처치 카운트 진입점.\n" +
+                 "보스 변형마다 고유 정수 (예: 1=드림 이터 Phase A, 2=Phase B, ...). 0 = 미설정.")]
+        public int bossId = 0;
         public string bossName = "드림 이터";
         public Sprite sprite;
 

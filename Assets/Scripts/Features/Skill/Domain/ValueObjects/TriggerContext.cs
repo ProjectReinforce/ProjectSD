@@ -57,5 +57,21 @@ namespace SwDreams.Features.Skill.Domain.ValueObjects
         /// 치명타 데미지 배율 (보통 1.5~). PlayerStats.CritDamageMultiplier 에서 주입.
         /// </summary>
         public float critDamageMultiplier;
+
+        /// <summary>
+        /// 데미지 가해자 ActorNumber (B-1a — run-statistics.md §4).
+        /// SkillExecutor.BuildContext 에서 PhotonNetwork.LocalPlayer.ActorNumber 주입.
+        /// DealDamage*Handler 에서 자기 ActorNumber 매칭 시 자기 PC 통계 누적,
+        /// 사망 시 Enemy.LastDamagerActorNumber 전파.
+        /// </summary>
+        public int attackerActorNumber;
+
+        /// <summary>
+        /// 발사 스킬의 SkillData.skillId (B-1a — run-statistics.md §4).
+        /// SkillExecutor.BuildContext 에서 ctx.skillData.skillId 주입.
+        /// 0 이면 미상 (적 자해/장판 등 기본 데미지 경로).
+        /// 자기 막타 시 사망 RPC 페이로드 killerSkillId 로 전파 → 결과 화면 스킬별 차트.
+        /// </summary>
+        public int sourceSkillId;
     }
 }

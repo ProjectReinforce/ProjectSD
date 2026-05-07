@@ -42,12 +42,14 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
             var existing = FindDoTBySource(context.target.gameObject, source);
             if (existing != null)
             {
-                existing.Refresh(finalTickDamage, duration, tickInterval, isCrit);
+                existing.Refresh(finalTickDamage, duration, tickInterval, isCrit,
+                    context.attackerActorNumber, context.sourceSkillId);
                 return;
             }
 
             var dot = context.target.gameObject.AddComponent<DoTEffect>();
-            dot.Initialize(source, finalTickDamage, duration, tickInterval, isCrit);
+            dot.Initialize(source, finalTickDamage, duration, tickInterval, isCrit,
+                context.attackerActorNumber, context.sourceSkillId);
         }
 
         private static DoTEffect FindDoTBySource(GameObject go, string source)
@@ -77,26 +79,36 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
         // R9: 부착 시점 1회 판정 결과 스냅샷. 모든 틱에 동일 적용.
         private bool isCritSnapshot;
 
+        // B-1a: DoT 가해자 / 발사 스킬 ID 스냅샷. 매 틱 enemy.LastDamager* 갱신에 사용.
+        private int attackerActorNumber;
+        private int sourceSkillId;
+
         public string Source => source;
 
-        public void Initialize(string source, int tickDamage, float duration, float tickInterval, bool isCrit = false)
+        public void Initialize(string source, int tickDamage, float duration, float tickInterval,
+            bool isCrit = false, int attackerActorNumber = 0, int sourceSkillId = 0)
         {
             this.source = source;
             this.tickDamage = tickDamage;
             this.duration = duration;
             this.tickInterval = tickInterval;
             this.isCritSnapshot = isCrit;
+            this.attackerActorNumber = attackerActorNumber;
+            this.sourceSkillId = sourceSkillId;
             tickTimer = 0f;
             aliveTime = 0f;
         }
 
-        public void Refresh(int tickDamage, float duration, float tickInterval, bool isCrit = false)
+        public void Refresh(int tickDamage, float duration, float tickInterval,
+            bool isCrit = false, int attackerActorNumber = 0, int sourceSkillId = 0)
         {
             this.tickDamage = tickDamage;
             this.duration = duration;
             this.tickInterval = tickInterval;
             // Refresh 시 새 판정 결과로 스냅샷 갱신.
             this.isCritSnapshot = isCrit;
+            this.attackerActorNumber = attackerActorNumber;
+            this.sourceSkillId = sourceSkillId;
             aliveTime = 0f; // 지속시간 리셋
         }
 
@@ -131,7 +143,13 @@ namespace SwDreams.Features.Skill.Adapter.TriggerEffects
                 if (damageable == null || !damageable.IsAlive) return;
 
                 var enemy = GetComponent<SwDreams.Features.Enemy.Adapter.Enemy>();
-                if (enemy != null) enemy.TakeDamage(tickDamage, isCritSnapshot);
+                if (enemy != null)
+                {
+                    // B-1a: 매 틱 가해자 갱신 — DoT 로 죽이면 부착자가 막타.
+                    enemy.LastDamagerActorNumber = attackerActorNumber;
+                    enemy.LastDamagerSkillId = sourceSkillId;
+                    enemy.TakeDamage(tickDamage, isCritSnapshot);
+                }
                 else damageable.TakeDamage(tickDamage);
             }
         }

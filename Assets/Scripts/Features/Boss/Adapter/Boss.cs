@@ -185,7 +185,11 @@ namespace SwDreams.Features.Boss.Adapter
                     CurrentHP, MaxHP, (int)newPhase, phaseChanged);
 
                 if (!IsAlive)
-                    photonView.RPC(nameof(RPC_BossDied), RpcTarget.All);
+                {
+                    // B-1a / D13: 보스 처치 RPC — bossId 페이로드. 모든 클라가 자기 PC OnBossDefeat 카운트.
+                    int bossId = bossData != null ? bossData.bossId : 0;
+                    photonView.RPC(nameof(RPC_BossDied), RpcTarget.All, bossId);
+                }
                 return;
             }
 
@@ -262,10 +266,15 @@ namespace SwDreams.Features.Boss.Adapter
         }
 
         [PunRPC]
-        private void RPC_BossDied()
+        private void RPC_BossDied(int bossId)
         {
             OnDied?.Invoke();
             Debug.Log("[Boss] 보스 처치!");
+
+            // B-1a / D13: 보스 처치는 모든 파티원 카운트 (가해자 매칭 안 함).
+            // run-statistics + meta-unlock 의 BossDefeat 진입점.
+            SwDreams.Features.Stats.Adapter.LocalStatsRecorder.Instance?
+                .OnBossDefeat(bossId);
 
             // 클리어 처리는 BossSpawner 또는 GameManager에서 OnDied 구독
         }

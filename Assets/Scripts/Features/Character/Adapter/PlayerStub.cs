@@ -114,6 +114,15 @@ namespace SwDreams.Features.Character.Adapter
             playerHealth?.ApplyDamage(damage);
         }
 
+        /// <summary>
+        /// 적 데미지 진입점 (B-1a). EnemyContact / EnemyProjectile / TelegraphZone 등 적 측 호출자가
+        /// 자기 EnemyId 동봉 → PlayerHealth.RPC_TakeDamage 페이로드 → 자기 클라가 LastDamagerEnemyId 기록.
+        /// </summary>
+        public void TakeDamageFromEnemy(int damage, int attackerEnemyId)
+        {
+            playerHealth?.ApplyDamage(damage, attackerEnemyId);
+        }
+
         // ===== 부활 (RespawnManager에서 호출) =====
 
         public void LocalRespawn(int newHP)

@@ -123,6 +123,9 @@ namespace SwDreams.Features.Skill.Adapter
             // 치명타 파라미터 (R9). 회복 장판은 critChance=0 으로 (회복 치명타는 별건 결정).
             float critChanceForZone = data.isHealingEffect ? 0f : ctx.critChance;
             zone.SetCritStats(critChanceForZone, ctx.critDamageMultiplier);
+
+            // 인-런 통계: 발사 스킬 ID 주입 (B-1a)
+            zone.SetSourceSkillId(data != null ? data.skillId : 0);
         }
     }
 }

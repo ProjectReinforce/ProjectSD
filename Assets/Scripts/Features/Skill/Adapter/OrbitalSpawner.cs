@@ -95,6 +95,9 @@ namespace SwDreams.Features.Skill.Adapter
             // 치명타 파라미터 (R9)
             orbital.SetCritStats(ctx.critChance, ctx.critDamageMultiplier);
 
+            // 인-런 통계: 발사 스킬 ID 주입 (B-1a)
+            orbital.SetSourceSkillId(data != null ? data.skillId : 0);
+
             // TwoPhase: Phase1 완료 콜백 연결 (각 orbital이 자기 위치/방향 전달)
             if (ctx.onSpawnComplete != null)
                 orbital.SetOnComplete(ctx.onSpawnComplete);
