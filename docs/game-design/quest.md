@@ -34,7 +34,7 @@
 - 격리 몹은 사실상 처치 불가 수준의 체력 (`enemy_quest_barrier` 안)
 - 퀘스트 완료 / 실패 시 격리 몹 자동 제거
 
-### 3.4 퀘스트 종류 (4유형)
+### 3.4 퀘스트 종류 (5유형)
 
 | 유형 | 완료 조건 | 실패 조건 |
 |---|---|---|
@@ -42,6 +42,12 @@
 | **시간 내 킬** | 제한 시간 내 적 N마리 처치 | 시간 초과 |
 | **낙하 공격 회피** | N회의 낙하 공격을 **모두 피함** (예: 5회) | **한 명이라도 죽거나 1회라도 맞으면 즉시 실패** |
 | **목표물 지키기** | 지정된 NPC/구조물을 일정 시간 보호 | 목표물 파괴 |
+| **조롱꾼 추격** ([enemies/mocker.md](enemies/mocker.md)) | 도주+도발 행동의 Mocker 1마리 처치 | 시간 초과 (안: 60s) — 광대가 도망 |
+
+**조롱꾼 추격 특이사항** ([mocker.md § 2](enemies/mocker.md)):
+- **격리 메커니즘 사용 안 함** (사용자 결정) — 격리 몹으로 둘러싸지 않고, Mocker 자체가 거점 반경(`zoneRadius`) 안에서만 도주
+- 맵 경계 미구현 단계에선 `zoneRadius` 가드만 작동. 맵 확정 시 `BossSpawner.mapBoundsCollider` 패턴 추가 검토
+- 협동 몰이 사냥 컨셉 — 1인 추격으론 잡기 어렵게, 가중치 도주가 가장 먼 플레이어들 사이 갭으로 이동
 
 ### 3.5 보상
 
@@ -64,6 +70,11 @@
 | 낙하 공격: 경고 → 낙하 시간 | TBD |
 | 목표물 처치: 처치 수 | TBD (예: 엘리트 3마리) |
 | 목표물 지키기: 보호 시간 | TBD |
+| 조롱꾼 추격: 시간 제한 | TBD (안: 60s) |
+| 조롱꾼 추격: `tauntDistance` (도발 진입 거리) | TBD (안: 8m) |
+| 조롱꾼 추격: `resumeDistance` (도주 재개 거리) | TBD (안: 4m, 히스테리시스 갭 4m) |
+| 조롱꾼 추격: `tauntDuration` (도발 자동 종료) | TBD (안: 4s) |
+| 조롱꾼 추격: `zoneRadius` (도주 가능 반경) | TBD (안: 거점 진입 반경 × 3) |
 | 보상 등급 분포 | TBD ([stat-boost.md § 4](stat-boost.md) 와 동일 안 또는 별도 가중치) |
 
 ## 5. 데이터 계약
@@ -75,13 +86,16 @@ Assets/Data/Quests/{quest_id}.asset
 QuestData : ScriptableObject
   - questId : string  (예: "quest_kill_elite_01")
   - displayName : string
-  - questType : enum { KillTarget, KillInTime, DodgeFalling, Defend }
+  - questType : enum { KillTarget, KillInTime, DodgeFalling, Defend, HuntMocker }
   - triggerRadius : float
   - waitTime : float
   - timeLimit : float (옵션)
   - targetCount : int (KillTarget / KillInTime / DodgeFalling 회수)
-  - barrierEnemyData : EnemyData (격리 몹)
+  - barrierEnemyData : EnemyData (격리 몹 — HuntMocker 는 미사용)
   - rewardRarityWeights : float[4] (Common/Rare/Epic/Legendary 가중치)
+  // HuntMocker 전용
+  - mockerData : MockerData (적 SO — § 2 mocker.md 참조)
+  - mockerZoneRadius : float (도주 가능 반경, 거점 진입 반경 × 3 안)
 ```
 
 ### 5.2 거점 / 매니저 (Adapter — 신규 Feature)
@@ -137,3 +151,4 @@ Features/Quest/Domain/QuestState.cs        ← Idle / Waiting / Active / Complet
 - **보상 등장 가중치** — [stat-boost.md](stat-boost.md) 의 레벨업 가중치와 동일? 다른가?
 - **목표물 지키기의 NPC/구조물** — 별도 데이터 / AI 필요
 - **퀘스트 완료 카운트** — Run 통계 / 업적 ([platform-integration.md](../systems/platform-integration.md))
+- **HuntMocker 세부 이슈** — 이름 확정, 수치 밸런싱, 인디케이터 표시 여부, 거점당 동시 등장 마릿수, MockerData SO 분리 여부 모두 [mocker.md § 11](enemies/mocker.md) 에 위임

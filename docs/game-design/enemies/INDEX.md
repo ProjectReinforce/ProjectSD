@@ -46,6 +46,14 @@ Sweepin' Dreams 에 등장하는 적과 보스 목록.
 | 엘리트형 | Elite | 독립 스폰 타이머 | 4종 구현(EliteChaser/Runner/Tank/RangedTurretShot). 정수 100% 드랍 | [elite.md](elite.md) |
 | **보스** | Boss | 15분 | 3페이즈. baseHP 20000, 인원 스케일링 ×0.6~1.8 | [boss.md](boss.md) |
 
+## 퀘스트 전용 (비전투형)
+
+일반 스폰 풀에 섞이지 않고, 특정 [퀘스트](../quest.md) 트리거 시에만 등장하는 적.
+
+| 적 | 유형 | 등장 | 설명 | 상세 |
+|---|---|---|---|---|
+| 조롱꾼 | Mocker / Quest | 조롱꾼 추격 퀘스트 트리거 시 | 데미지 X. 모든 플레이어 회피(가중치 도주) + 거리 벌어지면 춤(도발). 협동 몰이 사냥. 처치 시 stat boost 보상. ⬜ 설계만 | [mocker.md](mocker.md) |
+
 ## 인원 스케일링 (`DifficultyData.playerScalings`)
 
 | 인원 | 체력 배율 | 동시 적 수 배율 | 경험치 배율 |

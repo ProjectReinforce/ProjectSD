@@ -353,6 +353,7 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 ### DQ1. Quest 시스템 잔여
 - [ ] **QuestProgressUI HUD** — 진입 진행 / 대기 카운트다운 / 진행률 바
 - [ ] **DodgeFalling / Defend / KillInTime** 핸들러 (현재 KillTarget MVP 만)
+- [ ] **HuntMocker QuestType + Mocker 적 구현** (2026-05-07 추가) — 도주+도발 비전투형 신규 적. 가중치 도주 알고리즘 + Fleeing/Taunting 상태 머신 + `RPC_MockerTaunt`. `MockerData : EnemyData` SO 분리, 새 `EvadeStrategy` Movement, Animator `Taunt` 트리거 표준 추가, `EnemyContact` 데미지 가드. 격리 몹 미사용(거점 반경 가드만). 상세 [enemies/mocker.md](../game-design/enemies/mocker.md) + [quest.md § 3.4](../game-design/quest.md). 맵 경계 의존(현재 zoneRadius 가드로 대체)
 - [ ] **맵 배치** (WFC 또는 사전 배치, `GameplayConfig` 에 거점 개수/최소 간격)
 - [ ] **유저 Unity 배선** — QuestData SO 작성, QuestZone 거점 prefab + Scene PhotonView (Owner=null/Master), `SpawnManager.questBarrierVariants` 에 격리 몹 EnemyData 등록, 격리 몹 EnemyData (사실상 무한 HP) 작성
 
