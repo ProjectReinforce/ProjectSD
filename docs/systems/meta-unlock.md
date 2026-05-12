@@ -10,8 +10,8 @@
 | 분류 | 인프라 + 게임플레이 |
 | 의존 레이어 | Domain (조건/평가), Adapter (저장/이벤트 후크/UI) |
 | 의존 시스템 | [`platform-integration`](platform-integration.md) — `IPlatformService` 위에 얹힘 |
-| 최종 업데이트 | 2026-05-06 (B-1a 흐름 정정 + D13 보스 공유 카운트) |
-| 구현 상태 | ⬜ 미구현 — plan: `~/.claude/plans/synchronous-pondering-taco.md` ([`run-statistics`](run-statistics.md) 인-런 통계가 선행 진행 중 — 공유 인프라) |
+| 최종 업데이트 | 2026-05-12 (구현 완료 — Unit 1/2/3 통과) |
+| 구현 상태 | ✅ 구현 완료 (2026-05-12). Phase A Platform 추상화 + Domain/Adapter + 멀티 D5 + 결과 화면 토스트 모두 동작. plan: `~/.claude/plans/synchronous-pondering-taco.md`. ledger: [completed-work.md](../architecture/completed-work.md). |
 
 ## 2. 목적
 

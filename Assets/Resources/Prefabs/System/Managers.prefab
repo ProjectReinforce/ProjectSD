@@ -443,6 +443,8 @@ MonoBehaviour:
   weaponPrefab: {fileID: 3059849364639593112, guid: a262a40931ff181459d7234f63982dea, type: 3}
   micFilterPrefab: {fileID: 3059849364639593112, guid: 2dceff2855d46294dae0757c67385bf9, type: 3}
   prewarmPerType: 16
+  pickupMinSpacing: 0.5
+  overlapMaxAttempts: 4
 --- !u!1 &4912550727001042363
 GameObject:
   m_ObjectHideFlags: 0
@@ -669,7 +671,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwDreams.Adapter.Manager.BossSpawner
   bossData: {fileID: 11400000, guid: 2b104d5ea99e1c747b0becd460dae788, type: 2}
   bossPrefab: {fileID: 2276909343690220186, guid: 8ed9f810ba310fb4dabfb280acf83215, type: 3}
-  spawnDistance: 10
+  bossSpawnMargin: 2.5
+  mapBoundsCollider: {fileID: 0}
+  enforceOutsideMap: 0
 --- !u!1 &6796506290087046070
 GameObject:
   m_ObjectHideFlags: 0
@@ -1001,6 +1005,7 @@ MonoBehaviour:
   weaponDatabase: {fileID: 11400000, guid: dce164d4f6031da4893b9a37b74ffcc6, type: 2}
   statBoostDatabase: {fileID: 11400000, guid: 906a29618a80b744b8d0f1f93c1179cf, type: 2}
   micFilterDatabase: {fileID: 11400000, guid: 40bc543b952fb664788eaaf1b6c97b38, type: 2}
+  unlockCatalog: {fileID: 11400000, guid: 84ea315469bf49c4796230ee45784977, type: 2}
 --- !u!114 &4439880617327635830
 MonoBehaviour:
   m_ObjectHideFlags: 0

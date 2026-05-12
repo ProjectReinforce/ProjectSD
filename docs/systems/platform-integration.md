@@ -9,8 +9,8 @@
 | 시스템 ID | `platform-integration` |
 | 분류 | 인프라 |
 | 의존 레이어 | Domain (인터페이스), Adapter (SDK 구현) |
-| 최종 업데이트 | 2026-04-26 |
-| 구현 상태 | ⬜ 미구현 — 진행 체크리스트 [implementation-roadmap.md § 8-1, 8-3, 8-4](../architecture/implementation-roadmap.md) |
+| 최종 업데이트 | 2026-05-12 (Phase A 추상화 ✅ — meta-unlock 동봉) |
+| 구현 상태 | 🟡 Phase A 추상화 ✅ (2026-05-12), Phase A 후크 ⬜, Phase B/C ⬜. 진행 체크리스트 [implementation-roadmap.md § 8-1, 8-3, 8-4](../architecture/implementation-roadmap.md). ledger [completed-work.md](../architecture/completed-work.md). |
 
 ## 2. 목적
 

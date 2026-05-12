@@ -3,6 +3,7 @@ using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Skill.Domain.ValueObjects;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.Unlock.Domain;
 using UnityEngine;
 
 namespace SwDreams.Features.Skill.Adapter.Data
@@ -76,6 +77,13 @@ namespace SwDreams.Features.Skill.Adapter.Data
         [Header("UI 표시용")]
         public Sprite icon;
         [TextArea] public string description;
+
+        [Header("메타 언락 (meta-unlock.md §6 — 분산형 조건)")]
+        [Tooltip("비어있으면 처음부터 해금. 모든 조건이 AND 로 평가됨. 조건이 하나라도 미충족이면 풀에 등장 안 함.")]
+        public List<UnlockCondition> unlockConditions = new List<UnlockCondition>();
+
+        [Tooltip("true 면 미해금 상태에서 UI 에 ??? 같은 가림 표시 (등장은 unlockConditions 가 결정).")]
+        public bool isHidden = false;
 
         [Header("레벨 스케일링")]
         public int maxLevel = 7;

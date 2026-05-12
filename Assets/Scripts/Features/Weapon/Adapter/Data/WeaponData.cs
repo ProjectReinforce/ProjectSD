@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Features.Weapon.Domain;
+using SwDreams.Features.Unlock.Domain;
 using SwDreams.Shared.Domain.ValueObjects;
 
 namespace SwDreams.Features.Weapon.Adapter.Data
@@ -47,5 +49,13 @@ namespace SwDreams.Features.Weapon.Adapter.Data
         [Tooltip("이 무기가 재료일 때의 조합 레시피. 결과만 다른 무기일 때 각자 SO 가 동일 레시피를 중복 들고 있어도 OK.\n" +
                  "비어있으면 조합 불가능 무기.")]
         public WeaponCombineRecipe combineRecipe;
+
+        [Header("메타 언락 (meta-unlock.md §6 — 분산형 조건)")]
+        [Tooltip("합성 결과물 무기에만 부여. 기본 무기는 빈 리스트 — 처음부터 사용 가능.\n" +
+                 "조건 미충족 시 PlayerWeaponInventory.FindFirstMatchingRecipe 가 매칭에서 제외.")]
+        public List<UnlockCondition> unlockConditions = new List<UnlockCondition>();
+
+        [Tooltip("미해금 상태 UI 에서 '???' 표시 여부.")]
+        public bool isHidden = false;
     }
 }

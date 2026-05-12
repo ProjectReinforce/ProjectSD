@@ -19,6 +19,12 @@ MonoBehaviour:
   chaosEffectType: 0
   icon: {fileID: 21300000, guid: d0b6cc61d25464c48806479f9ce72fe0, type: 3}
   description: "\uC774\uB3D9\uC18D\uB3C4 \uC99D\uAC00"
+  unlockConditions:
+  - type: 1
+    targetValue: 60
+    targetIdA: 0
+    targetIdB: 0
+  isHidden: 0
   maxLevel: 5
   damagePerLevel: 0f00000012000000160000001a0000001f000000250000002d000000
   cooldownPerLevel:

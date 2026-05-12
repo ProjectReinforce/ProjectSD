@@ -2,9 +2,9 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v2.9 (2026-05-06) — § 3 폴더 지도에 `Stats/` Feature 추가 + § 4 용어집에 인-런 통계 / 분산 추적 / 보스 공유 카운트(D13) 항목 추가. Phase 7-5 run-statistics ✅ 도입.
+> **버전:** v3.0 (2026-05-12) — § 3 폴더 지도에 `Features/Unlock/` + `Shared/Platform/` + `Shared/Domain/Events/` 추가. § 4 용어집에 메타 언락 / D5 자기 진행도가 자기 게임에 반영 / Platform 추상화 / ParrelSync 격리 bridge 항목 추가. Phase 7-5 meta-unlock ✅ 도입 + Phase 8-1 Platform 추상화 부분 동봉.
 >
-> **이전:** v2.8 (2026-05-01) — § 8 에이전트 표에 `unity-perf-auditor` 추가 (Survivors-like 핫패스 7개 영역 깊은 성능 감사). `unity-reviewer` 의 깊은 성능 책임 분리.
+> **이전:** v2.9 (2026-05-06) — § 3 폴더 지도에 `Stats/` Feature 추가 + § 4 용어집에 인-런 통계 / 분산 추적 / 보스 공유 카운트(D13) 항목 추가. Phase 7-5 run-statistics ✅ 도입.
 
 ---
 
@@ -65,6 +65,7 @@ Assets/Scripts/
 │   ├── Quest/               ← Domain + Adapter (QuestZone, QuestRewardDispatcher) + Adapter/Data
 │   ├── StatBoost/           ← Adapter (StatBoostManager, StatBoostChoiceService) + Adapter/Data
 │   ├── Stats/               ← Domain (LocalRunStats, SkillRunStats VO) + Adapter (LocalStatsRecorder MonoBehaviour 싱글톤). 인-런 통계 자기 PC 누적 + 결과 화면 시각화. B-1a 분산 추적 — 호스트 마이그레이션 무관. — [docs/systems/run-statistics.md](docs/systems/run-statistics.md)
+│   ├── Unlock/              ← Domain (UnlockCondition struct + UnlockConditionType enum 5종 + UnlockableType/Id VO + IRunStats + UnlockEvaluator) + Adapter (MetaProgressStore IRunStats 구현·영구 누적 / RunRecordRepository PlatformService IO / UnlockTracker 일괄 평가·OnNewUnlocks / UnlockSetSync Photon CustomProperties D5 권위 모델) + Adapter/Data (UnlockCatalog SO — RefreshCharge 마일스톤). 자기 PC 영구 진행도. — [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md)
 │   ├── Pickup/              ← Domain + Adapter (DropSpawner, PickupItemBase, MagnetPickup, PotionPickup, PlayerPickupInteractor) + Presentation (InteractionPromptUI)
 │   └── UI/
 │       ├── Adapter/Menu/        ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
@@ -76,6 +77,8 @@ Assets/Scripts/
 │   ├── Data/                ← AudioLibrary, DifficultyData, GameplayConfig
 │   ├── Managers/            ← GameManager, NetworkManager, ResultManager, SpawnManager, AudioManager, GameAudioConnector, PoolManager, GameStatTracker, DifficultyManager, HostMigrationHandler, SceneTransitionManager
 │   ├── Network/             ← NetworkAdapter
+│   ├── Domain/Events/       ← IRunEventBus, RunEventBus — Feature 디커플링용 정적 이벤트 버스 (Stats↔Unlock 등). 순수 C#. RunEnded/KillRecorded/BossDefeatRecorded/DeathRecorded/ZoneVisited 발화·구독.
+│   ├── Platform/            ← Domain (IPlatformService 인터페이스 + PlatformUserProfile VO + PlatformType enum + AchievementId 상수) + Adapter (LocalPlatformService PlayerPrefs 백엔드 / PlatformBootstrap GetOrCreate lazy). Stove/Steam SDK 추상화. — [docs/systems/platform-integration.md](docs/systems/platform-integration.md)
 │   └── Localization/        ← Domain(ILocalizationService, Locale) + Adapter(LocalizationManager, LocalizationTable, LocaleFontMap, LocalizedText, Bootstrap) + Editor(SheetImporter). 설계만 — [docs/systems/localization.md](docs/systems/localization.md)
 ├── Editor/                  ← 에디터 전용 (SkillDataEditor, AnimationClipValidator 등)
 ├── Testing/                 ← 테스트 엔트리 (Phase2TestEntry 등)
@@ -129,10 +132,15 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **D13 보스 공유 카운트:** 보스 처치 시 모든 파티원이 BossDefeat 카운트 +1 (가해자 매칭 안 함). 협동 보스전 정책 — `RPC_BossDied(bossId)` RpcTarget.All 모든 클라 무조건 카운트.
 - **sourceSkillId 인프라:** 스킬 발사 경로 `TriggerContext.sourceSkillId` + `Enemy.LastDamagerSkillId` 필드. 결과 화면 스킬별 차트 + meta-unlock D1 ("특정 스킬로 처치") 부활 가능 상태.
 - **LocalStatsRecorder:** 자기 PC 1개 인스턴스 (`Features/Stats/Adapter/`). GameScene 마다 새 인스턴스 (DontDestroyOnLoad 안 함). `GameManager.Awake` 의 `GetOrCreate()` 로 timing 안전.
-- **Meta Unlock (메타 언락):** 영구 진행도로 다음 게임 컨텐츠 점진 해금. 미구현 — 설계만 [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 선행 의존.
+- **Meta Unlock (메타 언락):** 영구 진행도로 다음 게임 컨텐츠 점진 해금. **MVP 4종 보상** = 스킬 / 무기 조합식 / 캐릭터 / 새로고침 +N. 분산형 조건 (D6) — 각 SO 옆에 `List<UnlockCondition>` (`SkillData/WeaponData/CharacterData`). `UnlockCatalog` SO 는 SO 가 없는 보상 (RefreshCharge 마일스톤 / 미래 Cosmetic) 전용. 런 종료 시 일괄 평가 (D11). ✅ 구현 완료 (2026-05-12) — [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md).
+- **D5 (자기 진행도가 자기 게임에 반영):** 멀티 권위 모델 — 호스트가 풀 결정 시 *대상 플레이어의* unlock 셋을 참조. 각 클라가 자기 셋을 `Player.CustomProperties` (`mu_skills`/`mu_weapons`/`mu_chars`/`mu_refresh_bonus`) 로 push, 호스트가 `photonView.Owner.ActorNumber` 로 그 플레이어 셋 조회. → A 가 언락한 컨텐츠는 호스트 B 가 언락 안 했어도 A 의 풀에 등장.
+- **UnlockTracker:** 런 종료 (`RunEventBus.RunEnded`) 시 모든 Database 순회 + `UnlockEvaluator.EvaluateAll` 평가 → 신규 언락 `OnNewUnlocks(List<UnlockableId>)` 발화. `ResultPanelUI` 가 구독해 결과 화면 토스트 표시.
+- **MetaProgressStore:** 자기 PC 영구 누적 통계 (`IRunStats` 구현). `RunEventBus` 의 KillRecorded/BossDefeatRecorded/DeathRecorded/ZoneVisited/RunEnded 구독 → totalKills/totalDeaths/totalRuns/totalClears + 3 셋(BossDefeatedIds/ZonesVisitedIds/DeathByEnemyIds) 누적. RunEnded 시 PlayerPrefs flush.
 
 **플랫폼 / 인프라**
-- **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 → Phase B Stove → Phase C Steam. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
+- **Platform Service:** Stove/Steam SDK 추상화 (`IPlatformService`). Phase A 추상화 ✅ (2026-05-12, meta-unlock 동봉) → Phase B Stove → Phase C Steam. `LocalPlatformService` PlayerPrefs 백엔드 (SaveData/LoadData/IncrementStat/UnlockAchievement). `PlatformBootstrap` GetOrCreate lazy. 상세 [docs/systems/platform-integration.md](docs/systems/platform-integration.md).
+- **RunEventBus:** Stats↔Unlock Feature 디커플링용 정적 이벤트 버스 (`Shared/Domain/Events/`). 발화: LocalStatsRecorder (OnKill/OnBossDefeat/OnDeath) + GameManager (RunEnded throttle) + (미래) Quest (ZoneVisited). 구독: MetaProgressStore + UnlockTracker (간접 via Tracker). Adapter→Adapter 직접 참조 회피.
+- **ParrelSync 격리 bridge:** `Assets/Scripts/Editor/ParrelSyncBridge.cs` `[InitializeOnLoad]` 가 `LocalPlatformService.CloneSuffixProvider` 셋업 → clone 별 PlayerPrefs key prefix `clone_<arg>.` 적용. ProjectSettings symlink 공유로 양 인스턴스가 같은 PlayerPrefs namespace 쓰던 D5 검증 함정 해소. 빌드 환경 영향 없음 (Editor-only assembly).
 - **Localization:** 다국어 텍스트 시스템. **1차 지원 4개:** KO/EN/JA/ZH-CN. Google Sheets 가 작업용 SSOT, 빌드타임에 `LocalizationTable.asset` 으로 임포트. Key 기반(`ui.menu.start_button` 형식) + 동기 API + `ILocalizationService` 추상화. 자체 구현 — Unity Localization Package 미사용. 상세 [docs/systems/localization.md](docs/systems/localization.md).
 - **Locale (enum):** `KO_KR / EN_US / JA_JP / ZH_CN`. 클라이언트 로컬 — 네트워크 동기화 안 함 (같은 룸에서 각자 다른 언어).
 - **LocalizationKey:** `{scope}.{subscope}.{name}` 점 구분 영문 키. `ui.*`, `skill.{id}.name`, `chaos.{id}.*`, `error.*` 등.
@@ -186,7 +194,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **인게임 ESC 메뉴 / 일시정지 →** [docs/systems/in-game-menu.md](docs/systems/in-game-menu.md). 중앙 모달 + 솔로(PlayerCount==1) 한정 GameState.Paused 진정 정지 / 멀티는 로컬 UI 토글만. 메뉴 항목 4개(Resume/설정/룸 나가기/게임 종료). Frame_PopUp 의존(확인 다이얼로그). **roadmap U4** ⬜
 - **캐릭터/적 애니메이션 →** [docs/systems/character-animation.md](docs/systems/character-animation.md). base AnimatorController + 캐릭터별 AnimatorOverrideController. PlayerAnimator/EnemyAnimator 핸들러. Phase 1: 2방향(flipX) → Phase 2: 4방향(Blend Tree). GameState.Paused 시 `animator.speed=0` 정지. 풀링 적은 OnReturnToPool 시 Animator.Rebind. 깨진 sprite 검증 = `Tools → Validate AnimationClip Sprites`. CharacterData/EnemyData 의 animatorController 비어있으면 정적 sprite 동작 (점진 도입)
 - **인-런 통계 / 결과 화면 시각화 →** [docs/systems/run-statistics.md](docs/systems/run-statistics.md). B-1a 분산 추적 — 자기 발사 시점 자기 PC 누적, 사망 RPC 페이로드 확장으로 막타 카운트. 호스트 마이그레이션 무관. 보스 처치 D13 모든 파티원 카운트. ✅ 2026-05-06
-- **메타 언락 / 영구 진행도 →** [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 위에 얹힘. sourceSkillId 인프라 ✅ 도입 완료 (D1 부활 가능). MVP = 스킬/무기 조합식/캐릭터/새로고침+N. 미구현
+- **메타 언락 / 영구 진행도 →** [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 동봉 ✅ (2026-05-12). MVP = 스킬/무기 조합식/캐릭터/새로고침+N. 분산형 조건 (각 SO 의 `unlockConditions` 필드). 멀티 D5 — `Player.CustomProperties` 자기 셋 공유. 결과 화면 토스트. Editor: `Tools > Meta Unlock Debug` 디버그 윈도우 + `ParrelSyncBridge` clone 별 PlayerPrefs 격리. D1 ("특정 스킬로 처치") 부활은 sourceSkillId 인프라 ✅ 도입으로 거의 무비용 (후속 별건).
 
 ### SSOT 규칙
 같은 정보는 한 곳에만 둔다. 상세는 [docs/README.md § SSOT 규칙](docs/README.md).

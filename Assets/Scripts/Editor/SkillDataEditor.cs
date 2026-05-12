@@ -67,6 +67,17 @@ namespace SwDreams.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("icon"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("description"));
 
+            // ===== 메타 언락 (meta-unlock.md §6 — 분산형 조건) =====
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("메타 언락 조건", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "비어있으면 처음부터 해금. 모든 조건이 AND 로 평가됨.\n" +
+                "조건 종류: KillCount(targetValue) / RunsCleared(targetValue) /\n" +
+                "BossDefeat·ZoneVisited·DeathByEnemy(targetIdA).",
+                MessageType.Info);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("unlockConditions"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("isHidden"));
+
             // ===== 레벨 스케일링 (항상) =====
             // ===== 레벨 스케일링 (혼돈 제외 — Lv1 고정) =====
             if (skillType != SkillType.Chaos)

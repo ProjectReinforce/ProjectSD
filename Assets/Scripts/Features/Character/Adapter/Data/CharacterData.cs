@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.Unlock.Domain;
 
 namespace SwDreams.Features.Character.Adapter.Data
 {
@@ -73,5 +75,13 @@ namespace SwDreams.Features.Character.Adapter.Data
 
         [Tooltip("피격 후 무적 시간 (초).")]
         public float iFrameDuration = 0.4f;
+
+        [Header("메타 언락 (meta-unlock.md §6 — 분산형 조건)")]
+        [Tooltip("신규 캐릭터에만 부여. 기본 캐릭터는 빈 리스트.\n" +
+                 "CharacterSelectUI 가 자기 로컬 셋으로 잠금 표시 (자기 PC 진행도로 직접 결정 — 네트워크 동기화 불필요).")]
+        public List<UnlockCondition> unlockConditions = new List<UnlockCondition>();
+
+        [Tooltip("미해금 상태 UI 에서 '???' 표시 여부.")]
+        public bool isHidden = false;
     }
 }

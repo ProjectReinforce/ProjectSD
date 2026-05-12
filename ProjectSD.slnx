@@ -1,9 +1,9 @@
 ﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="PhotonUnityNetworking.csproj" />
   <Project Path="PhotonRealtime.csproj" />
   <Project Path="PhotonVoice.csproj" />
   <Project Path="PhotonVoice.API.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="PhotonVoice.Editor.csproj" />
   <Project Path="DamageNumbersPro.csproj" />
   <Project Path="PhotonVoice.Utilities.Editor.csproj" />

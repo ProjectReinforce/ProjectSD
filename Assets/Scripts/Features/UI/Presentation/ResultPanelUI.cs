@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Features.Skill.Adapter.Data;
+using SwDreams.Features.Unlock.Adapter;
+using SwDreams.Features.Unlock.Domain;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -41,16 +44,40 @@ namespace SwDreams.Features.UI.Presentation
         private TMP_Text statsText;
         private TMP_Text buildsText;
         private TMP_Text bossChaosText;
+        private TMP_Text unlockNoticeText;   // meta-unlock — 자기 PC 신규 언락 리스트
         private Button retryButton;
         private Button exitButton;
 
         private GameResult currentResult;
+
+        // 자기 PC 의 신규 언락 캐시 (RunEnded 직후 UnlockTracker.OnNewUnlocks 발화 시 채워짐).
+        // Show 시 한 번 표시 후 클리어. D5 — 각 클라가 자기 신규 언락만 표시.
+        private readonly List<UnlockableId> pendingNewUnlocks = new List<UnlockableId>();
 
         private void Awake()
         {
             EnsureCanvasGroup();
             BuildUI();
             gameObject.SetActive(false);
+
+            // 메타 언락 — 자기 PC UnlockTracker 의 OnNewUnlocks 구독.
+            // gameObject 비활성 상태여도 컴포넌트 Awake 는 호출됨 → 구독 등록.
+            // RunEnded 직후 UnlockTracker 가 평가/발화 → 이 핸들러가 pendingNewUnlocks 캐싱.
+            var tracker = UnlockTracker.GetOrCreate();
+            tracker.OnNewUnlocks -= HandleNewUnlocks;  // idempotent (씬 race 방어)
+            tracker.OnNewUnlocks += HandleNewUnlocks;
+        }
+
+        private void OnDestroy()
+        {
+            if (UnlockTracker.Instance != null)
+                UnlockTracker.Instance.OnNewUnlocks -= HandleNewUnlocks;
+        }
+
+        private void HandleNewUnlocks(List<UnlockableId> unlocks)
+        {
+            if (unlocks == null || unlocks.Count == 0) return;
+            pendingNewUnlocks.AddRange(unlocks);
         }
 
         /// <summary>
@@ -126,6 +153,13 @@ namespace SwDreams.Features.UI.Presentation
                 new Vector2(0f, -130f), new Vector2(500f, 40f),
                 20, TextAlignmentOptions.Center);
 
+            // 신규 언락 (보스 혼돈 텍스트 아래) — meta-unlock §D8 토스트
+            unlockNoticeText = CreateTMP("UnlockNoticeText",
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -180f), new Vector2(600f, 120f),
+                18, TextAlignmentOptions.Center);
+            unlockNoticeText.color = new Color(1f, 0.85f, 0.3f);  // 금색 — 보상 강조
+
             // 버튼 영역 (하단)
             retryButton = CreateButton("RetryButton", "다시 하기",
                 new Vector2(0.5f, 0f), new Vector2(-100f, 80f), new Vector2(180f, 50f));
@@ -185,6 +219,82 @@ namespace SwDreams.Features.UI.Presentation
                 {
                     bossChaosText.text = "";
                 }
+            }
+
+            // 신규 언락 (자기 PC) — UnlockTracker.OnNewUnlocks 가 캐싱한 페이로드 표시.
+            PopulateUnlockNotice();
+        }
+
+        private void PopulateUnlockNotice()
+        {
+            if (unlockNoticeText == null) return;
+            if (pendingNewUnlocks.Count == 0)
+            {
+                unlockNoticeText.text = "";
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("🎉 신규 언락");
+            for (int i = 0; i < pendingNewUnlocks.Count; i++)
+            {
+                string line = FormatUnlockLine(pendingNewUnlocks[i]);
+                if (!string.IsNullOrEmpty(line)) sb.AppendLine("• " + line);
+            }
+            unlockNoticeText.text = sb.ToString().TrimEnd();
+
+            // 한 런당 1회 표시 후 캐시 클리어 — 다음 게임에 다시 누적.
+            pendingNewUnlocks.Clear();
+        }
+
+        private string FormatUnlockLine(UnlockableId u)
+        {
+            switch (u.type)
+            {
+                case UnlockableType.Skill:
+                {
+                    var db = LevelUpManager.Instance?.SkillDB;
+                    var s = db?.GetSkillById(u.id);
+                    string name = (s != null && !string.IsNullOrEmpty(s.skillName)) ? s.skillName : $"#{u.id}";
+                    return $"스킬: {name}";
+                }
+                case UnlockableType.Weapon:
+                {
+                    var db = GameManager.Instance?.WeaponDB;
+                    if (db == null || db.All == null || u.id < 0 || u.id >= db.All.Count)
+                        return $"무기: #{u.id}";
+                    var w = db.All[u.id];
+                    string name = (w != null && !string.IsNullOrEmpty(w.displayName)) ? w.displayName : $"#{u.id}";
+                    return $"무기: {name}";
+                }
+                case UnlockableType.Character:
+                {
+                    var db = GameManager.Instance?.CharacterDB;
+                    if (db == null || db.characters == null) return $"캐릭터: #{u.id}";
+                    for (int i = 0; i < db.characters.Length; i++)
+                    {
+                        var c = db.characters[i];
+                        if (c != null && c.id == u.id)
+                        {
+                            string name = !string.IsNullOrEmpty(c.displayName) ? c.displayName : $"#{u.id}";
+                            return $"캐릭터: {name}";
+                        }
+                    }
+                    return $"캐릭터: #{u.id}";
+                }
+                case UnlockableType.RefreshCharge:
+                {
+                    var catalog = GameManager.Instance?.UnlockCatalog;
+                    int amount = 1;
+                    if (catalog != null && catalog.refreshChargeNodes != null
+                        && u.id >= 0 && u.id < catalog.refreshChargeNodes.Count)
+                    {
+                        amount = catalog.refreshChargeNodes[u.id].amount;
+                    }
+                    return $"새로고침 +{amount}";
+                }
+                default:
+                    return "";
             }
         }
 
@@ -293,14 +403,9 @@ namespace SwDreams.Features.UI.Presentation
 
         private string GetSkillName(int skillId)
         {
-            // LevelUpManager가 참조하는 SkillDatabase에서 조회
-            if (LevelUpManager.Instance != null)
-            {
-                // LevelUpManager → SkillDatabase 접근은 현재 구조에서 직접 안 됨
-                // GameManager에 SkillDatabase 접근자가 없으므로 ID로 표시
-                // TODO: SkillDatabase를 GameManager에서 접근 가능하게 하면 이름 조회 가능
-            }
-            return $"스킬#{skillId}";
+            // LevelUpManager.SkillDB getter 노출(Unit 2)로 SkillDatabase 접근 가능.
+            var s = LevelUpManager.Instance?.SkillDB?.GetSkillById(skillId);
+            return (s != null && !string.IsNullOrEmpty(s.skillName)) ? s.skillName : $"스킬#{skillId}";
         }
 
         private string GetChaosName(ChaosEffectType type)

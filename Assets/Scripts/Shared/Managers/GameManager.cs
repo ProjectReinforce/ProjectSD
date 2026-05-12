@@ -11,6 +11,7 @@ using UnityEngine;
 using Photon.Pun;
 using SwDreams.Shared.Managers;
 using SwDreams.Shared.Data;
+using SwDreams.Shared.Domain.Events;
 
 namespace SwDreams.Shared.Managers
 {
@@ -59,6 +60,10 @@ namespace SwDreams.Shared.Managers
         // R3 마이크 필터 DB. DropSpawner 가 픽업 결정 시 / MicFilterController 가 인덱스 해결 시 사용.
         [SerializeField] private MicFilterDatabase micFilterDatabase;
 
+        // 메타 언락 카탈로그 (RefreshCharge 마일스톤 등 SO 없는 보상). UnlockTracker 가 평가.
+        // 비어있으면 RefreshCharge 보너스 = 0 (스킬/무기/캐릭터 unlockConditions 평가는 별도로 동작).
+        [SerializeField] private SwDreams.Features.Unlock.Adapter.Data.UnlockCatalog unlockCatalog;
+
         /// <summary>
         /// 게임플레이 설정 SO. 읽기 전용 접근.
         /// null 체크 후 사용 권장:
@@ -94,6 +99,11 @@ namespace SwDreams.Shared.Managers
         /// MicFilterController 가 인덱스 → MicFilterData 해결.
         /// </summary>
         public MicFilterDatabase MicFilterDB => micFilterDatabase;
+
+        /// <summary>
+        /// 메타 언락 카탈로그 (UnlockTracker 가 평가). null 가능 — 그 경우 RefreshCharge 마일스톤 0.
+        /// </summary>
+        public SwDreams.Features.Unlock.Adapter.Data.UnlockCatalog UnlockCatalog => unlockCatalog;
 
         // Application 서비스
         private ExperienceService expService = new ExperienceService();
@@ -132,6 +142,18 @@ namespace SwDreams.Shared.Managers
             // B-1a: 인-런 통계 누적기 인스턴스 보장 (run-statistics.md §5).
             // 게임 시작 직후 첫 데미지/킬 RPC 가 도착해도 안전하게 카운트되도록.
             SwDreams.Features.Stats.Adapter.LocalStatsRecorder.GetOrCreate();
+
+            // 메타 진행도 영구 누적 인스턴스 보장 (meta-unlock.md §11).
+            // RunEventBus 를 통해 LocalStatsRecorder 의 OnKill/OnBossDefeat/OnDeath 와
+            // GameManager 의 RunEnded 발화를 자기 PC PlayerPrefs 에 누적.
+            // 등록 순서: MetaProgressStore 가 먼저 (totalRuns/totalClears 갱신) → UnlockTracker 가
+            // 그 후 평가 (RunEnded 멀티캐스트 등록 순서대로).
+            SwDreams.Features.Unlock.Adapter.MetaProgressStore.GetOrCreate();
+            SwDreams.Features.Unlock.Adapter.UnlockTracker.GetOrCreate();
+
+            // 멀티플레이 권위 모델 (D5) — 자기 unlocked 셋을 Photon CustomProperties 로 공유.
+            // OnJoinedRoom 에 자동 push (이미 룸이면 OnEnable 에서 push).
+            SwDreams.Features.Unlock.Adapter.UnlockSetSync.GetOrCreate();
         }
 
         private void OnDestroy()
@@ -181,6 +203,24 @@ namespace SwDreams.Shared.Managers
         {
             CurrentState = newState;
             OnStateChanged?.Invoke(newState);
+            EmitRunEndedIfTerminal(newState);
+        }
+
+        // 같은 런에서 GameClear/GameOver 가 두 번 진입(ChangeState + RPC_ChangeState 등)해도
+        // RaiseRunEnded 가 1회만 발화되도록 throttle. 비종료 state 진입 시 자동 리셋.
+        private bool runEndedEmitted;
+
+        private void EmitRunEndedIfTerminal(GameState s)
+        {
+            bool terminal = (s == GameState.GameClear || s == GameState.GameOver);
+            if (!terminal)
+            {
+                runEndedEmitted = false;
+                return;
+            }
+            if (runEndedEmitted) return;
+            runEndedEmitted = true;
+            RunEventBus.Instance.RaiseRunEnded(s == GameState.GameClear);
         }
 
         /// <summary>
@@ -215,6 +255,7 @@ namespace SwDreams.Shared.Managers
             CurrentState = newState;
             OnStateChanged?.Invoke(newState);
             Debug.Log($"[GameManager] 상태 전환(Network): {newState}");
+            EmitRunEndedIfTerminal(newState);
         }
     }
 }

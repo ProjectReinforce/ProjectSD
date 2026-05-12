@@ -12,6 +12,8 @@ using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Domain.ValueObjects;
 using SwDreams.Shared.Managers;
 using SwDreams.Features.Skill.Adapter.TriggerEffects;
+using SwDreams.Features.Unlock.Adapter;
+using Photon.Pun;
 
 namespace SwDreams.Features.Skill.Adapter
 {
@@ -139,6 +141,21 @@ namespace SwDreams.Features.Skill.Adapter
         private GameplayConfig GetConfig()
         {
             return GameManager.Instance?.Config;
+        }
+
+        // ===== 메타 언락 ownerActor 캐싱 =====
+
+        // SkillManager 는 각 플레이어 자식 오브젝트 — 부모(PlayerStub) 의 PhotonView.Owner 가 그 플레이어.
+        // GenerateChoices 안에서 자기 owner 의 unlock 셋을 조회하기 위해 캐싱.
+        private int cachedOwnerActor = -1;
+
+        private int GetOwnerActor()
+        {
+            if (cachedOwnerActor > 0) return cachedOwnerActor;
+            var pv = GetComponentInParent<PhotonView>();
+            if (pv == null || pv.Owner == null) return -1;
+            cachedOwnerActor = pv.Owner.ActorNumber;
+            return cachedOwnerActor;
         }
 
         // ===== PlayerStats 접근 헬퍼 =====
@@ -540,10 +557,19 @@ namespace SwDreams.Features.Skill.Adapter
             }
 
             // 2) 일반 후보 수집 (최대 레벨 제외, 슬롯 꽉 차면 미보유 제외)
+            int ownerActor = GetOwnerActor();
             List<SkillData> normalCandidates = new List<SkillData>();
             for (int i = 0; i < pool.Length; i++)
             {
                 if (pool[i] == null) continue;
+
+                // 메타 언락: 조건이 있으면 그 플레이어의 unlock 셋 검사 (D5 자기 진행도가 자기 게임에 반영).
+                // unlockConditions 비어있으면 처음부터 해금 — 통과.
+                if (pool[i].unlockConditions != null && pool[i].unlockConditions.Count > 0)
+                {
+                    if (!UnlockSetSync.IsSkillUnlocked(ownerActor, pool[i].skillId))
+                        continue;
+                }
 
                 // 진화 스킬과 중복 방지
                 if (evolutionChoice != null && pool[i].skillId == evolutionChoice.skillId)

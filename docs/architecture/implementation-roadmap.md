@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-06 (Phase 7-5 run-statistics ✅ 마이그레이션 — 인-런 통계 시스템 도입, sourceSkillId 인프라 ✅)
+최종 업데이트: 2026-05-12 (Phase 7-5 meta-unlock ✅ — 영구 언락 시스템 + 멀티 D5 + 결과 화면 토스트. Phase 8-1 Platform 추상화 부분 동봉 ✅. N22 known-issues 등재)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -16,7 +16,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 > **운영 룰 (마이그레이션 SSOT):** R/U/Phase 항목이 ✅ 처리되는 순간 → 본문은 [completed-work.md](completed-work.md) 로 이동, 본 문서에서는 1줄 요약 + 링크만 남긴다. 절차: ① completed-work 카테고리 섹션에 bullet 추가 (R→`시스템/아키텍처`, U→`메뉴/UI`) ② roadmap 본문을 `### R{N}. {제목} ✅ (YYYY-MM-DD) → [completed-work.md](completed-work.md)` 1줄로 교체 ③ Top 5 큐에서 제거 + 다음 후보 1개 승격 ④ 시스템 spec 헤더(있으면) ⬜/🟡 → ✅ 갱신 ⑤ 진행 요약 표 갱신 (Phase 단위 변동 시) ⑥ 본 문서 최종 업데이트 라인 갱신. 모든 변경은 사용자 승인 diff 후 일괄 적용. 우선순위는 의존성·블로킹·사용자 임팩트 기준. 진행 중에 사용자 의사결정 변경되면 즉시 갱신.
 >
-> 마지막 갱신: **2026-05-06** (Phase 7-5 run-statistics ✅ 마이그레이션 — Top 5 변동 없음, 7-5 잔여 = meta-unlock 만)
+> 마지막 갱신: **2026-05-12** (Phase 7-5 meta-unlock ✅ 마이그레이션 — Top 5 큐에서 제거, Phase 5-2/5-3 컨텐츠가 1순위 후보로 승격)
 
 | 순위 | 항목 | 근거 | 의존성/블로킹 | 예상 |
 |---|---|---|---|---|
@@ -28,7 +28,7 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 
 **선행 가능 그룹** (다른 작업 안 끝나도 시작 OK): R10, Phase 5-2/5-3, R4, Phase 8-5 B, Phase 8-1 A 모두 독립.
 **병렬 가능 그룹**: R10 + Phase 5 + Phase 8-5 B + Phase 8-1 A 가 서로 다른 파일 영역이라 동시 진행 OK.
-**다음 진입 후보** (Top 5 다 끝났을 때): R5 (혼돈 글로벌 설정 이전), Phase 8-5 C (스킬 SO 통합), Phase 3-4 화면 밖 적 간소화 AI.
+**다음 진입 후보** (Top 5 다 끝났을 때): R15-A (SkillDB 접근자 — 5분 / R15-B/#9 결과화면 카드 선결), R16 다운/리바이브 협력 부활, R5 (혼돈 글로벌 설정 이전), Phase 8-5 C (스킬 SO 통합), Phase 3-4 화면 밖 적 간소화 AI.
 
 ---
 
@@ -43,8 +43,8 @@ Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반�
 | 4. 레벨업 시스템 | ✅ 완료 | 6슬롯/진화/패시브/수치 표시/타임아웃/StatBoost 전환 모두 동작 (2026-04-25 검증) |
 | 5. 나머지 스킬 + 혼돈 | 🟡 진행 중 (**현재 브랜치 `Hyeon-Woo`**) | Phase 8-A/B 리팩터 완료. 스킬 #11~24 + 혼돈 13종 잔여 |
 | 6. 보스 + 네트워크 고급 | 🟡 거의 완료 | 보스 6종 변형, 사망/부활, 호스트 이탈 동작. UI 표시 잔여 |
-| 7. 마무리 + 밸런싱 | 🟡 부분 시작 | 결과 화면/경험치 곡선 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
-| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-2 ✅, 8-5 A ✅) | 8-2 Voice 1차 ✅ (2026-04-27). 8-5 A 코어+임포터 ✅ (2026-04-28). 8-1/8-3/8-4/8-5 B~D ⬜ |
+| 7. 마무리 + 밸런싱 | 🟡 부분 시작 (7-5 ✅) | 결과 화면/경험치 곡선/인-런 통계/메타 언락 완료. 수치 튜닝/비주얼/플레이테스트 잔여 |
+| 8. 출시 인프라 (Voice / Platform SDK / Localization) | 🟡 진행 중 (8-1 추상화 ✅, 8-2 ✅, 8-5 A ✅) | 8-1 Platform Phase A 추상화 ✅ (2026-05-12, meta-unlock 동봉). 8-2 Voice 1차 ✅ (2026-04-27). 8-5 A 코어+임포터 ✅ (2026-04-28). 8-1 후크/8-3/8-4/8-5 B~D ⬜ |
 | 드랍/장비/퀘스트 (Phase 0~7) | 🟡 코드 거의 완료 | 코드 ledger = [completed-work.md § 드랍 시스템 구현](completed-work.md). HUD/유저 Unity 배선/Quest 핸들러 잔여 — 본 문서 § DQ |
 | 신규 잔여 (R/U) | 🟡 미시작 | 방어력/자연회복/i-frame/메뉴 등 — 본 문서 § R, § U 참조 |
 
@@ -220,11 +220,9 @@ movementStrategy.UpdateMovement(transform, cachedTarget, moveSpeed);
 - [ ] 성능 프로파일링
 - [ ] 빌드 테스트
 
-### 7-5. 메타 진행도 + 결과 화면 통계 🟡
+### 7-5. 메타 진행도 + 결과 화면 통계 ✅
 - [x] [`run-statistics`](../systems/run-statistics.md) ✅ (2026-05-06) → [completed-work.md](completed-work.md). B-1a 분산 추적 + sourceSkillId 인프라 + 결과 화면 시각화. 보스 D13 모든 파티원 카운트.
-- [ ] [`meta-unlock`](../systems/meta-unlock.md) 구현 — 영구 언락 (스킬 / 무기 조합식 / 캐릭터 / 새로고침 +N) — **Phase 8-1 Platform 추상화 선행 의존**, ~6.25일
-- [ ] meta-unlock D1 ("특정 스킬로 처치") 부활 — sourceSkillId 인프라 ✅ 도입 완료, 메타 언락 구현 시 거의 무비용으로 동봉
-- 잔여 약 **6.25일** (run-statistics 4일 ✅ 차감). plan: `~/.claude/plans/synchronous-pondering-taco.md`
+- [x] [`meta-unlock`](../systems/meta-unlock.md) ✅ (2026-05-12) → [completed-work.md](completed-work.md). Phase 8-1 Platform Phase A 동봉 + Domain/Adapter + 멀티 D5 (Photon CustomProperties) + 결과 화면 토스트. ParrelSync 격리 bridge 도입. plan: `~/.claude/plans/synchronous-pondering-taco.md`.
 
 ---
 
@@ -309,6 +307,64 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 ### R14. 인게임/대기실 보이스 HUD ✅ (2026-05-01, 커밋 `0b1b23ff1`) → [completed-work.md](completed-work.md)
 
 좌측 별도 VoicePanel(대기실/인게임 동일 prefab) + 호버 알파 + AudioGainBoost(0~2 boost) + 마이크 민감도 3곳 양방향 + Discord 패턴 마이크 활성도 아이콘. LobbyPlayer.prefab Phase 8-2 보이스 셋업 보완 — 대기실 음성 송수신 활성화. 후속 별건: U4 ESC 메뉴 팀원 섹션(PerUserVoiceSettings 싱글턴 공유로 자동 정합) / LobbyPlayerEntry.prefab 잔존 빈 VoiceSlider 자식 정리. 상세 [voice-chat.md](../systems/voice-chat.md).
+
+### R15. SkillDatabase 글로벌 접근자 + 결과 화면 카드 디자인 (2026-05-07 결정)
+
+**증상:** [ResultPanelUI.cs:294-304](../../Assets/Scripts/Features/UI/Presentation/ResultPanelUI.cs#L294) 에서 스킬 ID → 이름 변환 경로가 없어 결과 화면에 `스킬#13` 식으로 출력. [GameManager](../../Assets/Scripts/Shared/Managers/GameManager.cs#L48) 가 이미 `CharacterDB / EssenceDB / WeaponDB / StatBoostDB / MicFilterDB` 5종 글로벌 접근자를 제공 중인데 **SkillDB 만 빠진 상태**.
+
+**잔여 작업 (R15-A — SkillDB 접근자, ~5분):**
+- [ ] `GameManager` 에 `[SerializeField] private SkillDatabase skillDatabase;` + `public SkillDatabase SkillDB => skillDatabase;` 추가
+- [ ] **사용자 작업:** Inspector 에서 GameManager 오브젝트의 새 슬롯에 기존 `SkillDatabase.asset` 드래그 (§ 6.8 SO 직접 수정 금지 룰)
+- [ ] [ResultPanelUI.GetSkillName()](../../Assets/Scripts/Features/UI/Presentation/ResultPanelUI.cs#L294) 에서 `GameManager.Instance.SkillDB.GetById(skillId)?.skillName` 으로 교체
+
+**잔여 작업 (R15-B — 결과 화면 카드 디자인, R15-A 완료 후):**
+디자인 명세는 [run-statistics.md § 7](../systems/run-statistics.md). 요약:
+- 4명 카드 그리드 (가해 1위 = MVP 황금 배지, 나머지 3명은 두드러진 항목 1개 작은 표창)
+- 카드 = 캐릭터 초상화 / 닉네임 / 가해 데미지 큰 숫자 / 보조 통계 4개 / 스킬 6슬롯 아이콘 / 메인 스킬 강조
+- 카드 호버/클릭 → 상세 패널 슬라이드 인 (스킬별 데미지 막대 차트 + 정수/무기/혼돈)
+- 솔로(인원=1) 시 카드 1장만 크게 (별도 화면 분기 X, 같은 컴포넌트 스케일업)
+- 빌드 후크 = **약** (정보 노출만, 자동 빌드 명명·"이 빌드 다시 하기" 버튼 X — 추후 확장)
+
+**의존성:** R15-A 가 R15-B 의 선결 (스킬 아이콘/이름 없으면 카드 디자인 의미 X).
+
+### R16. 다운/리바이브 — 협력 부활 (2026-05-07 결정)
+
+**의도:** 기존 [RespawnManager:97-122](../../Assets/Scripts/Features/Character/Adapter/RespawnManager.cs#L97) 의 10초 자동 부활은 그대로 유지하고, 그 동안 아군이 와서 길게 누르면 **즉시 부활** add-on. 솔로/연결 끊긴 상황도 안 깨지고, 협동 시 인센티브만 추가. 게임 룰 측 정의 = [rules.md § 3](../game-design/rules.md).
+
+**확정 파라미터:**
+| 항목 | 값 |
+|---|---|
+| 인터랙션 거리 | 1.5m (Pickup 거리보다 약간 가깝게 — 아군 곁을 지킨다는 의도) |
+| 홀드 시간 | 2초 |
+| 부활 후 HP | 자동=50% / 협력=50% 동일 (메리트는 "시간 단축"으로 충분) |
+| 부활 위치 | 시신 자리 그대로 (살리는 사람이 안전한 곳에서 작업) |
+| 동시 부활자 | 1명만 가능 |
+| 인터럽트 | 부활자 이동/공격 시 캔슬, 데미지로는 캔슬 X |
+| 시각 피드백 | 다운자 머리 위 자동 부활 카운트다운 게이지 + 부활자 진행도 게이지 (별도 색) |
+
+**잔여 작업:**
+- [ ] **다운 상태 정의** — `PlayerHealth` 또는 `RespawnManager` 에 `IsDown` 플래그. 기존 자동 부활 타이머 진행 중 = 다운 상태로 매핑
+- [ ] **부활 인터랙션 핸들러** — `PlayerPickupInteractor` (이미 상호작용 키 보유) 에 다운된 아군 검출 후크 추가. 거리 1.5m + 시야선 검사
+- [ ] **호스트 권위 RPC** — 클라 → `RPC_RequestRevive(targetViewID)` (RpcTarget.MasterClient) → 호스트 거리/홀드 시간 검증 → 기존 `RPC_ExecuteRespawn` 재사용. 클라 측은 자기 홀드 진행만 표시 (예측 X)
+- [ ] **이동/공격 캔슬** — 부활자 이동 입력 / 공격 입력 감지 시 클라가 호스트에 `RPC_CancelRevive` 발화. 데미지로는 캔슬 X (적 한복판 인내 게임화)
+- [ ] **시각 피드백 UI** — 다운자 머리 위 게이지 2종(자동 카운트다운 + 협력 진행도). World Indicator 시스템 위에 얹기 검토
+- [ ] **photon-sync-auditor 호출** (네트워크 RPC 신규)
+- [ ] **검증** — ParrelSync 4 인스턴스: 동시 2명이 같은 다운자에게 시도 시 1명만 진행 / 부활 도중 부활자 사망 시 자동 캔슬 / 솔로 시 협력 경로 호출 안 됨
+
+**의존성:** 없음 (선행 가능).
+
+### R17. 핑 / 이모지 통신 (후순위, 2026-05-07 결정)
+
+**의도:** 채팅은 도입 X. 4인 좁은 화면 협동에서 위치/의사 전달 최소 단위. 출시 직전 추가.
+
+**범위:**
+- **월드 핑 1종** — 단축키 1개 + 마우스 위치에 마커 (대표 메시지 1~3종: "여기 봐"/"도와줘"/"위험"). World Indicator 시스템 위에 얹기 가능
+- **HUD 이모지 휠** — V 키 누른 채 방향키/마우스 → 6~8종 표정. 캐릭터 머리 위 1.5초 표시. 분위기/감정 전달용
+- 학습 비용 절감 위해 단축키 1개 = 위치 핑 / V 키 = 이모지 휠 분리 (LoL 식 단일 휠 통합 X)
+
+**잔여 작업:** Top 5 진입 시 spec 분리 작성 후 착수. 본 항목은 등재 only.
+
+**의존성:** Localization Phase B 와 함께 처리하면 핑/이모지 라벨도 키 기반으로 도입 가능.
 
 ---
 
@@ -408,14 +464,13 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 
 출시 순서: **Stove Indie → Steam** (한국 게임 등급 분류를 Stove 로 먼저 획득).
 
-### 8-1. Platform 추상화 (Phase A) — 선행 가능
-- [ ] `Assets/Scripts/Shared/Platform/{Domain,Adapter}/` 폴더 생성
-- [ ] `IPlatformService` 인터페이스 + `PlatformUserProfile` VO + `AchievementId` 상수 (Domain)
-- [ ] `LocalPlatformService` (Debug.Log stub) + `PlatformBootstrap` 싱글턴 (Adapter)
-- [ ] `ResultManager`, `GameStatTracker`, `Boss` 에 후크 4~5곳 추가 (`?.` 안전 호출)
-- [ ] `architecture-guardian` 통과 확인
+### 8-1. Platform 추상화 (Phase A) 🟡 — 추상화 ✅, 후크 잔여
+- [x] `Assets/Scripts/Shared/Platform/{Domain,Adapter}/` 폴더 + `IPlatformService` + `PlatformUserProfile` + `PlatformType` + `AchievementId` (Domain) — 2026-05-12 ✅
+- [x] `LocalPlatformService` (PlayerPrefs 백엔드) + `PlatformBootstrap` (GetOrCreate lazy) — 2026-05-12 ✅
+- [x] `architecture-guardian` 통과 — 2026-05-12 ✅
+- [ ] `ResultManager`, `GameStatTracker`, `Boss` 에 `?.UnlockAchievement` / `?.IncrementStat` / `?.SubmitRunResult` 후크 4~5곳 추가 (SDK 도입 직전 작업)
 
-> **컨텐츠 작업과 병행 가능.** 코드 변경 최소, 게임 동작 변화 없음. 상세 [../systems/platform-integration.md § 12](../systems/platform-integration.md)
+> **추상화 부분은 meta-unlock 작업 시 동봉 완료** (2026-05-12). 잔여는 후크 후행 — Stove/Steam SDK 도입(8-3/8-4) 직전에 일괄 적용. 상세 [../systems/platform-integration.md § 7](../systems/platform-integration.md).
 
 ### 8-2. Photon Voice 2 통합 ✅ 1차 (2026-04-27) → [completed-work.md](completed-work.md)
 

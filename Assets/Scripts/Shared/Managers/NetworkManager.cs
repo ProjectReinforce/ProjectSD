@@ -114,6 +114,12 @@ namespace SwDreams.Shared.Managers
             // 이로 인해 다시하기 시 호스트만 대기실 가도 클라가 강제로 따라가는 부작용.
             // 게임 시작은 명시적 RPC_LoadGameScene 으로 모든 클라 동시 LoadScene 처리.
             PhotonNetwork.AutomaticallySyncScene = false;
+
+            // 메타 언락 — 룸 입장 시점부터 자기 unlock 셋을 PhotonPlayer.CustomProperties 로 공유.
+            // GameScene 진입 후가 아니라 MenuScene/Lobby 단계에서 미리 PushSelf 해야
+            // 게임 시작 시점에 다른 플레이어 props 가 호스트에 도달 완료 (첫 레벨업 race 방어).
+            // UnlockSetSync 는 DontDestroyOnLoad + GetOrCreate 라 chain 으로 UnlockTracker/MetaProgressStore/PlatformBootstrap 자동 초기화.
+            SwDreams.Features.Unlock.Adapter.UnlockSetSync.GetOrCreate();
         }
 
         private void Start()

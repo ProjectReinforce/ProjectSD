@@ -50,6 +50,9 @@ namespace SwDreams.Features.Progression.Adapter
         [Header("데이터")]
         [SerializeField] private SkillDatabase skillDatabase;
 
+        /// <summary>UnlockTracker 등 외부 시스템이 SkillDatabase 에 접근하기 위한 read-only 노출.</summary>
+        public SkillDatabase SkillDB => skillDatabase;
+
         [Header("설정")]
         [SerializeField] private float selectionTimeout = 15f;
 
@@ -512,12 +515,14 @@ namespace SwDreams.Features.Progression.Adapter
             }
         }
 
-        /// <summary>호스트 측: actor 의 남은 새로고침 횟수 (lazy init = base default).</summary>
+        /// <summary>호스트 측: actor 의 남은 새로고침 횟수 (lazy init = base + 메타 BonusRefreshCharges).</summary>
         private int GetRefreshRemainingHostSide(int actorNumber)
         {
             if (!playerRefreshRemaining.TryGetValue(actorNumber, out int remaining))
             {
-                remaining = BaseRefreshCharges;
+                // D5 — 자기 진행도가 자기 게임에 반영. 그 actor 의 영구 RefreshCharge 보너스 가산.
+                int bonus = SwDreams.Features.Unlock.Adapter.UnlockSetSync.GetRefreshBonusFor(actorNumber);
+                remaining = BaseRefreshCharges + bonus;
                 playerRefreshRemaining[actorNumber] = remaining;
             }
             return remaining;
@@ -533,11 +538,16 @@ namespace SwDreams.Features.Progression.Adapter
                 if (PhotonNetwork.IsMasterClient)
                     return GetRefreshRemainingHostSide(actor);
                 // 클라 캐시 — 호스트가 RPC_SyncRefreshRemaining 으로 보낸 값.
-                // 첫 sync 이전(sentinel < 0)에는 BaseRefreshCharges 로 fallback —
-                // 호스트가 lazy init 으로 같은 값을 갖고 있으므로 표시·차감 모두 일관.
-                return clientRefreshRemainingCache < 0
-                    ? BaseRefreshCharges
-                    : clientRefreshRemainingCache;
+                // 첫 sync 이전(sentinel < 0)에는 BaseRefreshCharges + 자기 BonusRefreshCharges 로 fallback.
+                // 호스트가 lazy init 시 동일 합산식으로 같은 값을 갖고 있으므로 표시·차감 모두 일관.
+                if (clientRefreshRemainingCache < 0)
+                {
+                    int selfBonus = SwDreams.Features.Unlock.Adapter.UnlockTracker.Instance != null
+                        ? SwDreams.Features.Unlock.Adapter.UnlockTracker.Instance.BonusRefreshCharges
+                        : 0;
+                    return BaseRefreshCharges + selfBonus;
+                }
+                return clientRefreshRemainingCache;
             }
         }
 

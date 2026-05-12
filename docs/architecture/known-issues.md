@@ -11,11 +11,46 @@ ProjectSD 의 알려진 버그/회귀 트래커. 신규 발견 → 분석 → �
 - **B (기존 미체크)**: 두 원본 문서에 있었던 버그 중 잔존
 - **V (검증 필요)**: 코드상 완료로 보이지만 실 동작 미확인. 검증 후 fix 또는 ledger 이동
 
-마지막 정리: 2026-04-29 (N15+N17 ✅ 호스트 권위 RPC 인프라로 해소 — 이중 발사 fix 포함)
+마지막 정리: 2026-05-12 (N22 추가 — 다시하기 카운트다운 중 Photon Voice race disconnect)
 
 ---
 
 ## N — 신규 추가
+
+### N22. 다시하기 → 대기실 카운트다운 중 Photon Voice race disconnect
+
+**증상:** 다시하기 → 대기실 진입 → 카운트다운 도중 룸 떠나서 방 리스트 화면으로 전환. 콘솔에 다음 로그 발생:
+
+```
+Operation LeaveRoom (254) not allowed on current server (MasterServer)
+@ Photon.Voice.VoiceFollowClient:FollowLeader (VoiceFollowClient.cs:250)
+
+Disconnected from Photon: DisconnectByClientLogic
+@ NetworkManager.OnDisconnected
+```
+
+**원인:** Photon Voice 의 `VoiceFollowClient.FollowLeader` 가 main PUN client 의 state 변화를 따라가는 동기화 로직.
+1. 다시하기 → main PUN client 가 LeaveRoom → MasterServer state 로 천이
+2. Voice client 가 main state 변화 감지 → 뒤늦게 OpLeaveRoom 시도
+3. 이미 MasterServer state → OpLeaveRoom (254) 거부 (서버 정책상 MasterServer 에서는 LeaveRoom 불가)
+4. Voice client 자체 Disconnect → main client 도 동반 Disconnect (`DisconnectByClientLogic`)
+5. 결과: 룸을 떠나 방 리스트로 강제 전환
+
+**관련:** R14 Photon Voice 통합 후행. 메타 언락 작업과 무관 (검증 완료 — UnlockSetSync 의 GetOrCreate 가 NetworkManager.Awake 에서 호출되는 흐름은 LeaveRoom 과 무관).
+
+**처리 방향 (후속 작업):**
+- 옵션 A: `ResultManager.OnRetry` 직전에 `PunVoiceClient.Instance.Disconnect()` 명시 호출 → Voice 가 main 보다 먼저 깔끔하게 떠남
+- 옵션 B: `VoiceFollowClient.AutoFollowMaster = false` 설정 후 다시하기/방 이탈 흐름에서 명시적 FollowLeader 호출
+- 옵션 C: PUN client 의 state 가 MasterServer 일 때 Voice 의 OpLeaveRoom 호출을 건너뛰는 가드 (Photon Voice 측 패치 — 권장 X, 외부 SDK 수정은 업데이트 시 손실)
+
+**우선순위:** Medium. 다시하기 흐름의 사용자 경험을 직접 깨뜨림. 메타 언락 작업 완료 후 별건으로 처리.
+
+**연관 파일:**
+- `Assets/Scripts/Shared/Managers/ResultManager.cs` (OnRetry 흐름)
+- `Assets/FromStore/Photon/PhotonVoice/Code/VoiceFollowClient.cs` (외부 SDK — 참조만)
+- `Assets/Scripts/Features/Voice/Adapter/VoiceController.cs` (Voice 측 관리자)
+
+---
 
 ### N19. TwoPhase 스킬 (장검 진화 검광 등) 호스트 권위 RPC 미지원 — Phase 2 후행
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using SwDreams.Features.Stats.Domain;
+using SwDreams.Shared.Domain.Events;
 
 namespace SwDreams.Features.Stats.Adapter
 {
@@ -76,14 +77,19 @@ namespace SwDreams.Features.Stats.Adapter
             stats.Kills++;
             if (sourceSkillId > 0)
                 stats.GetOrCreate(sourceSkillId).KillCount++;
+
+            // 메타 진행도(영구 누적) 발화 — Unlock Feature 가 RunEventBus 구독.
+            RunEventBus.Instance.RaiseKill(sourceSkillId, enemyId);
         }
 
         /// <summary>보스 처치 — RPC_BossDied 진입점, 모든 파티원 무조건 호출 (D13).</summary>
         public void OnBossDefeat(int bossId)
         {
             // run-statistics: 보스 처치는 모든 파티원에게 +1 표시 (가해자 매칭 안 함).
-            // meta-unlock 의 BossDefeatedIds 셋 갱신은 향후 메타 진행도 도입 시 여기서 hook.
             stats.Kills++;
+
+            // 메타 진행도(영구 누적): BossDefeatedIds 셋 갱신.
+            RunEventBus.Instance.RaiseBossDefeat(bossId);
         }
 
         // ===== 받은 데미지 / 사망 =====
@@ -97,7 +103,8 @@ namespace SwDreams.Features.Stats.Adapter
         public void OnDeath(int attackerEnemyId)
         {
             stats.Deaths++;
-            // attackerEnemyId 는 향후 메타 진행도 DeathByEnemy 조건 진입점.
+            // 메타 진행도(영구 누적): DeathByEnemy 조건 진입점.
+            RunEventBus.Instance.RaiseDeath(attackerEnemyId);
         }
 
         // ===== Snapshot / Reset =====

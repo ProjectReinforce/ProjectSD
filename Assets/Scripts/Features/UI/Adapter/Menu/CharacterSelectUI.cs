@@ -1,6 +1,7 @@
 using UnityEngine;
 using SwDreams.Features.UI.Adapter.Menu;
 using SwDreams.Features.Character.Adapter.Data;
+using SwDreams.Features.Unlock.Adapter;
 using UnityEngine.UI;
 using TMPro;
 using SwDreams.Shared.Data;
@@ -154,12 +155,34 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
                 var data = characters[i];
 
+                // 메타 언락: 자기 PC 기준 자기 진행도로 직접 결정 (D5).
+                // unlockConditions 비어있으면 처음부터 해금. 조건 있고 미충족이면 잠금 처리.
+                bool unlocked = true;
+                if (data.unlockConditions != null && data.unlockConditions.Count > 0)
+                {
+                    var tracker = UnlockTracker.Instance;
+                    unlocked = tracker != null && tracker.IsCharacterUnlocked(data.id);
+                }
+
                 // portrait 세팅
                 var portraitTransform = characterButtons[i].transform.Find("Portrait");
-                if (portraitTransform != null && data.portrait != null)
+                if (portraitTransform != null)
                 {
                     var img = portraitTransform.GetComponent<Image>();
-                    if (img != null) img.sprite = data.portrait;
+                    if (img != null)
+                    {
+                        if (unlocked && data.portrait != null)
+                        {
+                            img.sprite = data.portrait;
+                            img.color = Color.white;
+                        }
+                        else if (!unlocked)
+                        {
+                            // 잠금 상태 — 어둡게 처리 (별도 lock 아이콘 추가는 후속).
+                            if (data.portrait != null) img.sprite = data.portrait;
+                            img.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+                        }
+                    }
                 }
 
                 // displayName 세팅
@@ -167,16 +190,21 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 if (nameTransform != null)
                 {
                     var text = nameTransform.GetComponent<TMP_Text>();
-                    if (text != null) text.text = data.displayName;
+                    if (text != null)
+                        text.text = unlocked ? data.displayName : "???";
                 }
 
-                // 클릭 리스너
+                // 클릭 리스너 — 잠금 상태면 클릭 비활성화.
+                characterButtons[i].interactable = unlocked;
                 int capturedId = data.id;
                 int capturedIndex = i;
-                characterButtons[i].onClick.AddListener(() =>
+                if (unlocked)
                 {
-                    SelectCharacter(capturedId, capturedIndex);
-                });
+                    characterButtons[i].onClick.AddListener(() =>
+                    {
+                        SelectCharacter(capturedId, capturedIndex);
+                    });
+                }
             }
         }
 

@@ -5,6 +5,7 @@ using Photon.Pun;
 using SwDreams.Features.Character.Domain.ValueObjects;
 using SwDreams.Features.Weapon.Adapter.Data;
 using SwDreams.Features.Weapon.Domain;
+using SwDreams.Features.Unlock.Adapter;
 using SwDreams.Shared.Domain.Interfaces;
 using SwDreams.Shared.Managers;
 
@@ -300,6 +301,11 @@ namespace SwDreams.Features.Weapon.Adapter
             consumedFromEquipped = null;
             if (Database == null) return null;
 
+            // 메타 언락: 자기 owner 의 unlock 셋으로 결과 무기 매칭 필터링 (D5).
+            // photonView.Owner 는 호스트가 다른 플레이어 인벤토리 결정 시에도 그 플레이어로 셋업됨.
+            int ownerActor = (photonView != null && photonView.Owner != null)
+                ? photonView.Owner.ActorNumber : -1;
+
             foreach (var candidate in Database.All)
             {
                 if (candidate == null) continue;
@@ -308,6 +314,13 @@ namespace SwDreams.Features.Weapon.Adapter
 
                 if (!ContainsId(recipe.inputWeaponIds, incomingId)) continue;
                 if (!IsMultisetSubset(recipe.inputWeaponIds, combinedIds)) continue;
+
+                // 메타 언락 조건 — 합성 결과물에 unlockConditions 있으면 그 플레이어 셋 검사.
+                if (candidate.unlockConditions != null && candidate.unlockConditions.Count > 0)
+                {
+                    if (!UnlockSetSync.IsWeaponUnlocked(ownerActor, candidate.weaponId))
+                        continue;
+                }
 
                 consumedFromEquipped = SubtractOne(recipe.inputWeaponIds, incomingId);
                 return candidate;
