@@ -89,6 +89,13 @@ namespace SwDreams.Shared.Managers
         public event Action PlayersInRoomChanged;
         public event Action<short, string> JoinRoomFailed;
         public event Action<short, string> CreateRoomFailed;
+        /// <summary>본인이 호스트에 의해 강퇴됨. payload = 강퇴를 시도한 호스트 닉네임은 의미 없음 — 단순 알림.</summary>
+        public event Action WasKicked;
+        /// <summary>다른 플레이어가 강퇴됨 (호스트 본인 + 남은 플레이어 공통 수신). payload = 강퇴된 플레이어 닉네임.</summary>
+        public event Action<string> OtherPlayerKicked;
+
+        /// <summary>최근 강퇴된 ActorNumber 집합. OnPlayerLeftRoom 이 일반 퇴장과 강퇴를 구분하기 위해 조회.</summary>
+        private readonly HashSet<int> recentlyKickedActorNumbers = new HashSet<int>();
 
         public RoomInfo[] CachedRoomList { get; private set; } = Array.Empty<RoomInfo>();
 
@@ -479,8 +486,18 @@ namespace SwDreams.Shared.Managers
                 return;
             }
 
+            // 강퇴 신호를 먼저 보내 모든 클라가 강퇴 케이스를 식별할 수 있게 한 뒤 실제 연결을 끊는다.
+            // CloseConnection 만으론 대상이 일반 disconnect 와 구분할 수 없고, 남은 클라도 일반 퇴장과 구분 불가.
+            var nick = string.IsNullOrEmpty(player.NickName) ? $"Player {player.ActorNumber}" : player.NickName;
+            var payload = new object[] { player.ActorNumber, nick };
+            PhotonNetwork.RaiseEvent(
+                KickedEvent.EventCode,
+                payload,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable);
+
             PhotonNetwork.CloseConnection(player);
-            Debug.Log($"[NetworkManager] Kick {player.NickName} (Actor #{player.ActorNumber})");
+            Debug.Log($"[NetworkManager] Kick {nick} (Actor #{player.ActorNumber})");
         }
 
         public void SetLocalCharacter(int characterId)
@@ -839,10 +856,51 @@ namespace SwDreams.Shared.Managers
 
         public void OnEvent(EventData photonEvent)
         {
-            if (photonEvent.Code != LoadSceneEvent.EventCode) return;
-            var sceneName = photonEvent.CustomData as string;
-            if (string.IsNullOrEmpty(sceneName)) return;
-            UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
+            if (photonEvent.Code == LoadSceneEvent.EventCode)
+            {
+                var sceneName = photonEvent.CustomData as string;
+                if (!string.IsNullOrEmpty(sceneName))
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
+                }
+                return;
+            }
+
+            if (photonEvent.Code == KickedEvent.EventCode)
+            {
+                HandleKickedEvent(photonEvent.CustomData as object[]);
+                return;
+            }
+        }
+
+        private void HandleKickedEvent(object[] payload)
+        {
+            if (payload == null || payload.Length < 2) return;
+
+            int kickedActor;
+            try { kickedActor = Convert.ToInt32(payload[0]); }
+            catch { return; }
+
+            var kickedNick = payload[1] as string ?? $"Player {kickedActor}";
+
+            // OnPlayerLeftRoom 이 곧 발화될 때 일반 퇴장 메시지가 아니라 강퇴 케이스로 식별되도록 마킹.
+            recentlyKickedActorNumbers.Add(kickedActor);
+
+            // 본인이 강퇴 대상이면 WasKicked, 아니면 OtherPlayerKicked (호스트 본인 + 남은 플레이어 공통).
+            if (PhotonNetwork.LocalPlayer != null && kickedActor == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                WasKicked?.Invoke();
+            }
+            else
+            {
+                OtherPlayerKicked?.Invoke(kickedNick);
+            }
+        }
+
+        /// <summary>OnPlayerLeftRoom 가 일반 퇴장과 강퇴를 구분하기 위해 호출.</summary>
+        public bool WasRecentlyKicked(int actorNumber)
+        {
+            return recentlyKickedActorNumbers.Remove(actorNumber);
         }
     }
 }

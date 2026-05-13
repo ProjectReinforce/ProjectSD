@@ -170,7 +170,7 @@ GameState=Paused 만으로는 LevelUpManager 의 자기참조 문제(자기가 �
 - [ ] **설정 메뉴 재활용 방식** — 메뉴 씬 설정 패널 구조 보고 § 7 옵션 A/B 중 결정
 - [ ] **호출 가능 상태 확장** — 향후 새 GameState 추가 시 ESC 무시/허용 룰 갱신 필요
 - [ ] **게임패드 입력** — 현재 키보드 ESC 만 가정. 추후 게임패드 매핑 시 Start 버튼 등 추가
-- [ ] **확인 다이얼로그 UI** — `FrameToast` 는 비모달이라 부적합. 모달 확인창은 `Frame_PopUp` 이 미작성 ([ui-frame.md](ui-frame.md)) — 이 시스템보다 먼저 또는 같이 진행 필요
+- [x] **확인 다이얼로그 UI** — `Frame_PopUp` 미작성 상태의 stand-in 으로 `Features/UI/Adapter/InGameMenu/ConfirmDialog.cs` 사용. **글로벌 싱글톤 + 정적 `Show(title, message, onConfirm)`** — FrameToast 와 동일하게 메뉴씬 DontDestroyOnLoad 시스템 오브젝트 자식 Canvas 아래에 인스턴스 1개. 메뉴씬(강퇴 확인)/게임씬(룸 나가기·게임 종료) 어디서든 정적 호출. Frame_PopUp 작성 시 일괄 이관.
 
 ## 10. 기존 코드 참조
 

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using SwDreams.Features.UI.Adapter.Menu;
+using SwDreams.Features.UI.Adapter.InGameMenu;
+using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Character.Adapter.Data;
 using SwDreams.Shared.Managers;
 using ExitGames.Client.Photon;
@@ -27,7 +29,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
     ///   OCP — 새로운 캐릭터가 추가되어도 이 클래스는 변경되지 않는다.
     ///         CharacterDatabase SO와 CharacterSelectUI만 수정하면 된다.
     /// </summary>
-    public class WaitingRoomPanelController : MonoBehaviourPunCallbacks, ICharacterSelectCallback
+    public class WaitingRoomPanelController : MonoBehaviourPunCallbacks, ICharacterSelectCallback, IKickRequestHandler
     {
         private const string CountdownActiveKey = "startCountdownActive";
         private const string CountdownEndTimeKey = "startCountdownEndTime";
@@ -114,6 +116,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             NetworkManager.Instance.PlayersInRoomChanged += HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom += HandleLeftRoom;
+            NetworkManager.Instance.OtherPlayerKicked += HandleOtherPlayerKicked;
 
             // 캐릭터 선택 팝업 초기 상태: 닫힘
             if (characterSelectUI != null)
@@ -158,6 +161,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             NetworkManager.Instance.PlayersInRoomChanged -= HandlePlayersChanged;
             NetworkManager.Instance.LeftRoom -= HandleLeftRoom;
+            NetworkManager.Instance.OtherPlayerKicked -= HandleOtherPlayerKicked;
 
             // 캐릭터 셀렉트 버튼 리스너 해제
             if (characterSelectButton != null)
@@ -199,8 +203,14 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (string.IsNullOrEmpty(playerName))
                 playerName = $"Player {otherPlayer.ActorNumber}";
 
-            SetStateText($"{playerName} 님이 퇴장했습니다.");
-            Debug.Log($"[WaitingRoom] {playerName} 퇴장 (남은 인원: {PhotonNetwork.CurrentRoom.PlayerCount})");
+            // 강퇴 케이스는 OtherPlayerKicked 핸들러가 토스트를 띄우므로 일반 퇴장 메시지는 중복 표시 회피.
+            bool wasKicked = NetworkManager.Instance != null
+                             && NetworkManager.Instance.WasRecentlyKicked(otherPlayer.ActorNumber);
+            if (!wasKicked)
+            {
+                SetStateText($"{playerName} 님이 퇴장했습니다.");
+            }
+            Debug.Log($"[WaitingRoom] {playerName} 퇴장 (kicked={wasKicked}, 남은 인원: {PhotonNetwork.CurrentRoom.PlayerCount})");
         }
 
         /// <summary>
@@ -247,6 +257,34 @@ namespace SwDreams.Features.UI.Adapter.Menu
             SetStateText($"캐릭터 선택 완료: {characterId}");
             Debug.Log($"[WaitingRoom] Character confirmed: {characterId}");
             RefreshRoomUi();
+        }
+
+        // ===================================================================
+        // IKickRequestHandler 구현 — LobbyPlayerEntry 의 Kick 버튼 위임
+        // ===================================================================
+
+        /// <summary>
+        /// 호스트가 강퇴 버튼을 눌렀을 때 LobbyPlayerEntry 가 위임. 확인 다이얼로그를 거친 뒤 실제 강퇴 호출.
+        /// </summary>
+        public void RequestKick(Player player)
+        {
+            if (player == null || player.IsLocal) return;
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            var nick = string.IsNullOrEmpty(player.NickName) ? $"Player {player.ActorNumber}" : player.NickName;
+            ConfirmDialog.Show(
+                title: "강퇴 확인",
+                message: $"{nick} 님을 강퇴하시겠습니까?",
+                onConfirm: () => NetworkManager.Instance?.KickPlayer(player));
+        }
+
+        /// <summary>
+        /// 호스트 / 남은 플레이어 모두 동일 처리 — 강퇴된 사람의 닉네임으로 토스트만 표시.
+        /// 강퇴된 본인은 글로벌 KickedRouter 가 메뉴씬으로 라우팅 + 별도 토스트 처리.
+        /// </summary>
+        private void HandleOtherPlayerKicked(string kickedNickName)
+        {
+            FrameToastController.Show($"{kickedNickName} 님이 강퇴되었습니다");
         }
 
         // ===================================================================
@@ -780,13 +818,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 entryPool.Add(entry);
             }
 
-            // 바인딩.
+            // 바인딩 — this 를 IKickRequestHandler 로 전달해 Kick 버튼이 확인 다이얼로그를 거치도록 한다.
             for (int i = 0; i < entryPool.Count; i++)
             {
                 if (i < players.Length)
                 {
                     if (!entryPool[i].gameObject.activeSelf) entryPool[i].gameObject.SetActive(true);
-                    entryPool[i].Bind(players[i]);
+                    entryPool[i].Bind(players[i], this);
                 }
                 else
                 {

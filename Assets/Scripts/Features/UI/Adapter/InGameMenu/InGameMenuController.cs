@@ -20,7 +20,8 @@ namespace SwDreams.Features.UI.Adapter.InGameMenu
     /// 호스트가 종료해도 정지 동기화는 하지 않는다 (멀티 로컬 토글 정책).
     ///
     /// 셋업: InGameMenuCanvas (sortOrder=100) 의 루트에 본 컴포넌트 부착.
-    ///       4 버튼 + SettingsPanelUI 인스턴스 + ConfirmDialog 인스턴스를 인스펙터 연결.
+    ///       4 버튼 + SettingsPanelUI 인스턴스를 인스펙터 연결.
+    ///       ConfirmDialog 는 시스템 오브젝트(DontDestroyOnLoad) 자식의 글로벌 싱글톤을 정적 호출로 사용.
     /// </summary>
     public class InGameMenuController : MonoBehaviour
     {
@@ -37,8 +38,6 @@ namespace SwDreams.Features.UI.Adapter.InGameMenu
         [Header("하위 패널")]
         [Tooltip("같은 캔버스 하위에 배치된 SettingsPanelUI 인스턴스. (사용자가 prefab 인스턴스화 후 연결)")]
         [SerializeField] private SettingsPanelUI settingsPanel;
-        [Tooltip("같은 캔버스 하위에 배치된 ConfirmDialog 인스턴스. 룸 나가기/게임 종료 확인용 임시 모달.")]
-        [SerializeField] private ConfirmDialog confirmDialog;
 
         // ===== 상태 =====
         private bool isOpen;
@@ -87,9 +86,10 @@ namespace SwDreams.Features.UI.Adapter.InGameMenu
             if (!kb.escapeKey.wasPressedThisFrame) return;
 
             // 확인 다이얼로그가 열려있으면 ESC 는 다이얼로그 취소로만 사용.
-            if (confirmDialog != null && confirmDialog.IsOpen)
+            var dialog = ConfirmDialog.Instance;
+            if (dialog != null && dialog.IsOpen)
             {
-                confirmDialog.Cancel();
+                dialog.Cancel();
                 return;
             }
 
@@ -217,14 +217,8 @@ namespace SwDreams.Features.UI.Adapter.InGameMenu
 
         private void OnClickLeaveRoom()
         {
-            if (confirmDialog == null)
-            {
-                // 다이얼로그 미연결 시 즉시 실행 (안전 fallback).
-                LeaveRoomImmediate();
-                return;
-            }
-
-            confirmDialog.Show(
+            // 글로벌 싱글톤 정적 호출 — 인스턴스 없으면 안전 fallback 으로 즉시 실행.
+            ConfirmDialog.Show(
                 title: "룸 나가기",
                 message: "현재 게임을 떠나 룸 리스트로 돌아갑니다. 진행 상황은 저장되지 않습니다.",
                 onConfirm: LeaveRoomImmediate);
@@ -232,13 +226,7 @@ namespace SwDreams.Features.UI.Adapter.InGameMenu
 
         private void OnClickQuitGame()
         {
-            if (confirmDialog == null)
-            {
-                QuitGameImmediate();
-                return;
-            }
-
-            confirmDialog.Show(
+            ConfirmDialog.Show(
                 title: "게임 종료",
                 message: "게임을 완전히 종료합니다.",
                 onConfirm: QuitGameImmediate);

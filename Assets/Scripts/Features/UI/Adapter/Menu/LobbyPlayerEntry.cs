@@ -29,6 +29,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private Button kickButton;
 
         private Player boundPlayer;
+        private IKickRequestHandler kickHandler;
 
         private void Awake()
         {
@@ -48,10 +49,12 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         /// <summary>
         /// 행을 특정 플레이어에 바인딩. 매 갱신마다 호출해도 안전.
+        /// kickHandler 가 null 이면 Kick 버튼은 직접 NetworkManager.KickPlayer 호출 (확인 다이얼로그 없이 — 안전 fallback).
         /// </summary>
-        public void Bind(Player player)
+        public void Bind(Player player, IKickRequestHandler kickHandler = null)
         {
             boundPlayer = player;
+            this.kickHandler = kickHandler;
             if (player == null)
             {
                 Clear();
@@ -105,6 +108,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
         public void Clear()
         {
             boundPlayer = null;
+            kickHandler = null;
             if (nameText != null) nameText.text = string.Empty;
             if (roleText != null) roleText.text = string.Empty;
             if (characterText != null) characterText.text = string.Empty;
@@ -115,7 +119,15 @@ namespace SwDreams.Features.UI.Adapter.Menu
         private void OnClickKick()
         {
             if (boundPlayer == null) return;
-            NetworkManager.Instance?.KickPlayer(boundPlayer);
+            // 핸들러가 있으면 확인 다이얼로그를 거치도록 위임. 없으면 fallback 으로 즉시 강퇴.
+            if (kickHandler != null)
+            {
+                kickHandler.RequestKick(boundPlayer);
+            }
+            else
+            {
+                NetworkManager.Instance?.KickPlayer(boundPlayer);
+            }
         }
     }
 }

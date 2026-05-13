@@ -56,4 +56,15 @@ namespace SwDreams.Shared.Network
     {
         public const byte EventCode = 16;
     }
+
+    /// <summary>
+    /// 호스트가 플레이어 강퇴 직전 모든 클라에 강퇴 신호 송신.
+    /// PhotonNetwork.CloseConnection 만으론 강퇴된 본인이 단순 disconnect 와 구분 불가하므로 명시 신호 사용.
+    /// payload = object[] { int kickedActorNumber, string kickedNickName }.
+    /// NetworkManager 가 송수신 — 본인이면 WasKicked, 아니면 OtherPlayerKicked 이벤트 발화.
+    /// </summary>
+    public static class KickedEvent
+    {
+        public const byte EventCode = 17;
+    }
 }
