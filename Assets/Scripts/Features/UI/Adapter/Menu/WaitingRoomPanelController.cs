@@ -55,6 +55,10 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [Tooltip("CharacterSelectUI가 부착된 팝업 패널")]
         [SerializeField] private CharacterSelectUI characterSelectUI;
 
+        [Header("뒤로가기")]
+        [Tooltip("카운트다운 활성 시 비활성화되는 방 나가기 버튼. OnClick 이벤트는 OnClickLeaveRoom 호출로 인스펙터에 연결.")]
+        [SerializeField] private Button backButton;
+
         [Header("대기실 월드")]
         [Tooltip("방 입장/퇴장에 맞춰 LobbyPlayer를 스폰/파괴.")]
         [SerializeField] private LobbyPlayerSpawner lobbyPlayerSpawner;
@@ -383,6 +387,15 @@ namespace SwDreams.Features.UI.Adapter.Menu
         /// </summary>
         public void OnClickLeaveRoom()
         {
+            // 카운트다운 중에는 방 나가기 차단.
+            // backButton.interactable=false 와 별개 코드 가드 — interactable=false 상태에서도
+            // 외부 코드 onClick.Invoke 또는 키보드 단축키가 핸들러를 직접 부를 수 있어 방어적으로 추가.
+            // (UX: 인터랙터블이 이미 꺼져있어 사용자가 누를 수 없음 → 별도 안내 메시지 불필요)
+            if (IsCountdownActive())
+            {
+                return;
+            }
+
             CancelCountdown();
 
             // 캐릭터 선택 팝업이 열려 있으면 닫기
@@ -422,6 +435,19 @@ namespace SwDreams.Features.UI.Adapter.Menu
             {
                 characterSelectUI.Close();
             }
+        }
+
+        /// <summary>
+        /// 뒤로가기 버튼의 잠금 상태를 카운트다운 활성 여부에 맞춰 동기화한다.
+        ///
+        /// 잠금 조건 = 카운트다운 활성 (Ready 상태에선 허용).
+        ///   - 카운트다운 중에는 방 나가기를 막아 게임 진입 직전의 race 를 차단.
+        ///   - Ready 상태에선 마음 바꿔 방을 떠나는 시나리오를 허용.
+        /// </summary>
+        private void SyncBackButtonLockState()
+        {
+            if (backButton == null) return;
+            backButton.interactable = !IsCountdownActive();
         }
 
         // ===================================================================
@@ -528,6 +554,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
             // 카운트다운이 방금 시작됐거나 취소됐을 때 OnRoomPropertiesUpdate가 RefreshRoleUi를
             // 호출하므로, 이 한 줄로 버튼 활성 상태와 팝업 열림 여부가 자동 동기화된다.
             SyncCharacterSelectLockState();
+
+            // 뒤로가기 버튼은 카운트다운 활성 시에만 잠금 (Ready 상태에선 허용 — 마음 바꿔 방 떠나기 가능).
+            SyncBackButtonLockState();
         }
 
         // ===================================================================

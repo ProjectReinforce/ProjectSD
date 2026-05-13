@@ -135,6 +135,17 @@ namespace SwDreams.Shared.Managers
             // 사용자가 다시 Connect() 를 호출했으니 Disconnect 가드 해제.
             userInitiatedDisconnect = false;
 
+            // 이미 룸 안이면 connection 안정 → 새 접속 사이클 진입 차단.
+            // 다시하기로 MenuScene 재진입 시 TitlePanel 등이 잠깐 enable 되며 OnEnable 에서
+            // 자동으로 Connect 를 호출하는 케이스가 있는데, InRoom 상태에선 StartConnectAttempt 가
+            // JoinLobby 시도 → 룸 안이라 JoinLobby 거부 → 워치독 3초 timeout → Disconnect 로
+            // 룸에서 튕기는 회귀가 발생한다.
+            if (PhotonNetwork.InRoom)
+            {
+                SetState(ConnectionState.Connected);
+                return;
+            }
+
             if (PhotonNetwork.IsConnectedAndReady && PhotonNetwork.InLobby)
             {
                 SetState(ConnectionState.Connected);
@@ -159,6 +170,13 @@ namespace SwDreams.Shared.Managers
         public void RetryConnect()
         {
             userInitiatedDisconnect = false;
+
+            // 이미 룸 안이면 connection 안정 → 새 접속 사이클 진입 차단 (Connect() 와 동일 가드).
+            if (PhotonNetwork.InRoom)
+            {
+                SetState(ConnectionState.Connected);
+                return;
+            }
 
             if (State == ConnectionState.Connected || State == ConnectionState.Connecting || State == ConnectionState.Retrying)
             {

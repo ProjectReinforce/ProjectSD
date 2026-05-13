@@ -282,12 +282,11 @@ MicTestService (DontDestroyOnLoad 싱글턴, GetOrCreate 자동 생성)
 - [ ] **CCU 한도 모니터링:** 무료 티어 20 CCU 초과 시 음성만 끊기는 게 아니라 룸 자체 영향 가능 → Photon 대시보드 알람 설정
 - [ ] **모바일 빌드:** 본 프로젝트는 PC 우선이지만 향후 모바일 검토 시 마이크 권한 처리 재확인
 - [ ] **ParrelSync 환경에서 송수신 검증의 한계:** 같은 OS 마이크/같은 PhotonAppSettings 공유로 인해 미묘한 매핑 이슈가 발생할 수 있음. 진짜 송수신 검증은 빌드 + 다른 PC 또는 빌드 1 + 에디터 1 권장. 자체 마이크 입력 검증은 § 14-MicTestService 로 단일 인스턴스에서 가능
-- [x] **VoiceFollowClient self-recursive race — 룸 떠날 때마다 LogError (cosmetic)** (2026-04-29 발견)
+- [x] **VoiceFollowClient self-recursive race — 룸 떠날 때마다 LogError (cosmetic)** (2026-04-29 발견 → 2026-05-13 SDK 패치로 해결)
   - **증상:** `Operation LeaveRoom (254) not allowed on current server (MasterServer)` LogError. PUN 룸 떠날 때마다 100% 재현.
   - **원인:** `VoiceFollowClient.OnVoiceStateChanged` 가 자기 state 전이 도중(룸 → MasterServer 전환) 자체-recursive 로 `FollowLeader` 호출 → 자기는 이미 MasterServer 인데 OpLeaveRoom 시도 → `CheckIfOpCanBeSent` 가 거부. **Photon Voice 2 라이브러리 내부 callback chain 의 race**.
   - **영향:** 음성 송수신 동작 영향 0. LogError 만 발생.
-  - **워크어라운드 시도 (효과 없음):** `PhotonNetwork.LeaveRoom` 직전에 `PunVoiceClient.Instance.Client.OpLeaveRoom(false)` 명시 호출 → Voice 가 자기 state 전이 안에서 자체적으로 follow 트리거하므로 외부 사전 leave 가 무효. 라이브러리 내부 race 라 외부 코드로 해결 불가능.
-  - **처리:** **무시.** 인디 게임 스코프상 Photon 라이브러리 cosmetic 이슈에 시간 투입 비효율. Photon Voice 업데이트 시 자동 해소 가능성. 정 거슬리면 `Application.logMessageReceivedThreaded` 콜백으로 특정 메시지 필터링 가능하나 다른 Voice 에러 놓칠 위험으로 비추천.
+  - **처리 (2026-05-13):** `VoiceFollowClient.cs:243` 의 `OpLeaveRoom(false)` 호출 전 `this.Client.InRoom` 가드 1줄 추가. 원본은 `IsConnected && State != Disconnecting` 두 조건만 체크 → Voice 가 룸 밖(MasterServer 등) 상태에서도 OpLeaveRoom 시도 → 거부. InRoom 가드 추가로 LeaveRoom / Kick(CloseConnection) / Disconnect 모든 경로에서 발생하는 잘못된 OpLeaveRoom 을 한 곳에서 차단. **SDK 업그레이드 시 재적용 필요** — 패치 위치 라벨링: `[ProjectSD 패치]` 주석 검색.
 
 ## 14. 외부 참고
 

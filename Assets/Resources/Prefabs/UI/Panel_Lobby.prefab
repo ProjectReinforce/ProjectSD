@@ -1761,6 +1761,7 @@ MonoBehaviour:
   lobbyEntryPrefab: {fileID: 8104156796009253775, guid: 63d11b142043ad94c98c3fb8fc647c67, type: 3}
   characterSelectButton: {fileID: 4515439383751821602}
   characterSelectUI: {fileID: 6175499890731641233}
+  backButton: {fileID: 1561314730885159187}
   lobbyPlayerSpawner: {fileID: 0}
 --- !u!1 &8675813058958762112
 GameObject:

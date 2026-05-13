@@ -243,7 +243,12 @@ namespace Photon.Voice
                 if (!LeaderInRoom || LeaderOfflineMode)
                 {
                     // voice client always disconnects for Leader's offline mode
-                    if (this.Client.IsConnected && this.Client.State != ClientState.Disconnecting)
+                    // [ProjectSD 패치] this.Client.InRoom 가드 추가.
+                    // 원본은 Voice client 가 룸 밖(MasterServer 등) 상태일 때도 OpLeaveRoom 을 호출해
+                    // "Operation LeaveRoom (254) not allowed on current server (MasterServer)" 에러를 LogError 로 남김.
+                    // LeaveRoom / Kick(CloseConnection) / Disconnect 등 모든 경로에서 발생하므로 한 곳에서 막는다.
+                    // SDK 업그레이드 시 재적용 필요.
+                    if (this.Client.IsConnected && this.Client.State != ClientState.Disconnecting && this.Client.InRoom)
                     {
                         // this.Client.Disconnect();
                         // Remove the player from the room to avoid an error when reconnecting without rejoining with the same UserId

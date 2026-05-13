@@ -44,6 +44,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private void OnEnable()
         {
+            // 다시하기로 MenuScene 재진입 시 TitlePanel 이 인스펙터 default active 로 잠깐 켜졌다가
+            // MenuSceneManager.Start 의 ShowWaitingRoom 으로 꺼지는 race 가 있다.
+            // 이 짧은 enable 사이에 Connect() 가 호출되면 InRoom 상태에서 새 접속 사이클로 진입하며
+            // 워치독 timeout 으로 룸에서 튕긴다. NetworkManager.Connect 내부에도 동일 가드가 있지만,
+            // 이벤트 구독까지 한 사이클 끼는 게 의미 없으므로 여기서 조기 return.
+            if (PhotonNetwork.InRoom)
+            {
+                return;
+            }
+
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.ConnectionStateChanged += HandleConnectionStateChanged;
