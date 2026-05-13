@@ -140,7 +140,7 @@ Sweepin' Dreams 의 모든 네트워크 동기화는 이 문서의 규약을 따
 | `OnMasterClientSwitched` | Photon 자동 | 호스트 마이그레이션. `Shared/Managers/HostMigrationHandler.cs` 가 처리 |
 | `SetCustomProperties({characterId})` | 플레이어 | 캐릭터 선택. 키 `NetworkManager.CharacterIdKey` |
 | `SetCustomProperties({isReady})` | 플레이어 | 준비 상태. 키 `NetworkManager.IsReadyKey` |
-| `SetCustomProperties({hasPw, pw})` | 호스트(룸 생성 시) | 비밀번호 방. 키 `HasPasswordKey`, `PasswordKey` |
+| `SetCustomProperties({hasPw, pw})` | 호스트(룸 생성 시) | 비밀번호 방. 키 `HasPasswordKey`, `PasswordKey`. **둘 다 `CustomRoomPropertiesForLobby` 노출** — 클라가 `PhotonNetwork.JoinRoom` 호출 전 `NetworkManager.IsRoomPasswordMatch` 로 사전 검증해 호스트 화면 LobbyEntry 깜빡임 회피. 평문 노출은 캐주얼 게임 룸 비번 수준의 민감도라 수용. 사후 검증(OnJoinedRoom 내부 LeaveRoom + JoinRoomFailed -1001) 은 안전망으로 유지 |
 | `SetCustomProperties({startCountdownActive, startCountdownEndTime})` | MasterClient | 대기실 카운트다운 상태. 상세 [waiting-room.md § 3](waiting-room.md) |
 | `PhotonNetwork.CloseConnection(player)` | MasterClient → 대상 | 대기실 강퇴. `NetworkManager.Awake` 에서 `EnableCloseConnection = true` 로 선활성화 (PUN 기본값 false) |
 

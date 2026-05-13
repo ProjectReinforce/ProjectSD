@@ -9,8 +9,8 @@
 | 시스템 ID | `ui-frame` |
 | 분류 | UI |
 | 의존 레이어 | Features/UI/Adapter, Features/UI/Presentation |
-| 최종 업데이트 | 2026-04-19 |
-| 구현 상태 | 🟡 부분 구현 (FrameToast 프리팹만 있음, Frame_PopUp·Frame 정적 API 미작성) |
+| 최종 업데이트 | 2026-05-13 |
+| 구현 상태 | 🟡 부분 구현 (FrameToast 프리팹 + 컨트롤러 ✅, Frame_PopUp·Frame 정적 API 미작성) |
 
 ## 2. 목적
 
@@ -20,10 +20,18 @@
 
 ### 3.1 FrameToast ✅
 
-- **용도:** 짧은 안내 메시지용 비모달 팝업.
-- **위치:** `Assets/Resources/Prefabs/UI/FrameToast.prefab` (실재 ✓)
+- **용도:** 짧은 안내 메시지용 비모달 팝업. 룸 입장 실패 / 이름 중복 / 저장 완료 등.
+- **프리팹:** `Assets/Resources/Prefabs/UI/FrameToast.prefab` (실재 ✓)
 - **이미지 에셋:** `Assets/Resources/UI/window/box_toast.png`
-- **동작:** 위에서 떨어져 일정 시간 후 페이드아웃.
+- **컨트롤러:** `Features/UI/Presentation/FrameToastController.cs` ✓ (싱글톤, `Time.unscaledTime` 기준).
+- **배치 규칙:** **MenuScene 의 DontDestroyOnLoad 시스템 오브젝트 자식 Canvas 아래에 프리팹 인스턴스 1개를 두고 그 루트에 컨트롤러 부착.** 씬 전환 후에도 동일 인스턴스를 재사용하므로 GameScene 에서도 호출 가능.
+- **호출:** `FrameToastController.Show("이미 존재하는 방 이름입니다");` / `FrameToastController.Show("저장 완료", duration: 1.5f);`
+- **닫기 규칙:**
+  - 자동: `defaultDuration` (기본 3 초) 경과 시.
+  - 수동: 키보드 아무 키 또는 마우스 좌/우/중클릭. **단 표시 직후 `inputGracePeriod`(기본 0.3 초) 동안은 입력을 무시** — 직전 화면의 잔여 클릭/키가 토스트를 즉시 닫는 사고 방지.
+  - 게임패드는 의도적 제외 (게임씬에서 패드 조작 중 임의 닫힘 방지).
+- **이미 떠 있을 때 새 호출:** 메시지를 교체하고 타이머/그레이스 기간을 리셋. (큐잉 아님)
+- **페이드:** `CanvasGroup.alpha` 자체 보간 (DOTween 없음). `fadeDuration` 0 이하면 즉시 토글.
 
 ### 3.2 Frame_PopUp ⬜ (미작성)
 
@@ -34,16 +42,20 @@
 
 ## 4. 인터페이스 — 현재 vs 목표
 
-### 4.1 현재 구현 (UIManager 직접 제어)
+### 4.1 현재 구현 (UIManager 직접 제어 + FrameToastController 싱글톤)
 
-`Features/UI/Presentation/UImanager.cs` (파일명 소문자 m 주의) 가 각 패널을 **직접 SetActive 로 제어**한다. `Frame` 정적 API 클래스는 **존재하지 않는다.**
+`Features/UI/Presentation/UImanager.cs` (파일명 소문자 m 주의) 가 각 패널을 **직접 SetActive 로 제어**한다. `Frame` 정적 API 클래스는 **존재하지 않는다.** 토스트는 별도 싱글톤 `FrameToastController` 를 직접 호출한다.
 
 ```csharp
-// 실제 사용 예 (UImanager + LevelUpPanel)
+// 모달 팝업 (현행)
 UIManager.Instance.ShowLevelUp(choices);
 UIManager.Instance.HideLevelUp();
 UIManager.Instance.ShowResult(gameResult);
 UIManager.Instance.HideResult();
+
+// 비모달 토스트 (현행)
+FrameToastController.Show("이미 존재하는 방 이름입니다");
+FrameToastController.Show("저장 완료", duration: 1.5f);
 ```
 
 ### 4.2 목표 인터페이스 (미구현 — 도입 시 사용 예시)
@@ -62,7 +74,7 @@ public interface IPopupHandle
 }
 ```
 
-→ 도입 시 기존 `UIManager.ShowLevelUp/ShowResult` 등은 내부적으로 `Frame.ShowPopup` 을 호출하도록 마이그레이션.
+→ 도입 시 기존 `UIManager.ShowLevelUp/ShowResult` 등은 내부적으로 `Frame.ShowPopup` 을 호출하도록 마이그레이션. `Frame.ShowToast` 는 `FrameToastController.Show` 의 얇은 래퍼로 가능.
 
 ## 5. 사용 위치 — 현재 vs 예정
 
@@ -108,7 +120,7 @@ public interface IPopupHandle
 ## 10. 알려진 제약 / 남은 작업
 
 - [ ] **Frame_PopUp.prefab 미작성** — 모달 팝업 통합 프레임. 도입 시 LevelUpPanel/ResultPanel/DeathOverlay 등 이관. **[in-game-menu.md](in-game-menu.md) (ESC 메뉴) 가 룸 나가기/게임 종료 확인 다이얼로그를 위해 본 프레임 의존** — ESC 메뉴 구현 들어가기 전 또는 함께 작성 필요
-- [ ] **`Frame` 정적 API 클래스 미작성** — `ShowToast` / `ShowPopup` 진입점
-- [ ] **FrameToast 호출하는 컴포넌트 미작성** — 현재는 프리팹만 있고 인스턴스화 코드 없음
+- [ ] **`Frame` 정적 API 클래스 미작성** — `ShowToast` / `ShowPopup` 진입점 (현재는 `FrameToastController.Show` 직접 호출)
+- [x] **FrameToast 호출하는 컴포넌트** — `FrameToastController` ✅ (2026-05-13)
 - [ ] 모달 중첩 정책 확정 필요 (큐 vs 최상위만)
-- [ ] 한 번에 토스트 최대 개수 결정 (기본 3 제안)
+- [ ] 토스트 동시 표시 정책 — **현행: 단일 인스턴스, 새 호출이 메시지 교체**. 동시 다중 표시 필요 시 큐 또는 다중 인스턴스 도입 검토

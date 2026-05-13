@@ -417,6 +417,13 @@ namespace SwDreams.Shared.Managers
                     customProps[PasswordKey] = password.Trim();
                 }
 
+                // 로비에 hasPw + 비번 값을 함께 노출해 클라가 PhotonNetwork.JoinRoom 호출 전에
+                // 사전 검증할 수 있게 한다. 평문 노출이지만 게임 룸 비번 수준의 민감도라 수용.
+                // 사전 검증으로 비번 시도자가 호스트 화면 LobbyEntry 에 잠깐 깜빡이는 UX 글리치를 회피.
+                var lobbyExposedKeys = hasPassword
+                    ? new[] { HasPasswordKey, PasswordKey }
+                    : new[] { HasPasswordKey };
+
                 var options = new RoomOptions
                 {
                     MaxPlayers = maxPlayersPerRoom,
@@ -424,8 +431,7 @@ namespace SwDreams.Shared.Managers
                     IsOpen = true,
                     CleanupCacheOnLeave = true,
                     CustomRoomProperties = customProps,
-                    // 로비에는 hasPw만 노출하고, 실제 비밀번호 값은 노출하지 않음.
-                    CustomRoomPropertiesForLobby = new[] { HasPasswordKey }
+                    CustomRoomPropertiesForLobby = lobbyExposedKeys
                 };
 
                 isCreatingRoom = true;
@@ -553,6 +559,22 @@ namespace SwDreams.Shared.Managers
             }
 
             return value is bool boolValue && boolValue;
+        }
+
+        /// <summary>
+        /// 룸의 비밀번호와 입력값 일치 여부.
+        /// PhotonNetwork.JoinRoom 호출 전 클라가 사전 검증하기 위함 — 호스트 화면 LobbyEntry 깜빡임 회피.
+        /// 비번 없는 방은 항상 true. 비번 props 가 도달 안 한 케이스는 false 로 보수적 처리.
+        /// </summary>
+        public bool IsRoomPasswordMatch(RoomInfo room, string inputPassword)
+        {
+            if (room == null) return false;
+            if (!IsRoomPasswordProtected(room)) return true;
+            if (room.CustomProperties == null) return false;
+            if (!room.CustomProperties.TryGetValue(PasswordKey, out var pwValue)) return false;
+
+            var expected = pwValue?.ToString() ?? string.Empty;
+            return string.Equals(expected, inputPassword ?? string.Empty, StringComparison.Ordinal);
         }
 
         /// <summary>

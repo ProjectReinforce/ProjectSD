@@ -1,5 +1,6 @@
 using System;
 using SwDreams.Features.UI.Adapter.Menu;
+using SwDreams.Features.UI.Presentation;
 using SwDreams.Shared.Managers;
 using Photon.Realtime;
 using TMPro;
@@ -86,7 +87,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             HandleRoomListChanged();
             UpdateRefreshButtonState();
-            SetStatus("Connected. Search, create, or join a room.");
         }
 
         private void OnDisable()
@@ -152,7 +152,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
             UpdateRefreshButtonState();
 
             HandleRoomListChanged();
-            SetStatus("Room list refreshed.");
+            FrameToastController.Show("방 목록을 새로고침했습니다", duration: 1.5f);
         }
 
         public void OnClickOpenCreateRoomPopup()
@@ -167,8 +167,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 usePasswordToggle.SetIsOnWithoutNotify(false);
             }
             ApplyPasswordUseState(false);
-
-            SetStatus("Enter room options.");
         }
 
         public void OnClickCreateRoom()
@@ -221,7 +219,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
             var roomName = ReadCreateRoomNameOrDefault();
             if (IsDuplicateRoomName(roomName))
             {
-                SetStatus($"Room name already exists: {roomName}");
+                FrameToastController.Show("이미 존재하는 방 이름입니다");
                 return;
             }
 
@@ -233,9 +231,9 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             NetworkManager.Instance.CreateRoom(roomName, password);
 
-            SetStatus(string.IsNullOrWhiteSpace(password)
-                ? $"Creating room: {roomName}"
-                : $"Creating room: {roomName} (password)");
+            FrameToastController.Show(
+                string.IsNullOrWhiteSpace(password) ? $"방 생성 중: {roomName}" : $"방 생성 중: {roomName} (비밀번호)",
+                duration: 1.5f);
         }
 
         /// <summary>
@@ -264,12 +262,13 @@ namespace SwDreams.Features.UI.Adapter.Menu
             var roomName = ReadSearchRoomName();
             if (string.IsNullOrWhiteSpace(roomName))
             {
-                SetStatus("Enter a room name to search.");
+                FrameToastController.Show("방 이름을 입력하세요");
                 return;
             }
 
-            // 검색 팝업 닫고 진입 시도
-            SetSearchRoomPopup(false);
+            // 검색 팝업은 진입 성공 시 HandleJoinedRoom 에서 닫는다.
+            // 실패(존재하지 않는 방) 시에는 입력 유지로 재시도 편의 제공.
+            // 잠긴 방으로 분기되어 비밀번호 팝업이 열릴 때는 TryJoinRoom 안에서 검색 팝업을 닫는다.
             TryJoinRoom(roomName);
         }
 
@@ -300,13 +299,29 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (string.IsNullOrWhiteSpace(pendingJoinRoomName))
             {
                 SetJoinPasswordPopup(false);
-                SetStatus("No room selected.");
+                FrameToastController.Show("선택된 방이 없습니다");
                 return;
             }
 
             var password = joinPasswordPopupInputField != null ? joinPasswordPopupInputField.text : string.Empty;
-            NetworkManager.Instance?.JoinRoom(pendingJoinRoomName, password);
-            SetStatus($"Joining room: {pendingJoinRoomName}");
+            var targetRoom = FindRoomByName(pendingJoinRoomName);
+            if (targetRoom == null)
+            {
+                SetJoinPasswordPopup(false);
+                FrameToastController.Show("존재하지 않는 방입니다");
+                return;
+            }
+
+            // 사전 검증으로 JoinRoom 자체를 건너뛴다 → 호스트 화면에 시도자가 보이지 않음.
+            // 불일치 시 팝업은 유지해 재입력 편의 제공.
+            if (!NetworkManager.Instance.IsRoomPasswordMatch(targetRoom, password))
+            {
+                FrameToastController.Show("비밀번호가 일치하지 않습니다");
+                return;
+            }
+
+            NetworkManager.Instance.JoinRoom(pendingJoinRoomName, password);
+            FrameToastController.Show($"방 입장 중: {pendingJoinRoomName}", duration: 1.5f);
             SetJoinPasswordPopup(false);
         }
 
@@ -337,7 +352,39 @@ namespace SwDreams.Features.UI.Adapter.Menu
         private string ReadCreateRoomNameOrDefault()
         {
             var raw = roomNameInputField != null ? roomNameInputField.text : string.Empty;
-            return string.IsNullOrWhiteSpace(raw) ? defaultRoomName : raw.Trim();
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                return raw.Trim();
+            }
+            // 빈 입력이면 defaultRoomName 의 prefix 를 이어받아 다음 사용 가능한 번호 부여.
+            // 예) defaultRoomName="Room_0001" → 캐시에 없는 첫 번째 "Room_NNNN" 반환.
+            return FindAvailableDefaultRoomName();
+        }
+
+        /// <summary>
+        /// defaultRoomName 에서 끝 숫자를 떼 prefix 를 얻고, 캐시와 충돌 없는 첫 번째 4자리 번호를 붙여 반환.
+        /// </summary>
+        private string FindAvailableDefaultRoomName()
+        {
+            var prefix = ExtractPrefix(defaultRoomName);
+            for (var i = 1; i < 10000; i++)
+            {
+                var candidate = $"{prefix}{i:D4}";
+                if (!IsDuplicateRoomName(candidate)) return candidate;
+            }
+            // 1~9999 모두 충돌하는 극단 케이스 — 랜덤 fallback.
+            return $"{prefix}{UnityEngine.Random.Range(0, 10000):D4}";
+        }
+
+        /// <summary>
+        /// 문자열 끝에 붙은 숫자를 제거해 prefix 를 추출. "Room_0001" → "Room_". 숫자가 없으면 "_" 를 덧붙인다.
+        /// </summary>
+        private static string ExtractPrefix(string defaultName)
+        {
+            if (string.IsNullOrEmpty(defaultName)) return "Room_";
+            var i = defaultName.Length;
+            while (i > 0 && char.IsDigit(defaultName[i - 1])) i--;
+            return i == defaultName.Length ? defaultName + "_" : defaultName.Substring(0, i);
         }
 
         private string ReadSearchRoomName()
@@ -374,14 +421,14 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
             if (string.IsNullOrWhiteSpace(roomName))
             {
-                SetStatus("Enter a room name first.");
+                FrameToastController.Show("방 이름을 입력하세요");
                 return;
             }
 
             var targetRoom = FindRoomByName(roomName);
             if (targetRoom == null)
             {
-                SetStatus($"Room not found: {roomName}");
+                FrameToastController.Show("존재하지 않는 방입니다");
                 return;
             }
 
@@ -389,7 +436,7 @@ namespace SwDreams.Features.UI.Adapter.Menu
             if (!isProtected)
             {
                 NetworkManager.Instance.JoinRoom(targetRoom.Name);
-                SetStatus($"Joining room: {targetRoom.Name}");
+                FrameToastController.Show($"방 입장 중: {targetRoom.Name}", duration: 1.5f);
                 return;
             }
 
@@ -397,20 +444,28 @@ namespace SwDreams.Features.UI.Adapter.Menu
             {
                 pendingJoinRoomName = targetRoom.Name;
                 joinPasswordPopupInputField.text = string.Empty;
+                // 비밀번호 팝업이 열릴 때는 검색 팝업을 함께 닫는다 (UX: 동시 노출 방지).
+                SetSearchRoomPopup(false);
                 SetJoinPasswordPopup(true);
-                SetStatus("Enter password to join.");
                 return;
             }
 
             var inlinePassword = joinRoomPasswordInputField != null ? joinRoomPasswordInputField.text : string.Empty;
             if (string.IsNullOrWhiteSpace(inlinePassword))
             {
-                SetStatus("This room is password protected. Enter password to join.");
+                FrameToastController.Show("비밀번호가 필요한 방입니다");
+                return;
+            }
+
+            // 사전 검증 — 비번 팝업 없는 inline 입력 경로에서도 호스트 화면 깜빡임 회피.
+            if (!NetworkManager.Instance.IsRoomPasswordMatch(targetRoom, inlinePassword))
+            {
+                FrameToastController.Show("비밀번호가 일치하지 않습니다");
                 return;
             }
 
             NetworkManager.Instance.JoinRoom(targetRoom.Name, inlinePassword);
-            SetStatus($"Joining room: {targetRoom.Name}");
+            FrameToastController.Show($"방 입장 중: {targetRoom.Name}", duration: 1.5f);
         }
 
         private RoomInfo FindRoomByName(string roomName)
@@ -436,7 +491,6 @@ namespace SwDreams.Features.UI.Adapter.Menu
 
         private void HandleJoinedRoom()
         {
-            SetStatus("Joined room.");
             SetCreateRoomPanel(false);
             SetJoinPasswordPopup(false);
             SetSearchRoomPopup(false);
@@ -444,15 +498,16 @@ namespace SwDreams.Features.UI.Adapter.Menu
             menuSceneManager?.ShowWaitingRoom();
         }
 
+        // 입장/생성 실패 토스트는 MenuSceneManager 가 NetworkManager 이벤트를 직접 구독해 처리한다.
+        // RoomListPanelController 는 활성 상태에서만 구독 살아있어 비밀번호 검증 분기 등에서
+        // 토스트가 누락될 수 있어 글로벌 핸들러로 일원화.
         private void HandleJoinRoomFailed(short returnCode, string message)
         {
-            SetStatus($"Join failed ({returnCode}): {message}");
             Debug.LogWarning($"Join room failed ({returnCode}): {message}");
         }
 
         private void HandleCreateRoomFailed(short returnCode, string message)
         {
-            SetStatus($"Create failed ({returnCode}): {message}");
             Debug.LogWarning($"Create room failed ({returnCode}): {message}");
         }
 
