@@ -1,6 +1,8 @@
 using System;
+using SwDreams.Features.Map.Adapter.Data;
 using SwDreams.Features.UI.Adapter.Menu;
 using SwDreams.Features.UI.Presentation;
+using SwDreams.Shared.Domain;
 using SwDreams.Shared.Managers;
 using Photon.Realtime;
 using TMPro;
@@ -43,6 +45,29 @@ namespace SwDreams.Features.UI.Adapter.Menu
         [SerializeField] private GameObject passwordInputView;
 
         private bool passwordUseOn;
+
+        [Header("Create Room — 인원수 (1~4 순서로 연결)")]
+        [Tooltip("Frame_MakeRoom/NumberOfPeople 의 01/02/03/04 Toggle 을 순서대로 연결. ToggleGroup 으로 묶여 있어야 함.")]
+        [SerializeField] private Toggle[] playerCountToggles;
+        [Tooltip("팝업 열릴 때 기본 선택될 인원 (1~4). 0 또는 범위 밖이면 마지막 토글.")]
+        [SerializeField] private int defaultPlayerCount = 4;
+
+        [Header("Create Room — 난이도 (Easy/Normal/Hard 순서로 연결)")]
+        [Tooltip("Frame_MakeRoom/Level 의 01/02/03 Toggle 을 쉬움→보통→어려움 순서로 연결.")]
+        [SerializeField] private Toggle[] difficultyToggles;
+
+        [Header("Create Room — 맵")]
+        [Tooltip("선택 가능한 맵 데이터베이스. 현재는 단일 맵이지만 미래 확장 대비.")]
+        [SerializeField] private MapDatabase mapDatabase;
+        [Tooltip("(선택) 선택된 맵의 미리보기 이미지를 표시할 Image. 비워두면 표시 안 함.")]
+        [SerializeField] private Image mapPreviewImage;
+
+        // 현재 선택된 맵 (UI 가 1개라 첫 번째 자동 선택. 미래에 토글 그룹으로 확장).
+        private MapDefinition selectedMap;
+
+        [Header("Create Room — 입력 제한")]
+        [Tooltip("방 이름 최대 길이. 0 이면 제한 없음. 권장 16 (한글 8자, 영문 16자).")]
+        [SerializeField] private int roomNameMaxLength = 16;
 
         [Header("Search Room Popup")]
         [SerializeField] private GameObject searchRoomPopup;
@@ -167,6 +192,66 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 usePasswordToggle.SetIsOnWithoutNotify(false);
             }
             ApplyPasswordUseState(false);
+
+            // 인원수/난이도 기본 선택 + 방 이름 길이 제한 + 맵 미리보기 초기화.
+            ApplyDefaultPlayerCount();
+            ApplyDefaultDifficulty();
+            ApplyDefaultMap();
+            ApplyRoomNameLimit();
+        }
+
+        /// <summary>defaultPlayerCount 에 해당하는 토글만 ON, 나머지는 OFF.</summary>
+        private void ApplyDefaultPlayerCount()
+        {
+            if (playerCountToggles == null || playerCountToggles.Length == 0) return;
+            int idx = Mathf.Clamp(defaultPlayerCount - 1, 0, playerCountToggles.Length - 1);
+            for (int i = 0; i < playerCountToggles.Length; i++)
+            {
+                if (playerCountToggles[i] == null) continue;
+                playerCountToggles[i].SetIsOnWithoutNotify(i == idx);
+            }
+        }
+
+        /// <summary>난이도 토글 기본값 = Normal(인덱스 1). 토글 개수가 다르면 가운데 인덱스로 폴백.</summary>
+        private void ApplyDefaultDifficulty()
+        {
+            if (difficultyToggles == null || difficultyToggles.Length == 0) return;
+            int idx = difficultyToggles.Length >= 2 ? (int)Difficulty.Normal : 0;
+            if (idx >= difficultyToggles.Length) idx = difficultyToggles.Length / 2;
+            for (int i = 0; i < difficultyToggles.Length; i++)
+            {
+                if (difficultyToggles[i] == null) continue;
+                difficultyToggles[i].SetIsOnWithoutNotify(i == idx);
+            }
+        }
+
+        /// <summary>맵 디폴트 선택 + 미리보기 갱신. 현재 맵 UI 가 단일이라 DefaultMap 자동 선택.</summary>
+        private void ApplyDefaultMap()
+        {
+            selectedMap = mapDatabase != null ? mapDatabase.DefaultMap : null;
+            if (mapPreviewImage != null)
+            {
+                mapPreviewImage.sprite = selectedMap != null ? selectedMap.PreviewSprite : null;
+                mapPreviewImage.enabled = selectedMap != null && selectedMap.PreviewSprite != null;
+            }
+        }
+
+        /// <summary>방 이름 InputField characterLimit 적용. 0 이하면 변경 안 함 (Inspector 값 유지).</summary>
+        private void ApplyRoomNameLimit()
+        {
+            if (roomNameInputField == null || roomNameMaxLength <= 0) return;
+            roomNameInputField.characterLimit = roomNameMaxLength;
+        }
+
+        /// <summary>활성 토글의 인덱스. 없으면 -1.</summary>
+        private static int FindActiveToggleIndex(Toggle[] toggles)
+        {
+            if (toggles == null) return -1;
+            for (int i = 0; i < toggles.Length; i++)
+            {
+                if (toggles[i] != null && toggles[i].isOn) return i;
+            }
+            return -1;
         }
 
         public void OnClickCreateRoom()
@@ -229,11 +314,35 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 ? createRoomPasswordInputField.text
                 : string.Empty;
 
-            NetworkManager.Instance.CreateRoom(roomName, password);
+            // 인원수: 활성 토글 인덱스 + 1. 없으면 defaultPlayerCount 폴백.
+            int pcIdx = FindActiveToggleIndex(playerCountToggles);
+            byte maxPlayers = (byte)(pcIdx >= 0 ? pcIdx + 1 : Mathf.Clamp(defaultPlayerCount, 1, 4));
+
+            // 난이도: 활성 토글 인덱스 → Difficulty enum. 없으면 Normal.
+            int diffIdx = FindActiveToggleIndex(difficultyToggles);
+            Difficulty diff = diffIdx >= 0 ? (Difficulty)diffIdx : Difficulty.Normal;
+
+            // 맵 id: 선택된 맵의 id. 없으면 빈 문자열 (SceneTransitionManager 가 폴백).
+            string mapId = selectedMap != null ? selectedMap.Id : string.Empty;
+
+            NetworkManager.Instance.CreateRoom(roomName, password, maxPlayers, (int)diff, mapId);
 
             FrameToastController.Show(
-                string.IsNullOrWhiteSpace(password) ? $"방 생성 중: {roomName}" : $"방 생성 중: {roomName} (비밀번호)",
+                string.IsNullOrWhiteSpace(password)
+                    ? $"방 생성 중: {roomName} ({maxPlayers}인, {DifficultyDisplay(diff)})"
+                    : $"방 생성 중: {roomName} ({maxPlayers}인, {DifficultyDisplay(diff)}, 비밀번호)",
                 duration: 1.5f);
+        }
+
+        /// <summary>UI 표시용 난이도 한글 이름.</summary>
+        private static string DifficultyDisplay(Difficulty d)
+        {
+            switch (d)
+            {
+                case Difficulty.Easy: return "쉬움";
+                case Difficulty.Hard: return "어려움";
+                default: return "보통";
+            }
         }
 
         /// <summary>

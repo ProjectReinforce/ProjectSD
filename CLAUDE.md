@@ -2,9 +2,11 @@
 
 이 문서는 Claude가 **모든 세션 시작 시 자동으로 읽는** 프로젝트 안내서다. 긴 설계 문서는 여기 직접 쓰지 말고 `docs/` 하위에 두고 링크만 걸 것.
 
-> **버전:** v3.0 (2026-05-12) — § 3 폴더 지도에 `Features/Unlock/` + `Shared/Platform/` + `Shared/Domain/Events/` 추가. § 4 용어집에 메타 언락 / D5 자기 진행도가 자기 게임에 반영 / Platform 추상화 / ParrelSync 격리 bridge 항목 추가. Phase 7-5 meta-unlock ✅ 도입 + Phase 8-1 Platform 추상화 부분 동봉.
+> **버전:** v3.1 (2026-05-14) — § 3 폴더 지도에 `Features/Map/` 추가. § 4 용어집에 방 만들기 옵션(인원·난이도·맵) / Difficulty enum / MapDefinition·MapDatabase 항목 추가. 방 만들기 UI 인원수/난이도/맵 추상화 도입.
 >
-> **이전:** v2.9 (2026-05-06) — § 3 폴더 지도에 `Stats/` Feature 추가 + § 4 용어집에 인-런 통계 / 분산 추적 / 보스 공유 카운트(D13) 항목 추가. Phase 7-5 run-statistics ✅ 도입.
+> **이전:** v3.0 (2026-05-12) — § 3 폴더 지도에 `Features/Unlock/` + `Shared/Platform/` + `Shared/Domain/Events/` 추가. § 4 용어집에 메타 언락 / D5 자기 진행도가 자기 게임에 반영 / Platform 추상화 / ParrelSync 격리 bridge 항목 추가. Phase 7-5 meta-unlock ✅ 도입 + Phase 8-1 Platform 추상화 부분 동봉.
+>
+> **v2.9** (2026-05-06) — § 3 폴더 지도에 `Stats/` Feature 추가 + § 4 용어집에 인-런 통계 / 분산 추적 / 보스 공유 카운트(D13) 항목 추가. Phase 7-5 run-statistics ✅ 도입.
 
 ---
 
@@ -66,6 +68,7 @@ Assets/Scripts/
 │   ├── StatBoost/           ← Adapter (StatBoostManager, StatBoostChoiceService) + Adapter/Data
 │   ├── Stats/               ← Domain (LocalRunStats, SkillRunStats VO) + Adapter (LocalStatsRecorder MonoBehaviour 싱글톤). 인-런 통계 자기 PC 누적 + 결과 화면 시각화. B-1a 분산 추적 — 호스트 마이그레이션 무관. — [docs/systems/run-statistics.md](docs/systems/run-statistics.md)
 │   ├── Unlock/              ← Domain (UnlockCondition struct + UnlockConditionType enum 5종 + UnlockableType/Id VO + IRunStats + UnlockEvaluator) + Adapter (MetaProgressStore IRunStats 구현·영구 누적 / RunRecordRepository PlatformService IO / UnlockTracker 일괄 평가·OnNewUnlocks / UnlockSetSync Photon CustomProperties D5 권위 모델) + Adapter/Data (UnlockCatalog SO — RefreshCharge 마일스톤). 자기 PC 영구 진행도. — [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md)
+│   ├── Map/                 ← Adapter/Data (MapDefinition SO — id/displayName/gameSceneName/previewSprite / MapDatabase SO — MapDefinition[] + GetById). 방 만들기 시 호스트가 mapId 선택 → Room.CustomProperties[map] 저장 → SceneTransitionManager 가 mapId → sceneName 매핑. 현재 단일 맵 (default → GameScene), 신규 맵 추가는 SO 생성 + Database 등록만으로 끝.
 │   ├── Pickup/              ← Domain + Adapter (DropSpawner, PickupItemBase, MagnetPickup, PotionPickup, PlayerPickupInteractor) + Presentation (InteractionPromptUI)
 │   └── UI/
 │       ├── Adapter/Menu/        ← MenuSceneManager, TitlePanelController, RoomListPanelController, WaitingRoomPanelController, CharacterSelectUI, RoomList/, Common/
@@ -119,6 +122,9 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 **UI / 네트워크**
 - **Frame:** UI 팝업/토스트 프레임워크. `Frame_PopUp` (모달·일시정지 가능), `FrameToast` (비모달·짧은 알림). [docs/systems/ui-frame.md](docs/systems/ui-frame.md).
 - **MenuScene / GameScene:** 2개 씬 구조. [docs/systems/scene-structure.md](docs/systems/scene-structure.md).
+- **방 만들기 옵션 (2026-05-14):** 호스트가 방 생성 시 인원수(1~4) / 난이도(`Difficulty` enum Easy/Normal/Hard) / 맵(`MapDefinition.Id`) 선택. `NetworkManager.CreateRoom(name, password, maxPlayers, difficulty, mapId)` 시그니처 + Room.CustomProperties 키 `diff`/`map` 로비 노출. 방 리스트 `RoomListItem` 이 난이도/맵 미리보기 표시.
+- **Difficulty (enum):** `Shared.Domain.Difficulty` Easy=0/Normal=1/Hard=2. 순수 C# — `GameplayConfig.GetDifficultyMultiplier` 로 곱셈 배율 변환 → `DifficultyManager` 가 HP/데미지/이속/최대 동시 수에 일괄 적용. 스폰 간격/경험치/Swarm/타입 비율은 영향 없음 (게임 페이스 유지).
+- **MapDefinition / MapDatabase (SO):** `Features/Map/Adapter/Data/`. MapDefinition = id/displayName/gameSceneName/previewSprite. MapDatabase = MapDefinition[] + `GetById(id)`. `SceneTransitionManager` 가 인스펙터로 받아 방 props 의 mapId → sceneName 매핑. 매칭 실패 시 인스펙터 폴백 sceneName. 현재 단일 맵 (default → GameScene). 신규 맵 추가 = SO 생성 + Database 등록.
 - **맵 경계 (Map Bounds) / 안개:** 플레이 가능 영역 정의 + 외곽을 스타크래프트형 안개로 차단. **안개는 플레이어만 막고 적/보스/투사체는 자유 통과.** 보스 스폰의 맵 외부 가드 hook(`BossSpawner.mapBoundsCollider` + `enforceOutsideMap`)이 이 영역을 참조. [docs/systems/map-bounds.md](docs/systems/map-bounds.md).
 - **호스트-클라이언트:** Photon MasterClient 가 권위. 투사체는 로컬 렌더, 히트는 호스트. [docs/systems/network-sync.md](docs/systems/network-sync.md).
 - **런타임 Effect source prefix:** `essence_*` / `weapon_*` / `chaos_*` / `buff_*`.
@@ -192,6 +198,7 @@ UI 프리팹: `Assets/Resources/Prefabs/UI/FrameToast.prefab`, `LevelUpPanel.pre
 - **파티원/보스/랜덤 퀘스트 위치 인디케이터 →** [docs/systems/world-indicator.md](docs/systems/world-indicator.md). 히스테리시스 β. 클라이언트 로컬 (네트워크 동기화 없음). R11 ✅
 - **맵 경계 / 안개 →** [docs/systems/map-bounds.md](docs/systems/map-bounds.md). 안개 = 플레이어만 차단(적/보스 자유 통과). `BossSpawner.mapBoundsCollider`/`enforceOutsideMap` hook 보유. 맵 사이즈 미확정 — 맵 확정 시 활성
 - **인게임 ESC 메뉴 / 일시정지 →** [docs/systems/in-game-menu.md](docs/systems/in-game-menu.md). 중앙 모달 + 솔로(PlayerCount==1) 한정 GameState.Paused 진정 정지 / 멀티는 로컬 UI 토글만. 메뉴 항목 4개(Resume/설정/룸 나가기/게임 종료). Frame_PopUp 의존(확인 다이얼로그). **roadmap U4** ⬜
+- **방 만들기 옵션 (인원/난이도/맵) →** [docs/systems/scene-structure.md § 6](docs/systems/scene-structure.md). `NetworkManager.CreateRoom(name, password, maxPlayers, difficulty, mapId)`. Room.CustomProperties `diff`/`map` 키. `RoomListPanelController` 토글 인스펙터 + `SceneTransitionManager` MapDatabase 인스펙터. 새 맵 추가는 `MapDefinition.asset` + `MapDatabase.maps` 등록만. ✅ 2026-05-14
 - **캐릭터/적 애니메이션 →** [docs/systems/character-animation.md](docs/systems/character-animation.md). base AnimatorController + 캐릭터별 AnimatorOverrideController. PlayerAnimator/EnemyAnimator 핸들러. Phase 1: 2방향(flipX) → Phase 2: 4방향(Blend Tree). GameState.Paused 시 `animator.speed=0` 정지. 풀링 적은 OnReturnToPool 시 Animator.Rebind. 깨진 sprite 검증 = `Tools → Validate AnimationClip Sprites`. CharacterData/EnemyData 의 animatorController 비어있으면 정적 sprite 동작 (점진 도입)
 - **인-런 통계 / 결과 화면 시각화 →** [docs/systems/run-statistics.md](docs/systems/run-statistics.md). B-1a 분산 추적 — 자기 발사 시점 자기 PC 누적, 사망 RPC 페이로드 확장으로 막타 카운트. 호스트 마이그레이션 무관. 보스 처치 D13 모든 파티원 카운트. ✅ 2026-05-06
 - **메타 언락 / 영구 진행도 →** [docs/systems/meta-unlock.md](docs/systems/meta-unlock.md). Phase 8-1 Platform 추상화 동봉 ✅ (2026-05-12). MVP = 스킬/무기 조합식/캐릭터/새로고침+N. 분산형 조건 (각 SO 의 `unlockConditions` 필드). 멀티 D5 — `Player.CustomProperties` 자기 셋 공유. 결과 화면 토스트. Editor: `Tools > Meta Unlock Debug` 디버그 윈도우 + `ParrelSyncBridge` clone 별 PlayerPrefs 격리. D1 ("특정 스킬로 처치") 부활은 sourceSkillId 인프라 ✅ 도입으로 거의 무비용 (후속 별건).

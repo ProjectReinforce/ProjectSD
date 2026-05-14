@@ -2113,9 +2113,22 @@ MonoBehaviour:
   makeRoomPanel: {fileID: 3131554404325628094}
   roomNameInputField: {fileID: 5827026205118152268}
   createRoomPasswordInputField: {fileID: 1422563908917139973}
-  usePasswordToggle: {fileID: 0}
-  passwordOffView: {fileID: 0}
-  passwordInputView: {fileID: 0}
+  usePasswordToggle: {fileID: 4761110685688237200}
+  passwordOffView: {fileID: 142717071858411455}
+  passwordInputView: {fileID: 4441771669978888304}
+  playerCountToggles:
+  - {fileID: 8172783401483830014}
+  - {fileID: 4005078690123246502}
+  - {fileID: 7003638513912318489}
+  - {fileID: 2058308663368846935}
+  defaultPlayerCount: 4
+  difficultyToggles:
+  - {fileID: 8909790353701350463}
+  - {fileID: 7517449976584347484}
+  - {fileID: 6522476771426594777}
+  mapDatabase: {fileID: 11400000, guid: c4404dbc5c2779b4da329effe94a01f5, type: 2}
+  mapPreviewImage: {fileID: 0}
+  roomNameMaxLength: 16
   searchRoomPopup: {fileID: 5972036800394430701}
   searchRoomInputField: {fileID: 871387745882922573}
   joinRoomPasswordInputField: {fileID: 0}
@@ -3668,22 +3681,65 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+--- !u!1 &142717071858411455 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1389388052091343042, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1422563908917139973 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 76252434017463672, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
   m_PrefabInstance: {fileID: 1347439928250906493}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 4441771669978888304}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
+--- !u!114 &2058308663368846935 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1018804910900590890, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!1 &3131554404325628094 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4163179120927256515, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
   m_PrefabInstance: {fileID: 1347439928250906493}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &4005078690123246502 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2677377473839815899, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
+--- !u!1 &4441771669978888304 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3393258588086374157, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4761110685688237200 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5810150981292342253, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!114 &5827026205118152268 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4786992204627773745, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
@@ -3695,11 +3751,66 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
+--- !u!114 &6522476771426594777 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5203750392001517732, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
+--- !u!114 &7003638513912318489 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8323493679544122724, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
+--- !u!114 &7517449976584347484 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8854157773463005217, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!224 &8139551610480890927 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7081468862448706386, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
   m_PrefabInstance: {fileID: 1347439928250906493}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8172783401483830014 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7194674445526873475, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
+--- !u!114 &8909790353701350463 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7572519542207847234, guid: f02da90dfd0644a4b930ffb688fd9545, type: 3}
+  m_PrefabInstance: {fileID: 1347439928250906493}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Toggle
 --- !u!1001 &8124269351281620877
 PrefabInstance:
   m_ObjectHideFlags: 0

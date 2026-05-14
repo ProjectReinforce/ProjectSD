@@ -16,11 +16,16 @@ namespace SwDreams.Shared.Managers
     {
         private readonly DifficultyData data;
         private readonly float gameEndTime;
+        // 방 생성 시 호스트가 선택한 Difficulty(Easy/Normal/Hard) 의 배율.
+        // HP/데미지/이속/최대 동시 수에 일괄 곱. 1.0 = DifficultyData 곡선 그대로 (Normal).
+        // 스폰 간격/경험치/Swarm/타입 비율은 영향받지 않음 (게임 페이스 자체는 동일하게 유지).
+        private readonly float difficultyMultiplier;
 
-        public DifficultyManager(DifficultyData difficultyData, float gameEndTime)
+        public DifficultyManager(DifficultyData difficultyData, float gameEndTime, float difficultyMultiplier = 1f)
         {
             data = difficultyData ?? throw new ArgumentNullException(nameof(difficultyData));
             this.gameEndTime = Mathf.Max(1f, gameEndTime);
+            this.difficultyMultiplier = Mathf.Max(0.01f, difficultyMultiplier);
         }
 
         private float GetT(float gameTime)
@@ -53,7 +58,7 @@ namespace SwDreams.Shared.Managers
             float t = GetT(gameTime);
             float base_ = Eval(data.maxEnemyStart, data.maxEnemyEnd, data.maxEnemyCurve, t);
             var scaling = GetPlayerScaling(playerCount);
-            return Mathf.Max(1, Mathf.RoundToInt(base_ * scaling.maxEnemyMultiplier));
+            return Mathf.Max(1, Mathf.RoundToInt(base_ * scaling.maxEnemyMultiplier * difficultyMultiplier));
         }
 
         public float GetHealthMultiplier(float gameTime, int playerCount)
@@ -61,14 +66,14 @@ namespace SwDreams.Shared.Managers
             float t = GetT(gameTime);
             float base_ = Eval(data.hpStart, data.hpEnd, data.hpCurve, t);
             var scaling = GetPlayerScaling(playerCount);
-            return base_ * scaling.healthMultiplier;
+            return base_ * scaling.healthMultiplier * difficultyMultiplier;
         }
 
         // R13: 데미지 시간 배율 (raw, sensitivity 미적용 — 데미지는 전 타입 동일).
         public float GetDamageMultiplier(float gameTime)
         {
             float t = GetT(gameTime);
-            return Eval(data.damageStart, data.damageEnd, data.damageCurve, t);
+            return Eval(data.damageStart, data.damageEnd, data.damageCurve, t) * difficultyMultiplier;
         }
 
         public float GetDamageMultiplier(float gameTime, int playerCount)
@@ -82,7 +87,7 @@ namespace SwDreams.Shared.Managers
         public float GetMoveSpeedMultiplier(float gameTime)
         {
             float t = GetT(gameTime);
-            return Eval(data.moveSpeedStart, data.moveSpeedEnd, data.moveSpeedCurve, t);
+            return Eval(data.moveSpeedStart, data.moveSpeedEnd, data.moveSpeedCurve, t) * difficultyMultiplier;
         }
 
         public float GetMoveSpeedMultiplier(float gameTime, int playerCount)

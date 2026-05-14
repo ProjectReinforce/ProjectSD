@@ -1,5 +1,8 @@
 using Photon.Realtime;
+using SwDreams.Features.Map.Adapter.Data;
 using SwDreams.Features.UI.Adapter.Menu;
+using SwDreams.Shared.Domain;
+using SwDreams.Shared.Managers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,6 +38,8 @@ namespace SwDreams.Features.UI.Adapter.Menu
     {
         [Header("Map")]
         [SerializeField] private Image mapImage;
+        [Tooltip("방의 mapId 를 표시 sprite 로 매핑하기 위한 데이터베이스. 비워두면 미리보기 갱신 생략.")]
+        [SerializeField] private MapDatabase mapDatabase;
 
         [Header("Lock (Off = 열림, On = 잠김)")]
         [SerializeField] private GameObject lockOffIcon;
@@ -131,14 +136,33 @@ namespace SwDreams.Features.UI.Adapter.Menu
                 lockOnIcon.SetActive(isPasswordProtected);
             }
 
-            // 난이도 (추후 CustomProperties에서 읽어올 예정)
+            // 난이도 — 방 CustomProperties[diff] 에서 읽어 한글 표기.
             if (difficultyText != null)
             {
-                difficultyText.text = string.Empty;
+                var diff = NetworkManager.GetRoomDifficulty(room);
+                difficultyText.text = DifficultyDisplay(diff);
             }
 
-            // 맵 이미지 (추후 CustomProperties에서 맵 ID → 스프라이트 매핑 예정)
-            // 현재는 프리팹 기본 이미지 유지
+            // 맵 미리보기 — mapDatabase 가 연결되어 있을 때만 갱신. 매칭 실패 시 프리팹 기본 sprite 유지.
+            if (mapImage != null && mapDatabase != null)
+            {
+                var mapId = NetworkManager.GetRoomMapId(room);
+                var map = mapDatabase.GetById(mapId) ?? mapDatabase.DefaultMap;
+                if (map != null && map.PreviewSprite != null)
+                {
+                    mapImage.sprite = map.PreviewSprite;
+                }
+            }
+        }
+
+        private static string DifficultyDisplay(Difficulty d)
+        {
+            switch (d)
+            {
+                case Difficulty.Easy: return "쉬움";
+                case Difficulty.Hard: return "어려움";
+                default: return "보통";
+            }
         }
 
         private void HandleClick()

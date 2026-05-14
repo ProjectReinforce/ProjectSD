@@ -2,6 +2,7 @@ using UnityEngine;
 using SwDreams.Features.UI.Presentation;
 using SwDreams.Features.Progression.Adapter;
 using SwDreams.Features.Character.Adapter;
+using SwDreams.Shared.Domain;
 
 namespace SwDreams.Shared.Data
 {
@@ -84,6 +85,28 @@ namespace SwDreams.Shared.Data
 
         [Tooltip("혼돈 스킬이 등장하는 레벨 목록")]
         public int[] chaosLevels = { 10, 20, 30 };
+
+        // ===== 난이도 배율 =====
+        [Header("난이도 배율 (DifficultyData 곡선 전체에 곱셈 적용)")]
+        [Tooltip("쉬움 — 적 HP/데미지/이속/최대 동시 수에 일괄 곱. 0.7 권장 (느슨한 진행).")]
+        [Range(0.1f, 3f)] public float difficultyMultiplierEasy = 0.7f;
+
+        [Tooltip("보통 — 기본값. 1.0 권장 (DifficultyData 그대로).")]
+        [Range(0.1f, 3f)] public float difficultyMultiplierNormal = 1.0f;
+
+        [Tooltip("어려움 — 적 HP/데미지/이속/최대 동시 수에 일괄 곱. 1.35 권장.")]
+        [Range(0.1f, 3f)] public float difficultyMultiplierHard = 1.35f;
+
+        /// <summary>Difficulty enum → 배율 매핑. 알 수 없는 값은 Normal 폴백.</summary>
+        public float GetDifficultyMultiplier(Difficulty difficulty)
+        {
+            switch (difficulty)
+            {
+                case Difficulty.Easy: return difficultyMultiplierEasy;
+                case Difficulty.Hard: return difficultyMultiplierHard;
+                default: return difficultyMultiplierNormal;
+            }
+        }
 
         // ===== 보스 =====
         [Header("보스")]

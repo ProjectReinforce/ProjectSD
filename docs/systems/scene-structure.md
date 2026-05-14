@@ -9,7 +9,7 @@ Sweepin' Dreams 의 씬 구조와 각 씬 내부 패널 구성.
 | 시스템 ID | `scene-structure` |
 | 분류 | 아키텍처 / UI |
 | 의존 레이어 | Adapter (UI, Manager) |
-| 최종 업데이트 | 2026-04-18 |
+| 최종 업데이트 | 2026-05-14 |
 
 ## 2. 목적
 
@@ -74,8 +74,13 @@ UI 프레임 시스템(레벨업 팝업 등)은 [ui-frame.md](ui-frame.md).
 
 ### MenuScene → GameScene
 
-호스트가 `PhotonNetwork.LoadLevel("GameScene")` 호출.
-`PhotonNetwork.AutomaticallySyncScene = true` 설정으로 모든 클라이언트 씬이 자동 전환.
+호스트가 `SceneTransitionManager.EnterGameSceneByMaster()` → `NetworkManager.RequestLoadGameScene(sceneName)` 호출 (RaiseEvent 명시 동기). `AutomaticallySyncScene=false` 정책상 LoadLevel 자동 sync 안 씀.
+
+**맵 추상화 (2026-05-14):** `SceneTransitionManager` 가 인스펙터로 받은 `MapDatabase` (Features/Map/Adapter/Data) 에서 방 props 의 `mapId` 로 `MapDefinition` 조회 → 해당 맵의 `gameSceneName` 으로 로드. 매칭 실패 시 인스펙터 폴백 `gameSceneName` 사용. 신규 맵 추가 = `MapDefinition.asset` 1개 생성 + `MapDatabase.maps` 배열에 등록.
+
+**방 만들기 옵션 (2026-05-14):** 호스트가 방 생성 시 `NetworkManager.CreateRoom(name, password, maxPlayers, difficulty, mapId)` 로 인원수(1~4) / 난이도(Difficulty enum) / 맵 id 를 함께 전달. Room.CustomProperties 키:
+- `diff` (int) — `Shared.Domain.Difficulty` (Easy=0/Normal=1/Hard=2). `SpawnManager.Start` 가 읽어 `GameplayConfig.GetDifficultyMultiplier` 로 곱셈 배율 산출 → `DifficultyManager` 에 주입 (HP/데미지/이속/최대 동시 수 일괄 적용).
+- `map` (string) — `MapDefinition.Id`. `SceneTransitionManager` 가 sceneName 매핑.
 
 ### GameScene → MenuScene
 

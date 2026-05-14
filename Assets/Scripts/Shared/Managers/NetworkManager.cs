@@ -42,6 +42,11 @@ namespace SwDreams.Shared.Managers
         // 방 커스텀 프로퍼티 키
         public const string HasPasswordKey = "hasPw";
         public const string PasswordKey = "pw";
+        // 난이도 (int — Shared.Domain.Difficulty 값). 방 생성 시 호스트가 설정.
+        // 클라가 로비 목록에서 미리 보기 위해 LobbyExposedKeys 에 함께 노출.
+        public const string DifficultyKey = "diff";
+        // 맵 id (string — Features.Map.Adapter.Data.MapDefinition.Id). 게임 시작 시 SceneTransitionManager 가 sceneName 매핑.
+        public const string MapIdKey = "map";
 
         public static NetworkManager Instance { get; private set; }
 
@@ -403,7 +408,14 @@ namespace SwDreams.Shared.Managers
             });
         }
 
-        public void CreateRoom(string roomName, string password = "")
+        /// <summary>
+        /// 방 생성. 호스트가 메뉴씬 방 만들기 패널에서 호출.
+        ///
+        /// maxPlayers: 1~4. 0 또는 음수면 인스펙터 기본값(maxPlayersPerRoom) 으로 폴백.
+        /// difficulty: Shared.Domain.Difficulty 값. 방 props 에 저장 → SpawnManager 가 게임씬에서 읽음.
+        /// mapId: MapDefinition.Id. 빈 값이면 SceneTransitionManager 가 기본 맵으로 폴백.
+        /// </summary>
+        public void CreateRoom(string roomName, string password = "", byte maxPlayers = 0, int difficulty = (int)SwDreams.Shared.Domain.Difficulty.Normal, string mapId = "")
         {
             RunWhenMatchmakingReady(() =>
             {
@@ -417,23 +429,29 @@ namespace SwDreams.Shared.Managers
                 // 클라이언트가 입장 전에 비밀번호 입력 필요 여부를 판단할 수 있게 함
                 var customProps = new Hashtable
                 {
-                    [HasPasswordKey] = hasPassword
+                    [HasPasswordKey] = hasPassword,
+                    [DifficultyKey] = difficulty,
+                    [MapIdKey] = mapId ?? string.Empty
                 };
                 if (hasPassword)
                 {
                     customProps[PasswordKey] = password.Trim();
                 }
 
-                // 로비에 hasPw + 비번 값을 함께 노출해 클라가 PhotonNetwork.JoinRoom 호출 전에
-                // 사전 검증할 수 있게 한다. 평문 노출이지만 게임 룸 비번 수준의 민감도라 수용.
+                // 로비에 hasPw + 비번 값 + 난이도 + 맵 id 노출.
                 // 사전 검증으로 비번 시도자가 호스트 화면 LobbyEntry 에 잠깐 깜빡이는 UX 글리치를 회피.
+                // 난이도/맵은 방 리스트에서 표시하기 위함 (RoomListItem.difficultyText / mapImage).
                 var lobbyExposedKeys = hasPassword
-                    ? new[] { HasPasswordKey, PasswordKey }
-                    : new[] { HasPasswordKey };
+                    ? new[] { HasPasswordKey, PasswordKey, DifficultyKey, MapIdKey }
+                    : new[] { HasPasswordKey, DifficultyKey, MapIdKey };
+
+                // maxPlayers 0/음수면 인스펙터 기본값 폴백 (UI 잘못 연결돼도 게임 자체는 동작).
+                byte effectiveMax = maxPlayers > 0 ? maxPlayers : maxPlayersPerRoom;
+                if (effectiveMax > 4) effectiveMax = 4; // 게임 디자인상 4인 cap
 
                 var options = new RoomOptions
                 {
-                    MaxPlayers = maxPlayersPerRoom,
+                    MaxPlayers = effectiveMax,
                     IsVisible = true,
                     IsOpen = true,
                     CleanupCacheOnLeave = true,
@@ -444,6 +462,26 @@ namespace SwDreams.Shared.Managers
                 isCreatingRoom = true;
                 PhotonNetwork.CreateRoom(roomName.Trim(), options, TypedLobby.Default);
             });
+        }
+
+        /// <summary>
+        /// 방의 난이도. 방 props 미설정 시 Normal 폴백.
+        /// RoomInfo 를 받으므로 RoomList 의 `RoomInfo` 와 현재 입장 중 방의 `Room` 양쪽에서 호출 가능 (Room : RoomInfo).
+        /// </summary>
+        public static SwDreams.Shared.Domain.Difficulty GetRoomDifficulty(RoomInfo room)
+        {
+            if (room == null || room.CustomProperties == null) return SwDreams.Shared.Domain.Difficulty.Normal;
+            if (!room.CustomProperties.TryGetValue(DifficultyKey, out var value)) return SwDreams.Shared.Domain.Difficulty.Normal;
+            try { return (SwDreams.Shared.Domain.Difficulty)Convert.ToInt32(value); }
+            catch { return SwDreams.Shared.Domain.Difficulty.Normal; }
+        }
+
+        /// <summary>방의 맵 id. 미설정 시 빈 문자열 — 호출부가 기본 맵 폴백 결정.</summary>
+        public static string GetRoomMapId(RoomInfo room)
+        {
+            if (room == null || room.CustomProperties == null) return string.Empty;
+            if (!room.CustomProperties.TryGetValue(MapIdKey, out var value)) return string.Empty;
+            return value?.ToString() ?? string.Empty;
         }
 
         public void JoinRoom(string roomName, string password = "")

@@ -16,7 +16,7 @@
 | 시스템 ID | `spawn-rules` |
 | 분류 | 전투 / 밸런싱 |
 | 의존 레이어 | Adapter (SpawnManager) |
-| 최종 업데이트 | 2026-04-24 |
+| 최종 업데이트 | 2026-05-14 |
 
 ## 2. 목적
 
@@ -35,6 +35,18 @@
 | 경험치 시간 배율 (`expTime`) | **1.2** | **0.4** | `expTimeCurve` | 초반 EXP 후함, 후반 박함 |
 
 **게임 시간 0 ~ `GameplayConfig.bossSpawnTime`(900s) 을 `t ∈ [0,1]` 로 정규화** 하고 각 커브로 값을 보간한다. 곡선은 모두 linear(time=0→0, time=1→1) 가 기본. 튜닝 시 커브 편집으로 비선형화.
+
+### 3-1. 방 난이도 배율 (2026-05-14)
+
+호스트가 방 만들기 UI 에서 선택한 `Difficulty` (Easy/Normal/Hard) 가 `Room.CustomProperties[diff]` 에 저장되고, `SpawnManager.Start` 가 `GameplayConfig.GetDifficultyMultiplier` 로 곱셈 배율을 얻어 `DifficultyManager` 생성자에 주입.
+
+| 난이도 | 배율 (`GameplayConfig`) | 적용 대상 |
+|---|---|---|
+| Easy | `difficultyMultiplierEasy` (0.7) | HP / 데미지 / 이속 / 최대 동시 수 |
+| Normal | `difficultyMultiplierNormal` (1.0) | (DifficultyData 곡선 그대로) |
+| Hard | `difficultyMultiplierHard` (1.35) | HP / 데미지 / 이속 / 최대 동시 수 |
+
+**비적용**: 스폰 간격, 틱당 스폰 수, 경험치 시간 배율, Swarm 그룹 크기, 적 타입 비율 — 게임 페이스 자체는 난이도와 무관하게 유지.
 
 ## 4. 적 타입별 등장 비율 (`DifficultyData`, 시작 → 종료)
 

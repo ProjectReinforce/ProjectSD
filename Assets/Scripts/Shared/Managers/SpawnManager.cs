@@ -160,7 +160,13 @@ namespace SwDreams.Shared.Managers
             float bossTime = GameManager.Instance?.Config != null
                 ? GameManager.Instance.Config.bossSpawnTime
                 : 900f;
-            difficulty = new DifficultyManager(difficultyData, bossTime);
+            // 방 props 에 저장된 호스트 선택 난이도(Easy/Normal/Hard) 를 일괄 배율로 변환.
+            // Room 이 없거나 props 미설정이면 Normal 폴백 → multiplier = 1.0 (DifficultyData 곡선 그대로).
+            var diffEnum = NetworkManager.GetRoomDifficulty(PhotonNetwork.CurrentRoom);
+            float diffMul = GameManager.Instance?.Config != null
+                ? GameManager.Instance.Config.GetDifficultyMultiplier(diffEnum)
+                : 1f;
+            difficulty = new DifficultyManager(difficultyData, bossTime, diffMul);
 
             // EnemyData 매핑 (Ranged 는 variant 기반이라 rangedVariants 배열로 별도 관리)
             enemyDataMap = new Dictionary<EnemyType, EnemyData>
