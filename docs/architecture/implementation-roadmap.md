@@ -2,7 +2,7 @@
 
 Sweepin' Dreams 의 구현 단계 로드맵. 현재 코드 진행 상태를 반영하여 **Phase별 완료/진행 표시**를 명확히 한다.
 
-최종 업데이트: 2026-05-12 (Phase 7-5 meta-unlock ✅ — 영구 언락 시스템 + 멀티 D5 + 결과 화면 토스트. Phase 8-1 Platform 추상화 부분 동봉 ✅. N22 known-issues 등재)
+최종 업데이트: 2026-05-14 (방 만들기 UI 5종 중 1~4 ✅ — 인원수/난이도 토글 + 맵 추상화 + 방 이름 길이 제한. 5(비밀번호 인풋 UX) 는 U8 로 보류 등재)
 
 > 본 문서는 "**언제·무엇을·어떤 순서로 구현하는가**" 의 SSOT. 게임 설계 자체는 [../game-design/overview.md](../game-design/overview.md) 참조. 개별 스킬·적·시스템 설계는 해당 폴더 문서.
 >
@@ -390,6 +390,16 @@ Phase 1 (AudioMixer) ~ Phase 5 (검증) 완료. 후속 별건: U4 ESC 인게임 
 ### U6. 설정창 구조잡기 → **R12 로 통합 (2026-04-26)**
 - ~~`TitlePanelController.OnClickSettings()` TODO~~ → [§ R12](#r12-설정-패널--video--audio--language) 로 흡수. Video/Audio/Language 카테고리로 확정.
 - 키바인딩은 R12 범위 외 — 별건 작업으로 보류 (`settings.input` PlayerPrefs 키만 예약).
+
+### U8. 비밀번호 인풋 클릭 UX 개선 ⬜
+- 현재: 우측 체크박스를 켜야 인풋박스가 활성화 (`RoomListPanelController.ApplyPasswordUseState` 가 `passwordInputView.SetActive(useOn)` 으로 토글). 인풋박스에 도달하려면 체크박스 클릭 필요.
+- 목표: 인풋박스를 직접 클릭(포커스)해도 우측 체크박스가 자동으로 켜지고 입력 가능. 체크박스 해제는 기존대로 우측 체크박스 클릭으로만.
+- 구현 메모:
+  - `Frame_MakeRoom.prefab` Password 영역에서 `passwordInputView` 가 항상 클릭 가능하도록 (현재 OffView/InputView 가 SetActive 교차로 가려져 있음). 둘을 겹쳐 두고 OffView 는 `Image.raycastTarget = false` 로 두거나, OffView 비주얼만 살리고 InputField 는 항상 활성.
+  - `roomPasswordInputField.onSelect.AddListener` 로 포커스 시 `usePasswordToggle.SetIsOnWithoutNotify(true) + ApplyPasswordUseState(true)`.
+  - 토글 off → 기존 그대로 (텍스트 클리어 + 인풋 deselect).
+- 의존성: 없음. 0.5일.
+- 배경: 방 만들기 UI 5종 개선 작업(2026-05-14) 에서 1~4 진행, 5(이 항목) 만 보류. [scene-structure.md § 6](../systems/scene-structure.md) 참조.
 
 ### U7. 스킬 카드에 적용 패시브 + multiplier 표시 (N18 후속, 옵션)
 - 현재 [SkillCardDescriptionFormatter](../../Assets/Scripts/Features/UI/Presentation/SkillCardDescriptionFormatter.cs) 가 SO base 수치만 표시 (Survivors-like 표준). N18 도입으로 스킬마다 패시브 영향력 차등 가능해진 후, 카드에서 "이 스킬은 SkillRange 50% 만 적용" 같은 정보가 노출되지 않음.
