@@ -53,6 +53,15 @@ namespace SwDreams.Features.Skill.Adapter
         // ===== 서브 투사체 (분기탄 등) =====
         private GameObject subProjectilePrefab;
 
+        // ===== Animator (선택) =====
+        // 자식 GO 의 Animator. 비주얼 sprite 애니메이션용. 없으면 null 유지 (대부분 투사체).
+        private Animator cachedAnimator;
+
+        private void Awake()
+        {
+            cachedAnimator = GetComponentInChildren<Animator>(true);
+        }
+
         /// <summary>궤적 행동 부착. ProjectileEffect에서 스폰 후 호출.</summary>
         public void SetTrajectory(ITrajectoryBehavior behavior)
         {
@@ -173,10 +182,19 @@ namespace SwDreams.Features.Skill.Adapter
 
         protected virtual void Update()
         {
-            if (GameManager.Instance != null &&
-                GameManager.Instance.CurrentState != GameManager.GameState.Playing &&
-                GameManager.Instance.CurrentState != GameManager.GameState.BossFight)
-                return;
+            bool playing = GameManager.Instance == null
+                || GameManager.Instance.CurrentState == GameManager.GameState.Playing
+                || GameManager.Instance.CurrentState == GameManager.GameState.BossFight;
+
+            // EnemyAnimator/PlayerAnimator 와 동일 가드 — 매 프레임 native setter 호출 방지.
+            // paused 진입/탈출 프레임에만 실제 set, 그 외엔 no-op.
+            if (cachedAnimator != null)
+            {
+                float target = playing ? 1f : 0f;
+                if (cachedAnimator.speed != target) cachedAnimator.speed = target;
+            }
+
+            if (!playing) return;
 
             MoveStep();
 
@@ -439,6 +457,11 @@ namespace SwDreams.Features.Skill.Adapter
 
         public virtual void OnReturnToPool()
         {
+            // 풀 잔류 방지: 다음 스폰 시 첫 프레임부터 재생되도록 Animator 리바인드 (없으면 no-op).
+            // SetActive(false) 보다 먼저 호출 — Unity 는 비활성 GO 의 Rebind 를 무시 + 경고.
+            if (cachedAnimator != null && cachedAnimator.runtimeAnimatorController != null)
+                cachedAnimator.Rebind();
+
             gameObject.SetActive(false);
             triggerSystem = null;
             ownerTransform = null;

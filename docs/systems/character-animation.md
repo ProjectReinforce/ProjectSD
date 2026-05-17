@@ -30,7 +30,7 @@
 | **피격 비주얼** | Animator hit state 도입 안 함. 기존 `PlayerVisual` / `Enemy` 의 빨간 깜빡임 + DamagePopup 으로 충분 |
 | **부활 시퀀스** | Stand 복귀 + 부활 이펙트 + `PlayerMovement.SetInputLocked` + i-frame (R7) — 신규 Revive 클립 또는 단순 Stand 복귀 (선택) |
 | **GameState.Paused 시 정지** | `animator.speed = 0` (timeScale 정책 X 라 Animator 자동 정지 안 됨) — 레벨업·ESC 솔로 메뉴 시 idle 클립 계속 재생 어색함 회피. `GameOver/GameClear` 는 Die 진행을 위해 정지 X |
-| **풀링 환경 (적 한정)** | `EnemyAnimator.OnReturnToPool` 에서 `Animator.Rebind()` — Death state 가 다음 스폰에 잔류 방지 |
+| **풀링 환경 (적·투사체)** | `EnemyAnimator.OnReturnToPool` 에서 `Animator.Rebind()` — Death state 가 다음 스폰에 잔류 방지. `Projectile` 베이스 클래스도 동일 패턴 (자식 GO Animator 캐싱 + `OnReturnToPool` 안 `Rebind` — SetActive(false) 보다 먼저). Animator 미부착 프리팹은 모두 no-op. |
 | **결과창 진입 지연** | 사망 애니메이션 클립 길이만큼 결과창 표시 지연 (`GameplayConfig.resultPanelDelay`, default 1.5s) |
 
 ## 4. 표준 AnimatorController 파라미터
@@ -219,7 +219,7 @@ LobbyPlayerController 양쪽이 flip 토글마다 SpriteRenderer 자식
 `Attack` 트리거는 `RpcTarget.All` 송신 (buffered 아님). 늦참 클라가 송신 직후 join 하면
 첫 1회 미스 가능성 있음 — **수용**: 다음 cooldown 사이클에서 자동 복구. 게임플레이 영향 미미.
 
-## 9. 풀링 함정 (적 전용)
+## 9. 풀링 함정 (적·투사체 공통)
 
 `Enemy.OnReturnToPool` 호출 순서:
 ```
@@ -228,7 +228,9 @@ LobbyPlayerController 양쪽이 flip 토글마다 SpriteRenderer 자식
 3. gameObject.SetActive(false)     ← 마지막
 ```
 
-**중요**: `Animator.Rebind()` 는 `gameObject.SetActive(false)` 이후 호출하면 Unity 가 무시 + 경고. 순서 절대 바꾸지 말 것 (`EnemyAnimator.cs:88` 주석에 명시).
+`Projectile.OnReturnToPool` 도 동일 — `cachedAnimator.Rebind()` 가 `gameObject.SetActive(false)` 보다 먼저 호출됨. Animator 가 자식 GO 에 있는 표창/번개 등 투사체에 적용.
+
+**중요**: `Animator.Rebind()` 는 `gameObject.SetActive(false)` 이후 호출하면 Unity 가 무시 + 경고. 순서 절대 바꾸지 말 것 (`EnemyAnimator.cs:88`, `Projectile.cs:OnReturnToPool` 주석에 명시).
 
 ## 10. 깨진 sprite reference 검증 도구
 
